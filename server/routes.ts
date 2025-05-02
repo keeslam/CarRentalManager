@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { z } from "zod";
 import { insertVehicleSchema, insertCustomerSchema, insertReservationSchema, insertExpenseSchema, insertDocumentSchema } from "@shared/schema";
+import multer from "multer";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create uploads directory if it doesn't exist
@@ -410,34 +411,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== DOCUMENT ROUTES ====================
-  // Upload document
-  app.post("/api/documents/upload", async (req, res) => {
+  // Configure storage for multer
+  const createDocumentUploadStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
     try {
-      // This would normally use multer middleware for file uploads
-      // Since we're using in-memory storage, we'll simulate file upload
-      const { vehicleId, documentType, file, notes } = req.body;
+      // Get vehicle info based on vehicleId to retrieve license plate
+      const vehicleId = req.body.vehicleId;
+      if (!vehicleId) {
+        return callback(new Error("Vehicle ID is required"), null);
+      }
+      
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      if (!vehicle) {
+        return callback(new Error("Vehicle not found"), null);
+      }
+      
+      const licensePlate = vehicle.licensePlate;
+      const documentType = req.body.documentType || "Other";
+      
+      // Create directory structure if it doesn't exist
+      const dirPath = path.join(process.cwd(), "uploads", licensePlate, documentType);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      
+      callback(null, dirPath);
+    } catch (error) {
+      callback(error, null);
+    }
+  };
+  
+  const multerStorage = multer.diskStorage({
+    destination: createDocumentUploadStorage,
+    filename: (req, file, callback) => {
+      // Generate a unique filename using timestamp
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const extension = path.extname(file.originalname);
+      const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
+      callback(null, filename);
+    }
+  });
+  
+  const upload = multer({ 
+    storage: multerStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    }
+  });
+  
+  // Upload document
+  app.post("/api/documents/upload", upload.single('file'), async (req, res) => {
+    try {
+      const file = req.file;
+      const { vehicleId, documentType, notes } = req.body;
       
       if (!vehicleId || !documentType || !file) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-
-      const fileName = file.name || "document.pdf";
-      const filePath = `/uploads/${vehicleId}/${documentType}/${fileName}`;
       
+      // Get the license plate for storing in the correct folder
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      const licensePlate = vehicle.licensePlate;
+      
+      // Prepare document data
       const documentData = {
         vehicleId: parseInt(vehicleId),
         documentType,
-        fileName,
-        filePath,
-        fileSize: file.size || 100000, // Simulate file size
-        contentType: file.type || "application/pdf",
-        notes
+        fileName: file.originalname,
+        filePath: file.path,
+        fileSize: file.size,
+        contentType: file.mimetype,
+        notes: notes || null
       };
 
       const document = await storage.createDocument(documentData);
       res.status(201).json(document);
     } catch (error) {
-      res.status(400).json({ message: "Invalid document data", error });
+      console.error("Error uploading document:", error);
+      res.status(400).json({ 
+        message: "Invalid document data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
@@ -464,11 +521,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // This would normally serve the actual file
-    // Since we're using in-memory storage, we'll send a placeholder response
+    // Check if file exists
+    if (!fs.existsSync(document.filePath)) {
+      return res.status(404).json({ message: "File not found on disk" });
+    }
+
+    // Serve the actual file
     res.setHeader('Content-Type', document.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
-    res.send("This is a placeholder for the actual file content");
+    res.sendFile(document.filePath);
   });
   
   // Get all documents
@@ -499,9 +560,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid document ID" });
     }
 
+    // Get document before deleting to know the file path
+    const document = await storage.getDocument(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    
+    // Delete the file from disk if it exists
+    if (document.filePath && fs.existsSync(document.filePath)) {
+      try {
+        fs.unlinkSync(document.filePath);
+      } catch (error) {
+        console.error("Failed to delete file from disk:", error);
+        // Continue with the database deletion even if file deletion fails
+      }
+    }
+
     const success = await storage.deleteDocument(id);
     if (!success) {
-      return res.status(404).json({ message: "Document not found" });
+      return res.status(404).json({ message: "Document not found in database" });
     }
 
     res.status(204).end();
