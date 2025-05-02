@@ -117,6 +117,10 @@ export const expenses = pgTable("expenses", {
   date: text("date").notNull(),
   description: text("description"),
   receiptUrl: text("receipt_url"),
+  receiptFile: text("receipt_file"), // Stores the file name
+  receiptFilePath: text("receipt_file_path"), // Stores the path to the file
+  receiptFileSize: integer("receipt_file_size"), // Stores the file size
+  receiptContentType: text("receipt_content_type"), // Stores the file content type
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
