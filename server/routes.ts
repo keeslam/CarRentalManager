@@ -243,9 +243,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(reservation);
   });
 
-  // Create reservation
-  app.post("/api/reservations", async (req, res) => {
+  // Setup storage for damage check uploads
+  const createDamageCheckStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
     try {
+      const vehicleId = req.body.vehicleId;
+      if (!vehicleId) {
+        return callback(new Error("Vehicle ID is required"), false);
+      }
+      
+      // Get vehicle details for organizing files
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      if (!vehicle) {
+        return callback(new Error("Vehicle not found"), false);
+      }
+      
+      // Create folders if they don't exist
+      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      const damageCheckDir = path.join(baseDir, 'damage_checks');
+      
+      if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+      }
+      if (!fs.existsSync(damageCheckDir)) {
+        fs.mkdirSync(damageCheckDir, { recursive: true });
+      }
+      
+      callback(null, damageCheckDir);
+    } catch (error) {
+      console.error("Error with damage check upload:", error);
+      callback(error, false);
+    }
+  };
+
+  // Configure multer for damage check uploads
+  const damageCheckStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      createDamageCheckStorage(req, file, (err: any, result: any) => {
+        if (err) return cb(err, '');
+        cb(null, result);
+      });
+    },
+    filename: async (req, file, cb) => {
+      try {
+        // Generate filename with reservation dates
+        const startDate = req.body.startDate || new Date().toISOString().split('T')[0];
+        const timestamp = Date.now();
+        const extension = path.extname(file.originalname);
+        const fileName = `damage_check_${startDate}_${timestamp}${extension}`;
+        
+        cb(null, fileName);
+      } catch (error) {
+        console.error("Error creating filename for damage check:", error);
+        const fallbackName = `damage_check_${Date.now()}${path.extname(file.originalname)}`;
+        cb(null, fallbackName);
+      }
+    }
+  });
+  
+  const damageCheckUpload = multer({
+    storage: damageCheckStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only specific file types
+      const fileTypes = /jpeg|jpg|png|pdf/;
+      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = fileTypes.test(file.mimetype);
+      
+      if (extname && mimetype) {
+        return cb(null, true);
+      } else {
+        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
+      }
+    },
+  });
+  
+  // Create reservation with damage check upload
+  app.post("/api/reservations", damageCheckUpload.single('damageCheckFile'), async (req, res) => {
+    try {
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
+      if (req.body.totalPrice) req.body.totalPrice = parseFloat(req.body.totalPrice);
+      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts
@@ -264,20 +346,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const reservation = await storage.createReservation(reservationData);
+      
+      // If there's a file, create a document record linked to the vehicle
+      if (req.file) {
+        const documentData = {
+          vehicleId: reservationData.vehicleId,
+          documentType: "Damage Check",
+          fileName: req.file.originalname,
+          filePath: req.file.path,
+          fileSize: req.file.size,
+          contentType: req.file.mimetype,
+          createdBy: `Reservation #${reservation.id}`,
+          notes: `Damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
+        };
+        
+        await storage.createDocument(documentData);
+      }
+      
       res.status(201).json(reservation);
     } catch (error) {
-      res.status(400).json({ message: "Invalid reservation data", error });
+      console.error("Error creating reservation:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid reservation data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to create reservation", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
     }
   });
 
-  // Update reservation
-  app.patch("/api/reservations/:id", async (req, res) => {
+  // Update reservation with damage check upload
+  app.patch("/api/reservations/:id", damageCheckUpload.single('damageCheckFile'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
+      if (req.body.totalPrice) req.body.totalPrice = parseFloat(req.body.totalPrice);
+      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts
@@ -301,9 +413,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
+      // If there's a file, create a document record linked to the vehicle
+      if (req.file) {
+        const documentData = {
+          vehicleId: reservationData.vehicleId,
+          documentType: "Damage Check",
+          fileName: req.file.originalname,
+          filePath: req.file.path,
+          fileSize: req.file.size,
+          contentType: req.file.mimetype,
+          createdBy: `Reservation #${reservation.id} (Updated)`,
+          notes: `Updated damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
+        };
+        
+        await storage.createDocument(documentData);
+      }
+      
       res.json(reservation);
     } catch (error) {
-      res.status(400).json({ message: "Invalid reservation data", error });
+      console.error("Error updating reservation:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid reservation data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to update reservation", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
     }
   });
 

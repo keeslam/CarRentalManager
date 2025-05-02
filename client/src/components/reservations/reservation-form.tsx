@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,8 +6,8 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { insertReservationSchema } from "@shared/schema";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { insertReservationSchema, insertVehicleSchema, insertCustomerSchema } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { 
   Form, 
   FormControl, 
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { 
   Select,
   SelectContent,
@@ -29,11 +30,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { SearchableCombobox, ComboboxOption } from "@/components/ui/searchable-combobox";
 import { formatDate } from "@/lib/format-utils";
 import { doDateRangesOverlap } from "@/lib/date-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
-import { Customer, Vehicle, Reservation } from "@shared/schema";
+import { Customer, Vehicle, Reservation, InsertVehicle, InsertCustomer } from "@shared/schema";
+import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
 
 // Extended schema with validation
 const formSchema = insertReservationSchema.extend({
@@ -48,6 +59,19 @@ const formSchema = insertReservationSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   totalPrice: z.number().optional(),
+  damageCheckFile: z.instanceof(File).optional(),
+});
+
+// Vehicle form schema
+const vehicleFormSchema = insertVehicleSchema.extend({
+  licensePlate: z.string().min(1, "License plate is required"),
+  brand: z.string().min(1, "Brand is required"),
+  model: z.string().min(1, "Model is required"),
+});
+
+// Customer form schema
+const customerFormSchema = insertCustomerSchema.extend({
+  name: z.string().min(1, "Name is required"),
 });
 
 interface ReservationFormProps {
@@ -63,6 +87,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [damageFile, setDamageFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -147,6 +176,32 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       notes: ""
     },
   });
+
+  // Setup vehicle form
+  const vehicleForm = useForm<z.infer<typeof vehicleFormSchema>>({
+    resolver: zodResolver(vehicleFormSchema),
+    defaultValues: {
+      licensePlate: "",
+      brand: "",
+      model: "",
+      vehicleType: "sedan",
+      fuel: "gasoline"
+    }
+  });
+
+  // Setup customer form
+  const customerForm = useForm<z.infer<typeof customerFormSchema>>({
+    resolver: zodResolver(customerFormSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      postalCode: "",
+      country: "NL"
+    }
+  });
   
   // If vehicleId or customerId changes from URL, update the form
   useEffect(() => {
@@ -219,14 +274,145 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   // Get selected vehicle and customer
   const selectedVehicle = vehicles?.find(v => v.id === vehicleIdWatch);
   const selectedCustomer = customers?.find(c => c.id === form.watch("customerId"));
+
+  // Create vehicle mutation
+  const createVehicleMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof vehicleFormSchema>) => {
+      return await apiRequest("POST", "/api/vehicles", data);
+    },
+    onSuccess: async (data) => {
+      // Invalidate vehicles query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      
+      // Set the new vehicle as selected
+      form.setValue("vehicleId", data.id);
+      
+      // Close the dialog
+      setVehicleDialogOpen(false);
+      
+      // Show success message
+      toast({
+        title: "Vehicle created",
+        description: `Vehicle "${data.licensePlate}" has been created.`,
+      });
+
+      // Reset form
+      vehicleForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create vehicle: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create customer mutation
+  const createCustomerMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof customerFormSchema>) => {
+      return await apiRequest("POST", "/api/customers", data);
+    },
+    onSuccess: async (data) => {
+      // Invalidate customers query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      
+      // Set the new customer as selected
+      form.setValue("customerId", data.id);
+      
+      // Close the dialog
+      setCustomerDialogOpen(false);
+      
+      // Show success message
+      toast({
+        title: "Customer created",
+        description: `Customer "${data.name}" has been created.`,
+      });
+
+      // Reset form
+      customerForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create customer: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
   
+  // File upload handling for damage check
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDamageFile(file);
+      form.setValue("damageCheckFile", file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setDamageFile(file);
+      form.setValue("damageCheckFile", file);
+    }
+  };
+
+  const removeDamageFile = () => {
+    setDamageFile(null);
+    form.setValue("damageCheckFile", undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  
+  // Create or update reservation mutation
   const createReservationMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest(
-        editMode ? "PATCH" : "POST", 
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add all other form data
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== "damageCheckFile") {
+          formData.append(key, String(value));
+        }
+      });
+      
+      // Add file if present
+      if (data.damageCheckFile) {
+        formData.append("damageCheckFile", data.damageCheckFile);
+      }
+      
+      // Use FormData for the request
+      return await fetch(
         editMode ? `/api/reservations/${initialData?.id}` : "/api/reservations", 
-        data
-      );
+        {
+          method: editMode ? "PATCH" : "POST",
+          body: formData,
+        }
+      ).then(res => {
+        if (!res.ok) {
+          throw new Error("Failed to save reservation");
+        }
+        return res.json();
+      });
     },
     onSuccess: async (data) => {
       // Save selections to recent items
@@ -239,6 +425,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       
       // Show success message
       toast({
@@ -262,6 +450,17 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     },
   });
   
+  // Handle vehicle form submission
+  const onVehicleSubmit = (data: z.infer<typeof vehicleFormSchema>) => {
+    createVehicleMutation.mutate(data);
+  };
+
+  // Handle customer form submission
+  const onCustomerSubmit = (data: z.infer<typeof customerFormSchema>) => {
+    createCustomerMutation.mutate(data);
+  };
+  
+  // Handle reservation form submission
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     // Check for overlapping reservations
     if (hasOverlap) {
@@ -299,7 +498,144 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                   name="vehicleId"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Vehicle</FormLabel>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>Vehicle</FormLabel>
+                        <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                              Add New
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                              <DialogTitle>Add New Vehicle</DialogTitle>
+                              <DialogDescription>
+                                Create a new vehicle to add to the reservation
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Form {...vehicleForm}>
+                              <form onSubmit={vehicleForm.handleSubmit(onVehicleSubmit)} className="space-y-4">
+                                <FormField
+                                  control={vehicleForm.control}
+                                  name="licensePlate"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>License Plate *</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g. AB-123-C" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="brand"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Brand *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="e.g. Toyota" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="model"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Model *</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="e.g. Corolla" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="vehicleType"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Vehicle Type</FormLabel>
+                                        <Select 
+                                          onValueChange={field.onChange} 
+                                          defaultValue={field.value || "sedan"}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            <SelectItem value="sedan">Sedan</SelectItem>
+                                            <SelectItem value="suv">SUV</SelectItem>
+                                            <SelectItem value="wagon">Wagon</SelectItem>
+                                            <SelectItem value="van">Van</SelectItem>
+                                            <SelectItem value="truck">Truck</SelectItem>
+                                            <SelectItem value="convertible">Convertible</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={vehicleForm.control}
+                                    name="fuel"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Fuel Type</FormLabel>
+                                        <Select 
+                                          onValueChange={field.onChange} 
+                                          defaultValue={field.value || "gasoline"}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select fuel" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            <SelectItem value="gasoline">Gasoline</SelectItem>
+                                            <SelectItem value="diesel">Diesel</SelectItem>
+                                            <SelectItem value="electric">Electric</SelectItem>
+                                            <SelectItem value="hybrid">Hybrid</SelectItem>
+                                            <SelectItem value="plugin_hybrid">Plug-in Hybrid</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <DialogFooter className="mt-4">
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={() => setVehicleDialogOpen(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    type="submit" 
+                                    disabled={createVehicleMutation.isPending}
+                                  >
+                                    {createVehicleMutation.isPending ? "Creating..." : "Create Vehicle"}
+                                  </Button>
+                                </DialogFooter>
+                              </form>
+                            </Form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                       <FormControl>
                         <SearchableCombobox
                           options={vehicleOptions}
@@ -321,12 +657,12 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       {selectedVehicle && (
                         <div className="mt-2 text-sm bg-muted p-2 rounded-md">
                           <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                             {selectedVehicle.vehicleType && (
-                              <span className="mr-2">{selectedVehicle.vehicleType}</span>
+                              <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
                             )}
                             {selectedVehicle.fuel && (
-                              <span>{selectedVehicle.fuel}</span>
+                              <Badge variant="outline">{selectedVehicle.fuel}</Badge>
                             )}
                           </div>
                         </div>
@@ -341,7 +677,154 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                   name="customerId"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Customer</FormLabel>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>Customer</FormLabel>
+                        <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                              Add New
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                              <DialogTitle>Add New Customer</DialogTitle>
+                              <DialogDescription>
+                                Create a new customer to add to the reservation
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Form {...customerForm}>
+                              <form onSubmit={customerForm.handleSubmit(onCustomerSubmit)} className="space-y-4">
+                                <FormField
+                                  control={customerForm.control}
+                                  name="name"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Full Name *</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="Customer name" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={customerForm.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="+31 1234 567890" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={customerForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="customer@example.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <FormField
+                                  control={customerForm.control}
+                                  name="address"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Address</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="Street address" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <div className="grid grid-cols-3 gap-4">
+                                  <FormField
+                                    control={customerForm.control}
+                                    name="city"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>City</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="City" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={customerForm.control}
+                                    name="postalCode"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Postal Code</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="1234 AB" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={customerForm.control}
+                                    name="country"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Country</FormLabel>
+                                        <Select 
+                                          onValueChange={field.onChange} 
+                                          defaultValue={field.value || "NL"}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select country" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            <SelectItem value="NL">Netherlands</SelectItem>
+                                            <SelectItem value="BE">Belgium</SelectItem>
+                                            <SelectItem value="DE">Germany</SelectItem>
+                                            <SelectItem value="FR">France</SelectItem>
+                                            <SelectItem value="GB">United Kingdom</SelectItem>
+                                            <SelectItem value="OTHER">Other</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <DialogFooter className="mt-4">
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={() => setCustomerDialogOpen(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    type="submit" 
+                                    disabled={createCustomerMutation.isPending}
+                                  >
+                                    {createCustomerMutation.isPending ? "Creating..." : "Create Customer"}
+                                  </Button>
+                                </DialogFooter>
+                              </form>
+                            </Form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                       <FormControl>
                         <SearchableCombobox
                           options={customerOptions}
@@ -357,10 +840,16 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       {selectedCustomer && (
                         <div className="mt-2 text-sm bg-muted p-2 rounded-md">
                           {selectedCustomer.phone && (
-                            <div>Phone: {selectedCustomer.phone}</div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Phone:</span>
+                              <span>{selectedCustomer.phone}</span>
+                            </div>
                           )}
                           {selectedCustomer.email && (
-                            <div>Email: {selectedCustomer.email}</div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Email:</span>
+                              <span>{selectedCustomer.email}</span>
+                            </div>
                           )}
                         </div>
                       )}
@@ -484,6 +973,68 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                     </FormItem>
                   )}
                 />
+              </div>
+              
+              {/* Damage Check Upload */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <FormLabel>Upload Damage Check</FormLabel>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <FileCheck className="h-3.5 w-3.5 mr-1" />
+                    Will be linked to vehicle documents
+                  </div>
+                </div>
+                
+                <div 
+                  className={`border-2 border-dashed rounded-md p-6 transition-colors ${
+                    isDragActive ? 'border-primary bg-primary/5' : 'border-border'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  
+                  {damageFile ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <FileCheck className="h-8 w-8 mr-2 text-green-500" />
+                        <div>
+                          <p className="font-medium text-sm">{damageFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(damageFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeDamageFile();
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-4">
+                      <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">Drag & drop or click to upload</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload a damage check document for this reservation (PDF, JPG, PNG)
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* Notes */}
