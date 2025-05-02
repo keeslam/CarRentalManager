@@ -167,8 +167,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId || undefined,
-      customerId: customerId || undefined, 
+      vehicleId: vehicleId || 0,
+      customerId: customerId || 0, 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       status: "pending",
@@ -765,7 +765,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={vehicleOptions}
-                          value={field.value.toString()}
+                          value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
                             field.onChange(parseInt(value));
                             // If switching vehicles, check for conflicts
@@ -982,7 +982,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={customerOptions}
-                          value={field.value.toString()}
+                          value={field.value ? field.value.toString() : ''}
                           onChange={(value) => field.onChange(parseInt(value))}
                           placeholder="Search and select a customer..."
                           searchPlaceholder="Search by name, phone, or city..."
