@@ -101,7 +101,7 @@ export class MemStorage implements IStorage {
       fuel: "Gasoline",
       euroZone: "Euro 6",
       apkDate: "2024-05-15",
-      warrantyDate: "2024-07-10"
+      warrantyEndDate: "2024-07-10"
     });
     
     this.createVehicle({
@@ -113,7 +113,7 @@ export class MemStorage implements IStorage {
       fuel: "Hybrid",
       euroZone: "Euro 6",
       apkDate: "2024-03-01",
-      warrantyDate: "2024-04-15"
+      warrantyEndDate: "2024-04-15"
     });
     
     this.createVehicle({
@@ -125,7 +125,7 @@ export class MemStorage implements IStorage {
       fuel: "Diesel",
       euroZone: "Euro 5",
       apkDate: "2024-04-20",
-      warrantyDate: "2024-06-30"
+      warrantyEndDate: "2024-06-30"
     });
     
     // Sample customers
@@ -318,10 +318,10 @@ export class MemStorage implements IStorage {
     const twoMonthsFromNow = addMonths(today, 2);
     
     return Array.from(this.vehicles.values()).filter(vehicle => {
-      if (!vehicle.warrantyDate) return false;
+      if (!vehicle.warrantyEndDate) return false;
       
-      const warrantyDate = parseISO(vehicle.warrantyDate);
-      return isAfter(warrantyDate, today) && isBefore(warrantyDate, twoMonthsFromNow);
+      const warrantyEndDate = parseISO(vehicle.warrantyEndDate);
+      return isAfter(warrantyEndDate, today) && isBefore(warrantyEndDate, twoMonthsFromNow);
     });
   }
 
@@ -631,4 +631,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./database-storage";
+
+// Use DatabaseStorage for production
+export const storage = new DatabaseStorage();

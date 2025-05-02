@@ -179,7 +179,7 @@ function generateSimulatedVehicleData(normalized: string): Partial<InsertVehicle
     fuel: getRandomFuelType(),
     euroZone: getRandomEuroZone(),
     apkDate: getRandomFutureDate(1, 12),
-    warrantyDate: getRandomFutureDate(1, 24)
+    warrantyEndDate: getRandomFutureDate(1, 24)
   };
 }
 
@@ -226,7 +226,7 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
       fuel: mapFuelType(rdwVehicle.brandstof_omschrijving),
       euroZone: mapEuroZone(rdwVehicle.emissiecode_omschrijving),
       apkDate: formatDate(rdwVehicle.vervaldatum_apk) || getRandomFutureDate(1, 12),
-      warrantyDate: getRandomFutureDate(3, 24) // Warranty is not in the RDW data, so generate a random one
+      warrantyEndDate: getRandomFutureDate(3, 24) // Warranty is not in the RDW data, so generate a random one
     };
     
     return mappedVehicle;
