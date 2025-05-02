@@ -137,6 +137,7 @@ export const documents = pgTable("documents", {
   fileSize: integer("file_size").notNull(),
   contentType: text("content_type").notNull(),
   uploadDate: timestamp("upload_date").defaultNow().notNull(),
+  createdBy: text("created_by"),
   notes: text("notes"),
 });
 
