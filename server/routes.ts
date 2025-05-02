@@ -507,6 +507,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
+  // ==================== BULK IMPORT ROUTES ====================
+  // Bulk import vehicles by license plates
+  app.post("/api/vehicles/bulk-import-plates", async (req, res) => {
+    try {
+      // Expect an array of license plates
+      const { licensePlates } = req.body;
+      
+      if (!Array.isArray(licensePlates) || licensePlates.length === 0) {
+        return res.status(400).json({ message: "Please provide a non-empty array of license plates" });
+      }
+      
+      const results = {
+        imported: [] as any[],
+        failed: [] as any[]
+      };
+      
+      // Process each license plate
+      for (const licensePlate of licensePlates) {
+        try {
+          // Fetch vehicle info from RDW API
+          const vehicleInfo = await fetchVehicleInfoByLicensePlate(licensePlate);
+          
+          if (vehicleInfo) {
+            // Create the vehicle in the database
+            const vehicle = await storage.createVehicle(vehicleInfo);
+            results.imported.push({ licensePlate, vehicle });
+          } else {
+            results.failed.push({ licensePlate, error: "No vehicle information found" });
+          }
+        } catch (error) {
+          results.failed.push({ 
+            licensePlate, 
+            error: error instanceof Error ? error.message : "Unknown error" 
+          });
+        }
+      }
+      
+      res.status(200).json(results);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Failed to process bulk import", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
