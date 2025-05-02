@@ -33,6 +33,16 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
     queryKey: [`/api/documents/vehicle/${vehicleId}`],
   });
   
+  // Group documents by category
+  const documentsByCategory = documents?.reduce((grouped, document) => {
+    const category = document.documentType;
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
+    grouped[category].push(document);
+    return grouped;
+  }, {} as Record<string, Document[]>) || {};
+  
   // Fetch vehicle reservations
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: [`/api/reservations/vehicle/${vehicleId}`],
@@ -635,33 +645,61 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   No documents uploaded for this vehicle
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {documents?.map((document) => (
-                    <Card key={document.id} className="overflow-hidden">
-                      <div className="bg-gray-100 p-6 flex items-center justify-center">
-                        <DocumentIcon type={document.contentType} />
+                <div className="space-y-6">
+                  {/* Document categories */}
+                  {Object.entries(documentsByCategory).map(([category, docs]) => (
+                    <div key={category} className="space-y-4">
+                      <h3 className="text-lg font-medium border-b pb-2">{category}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {docs.map((document) => (
+                          <Card key={document.id} className="overflow-hidden">
+                            <div className="bg-gray-100 p-6 flex items-center justify-center">
+                              <DocumentIcon type={document.contentType} />
+                            </div>
+                            <CardContent className="p-4">
+                              <h3 className="font-medium mb-1 truncate" title={document.fileName}>{document.fileName}</h3>
+                              <div className="flex items-center text-sm text-gray-500 mb-2">
+                                <Badge variant="outline" className="mr-2">{document.documentType}</Badge>
+                                <span>{formatDate(document.uploadDate?.toString() || "")}</span>
+                              </div>
+                              {document.createdBy && (
+                                <div className="text-xs text-gray-500 mb-2">
+                                  Created by: {document.createdBy}
+                                </div>
+                              )}
+                              <div className="flex justify-between mt-2">
+                                <div className="flex space-x-2">
+                                  <a 
+                                    href={`/api/documents/download/${document.id}`} 
+                                    className="text-primary-600 hover:text-primary-800 text-sm"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download
+                                  </a>
+                                  <a 
+                                    href={`/api/documents/download/${document.id}`} 
+                                    className="text-primary-600 hover:text-primary-800 text-sm"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      window.open(`/api/documents/download/${document.id}`, '_blank');
+                                      setTimeout(() => { window.print(); }, 1000);
+                                    }}
+                                  >
+                                    Print
+                                  </a>
+                                </div>
+                                <button className="text-red-600 hover:text-red-800 text-sm">
+                                  Delete
+                                </button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium mb-1 truncate" title={document.fileName}>{document.fileName}</h3>
-                        <div className="flex items-center text-sm text-gray-500 mb-2">
-                          <Badge variant="outline" className="mr-2">{document.documentType}</Badge>
-                          <span>{formatDate(document.uploadDate?.toString() || "")}</span>
-                        </div>
-                        <div className="flex justify-between mt-2">
-                          <a 
-                            href={`/api/documents/download/${document.id}`} 
-                            className="text-primary-600 hover:text-primary-800 text-sm"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Download
-                          </a>
-                          <button className="text-red-600 hover:text-red-800 text-sm">
-                            Delete
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               )}

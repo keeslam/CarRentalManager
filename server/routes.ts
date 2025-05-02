@@ -486,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/documents/upload", upload.single('file'), async (req, res) => {
     try {
       const file = req.file;
-      const { vehicleId, documentType, notes } = req.body;
+      const { vehicleId, documentType, notes, createdBy } = req.body;
       
       if (!vehicleId || !documentType || !file) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -508,6 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filePath: file.path,
         fileSize: file.size,
         contentType: file.mimetype,
+        createdBy: createdBy || 'System',
         notes: notes || null
       };
 

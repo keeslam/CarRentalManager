@@ -127,6 +127,7 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
       formData.append("vehicleId", data.vehicleId.toString());
       formData.append("documentType", data.documentType);
       formData.append("file", data.file);
+      formData.append("createdBy", localStorage.getItem("userName") || "User");
       
       if (data.notes) {
         formData.append("notes", data.notes);
