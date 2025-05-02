@@ -421,7 +421,11 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
                       <FormDescription>
                         Upload a PDF receipt or invoice directly. The file will be stored securely.
                       </FormDescription>
-                      <FormMessage name="receiptFile" />
+                      {form.formState.errors.receiptFile && (
+                        <p className="text-sm font-medium text-destructive">
+                          {form.formState.errors.receiptFile.message}
+                        </p>
+                      )}
                     </div>
                   </TabsContent>
                 </Tabs>

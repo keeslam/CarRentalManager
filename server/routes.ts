@@ -409,6 +409,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid expense data", error });
     }
   });
+  
+  // Setup storage for expense receipts
+  const createExpenseReceiptStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
+    try {
+      // Get the vehicle ID from the request
+      const vehicleId = req.body.vehicleId;
+      
+      if (!vehicleId) {
+        return callback(new Error("Vehicle ID is required"));
+      }
+      
+      // Get the vehicle to get the license plate
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      
+      if (!vehicle) {
+        return callback(new Error("Vehicle not found"));
+      }
+      
+      const licensePlate = vehicle.licensePlate;
+      
+      // Create folder structure if it doesn't exist
+      // Format: /uploads/[license_plate]/expenses
+      const folderPath = path.join(process.cwd(), "uploads", licensePlate, "expenses");
+      
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+      
+      callback(null, folderPath);
+    } catch (error) {
+      console.error("Error setting up expense receipt storage:", error);
+      callback(error);
+    }
+  };
+  
+  // Configure multer for expense receipt uploads
+  const expenseReceiptStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      createExpenseReceiptStorage(req, file, (err: any, result: any) => {
+        if (err) return cb(err, '');
+        cb(null, result);
+      });
+    },
+    filename: async (req, file, cb) => {
+      try {
+        // Get vehicle info to retrieve license plate
+        const vehicleId = req.body.vehicleId;
+        const vehicle = await storage.getVehicle(parseInt(vehicleId));
+        
+        if (!vehicle) {
+          return cb(new Error("Vehicle not found"), "" as any);
+        }
+        
+        const licensePlate = vehicle.licensePlate;
+        
+        // Format the current date as YYYY-MM-DD
+        const now = new Date();
+        const dateString = now.toISOString().split('T')[0];
+        
+        // Create filename in the format: licensePlate-receipt-date-uniqueSuffix.extension
+        const extension = path.extname(file.originalname);
+        const uniqueSuffix = Math.round(Math.random() * 1E6);
+        const sanitizedLicensePlate = licensePlate.replace(/[^a-zA-Z0-9-]/g, '');
+        const filename = `${sanitizedLicensePlate}-receipt-${dateString}-${uniqueSuffix}${extension}`;
+        
+        cb(null, filename);
+      } catch (error) {
+        console.error("Error creating filename for expense receipt:", error);
+        // If there's an error, use a fallback naming strategy
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname);
+        const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
+        cb(null, filename);
+      }
+    }
+  });
+  
+  const uploadExpenseReceipt = multer({ 
+    storage: expenseReceiptStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (_req, file, cb) => {
+      // Accept PDF, JPG, JPEG, PNG and GIF files
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only PDF, JPG, PNG and GIF files are allowed.') as any, false);
+      }
+    }
+  });
+  
+  // Create expense with receipt file
+  app.post("/api/expenses/with-receipt", uploadExpenseReceipt.single('receiptFile'), async (req, res) => {
+    try {
+      const file = req.file;
+      const { vehicleId, category, amount, date, description } = req.body;
+      
+      if (!vehicleId || !category || !amount || !date || !file) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Create expense data with receipt file information
+      const expenseData = {
+        vehicleId: parseInt(vehicleId),
+        category,
+        amount: parseFloat(amount).toString(), // Convert to string as per schema
+        date,
+        description: description || null,
+        receiptFile: file.filename,
+        receiptFilePath: file.path,
+        receiptFileSize: file.size,
+        receiptContentType: file.mimetype
+      };
+      
+      const expense = await storage.createExpense(expenseData);
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error("Error creating expense with receipt:", error);
+      res.status(400).json({ 
+        message: "Invalid expense data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Update expense with receipt file
+  app.post("/api/expenses/:id/with-receipt", uploadExpenseReceipt.single('receiptFile'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
+      
+      const file = req.file;
+      const { vehicleId, category, amount, date, description } = req.body;
+      
+      if (!vehicleId || !category || !amount || !date || !file) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Create expense data with receipt file information
+      const expenseData = {
+        vehicleId: parseInt(vehicleId),
+        category,
+        amount: parseFloat(amount).toString(), // Convert to string as per schema
+        date,
+        description: description || null,
+        receiptFile: file.filename,
+        receiptFilePath: file.path,
+        receiptFileSize: file.size,
+        receiptContentType: file.mimetype
+      };
+      
+      const expense = await storage.updateExpense(id, expenseData);
+      
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense with receipt:", error);
+      res.status(400).json({ 
+        message: "Invalid expense data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   // ==================== DOCUMENT ROUTES ====================
   // Configure storage for multer
