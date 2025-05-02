@@ -259,7 +259,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Winter Tires</h4>
-                    <p className="text-base">{vehicle.winterTires ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.winterTires} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.winterTires ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -389,17 +392,26 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Roadside Assistance</h4>
-                    <p className="text-base">{vehicle.roadsideAssistance ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.roadsideAssistance} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.roadsideAssistance ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">GPS</h4>
-                    <p className="text-base">{vehicle.gps ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.gps} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.gps ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">WOK Notification</h4>
-                    <p className="text-base">{vehicle.wokNotification ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.wokNotification} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.wokNotification ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -419,7 +431,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Key</h4>
-                    <p className="text-base">{vehicle.spareKey ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.spareKey} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.spareKey ? "Available" : "Not Available"}</span>
+                    </div>
                   </div>
                   
                   <div>
@@ -429,12 +444,18 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Seat Covers</h4>
-                    <p className="text-base">{vehicle.seatcovers ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.seatcovers} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.seatcovers ? "Installed" : "Not Installed"}</span>
+                    </div>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Backup Beepers</h4>
-                    <p className="text-base">{vehicle.backupbeepers ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.backupbeepers} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.backupbeepers ? "Installed" : "Not Installed"}</span>
+                    </div>
                   </div>
                   
                   <div>
