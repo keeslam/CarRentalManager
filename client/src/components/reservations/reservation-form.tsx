@@ -167,8 +167,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId || 0,
-      customerId: customerId || 0,
+      vehicleId: vehicleId || undefined,
+      customerId: customerId || undefined, 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       status: "pending",
@@ -177,19 +177,25 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     },
   });
 
-  // Setup vehicle form
+  // Setup vehicle form with expanded fields
   const vehicleForm = useForm<z.infer<typeof vehicleFormSchema>>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: {
       licensePlate: "",
       brand: "",
       model: "",
+      chassisNumber: "",
+      constructionYear: "",
       vehicleType: "sedan",
-      fuel: "gasoline"
+      fuel: "gasoline",
+      euroZone: "",
+      apkDate: "",
+      mileage: "",
+      registrationNumber: ""
     }
   });
 
-  // Setup customer form
+  // Setup customer form with expanded fields
   const customerForm = useForm<z.infer<typeof customerFormSchema>>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
@@ -199,7 +205,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       address: "",
       city: "",
       postalCode: "",
-      country: "NL"
+      country: "NL",
+      driverLicenseNumber: ""
     }
   });
   
@@ -507,7 +514,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                               Add New
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-[500px]">
+                          <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Add New Vehicle</DialogTitle>
                               <DialogDescription>
@@ -516,106 +523,225 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                             </DialogHeader>
                             <Form {...vehicleForm}>
                               <form onSubmit={vehicleForm.handleSubmit(onVehicleSubmit)} className="space-y-4">
-                                <FormField
-                                  control={vehicleForm.control}
-                                  name="licensePlate"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>License Plate *</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="e.g. AB-123-C" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                  <FormField
-                                    control={vehicleForm.control}
-                                    name="brand"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Brand *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="e.g. Toyota" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={vehicleForm.control}
-                                    name="model"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Model *</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="e.g. Corolla" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <FormField
-                                    control={vehicleForm.control}
-                                    name="vehicleType"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Vehicle Type</FormLabel>
-                                        <Select 
-                                          onValueChange={field.onChange} 
-                                          defaultValue={field.value || "sedan"}
-                                        >
+                                <Tabs defaultValue="general">
+                                  <TabsList className="grid grid-cols-3 mb-4">
+                                    <TabsTrigger value="general">General</TabsTrigger>
+                                    <TabsTrigger value="technical">Technical</TabsTrigger>
+                                    <TabsTrigger value="dates">Important Dates</TabsTrigger>
+                                  </TabsList>
+                                
+                                  <TabsContent value="general" className="space-y-4">
+                                    {/* General Information */}
+                                    <FormField
+                                      control={vehicleForm.control}
+                                      name="licensePlate"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>License Plate *</FormLabel>
                                           <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
+                                            <Input placeholder="e.g. AB-123-C" {...field} />
                                           </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="sedan">Sedan</SelectItem>
-                                            <SelectItem value="suv">SUV</SelectItem>
-                                            <SelectItem value="wagon">Wagon</SelectItem>
-                                            <SelectItem value="van">Van</SelectItem>
-                                            <SelectItem value="truck">Truck</SelectItem>
-                                            <SelectItem value="convertible">Convertible</SelectItem>
-                                            <SelectItem value="other">Other</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={vehicleForm.control}
-                                    name="fuel"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Fuel Type</FormLabel>
-                                        <Select 
-                                          onValueChange={field.onChange} 
-                                          defaultValue={field.value || "gasoline"}
-                                        >
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="brand"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Brand *</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="e.g. Toyota" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="model"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Model *</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="e.g. Corolla" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="vehicleType"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Vehicle Type</FormLabel>
+                                            <Select 
+                                              onValueChange={field.onChange} 
+                                              defaultValue={field.value || "sedan"}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                <SelectItem value="sedan">Sedan</SelectItem>
+                                                <SelectItem value="suv">SUV</SelectItem>
+                                                <SelectItem value="wagon">Wagon</SelectItem>
+                                                <SelectItem value="van">Van</SelectItem>
+                                                <SelectItem value="truck">Truck</SelectItem>
+                                                <SelectItem value="convertible">Convertible</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="constructionYear"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Construction Year</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="e.g. 2020" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  </TabsContent>
+                                
+                                  <TabsContent value="technical" className="space-y-4">
+                                    {/* Technical Information */}
+                                    <FormField
+                                      control={vehicleForm.control}
+                                      name="chassisNumber"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Chassis/VIN Number</FormLabel>
                                           <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select fuel" />
-                                            </SelectTrigger>
+                                            <Input placeholder="e.g. WBA12345678901234" {...field} />
                                           </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="gasoline">Gasoline</SelectItem>
-                                            <SelectItem value="diesel">Diesel</SelectItem>
-                                            <SelectItem value="electric">Electric</SelectItem>
-                                            <SelectItem value="hybrid">Hybrid</SelectItem>
-                                            <SelectItem value="plugin_hybrid">Plug-in Hybrid</SelectItem>
-                                            <SelectItem value="other">Other</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="fuel"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Fuel Type</FormLabel>
+                                            <Select 
+                                              onValueChange={field.onChange} 
+                                              defaultValue={field.value || "gasoline"}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select fuel" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                <SelectItem value="gasoline">Gasoline</SelectItem>
+                                                <SelectItem value="diesel">Diesel</SelectItem>
+                                                <SelectItem value="electric">Electric</SelectItem>
+                                                <SelectItem value="hybrid">Hybrid</SelectItem>
+                                                <SelectItem value="plugin_hybrid">Plug-in Hybrid</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="euroZone"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Euro Zone</FormLabel>
+                                            <Select 
+                                              onValueChange={field.onChange} 
+                                              defaultValue={field.value || ""}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                <SelectItem value="euro0">Euro 0</SelectItem>
+                                                <SelectItem value="euro1">Euro 1</SelectItem>
+                                                <SelectItem value="euro2">Euro 2</SelectItem>
+                                                <SelectItem value="euro3">Euro 3</SelectItem>
+                                                <SelectItem value="euro4">Euro 4</SelectItem>
+                                                <SelectItem value="euro5">Euro 5</SelectItem>
+                                                <SelectItem value="euro6">Euro 6</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="mileage"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Mileage (km)</FormLabel>
+                                            <FormControl>
+                                              <Input type="number" placeholder="e.g. 50000" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={vehicleForm.control}
+                                        name="registrationNumber"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Registration Number</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="e.g. REG123456" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  </TabsContent>
+                                
+                                  <TabsContent value="dates" className="space-y-4">
+                                    {/* Dates */}
+                                    <FormField
+                                      control={vehicleForm.control}
+                                      name="apkDate"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>APK Expiration Date</FormLabel>
+                                          <FormControl>
+                                            <Input type="date" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </TabsContent>
+                                </Tabs>
                                 <DialogFooter className="mt-4">
                                   <Button 
                                     type="button" 
@@ -686,7 +812,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                               Add New
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-[500px]">
+                          <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Add New Customer</DialogTitle>
                               <DialogDescription>
@@ -695,116 +821,144 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                             </DialogHeader>
                             <Form {...customerForm}>
                               <form onSubmit={customerForm.handleSubmit(onCustomerSubmit)} className="space-y-4">
-                                <FormField
-                                  control={customerForm.control}
-                                  name="name"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Full Name *</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="Customer name" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                  <FormField
-                                    control={customerForm.control}
-                                    name="phone"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Phone Number</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="+31 1234 567890" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={customerForm.control}
-                                    name="email"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="customer@example.com" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <FormField
-                                  control={customerForm.control}
-                                  name="address"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Address</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="Street address" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <div className="grid grid-cols-3 gap-4">
-                                  <FormField
-                                    control={customerForm.control}
-                                    name="city"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>City</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="City" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={customerForm.control}
-                                    name="postalCode"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Postal Code</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="1234 AB" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={customerForm.control}
-                                    name="country"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Country</FormLabel>
-                                        <Select 
-                                          onValueChange={field.onChange} 
-                                          defaultValue={field.value || "NL"}
-                                        >
+                                <Tabs defaultValue="basic">
+                                  <TabsList className="grid grid-cols-2 mb-4">
+                                    <TabsTrigger value="basic">Basic Information</TabsTrigger>
+                                    <TabsTrigger value="contact">Contact & Address</TabsTrigger>
+                                  </TabsList>
+                                  
+                                  <TabsContent value="basic" className="space-y-4">
+                                    <FormField
+                                      control={customerForm.control}
+                                      name="name"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Full Name *</FormLabel>
                                           <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select country" />
-                                            </SelectTrigger>
+                                            <Input placeholder="Customer name" {...field} />
                                           </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="NL">Netherlands</SelectItem>
-                                            <SelectItem value="BE">Belgium</SelectItem>
-                                            <SelectItem value="DE">Germany</SelectItem>
-                                            <SelectItem value="FR">France</SelectItem>
-                                            <SelectItem value="GB">United Kingdom</SelectItem>
-                                            <SelectItem value="OTHER">Other</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={customerForm.control}
+                                        name="phone"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Phone Number</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="+31 1234 567890" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={customerForm.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="customer@example.com" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                    <FormField
+                                      control={customerForm.control}
+                                      name="driverLicenseNumber"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Driver License Number</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="e.g. D123456789" {...field} />
+                                          </FormControl>
+                                          <FormDescription>
+                                            This is required for vehicle rental verification
+                                          </FormDescription>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </TabsContent>
+                                  
+                                  <TabsContent value="contact" className="space-y-4">
+                                    <FormField
+                                      control={customerForm.control}
+                                      name="address"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Address</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="Street address" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <div className="grid grid-cols-3 gap-4">
+                                      <FormField
+                                        control={customerForm.control}
+                                        name="city"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>City</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="City" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={customerForm.control}
+                                        name="postalCode"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Postal Code</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="1234 AB" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={customerForm.control}
+                                        name="country"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Country</FormLabel>
+                                            <Select 
+                                              onValueChange={field.onChange} 
+                                              defaultValue={field.value || "NL"}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select country" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                <SelectItem value="NL">Netherlands</SelectItem>
+                                                <SelectItem value="BE">Belgium</SelectItem>
+                                                <SelectItem value="DE">Germany</SelectItem>
+                                                <SelectItem value="FR">France</SelectItem>
+                                                <SelectItem value="GB">United Kingdom</SelectItem>
+                                                <SelectItem value="OTHER">Other</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
                                 <DialogFooter className="mt-4">
                                   <Button 
                                     type="button" 

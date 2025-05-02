@@ -106,6 +106,9 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+})
+.extend({
+  totalPrice: z.number().optional().or(z.string().transform(val => Number(val) || 0))
 });
 
 // Expenses table
