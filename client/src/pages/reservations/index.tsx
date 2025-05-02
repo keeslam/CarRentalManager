@@ -474,8 +474,8 @@ export default function ReservationsIndex() {
                   <DataTable
                     columns={columns}
                     data={groupReservations}
-                    searchable={false}
-                    pagination={vehicleGrouping === "none"}
+                    searchColumn="id"
+                    pagination
                   />
                 </div>
               ))}
