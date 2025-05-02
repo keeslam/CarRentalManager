@@ -1,0 +1,634 @@
+import { 
+  users, type User, type InsertUser,
+  vehicles, type Vehicle, type InsertVehicle,
+  customers, type Customer, type InsertCustomer,
+  reservations, type Reservation, type InsertReservation,
+  expenses, type Expense, type InsertExpense,
+  documents, type Document, type InsertDocument
+} from "@shared/schema";
+import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
+
+export interface IStorage {
+  // User methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  
+  // Vehicle methods
+  getAllVehicles(): Promise<Vehicle[]>;
+  getVehicle(id: number): Promise<Vehicle | undefined>;
+  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: number, vehicleData: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  getAvailableVehicles(): Promise<Vehicle[]>;
+  getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]>;
+  getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]>;
+  
+  // Customer methods
+  getAllCustomers(): Promise<Customer[]>;
+  getCustomer(id: number): Promise<Customer | undefined>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: number, customerData: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  
+  // Reservation methods
+  getAllReservations(): Promise<Reservation[]>;
+  getReservation(id: number): Promise<Reservation | undefined>;
+  createReservation(reservation: InsertReservation): Promise<Reservation>;
+  updateReservation(id: number, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined>;
+  getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]>;
+  getUpcomingReservations(): Promise<Reservation[]>;
+  getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
+  getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
+  checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null): Promise<Reservation[]>;
+  
+  // Expense methods
+  getAllExpenses(): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expenseData: Partial<InsertExpense>): Promise<Expense | undefined>;
+  getExpensesByVehicle(vehicleId: number): Promise<Expense[]>;
+  getRecentExpenses(limit: number): Promise<Expense[]>;
+  
+  // Document methods
+  getAllDocuments(): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  getDocumentsByVehicle(vehicleId: number): Promise<Document[]>;
+  deleteDocument(id: number): Promise<boolean>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<number, User>;
+  private vehicles: Map<number, Vehicle>;
+  private customers: Map<number, Customer>;
+  private reservations: Map<number, Reservation>;
+  private expenses: Map<number, Expense>;
+  private documents: Map<number, Document>;
+  
+  private userId: number;
+  private vehicleId: number;
+  private customerId: number;
+  private reservationId: number;
+  private expenseId: number;
+  private documentId: number;
+
+  constructor() {
+    this.users = new Map();
+    this.vehicles = new Map();
+    this.customers = new Map();
+    this.reservations = new Map();
+    this.expenses = new Map();
+    this.documents = new Map();
+    
+    this.userId = 1;
+    this.vehicleId = 1;
+    this.customerId = 1;
+    this.reservationId = 1;
+    this.expenseId = 1;
+    this.documentId = 1;
+    
+    // Initialize with sample data for demo
+    this.initializeSampleData();
+  }
+
+  private initializeSampleData() {
+    // Sample vehicles
+    this.createVehicle({
+      licensePlate: "AB-123-C",
+      brand: "Volkswagen",
+      model: "Golf",
+      vehicleType: "Hatchback",
+      chassisNumber: "WVW123456789",
+      fuel: "Gasoline",
+      euroZone: "Euro 6",
+      apkDate: "2024-05-15",
+      warrantyDate: "2024-07-10"
+    });
+    
+    this.createVehicle({
+      licensePlate: "XY-789-Z",
+      brand: "Toyota",
+      model: "Corolla",
+      vehicleType: "Sedan",
+      chassisNumber: "JTD987654321",
+      fuel: "Hybrid",
+      euroZone: "Euro 6",
+      apkDate: "2024-03-01",
+      warrantyDate: "2024-04-15"
+    });
+    
+    this.createVehicle({
+      licensePlate: "TR-567-P",
+      brand: "Ford",
+      model: "Focus",
+      vehicleType: "Sedan",
+      chassisNumber: "WF0123456789",
+      fuel: "Diesel",
+      euroZone: "Euro 5",
+      apkDate: "2024-04-20",
+      warrantyDate: "2024-06-30"
+    });
+    
+    // Sample customers
+    this.createCustomer({
+      name: "John Doe",
+      email: "john.doe@example.com",
+      phone: "0612345678",
+      address: "Kerkweg 1",
+      city: "Amsterdam",
+      postalCode: "1234 AB",
+      country: "Nederland",
+      driverLicenseNumber: "12345678"
+    });
+    
+    this.createCustomer({
+      name: "Jane Smith",
+      email: "jane.smith@example.com",
+      phone: "0687654321",
+      address: "Hoofdstraat 10",
+      city: "Rotterdam",
+      postalCode: "3000 XY",
+      country: "Nederland",
+      driverLicenseNumber: "87654321"
+    });
+    
+    // Sample reservations
+    const today = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const nextDay = new Date();
+    nextDay.setDate(today.getDate() + 1);
+    
+    const nextMonth = new Date();
+    nextMonth.setDate(today.getDate() + 30);
+    
+    this.createReservation({
+      vehicleId: 1,
+      customerId: 1,
+      startDate: today.toISOString().split('T')[0],
+      endDate: nextDay.toISOString().split('T')[0],
+      status: "confirmed",
+      totalPrice: 120,
+      notes: "Sample reservation"
+    });
+    
+    this.createReservation({
+      vehicleId: 2,
+      customerId: 2,
+      startDate: nextWeek.toISOString().split('T')[0],
+      endDate: nextMonth.toISOString().split('T')[0],
+      status: "pending",
+      totalPrice: 1200,
+      notes: "Long-term rental"
+    });
+    
+    // Sample expenses
+    this.createExpense({
+      vehicleId: 1,
+      category: "Maintenance",
+      amount: 150,
+      date: "2024-01-15",
+      description: "Oil change and filter replacement"
+    });
+    
+    this.createExpense({
+      vehicleId: 2,
+      category: "Tires",
+      amount: 320,
+      date: "2024-01-05",
+      description: "New winter tires"
+    });
+    
+    this.createExpense({
+      vehicleId: 3,
+      category: "Repair",
+      amount: 450,
+      date: "2024-01-10",
+      description: "Brake system repair"
+    });
+    
+    // Sample documents
+    this.createDocument({
+      vehicleId: 1,
+      documentType: "APK Inspection",
+      fileName: "apk_report_2023.pdf",
+      filePath: "/uploads/1/APK Inspection/apk_report_2023.pdf",
+      fileSize: 250000,
+      contentType: "application/pdf",
+      notes: "Annual APK inspection report"
+    });
+    
+    this.createDocument({
+      vehicleId: 2,
+      documentType: "Insurance",
+      fileName: "insurance_policy.pdf",
+      filePath: "/uploads/2/Insurance/insurance_policy.pdf",
+      fileSize: 180000,
+      contentType: "application/pdf",
+      notes: "Vehicle insurance policy"
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userId++;
+    const now = new Date();
+    const user: User = { ...insertUser, id, createdAt: now, updatedAt: now };
+    this.users.set(id, user);
+    return user;
+  }
+
+  // Vehicle methods
+  async getAllVehicles(): Promise<Vehicle[]> {
+    return Array.from(this.vehicles.values());
+  }
+
+  async getVehicle(id: number): Promise<Vehicle | undefined> {
+    return this.vehicles.get(id);
+  }
+
+  async createVehicle(vehicleData: InsertVehicle): Promise<Vehicle> {
+    const id = this.vehicleId++;
+    const now = new Date();
+    const vehicle: Vehicle = { ...vehicleData, id, createdAt: now, updatedAt: now };
+    this.vehicles.set(id, vehicle);
+    return vehicle;
+  }
+
+  async updateVehicle(id: number, vehicleData: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
+    const existingVehicle = this.vehicles.get(id);
+    if (!existingVehicle) {
+      return undefined;
+    }
+    
+    const updatedVehicle: Vehicle = {
+      ...existingVehicle,
+      ...vehicleData,
+      updatedAt: new Date()
+    };
+    
+    this.vehicles.set(id, updatedVehicle);
+    return updatedVehicle;
+  }
+
+  async getAvailableVehicles(): Promise<Vehicle[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all vehicles
+    const allVehicles = Array.from(this.vehicles.values());
+    
+    // Get active reservations
+    const activeReservations = Array.from(this.reservations.values()).filter(r => 
+      r.status !== "cancelled" && 
+      r.startDate <= today && 
+      r.endDate >= today
+    );
+    
+    // Get IDs of vehicles with active reservations
+    const reservedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
+    
+    // Filter out reserved vehicles
+    return allVehicles.filter(v => !reservedVehicleIds.has(v.id));
+  }
+
+  async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
+    const today = new Date();
+    const twoMonthsFromNow = addMonths(today, 2);
+    
+    return Array.from(this.vehicles.values()).filter(vehicle => {
+      if (!vehicle.apkDate) return false;
+      
+      const apkDate = parseISO(vehicle.apkDate);
+      return isAfter(apkDate, today) && isBefore(apkDate, twoMonthsFromNow);
+    });
+  }
+
+  async getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]> {
+    const today = new Date();
+    const twoMonthsFromNow = addMonths(today, 2);
+    
+    return Array.from(this.vehicles.values()).filter(vehicle => {
+      if (!vehicle.warrantyDate) return false;
+      
+      const warrantyDate = parseISO(vehicle.warrantyDate);
+      return isAfter(warrantyDate, today) && isBefore(warrantyDate, twoMonthsFromNow);
+    });
+  }
+
+  // Customer methods
+  async getAllCustomers(): Promise<Customer[]> {
+    return Array.from(this.customers.values());
+  }
+
+  async getCustomer(id: number): Promise<Customer | undefined> {
+    return this.customers.get(id);
+  }
+
+  async createCustomer(customerData: InsertCustomer): Promise<Customer> {
+    const id = this.customerId++;
+    const now = new Date();
+    const customer: Customer = { ...customerData, id, createdAt: now, updatedAt: now };
+    this.customers.set(id, customer);
+    return customer;
+  }
+
+  async updateCustomer(id: number, customerData: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const existingCustomer = this.customers.get(id);
+    if (!existingCustomer) {
+      return undefined;
+    }
+    
+    const updatedCustomer: Customer = {
+      ...existingCustomer,
+      ...customerData,
+      updatedAt: new Date()
+    };
+    
+    this.customers.set(id, updatedCustomer);
+    return updatedCustomer;
+  }
+
+  // Reservation methods
+  async getAllReservations(): Promise<Reservation[]> {
+    const reservations = Array.from(this.reservations.values());
+    
+    // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getReservation(id: number): Promise<Reservation | undefined> {
+    const reservation = this.reservations.get(id);
+    if (!reservation) {
+      return undefined;
+    }
+    
+    // Populate vehicle and customer data
+    return {
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    };
+  }
+
+  async createReservation(reservationData: InsertReservation): Promise<Reservation> {
+    const id = this.reservationId++;
+    const now = new Date();
+    const reservation: Reservation = { ...reservationData, id, createdAt: now, updatedAt: now };
+    this.reservations.set(id, reservation);
+    
+    // Return with populated data
+    return {
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    };
+  }
+
+  async updateReservation(id: number, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined> {
+    const existingReservation = this.reservations.get(id);
+    if (!existingReservation) {
+      return undefined;
+    }
+    
+    const updatedReservation: Reservation = {
+      ...existingReservation,
+      ...reservationData,
+      updatedAt: new Date()
+    };
+    
+    this.reservations.set(id, updatedReservation);
+    
+    // Return with populated data
+    return {
+      ...updatedReservation,
+      vehicle: this.vehicles.get(updatedReservation.vehicleId),
+      customer: this.customers.get(updatedReservation.customerId)
+    };
+  }
+
+  async getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]> {
+    const reservations = Array.from(this.reservations.values()).filter(r => {
+      // Check if reservation overlaps with date range
+      return (
+        (r.startDate <= endDate && r.endDate >= startDate) ||
+        (r.startDate >= startDate && r.startDate <= endDate) ||
+        (r.endDate >= startDate && r.endDate <= endDate)
+      );
+    });
+    
+    // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getUpcomingReservations(): Promise<Reservation[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const reservations = Array.from(this.reservations.values())
+      .filter(r => r.startDate >= today && r.status !== "cancelled")
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+      .slice(0, 5); // Limit to 5 reservations
+    
+    // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getReservationsByVehicle(vehicleId: number): Promise<Reservation[]> {
+    const reservations = Array.from(this.reservations.values())
+      .filter(r => r.vehicleId === vehicleId)
+      .sort((a, b) => b.startDate.localeCompare(a.startDate)); // Sort by start date, newest first
+    
+    // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getReservationsByCustomer(customerId: number): Promise<Reservation[]> {
+    const reservations = Array.from(this.reservations.values())
+      .filter(r => r.customerId === customerId)
+      .sort((a, b) => b.startDate.localeCompare(a.startDate)); // Sort by start date, newest first
+    
+    // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async checkReservationConflicts(
+    vehicleId: number, 
+    startDate: string, 
+    endDate: string, 
+    excludeReservationId: number | null
+  ): Promise<Reservation[]> {
+    const conflicts = Array.from(this.reservations.values()).filter(r => {
+      // Skip the reservation we're checking against (for updates)
+      if (excludeReservationId !== null && r.id === excludeReservationId) {
+        return false;
+      }
+      
+      // Skip cancelled reservations
+      if (r.status === "cancelled") {
+        return false;
+      }
+      
+      // Check if this is for the same vehicle and if dates overlap
+      return (
+        r.vehicleId === vehicleId &&
+        (
+          (r.startDate <= endDate && r.endDate >= startDate) ||
+          (r.startDate >= startDate && r.startDate <= endDate) ||
+          (r.endDate >= startDate && r.endDate <= endDate)
+        )
+      );
+    });
+    
+    // Populate vehicle and customer data
+    return conflicts.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  // Expense methods
+  async getAllExpenses(): Promise<Expense[]> {
+    const expenses = Array.from(this.expenses.values());
+    
+    // Populate vehicle data
+    return expenses.map(expense => ({
+      ...expense,
+      vehicle: this.vehicles.get(expense.vehicleId)
+    }));
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const expense = this.expenses.get(id);
+    if (!expense) {
+      return undefined;
+    }
+    
+    // Populate vehicle data
+    return {
+      ...expense,
+      vehicle: this.vehicles.get(expense.vehicleId)
+    };
+  }
+
+  async createExpense(expenseData: InsertExpense): Promise<Expense> {
+    const id = this.expenseId++;
+    const now = new Date();
+    const expense: Expense = { ...expenseData, id, createdAt: now, updatedAt: now };
+    this.expenses.set(id, expense);
+    
+    // Return with populated data
+    return {
+      ...expense,
+      vehicle: this.vehicles.get(expense.vehicleId)
+    };
+  }
+
+  async updateExpense(id: number, expenseData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const existingExpense = this.expenses.get(id);
+    if (!existingExpense) {
+      return undefined;
+    }
+    
+    const updatedExpense: Expense = {
+      ...existingExpense,
+      ...expenseData,
+      updatedAt: new Date()
+    };
+    
+    this.expenses.set(id, updatedExpense);
+    
+    // Return with populated data
+    return {
+      ...updatedExpense,
+      vehicle: this.vehicles.get(updatedExpense.vehicleId)
+    };
+  }
+
+  async getExpensesByVehicle(vehicleId: number): Promise<Expense[]> {
+    const expenses = Array.from(this.expenses.values())
+      .filter(e => e.vehicleId === vehicleId)
+      .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date, newest first
+    
+    // Populate vehicle data
+    return expenses.map(expense => ({
+      ...expense,
+      vehicle: this.vehicles.get(expense.vehicleId)
+    }));
+  }
+
+  async getRecentExpenses(limit: number): Promise<Expense[]> {
+    const expenses = Array.from(this.expenses.values())
+      .sort((a, b) => b.date.localeCompare(a.date)) // Sort by date, newest first
+      .slice(0, limit);
+    
+    // Populate vehicle data
+    return expenses.map(expense => ({
+      ...expense,
+      vehicle: this.vehicles.get(expense.vehicleId)
+    }));
+  }
+
+  // Document methods
+  async getAllDocuments(): Promise<Document[]> {
+    return Array.from(this.documents.values());
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    return this.documents.get(id);
+  }
+
+  async createDocument(documentData: InsertDocument): Promise<Document> {
+    const id = this.documentId++;
+    const now = new Date();
+    const document: Document = { ...documentData, id, uploadDate: now };
+    this.documents.set(id, document);
+    return document;
+  }
+
+  async getDocumentsByVehicle(vehicleId: number): Promise<Document[]> {
+    return Array.from(this.documents.values())
+      .filter(d => d.vehicleId === vehicleId)
+      .sort((a, b) => {
+        // Sort by upload date, newest first
+        const dateA = a.uploadDate ? new Date(a.uploadDate).getTime() : 0;
+        const dateB = b.uploadDate ? new Date(b.uploadDate).getTime() : 0;
+        return dateB - dateA;
+      });
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    return this.documents.delete(id);
+  }
+}
+
+export const storage = new MemStorage();
