@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Link, useLocation } from "wouter";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
@@ -235,7 +236,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">AdBlue</h4>
-                    <p className="text-base">{vehicle.adBlue ? "Yes" : "No"}</p>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.adBlue} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.adBlue ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
                   
                   <div>

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -614,21 +615,19 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="adBlue"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>AdBlue</FormLabel>
                           <FormDescription>
                             Vehicle uses AdBlue
                           </FormDescription>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -637,21 +636,19 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="gps"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>GPS</FormLabel>
                           <FormDescription>
                             Vehicle has GPS tracking
                           </FormDescription>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -660,18 +657,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="roadsideAssistance"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>Roadside Assistance</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -680,18 +675,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="spareKey"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>Spare Key</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -700,18 +693,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="winterTires"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>Winter Tires</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -720,18 +711,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="wokNotification"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>WOK Notification</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -740,18 +729,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="seatcovers"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>Seat Covers</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
@@ -760,18 +747,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="backupbeepers"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value as boolean}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
                           <FormLabel>Backup Beepers</FormLabel>
                         </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
