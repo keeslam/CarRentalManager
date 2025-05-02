@@ -3,6 +3,7 @@ import Dashboard from "@/pages/dashboard";
 import VehiclesIndex from "@/pages/vehicles/index";
 import VehicleAdd from "@/pages/vehicles/add";
 import VehicleDetails from "@/pages/vehicles/[id]";
+import VehicleEdit from "@/pages/vehicles/[id]/edit";
 import VehicleBulkImport from "@/pages/vehicles/bulk-import";
 import CustomersIndex from "@/pages/customers/index";
 import CustomerAdd from "@/pages/customers/add";
@@ -24,6 +25,7 @@ function App() {
         <Route path="/vehicles" component={VehiclesIndex} />
         <Route path="/vehicles/add" component={VehicleAdd} />
         <Route path="/vehicles/bulk-import" component={VehicleBulkImport} />
+        <Route path="/vehicles/:id/edit" component={VehicleEdit} />
         <Route path="/vehicles/:id" component={VehicleDetails} />
         <Route path="/customers" component={CustomersIndex} />
         <Route path="/customers/add" component={CustomerAdd} />
