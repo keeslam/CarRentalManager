@@ -27,8 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Vehicle } from "@shared/schema";
 import { format } from "date-fns";
+import { formatFileSize } from "@/lib/format-utils";
 
 // Expense categories
 const expenseCategories = [
@@ -38,6 +40,17 @@ const expenseCategories = [
   "Damage",
   "Repair",
   "Other"
+];
+
+// Maximum file size (5 MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+// Allowed file types
+const ACCEPTED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/gif"
 ];
 
 // Extended schema with validation
@@ -52,6 +65,21 @@ const formSchema = insertExpenseSchema.extend({
     invalid_type_error: "Amount must be a number",
   }).min(0, "Amount must be positive"),
   date: z.string().min(1, "Date is required"),
+  receiptFile: z
+    .instanceof(File)
+    .optional()
+    .refine((file) => {
+      if (!file) return true;
+      return file.size <= MAX_FILE_SIZE;
+    }, {
+      message: `File size must be less than ${formatFileSize(MAX_FILE_SIZE)}.`,
+    })
+    .refine((file) => {
+      if (!file) return true;
+      return ACCEPTED_FILE_TYPES.includes(file.type);
+    }, {
+      message: "File type not supported.",
+    }),
 });
 
 interface ExpenseFormProps {
@@ -65,6 +93,8 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
   const [_, navigate] = useLocation();
   const [searchParams] = useLocation();
   const [vehicleId, setVehicleId] = useState<number | null>(null);
+  const [receiptTab, setReceiptTab] = useState<string>("url");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   // Get preselected vehicle ID from URL if available
   useEffect(() => {
@@ -104,13 +134,59 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
     }
   }, [vehicleId, form, editMode]);
   
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      setSelectedFile(file);
+      form.setValue("receiptFile", file);
+    }
+  };
+  
   const createExpenseMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest(
-        editMode ? "PATCH" : "POST", 
-        editMode ? `/api/expenses/${initialData?.id}` : "/api/expenses", 
-        data
-      );
+      // If we have a file, we need to use FormData instead of JSON
+      if (selectedFile && receiptTab === "upload") {
+        const formData = new FormData();
+        
+        // Add all the regular fields
+        formData.append("vehicleId", data.vehicleId.toString());
+        formData.append("category", data.category);
+        formData.append("amount", data.amount.toString());
+        formData.append("date", data.date);
+        
+        if (data.description) {
+          formData.append("description", data.description);
+        }
+        
+        // Add the file
+        formData.append("receiptFile", selectedFile);
+        
+        // Use fetch directly instead of apiRequest which is JSON-only
+        const response = await fetch(
+          editMode ? `/api/expenses/${initialData?.id}/with-receipt` : "/api/expenses/with-receipt", 
+          {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to upload receipt");
+        }
+        
+        return await response.json();
+      } else {
+        // Regular JSON request for URL-based receipts
+        return await apiRequest(
+          editMode ? "PATCH" : "POST", 
+          editMode ? `/api/expenses/${initialData?.id}` : "/api/expenses", 
+          data
+        );
+      }
     },
     onSuccess: async () => {
       // Invalidate relevant queries
@@ -265,22 +341,91 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="receiptUrl"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Receipt URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="URL to receipt image or document" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Alternatively, you can upload a receipt document directly from the Documents section.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="md:col-span-2">
+                <FormLabel className="mb-2 block">Receipt</FormLabel>
+                <Tabs defaultValue="url" value={receiptTab} onValueChange={setReceiptTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="url">URL</TabsTrigger>
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="url">
+                    <FormField
+                      control={form.control}
+                      name="receiptUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="URL to receipt image or document" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Enter a URL to an online receipt or invoice
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="upload">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center w-full">
+                        <label 
+                          htmlFor="receipt-file-upload" 
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg className="w-8 h-8 mb-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                            <p className="text-xs text-muted-foreground">PDF, PNG, JPG or GIF (max. 5MB)</p>
+                          </div>
+                          <input 
+                            id="receipt-file-upload" 
+                            type="file" 
+                            className="hidden" 
+                            accept=".pdf,.png,.jpg,.jpeg,.gif"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                      </div>
+                      
+                      {selectedFile && (
+                        <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <div className="text-sm">
+                              <div className="font-medium truncate max-w-[150px] sm:max-w-[300px]">{selectedFile.name}</div>
+                              <div className="text-muted-foreground text-xs">{formatFileSize(selectedFile.size)}</div>
+                            </div>
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedFile(null);
+                              form.setValue("receiptFile", undefined as any);
+                            }}
+                          >
+                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <FormDescription>
+                        Upload a PDF receipt or invoice directly. The file will be stored securely.
+                      </FormDescription>
+                      <FormMessage name="receiptFile" />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
             
             <div className="flex justify-end space-x-2">
