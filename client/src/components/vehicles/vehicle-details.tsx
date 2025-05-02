@@ -689,13 +689,13 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Warranty Valid Until</p>
-                      <p className="text-lg font-medium">{vehicle.warrantyDate ? formatDate(vehicle.warrantyDate) : "Not set"}</p>
+                      <p className="text-lg font-medium">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "Not set"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Days Remaining</p>
                       <div className="flex items-center">
                         <p className="text-lg font-medium mr-2">{daysUntilWarranty}</p>
-                        {vehicle.warrantyDate && <Badge className={warrantyUrgencyClass}>{daysUntilWarranty <= 30 ? "Expiring soon" : "Active"}</Badge>}
+                        {vehicle.warrantyEndDate && <Badge className={warrantyUrgencyClass}>{daysUntilWarranty <= 30 ? "Expiring soon" : "Active"}</Badge>}
                       </div>
                     </div>
                   </div>
