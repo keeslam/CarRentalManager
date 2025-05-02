@@ -16,6 +16,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // ==================== VEHICLE ROUTES ====================
+  // Get available vehicles
+  app.get("/api/vehicles/available", async (req, res) => {
+    const vehicles = await storage.getAvailableVehicles();
+    res.json(vehicles);
+  });
+
+  // Get vehicles with APK expiring soon
+  app.get("/api/vehicles/apk-expiring", async (req, res) => {
+    const vehicles = await storage.getVehiclesWithApkExpiringSoon();
+    res.json(vehicles);
+  });
+
+  // Get vehicles with warranty expiring soon
+  app.get("/api/vehicles/warranty-expiring", async (req, res) => {
+    const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon();
+    res.json(vehicles);
+  });
+  
   // Get all vehicles
   app.get("/api/vehicles", async (req, res) => {
     const vehicles = await storage.getAllVehicles();
@@ -67,24 +85,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: "Invalid vehicle data", error });
     }
-  });
-
-  // Get available vehicles
-  app.get("/api/vehicles/available", async (req, res) => {
-    const vehicles = await storage.getAvailableVehicles();
-    res.json(vehicles);
-  });
-
-  // Get vehicles with APK expiring soon
-  app.get("/api/vehicles/apk-expiring", async (req, res) => {
-    const vehicles = await storage.getVehiclesWithApkExpiringSoon();
-    res.json(vehicles);
-  });
-
-  // Get vehicles with warranty expiring soon
-  app.get("/api/vehicles/warranty-expiring", async (req, res) => {
-    const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon();
-    res.json(vehicles);
   });
 
   // Lookup vehicle via RDW API
@@ -156,6 +156,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== RESERVATION ROUTES ====================
+  // Get reservations for a date range
+  app.get("/api/reservations/range/:startDate/:endDate", async (req, res) => {
+    const { startDate, endDate } = req.params;
+    const reservations = await storage.getReservationsInDateRange(startDate, endDate);
+    res.json(reservations);
+  });
+
+  // Get upcoming reservations
+  app.get("/api/reservations/upcoming", async (req, res) => {
+    const reservations = await storage.getUpcomingReservations();
+    res.json(reservations);
+  });
+
+  // Get reservations by vehicle
+  app.get("/api/reservations/vehicle/:vehicleId", async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const reservations = await storage.getReservationsByVehicle(vehicleId);
+    res.json(reservations);
+  });
+
+  // Get reservations by customer
+  app.get("/api/reservations/customer/:customerId", async (req, res) => {
+    const customerId = parseInt(req.params.customerId);
+    if (isNaN(customerId)) {
+      return res.status(400).json({ message: "Invalid customer ID" });
+    }
+
+    const reservations = await storage.getReservationsByCustomer(customerId);
+    res.json(reservations);
+  });
+
+  // Check availability
+  app.get("/api/reservations/check-availability/:vehicleId/:startDate/:endDate", async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    const { startDate, endDate } = req.params;
+    
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const conflicts = await storage.checkReservationConflicts(vehicleId, startDate, endDate, null);
+    res.json(conflicts);
+  });
+
   // Get all reservations
   app.get("/api/reservations", async (req, res) => {
     const reservations = await storage.getAllReservations();
@@ -239,54 +287,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: "Invalid reservation data", error });
     }
-  });
-
-  // Get reservations for a date range
-  app.get("/api/reservations/range/:startDate/:endDate", async (req, res) => {
-    const { startDate, endDate } = req.params;
-    const reservations = await storage.getReservationsInDateRange(startDate, endDate);
-    res.json(reservations);
-  });
-
-  // Get upcoming reservations
-  app.get("/api/reservations/upcoming", async (req, res) => {
-    const reservations = await storage.getUpcomingReservations();
-    res.json(reservations);
-  });
-
-  // Get reservations by vehicle
-  app.get("/api/reservations/vehicle/:vehicleId", async (req, res) => {
-    const vehicleId = parseInt(req.params.vehicleId);
-    if (isNaN(vehicleId)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
-
-    const reservations = await storage.getReservationsByVehicle(vehicleId);
-    res.json(reservations);
-  });
-
-  // Get reservations by customer
-  app.get("/api/reservations/customer/:customerId", async (req, res) => {
-    const customerId = parseInt(req.params.customerId);
-    if (isNaN(customerId)) {
-      return res.status(400).json({ message: "Invalid customer ID" });
-    }
-
-    const reservations = await storage.getReservationsByCustomer(customerId);
-    res.json(reservations);
-  });
-
-  // Check availability
-  app.get("/api/reservations/check-availability/:vehicleId/:startDate/:endDate", async (req, res) => {
-    const vehicleId = parseInt(req.params.vehicleId);
-    const { startDate, endDate } = req.params;
-    
-    if (isNaN(vehicleId)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
-
-    const conflicts = await storage.checkReservationConflicts(vehicleId, startDate, endDate, null);
-    res.json(conflicts);
   });
 
   // Generate rental contract PDF
