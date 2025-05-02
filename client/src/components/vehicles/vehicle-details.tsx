@@ -42,7 +42,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const apkUrgencyClass = getUrgencyColorClass(daysUntilApk);
   
   // Calculate days until warranty expiration
-  const daysUntilWarranty = vehicle?.warrantyDate ? getDaysUntil(vehicle.warrantyDate) : 0;
+  const daysUntilWarranty = vehicle?.warrantyEndDate ? getDaysUntil(vehicle.warrantyEndDate) : 0;
   const warrantyUrgencyClass = getUrgencyColorClass(daysUntilWarranty);
   
   // Calculate total expenses
@@ -150,8 +150,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <p className="text-2xl font-semibold">{vehicle.warrantyDate ? formatDate(vehicle.warrantyDate) : "N/A"}</p>
-              {vehicle.warrantyDate && (
+              <p className="text-2xl font-semibold">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
+              {vehicle.warrantyEndDate && (
                 <Badge className={warrantyUrgencyClass}>
                   {daysUntilWarranty} days
                 </Badge>
@@ -178,45 +178,225 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
               <CardTitle>Vehicle Details</CardTitle>
               <CardDescription>General information about this vehicle</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Brand</h3>
-                <p className="text-base">{vehicle.brand}</p>
+            <CardContent>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Vehicle ID</h4>
+                    <p className="text-base">{vehicle.id}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">License Plate</h4>
+                    <p className="text-base">{vehicle.licensePlate}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Brand</h4>
+                    <p className="text-base">{vehicle.brand}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Model</h4>
+                    <p className="text-base">{vehicle.model}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Vehicle Type</h4>
+                    <p className="text-base">{vehicle.vehicleType || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Chassis Number</h4>
+                    <p className="text-base">{vehicle.chassisNumber || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Technical Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Type</h4>
+                    <p className="text-base">{vehicle.fuel || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">AdBlue</h4>
+                    <p className="text-base">{vehicle.adBlue ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Euro Zone</h4>
+                    <p className="text-base">{vehicle.euroZone || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Euro Zone End Date</h4>
+                    <p className="text-base">{vehicle.euroZoneEndDate ? formatDate(vehicle.euroZoneEndDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Tire Size</h4>
+                    <p className="text-base">{vehicle.tireSize || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Winter Tires</h4>
+                    <p className="text-base">{vehicle.winterTires ? "Yes" : "No"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Registration & Maintenance</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">APK Date</h4>
+                    <p className="text-base">{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Warranty End Date</h4>
+                    <p className="text-base">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To</h4>
+                    <p className="text-base">{vehicle.registeredTo || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To Date</h4>
+                    <p className="text-base">{vehicle.registeredToDate ? formatDate(vehicle.registeredToDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Company</h4>
+                    <p className="text-base">{vehicle.company || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Company Date</h4>
+                    <p className="text-base">{vehicle.companyDate ? formatDate(vehicle.companyDate) : "N/A"}</p>
+                  </div>
+                </div>
               </div>
               
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Model</h3>
-                <p className="text-base">{vehicle.model}</p>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Contract & Pricing</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contract Number</h4>
+                    <p className="text-base">{vehicle.contractNumber || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Monthly Price</h4>
+                    <p className="text-base">{vehicle.monthlyPrice ? formatCurrency(vehicle.monthlyPrice) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Daily Price</h4>
+                    <p className="text-base">{vehicle.dailyPrice ? formatCurrency(vehicle.dailyPrice) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Date In</h4>
+                    <p className="text-base">{vehicle.dateIn ? formatDate(vehicle.dateIn) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Date Out</h4>
+                    <p className="text-base">{vehicle.dateOut ? formatDate(vehicle.dateOut) : "N/A"}</p>
+                  </div>
+                </div>
               </div>
               
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">License Plate</h3>
-                <p className="text-base">{vehicle.licensePlate}</p>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Damage & Safety</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check</h4>
+                    <p className="text-base">{vehicle.damageCheck || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Date</h4>
+                    <p className="text-base">{vehicle.damageCheckDate ? formatDate(vehicle.damageCheckDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Attachment</h4>
+                    <p className="text-base">{vehicle.damageCheckAttachment || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Roadside Assistance</h4>
+                    <p className="text-base">{vehicle.roadsideAssistance ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">GPS</h4>
+                    <p className="text-base">{vehicle.gps ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">WOK Notification</h4>
+                    <p className="text-base">{vehicle.wokNotification ? "Yes" : "No"}</p>
+                  </div>
+                </div>
               </div>
               
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Vehicle Type</h3>
-                <p className="text-base">{vehicle.vehicleType || "N/A"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Chassis Number</h3>
-                <p className="text-base">{vehicle.chassisNumber || "N/A"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Fuel Type</h3>
-                <p className="text-base">{vehicle.fuel || "N/A"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Euro Zone</h3>
-                <p className="text-base">{vehicle.euroZone || "N/A"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Added On</h3>
-                <p className="text-base">{formatDate(vehicle.createdAt?.toString() || "")}</p>
+              <div className="mb-0">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Additional Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Departure Mileage</h4>
+                    <p className="text-base">{vehicle.departureMileage || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
+                    <p className="text-base">{vehicle.returnMileage || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Key</h4>
+                    <p className="text-base">{vehicle.spareKey ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Radio Code</h4>
+                    <p className="text-base">{vehicle.radioCode || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Seat Covers</h4>
+                    <p className="text-base">{vehicle.seatcovers ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Backup Beepers</h4>
+                    <p className="text-base">{vehicle.backupbeepers ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Internal Appointments</h4>
+                    <p className="text-base">{vehicle.internalAppointments || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Remarks</h4>
+                    <p className="text-base">{vehicle.remarks || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Created By</h4>
+                    <p className="text-base">{vehicle.createdBy || "N/A"}</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
