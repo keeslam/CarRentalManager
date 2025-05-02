@@ -66,9 +66,38 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       vehicleType: "",
       chassisNumber: "",
       fuel: "",
+      adBlue: false,
       euroZone: "",
+      euroZoneEndDate: "",
       apkDate: "",
-      warrantyDate: "",
+      warrantyEndDate: "",
+      registeredTo: "",
+      registeredToDate: "",
+      company: "",
+      companyDate: "",
+      gps: false,
+      monthlyPrice: "",
+      dailyPrice: "",
+      dateIn: "",
+      dateOut: "",
+      contractNumber: "",
+      damageCheck: "",
+      damageCheckDate: "",
+      damageCheckAttachment: "",
+      damageCheckAttachmentDate: "",
+      roadsideAssistance: false,
+      spareKey: false,
+      remarks: "",
+      winterTires: false,
+      tireSize: "",
+      wokNotification: false,
+      radioCode: "",
+      seatcovers: false,
+      backupbeepers: false,
+      internalAppointments: "",
+      departureMileage: "",
+      returnMileage: "",
+      createdBy: "",
     },
   });
   
@@ -202,10 +231,12 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
             </div>
             
             <Tabs defaultValue="general">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="general">General Information</TabsTrigger>
-                <TabsTrigger value="technical">Technical Details</TabsTrigger>
-                <TabsTrigger value="dates">Important Dates</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="general">General</TabsTrigger>
+                <TabsTrigger value="technical">Technical</TabsTrigger>
+                <TabsTrigger value="dates">Dates</TabsTrigger>
+                <TabsTrigger value="contract">Contract</TabsTrigger>
+                <TabsTrigger value="additional">Additional</TabsTrigger>
               </TabsList>
               
               <TabsContent value="general" className="space-y-4 mt-4">
@@ -357,7 +388,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                   
                   <FormField
                     control={form.control}
-                    name="warrantyDate"
+                    name="warrantyEndDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Warranty Expiration Date</FormLabel>
@@ -371,6 +402,472 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="euroZoneEndDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Euro Zone End Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="registeredToDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Registered To Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="companyDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dateIn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date In</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dateOut"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date Out</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="damageCheckDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Damage Check Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="damageCheckAttachmentDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Damage Check Attachment Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="contract" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="monthlyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Price (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dailyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Daily Price (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="contractNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contract Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contract number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="registeredTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Registered To</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Registered to" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="company"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="departureMileage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departure Mileage (km)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="returnMileage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Return Mileage (km)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="additional" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="adBlue"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>AdBlue</FormLabel>
+                          <FormDescription>
+                            Vehicle uses AdBlue
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="gps"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>GPS</FormLabel>
+                          <FormDescription>
+                            Vehicle has GPS tracking
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="roadsideAssistance"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Roadside Assistance</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="spareKey"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Spare Key</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="winterTires"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Winter Tires</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="wokNotification"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>WOK Notification</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="seatcovers"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Seat Covers</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="backupbeepers"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value as boolean}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Backup Beepers</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                
+                  <FormField
+                    control={form.control}
+                    name="tireSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tire Size</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Tire size" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="radioCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Radio Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Radio code" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="damageCheck"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Damage Check</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Damage check details" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="damageCheckAttachment"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Damage Check Attachment</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Attachment reference" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="internalAppointments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Internal Appointments</FormLabel>
+                          <FormControl>
+                            <textarea 
+                              className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Internal appointments and notes" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="remarks"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Remarks</FormLabel>
+                          <FormControl>
+                            <textarea 
+                              className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Additional remarks" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
