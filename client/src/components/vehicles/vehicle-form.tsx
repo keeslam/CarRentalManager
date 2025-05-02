@@ -584,6 +584,9 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                         <FormControl>
                           <Input type="number" placeholder="0" {...field} />
                         </FormControl>
+                        <FormDescription>
+                          Optional: Enter the current mileage if known
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

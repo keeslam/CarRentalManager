@@ -186,6 +186,8 @@ function generateSimulatedVehicleData(normalized: string): Partial<InsertVehicle
 /**
  * Fetches vehicle information from the RDW API based on license plate
  * Uses the new API endpoint: https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=XX9999
+ * 
+ * Now with improved error handling and fallbacks
  */
 export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Promise<Partial<InsertVehicle>> {
   try {
@@ -195,45 +197,79 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     // Define the base API URL
     const apiUrl = `https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=${normalized}`;
     
-    // Fetch data from the RDW API
-    const response = await fetch(apiUrl);
+    // Attempt to fetch with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    // Check if the response is OK
-    if (!response.ok) {
-      throw new Error(`RDW API error: ${response.status} ${response.statusText}`);
+    try {
+      // Fetch data from the RDW API
+      const response = await fetch(apiUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Check if the response is OK
+      if (!response.ok) {
+        console.warn(`RDW API error: ${response.status} ${response.statusText}`);
+        return {
+          licensePlate: formatLicensePlate(normalized),
+          brand: "",
+          model: ""
+        };
+      }
+      
+      // Parse the response as JSON
+      const data = await response.json();
+      
+      // Check if we got any results
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        // If no data was found, return minimal data
+        console.warn(`No data found for license plate ${licensePlate}`);
+        return {
+          licensePlate: formatLicensePlate(normalized),
+          brand: "",
+          model: ""
+        };
+      }
+      
+      // Extract the vehicle data from the API response
+      const rdwVehicle = data[0];
+      
+      // Map the RDW data to our vehicle structure - only taking what we can reliably get
+      const mappedVehicle: Partial<InsertVehicle> = {
+        licensePlate: formatLicensePlate(normalized),
+        brand: rdwVehicle.merk || "",
+        model: rdwVehicle.handelsbenaming || "",
+        vehicleType: rdwVehicle.voertuigsoort ? mapVehicleType(rdwVehicle.voertuigsoort) : null,
+        chassisNumber: rdwVehicle.chassis || null,
+        fuel: rdwVehicle.brandstof_omschrijving ? mapFuelType(rdwVehicle.brandstof_omschrijving) : null,
+        euroZone: rdwVehicle.emissiecode_omschrijving ? mapEuroZone(rdwVehicle.emissiecode_omschrijving) : null,
+        apkDate: formatDate(rdwVehicle.vervaldatum_apk) || null
+      };
+      
+      return mappedVehicle;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error('Fetch error:', fetchError);
+      // Return minimal vehicle data if fetch fails
+      return {
+        licensePlate: formatLicensePlate(normalized),
+        brand: "",
+        model: ""
+      };
     }
-    
-    // Parse the response as JSON
-    const data = await response.json();
-    
-    // Check if we got any results
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      // If no data was found, return simulated data for testing purposes
-      console.log(`No data found for license plate ${licensePlate}, generating simulated data`);
-      return generateSimulatedVehicleData(normalized);
-    }
-    
-    // Extract the vehicle data from the API response
-    const rdwVehicle = data[0];
-    
-    // Map the RDW data to our vehicle structure
-    const mappedVehicle: Partial<InsertVehicle> = {
-      licensePlate: formatLicensePlate(normalized),
-      brand: rdwVehicle.merk || getRandomBrand(),
-      model: rdwVehicle.handelsbenaming || getRandomModel(),
-      vehicleType: mapVehicleType(rdwVehicle.voertuigsoort),
-      chassisNumber: rdwVehicle.chassis || generateRandomChassisNumber(),
-      fuel: mapFuelType(rdwVehicle.brandstof_omschrijving),
-      euroZone: mapEuroZone(rdwVehicle.emissiecode_omschrijving),
-      apkDate: formatDate(rdwVehicle.vervaldatum_apk) || getRandomFutureDate(1, 12),
-      warrantyEndDate: getRandomFutureDate(3, 24) // Warranty is not in the RDW data, so generate a random one
-    };
-    
-    return mappedVehicle;
   } catch (error) {
-    console.error('Error fetching data from RDW API:', error);
+    console.error('Error in RDW API service:', error);
     
-    // If any error occurs, return simulated data for testing purposes
-    return generateSimulatedVehicleData(licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase());
+    // If any error occurs, return minimal required data
+    return {
+      licensePlate: formatLicensePlate(licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()),
+      brand: "",
+      model: ""
+    };
   }
 }
