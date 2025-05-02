@@ -157,6 +157,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
+  app.get("/api/reservations/range", async (req, res) => {
+    try {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Missing startDate or endDate query parameters" });
+      }
+      
+      const reservations = await storage.getReservationsInDateRange(startDate, endDate);
+      res.json(reservations);
+    } catch (error) {
+      console.error("Error getting reservations by range:", error);
+      res.status(500).json({ message: "Error getting reservations" });
+    }
+  });
+  
   app.get("/api/reservations/range/:startDate/:endDate", async (req, res) => {
     const { startDate, endDate } = req.params;
     const reservations = await storage.getReservationsInDateRange(startDate, endDate);
@@ -316,6 +333,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== EXPENSE ROUTES ====================
+  // Get expenses by vehicle
+  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const expenses = await storage.getExpensesByVehicle(vehicleId);
+    res.json(expenses);
+  });
+
+  // Get recent expenses
+  app.get("/api/expenses/recent", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const expenses = await storage.getRecentExpenses(limit);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error getting recent expenses:", error);
+      res.status(500).json({ message: "Error getting recent expenses" });
+    }
+  });
+  
   // Get all expenses
   app.get("/api/expenses", async (req, res) => {
     const expenses = await storage.getAllExpenses();
@@ -369,46 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get expenses by vehicle
-  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
-    const vehicleId = parseInt(req.params.vehicleId);
-    if (isNaN(vehicleId)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
-
-    const expenses = await storage.getExpensesByVehicle(vehicleId);
-    res.json(expenses);
-  });
-
-  // Get recent expenses
-  app.get("/api/expenses/recent", async (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
-    const expenses = await storage.getRecentExpenses(limit);
-    res.json(expenses);
-  });
-
   // ==================== DOCUMENT ROUTES ====================
-  // Get all documents
-  app.get("/api/documents", async (req, res) => {
-    const documents = await storage.getAllDocuments();
-    res.json(documents);
-  });
-
-  // Get single document
-  app.get("/api/documents/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid document ID" });
-    }
-
-    const document = await storage.getDocument(id);
-    if (!document) {
-      return res.status(404).json({ message: "Document not found" });
-    }
-
-    res.json(document);
-  });
-
   // Upload document
   app.post("/api/documents/upload", async (req, res) => {
     try {
@@ -468,6 +469,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Content-Type', document.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
     res.send("This is a placeholder for the actual file content");
+  });
+  
+  // Get all documents
+  app.get("/api/documents", async (req, res) => {
+    const documents = await storage.getAllDocuments();
+    res.json(documents);
+  });
+
+  // Get single document
+  app.get("/api/documents/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid document ID" });
+    }
+
+    const document = await storage.getDocument(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    res.json(document);
   });
 
   // Delete document
