@@ -80,9 +80,10 @@ interface InlineDocumentUploadProps {
   vehicleId: number;
   onSuccess?: () => void;
   preselectedType?: string;
+  children?: React.ReactNode;
 }
 
-export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType }: InlineDocumentUploadProps) {
+export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, children }: InlineDocumentUploadProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -179,14 +180,20 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType }: 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload mr-2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" x2="12" y1="3" y2="15" />
-          </svg>
-          Upload Document
-        </Button>
+        {children ? (
+          <div className="cursor-pointer" onClick={() => setIsOpen(true)}>
+            {children}
+          </div>
+        ) : (
+          <Button size="sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload mr-2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" x2="12" y1="3" y2="15" />
+            </svg>
+            Upload Document
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>

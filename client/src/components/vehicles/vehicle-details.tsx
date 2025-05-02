@@ -8,6 +8,7 @@ import { Link, useLocation } from "wouter";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
+import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -253,12 +254,32 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4">Registration & Maintenance</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">APK Date</h4>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">APK Date</h4>
+                      <InlineDocumentUpload 
+                        vehicleId={vehicleId}
+                        preselectedType="APK Inspection"
+                      >
+                        <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                          + Upload APK
+                        </span>
+                      </InlineDocumentUpload>
+                    </div>
                     <p className="text-base">{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Warranty End Date</h4>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Warranty End Date</h4>
+                      <InlineDocumentUpload 
+                        vehicleId={vehicleId}
+                        preselectedType="Warranty"
+                      >
+                        <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                          + Upload warranty
+                        </span>
+                      </InlineDocumentUpload>
+                    </div>
                     <p className="text-base">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
                   </div>
                   
@@ -323,12 +344,32 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Date</h4>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Date</h4>
+                      <InlineDocumentUpload 
+                        vehicleId={vehicleId}
+                        preselectedType="Damage Report"
+                      >
+                        <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                          + Add report
+                        </span>
+                      </InlineDocumentUpload>
+                    </div>
                     <p className="text-base">{vehicle.damageCheckDate ? formatDate(vehicle.damageCheckDate) : "N/A"}</p>
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Attachment</h4>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Attachment</h4>
+                      <InlineDocumentUpload 
+                        vehicleId={vehicleId}
+                        preselectedType="Damage Photos"
+                      >
+                        <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
+                          + Add photos
+                        </span>
+                      </InlineDocumentUpload>
+                    </div>
                     <p className="text-base">{vehicle.damageCheckAttachment || "N/A"}</p>
                   </div>
                   
@@ -500,19 +541,88 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <CardTitle>Vehicle Documents</CardTitle>
                   <CardDescription>All documents related to this vehicle</CardDescription>
                 </div>
-                <Link href={`/documents/upload?vehicleId=${vehicleId}`}>
-                  <Button size="sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-upload mr-2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" x2="12" y1="3" y2="15" />
-                    </svg>
-                    Upload Document
-                  </Button>
-                </Link>
+                <InlineDocumentUpload 
+                  vehicleId={vehicleId} 
+                  onSuccess={() => {
+                    // Refresh the documents list after upload
+                  }}
+                />
               </div>
             </CardHeader>
             <CardContent>
+              {/* Document Categories */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">Quick Upload Categories</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
+                    <InlineDocumentUpload 
+                      vehicleId={vehicleId} 
+                      preselectedType="APK Inspection"
+                    >
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-blue-500">
+                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <path d="M12 18v-6" />
+                          <path d="m9 15 3 3 3-3" />
+                        </svg>
+                        <span className="block text-sm font-medium">APK Inspection</span>
+                      </div>
+                    </InlineDocumentUpload>
+                  </div>
+                  
+                  <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
+                    <InlineDocumentUpload 
+                      vehicleId={vehicleId}
+                      preselectedType="Damage Report"
+                    >
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-red-500">
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span className="block text-sm font-medium">Damage Report</span>
+                      </div>
+                    </InlineDocumentUpload>
+                  </div>
+                  
+                  <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
+                    <InlineDocumentUpload 
+                      vehicleId={vehicleId}
+                      preselectedType="Vehicle Picture"
+                    >
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-green-500">
+                          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                          <circle cx="9" cy="9" r="2" />
+                          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                        </svg>
+                        <span className="block text-sm font-medium">Vehicle Picture</span>
+                      </div>
+                    </InlineDocumentUpload>
+                  </div>
+                  
+                  <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
+                    <InlineDocumentUpload 
+                      vehicleId={vehicleId}
+                      preselectedType="Maintenance Record"
+                    >
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-purple-500">
+                          <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                          <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" />
+                          <line x1="9" x2="15" y1="9" y2="9" />
+                          <line x1="9" x2="15" y1="13" y2="13" />
+                          <line x1="9" x2="15" y1="17" y2="17" />
+                        </svg>
+                        <span className="block text-sm font-medium">Maintenance</span>
+                      </div>
+                    </InlineDocumentUpload>
+                  </div>
+                </div>
+              </div>
+            
+              {/* Document List */}
               {isLoadingDocuments ? (
                 <div className="flex justify-center p-6">
                   <svg className="animate-spin h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
