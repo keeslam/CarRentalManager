@@ -442,12 +442,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   const multerStorage = multer.diskStorage({
     destination: createDocumentUploadStorage,
-    filename: (req, file, callback) => {
-      // Generate a unique filename using timestamp
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const extension = path.extname(file.originalname);
-      const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
-      callback(null, filename);
+    filename: async (req, file, callback) => {
+      try {
+        // Get vehicle info to retrieve license plate
+        const vehicleId = req.body.vehicleId;
+        const vehicle = await storage.getVehicle(parseInt(vehicleId));
+        
+        if (!vehicle) {
+          return callback(new Error("Vehicle not found"), "" as any);
+        }
+        
+        const licensePlate = vehicle.licensePlate;
+        const documentType = req.body.documentType || "Other";
+        
+        // Format the current date as YYYY-MM-DD
+        const now = new Date();
+        const dateString = now.toISOString().split('T')[0];
+        
+        // Create filename in the format: licensePlate-documentType-date-uniqueSuffix.extension
+        const extension = path.extname(file.originalname);
+        const uniqueSuffix = Math.round(Math.random() * 1E6);
+        const filename = `${licensePlate} - ${documentType} - ${dateString} - ${uniqueSuffix}${extension}`;
+        
+        callback(null, filename);
+      } catch (error) {
+        // If there's an error, use a fallback naming strategy
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname);
+        const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
+        callback(null, filename);
+      }
     }
   });
   
@@ -480,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const documentData = {
         vehicleId: parseInt(vehicleId),
         documentType,
-        fileName: file.originalname,
+        fileName: file.filename, // Use the renamed filename instead of originalname
         filePath: file.path,
         fileSize: file.size,
         contentType: file.mimetype,
