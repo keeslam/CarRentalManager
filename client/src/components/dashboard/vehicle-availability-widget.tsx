@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { displayLicensePlate } from "@/lib/utils";
 import { Link } from "wouter";
 import { Vehicle } from "@shared/schema";
 
@@ -86,7 +87,7 @@ export function VehicleAvailabilityWidget() {
                   </svg>
                 </div>
                 <div className="ml-3 flex-grow">
-                  <div className="text-sm font-medium text-gray-900">{vehicle.licensePlate}</div>
+                  <div className="text-sm font-medium text-gray-900">{displayLicensePlate(vehicle.licensePlate)}</div>
                   <div className="text-xs text-gray-500">{vehicle.brand} {vehicle.model}</div>
                 </div>
                 <div>

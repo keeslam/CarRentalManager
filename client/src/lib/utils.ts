@@ -45,3 +45,11 @@ export function normalizeLicensePlate(licensePlate: string): string {
   if (!licensePlate) return '';
   return licensePlate.replace(/[-\s]/g, '').toUpperCase();
 }
+
+/**
+ * Displays a license plate without dashes in uppercase
+ */
+export function displayLicensePlate(licensePlate: string): string {
+  if (!licensePlate) return '';
+  return licensePlate.replace(/[-\s]/g, '').toUpperCase();
+}
