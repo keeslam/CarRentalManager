@@ -438,20 +438,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create vehicle
   app.post("/api/vehicles", requireAuth, async (req: Request, res: Response) => {
     try {
-      const vehicleData = insertVehicleSchema.parse(req.body);
+      console.log("Received vehicle data:", JSON.stringify(req.body));
       
-      // Add user tracking information
-      const user = req.user;
-      const dataWithTracking = {
-        ...vehicleData,
-        createdBy: user ? user.username : null,
-        updatedBy: user ? user.username : null
-      };
+      // Check if required fields are present
+      if (!req.body.licensePlate || !req.body.brand || !req.body.model) {
+        console.log("Missing required fields in vehicle data");
+        return res.status(400).json({ 
+          message: "Missing required fields", 
+          details: { 
+            licensePlate: !req.body.licensePlate ? "License plate is required" : null,
+            brand: !req.body.brand ? "Brand is required" : null,
+            model: !req.body.model ? "Model is required" : null
+          } 
+        });
+      }
       
-      const vehicle = await storage.createVehicle(dataWithTracking);
-      res.status(201).json(vehicle);
+      // Convert empty string mileage values to null
+      if (req.body.departureMileage === '') {
+        req.body.departureMileage = null;
+      }
+      if (req.body.returnMileage === '') {
+        req.body.returnMileage = null;
+      }
+      
+      try {
+        const vehicleData = insertVehicleSchema.parse(req.body);
+        
+        // Add user tracking information
+        const user = req.user;
+        const dataWithTracking = {
+          ...vehicleData,
+          createdBy: user ? user.username : null,
+          updatedBy: user ? user.username : null
+        };
+        
+        const vehicle = await storage.createVehicle(dataWithTracking);
+        res.status(201).json(vehicle);
+      } catch (parseError) {
+        console.error("Validation error:", parseError);
+        res.status(400).json({ 
+          message: "Invalid vehicle data format", 
+          error: parseError 
+        });
+      }
     } catch (error) {
-      res.status(400).json({ message: "Invalid vehicle data", error });
+      console.error("Error creating vehicle:", error);
+      res.status(400).json({ message: "Failed to create vehicle", error });
     }
   });
 
