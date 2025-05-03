@@ -176,7 +176,14 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    createVehicleMutation.mutate(data);
+    // Convert boolean toggle values to text for database compatibility
+    const formattedData = {
+      ...data,
+      // Convert boolean values to "true"/"false" strings for DB compatibility
+      company: data.company ? "true" : "false",
+      registeredTo: data.registeredTo ? "true" : "false"
+    } as any; // Use type assertion to bypass TypeScript check
+    createVehicleMutation.mutate(formattedData);
   };
   
   const handleLookup = () => {
@@ -561,7 +568,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                         </div>
                         <FormControl>
                           <Switch
-                            checked={Boolean(field.value)}
+                            checked={field.value === true || field.value === "true"}
                             onCheckedChange={(checked) => {
                               field.onChange(checked);
                               if (checked) {
@@ -595,7 +602,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                         </div>
                         <FormControl>
                           <Switch
-                            checked={Boolean(field.value)}
+                            checked={field.value === true || field.value === "true"}
                             onCheckedChange={(checked) => {
                               field.onChange(checked);
                               if (checked) {
