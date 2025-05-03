@@ -9,6 +9,11 @@ import { z } from "zod";
 import { insertVehicleSchema, insertCustomerSchema, insertReservationSchema, insertExpenseSchema, insertDocumentSchema } from "@shared/schema";
 import multer from "multer";
 
+// Helper function to convert absolute paths to relative paths
+function getRelativePath(absolutePath: string): string {
+  return absolutePath.replace(/^\/home\/runner\/workspace\//, '');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(process.cwd(), "uploads");
