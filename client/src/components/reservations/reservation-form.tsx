@@ -279,8 +279,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   }, [customers]);
   
   // Get selected vehicle and customer
-  const selectedVehicle = vehicles?.find(v => v.id.toString() === vehicleIdWatch);
-  const selectedCustomer = customers?.find(c => c.id.toString() === form.watch("customerId"));
+  const selectedVehicle = vehicles?.find(v => v.id.toString() === vehicleIdWatch?.toString());
+  const selectedCustomer = customers?.find(c => c.id.toString() === form.watch("customerId")?.toString());
 
   // Create vehicle mutation
   const createVehicleMutation = useMutation({
@@ -765,7 +765,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={vehicleOptions}
-                          value={field.value}
+                          value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
                             console.log("Vehicle selected:", value); 
                             field.onChange(value);
@@ -979,7 +979,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={customerOptions}
-                          value={field.value}
+                          value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
                             console.log("Customer selected:", value);
                             field.onChange(value);

@@ -96,7 +96,7 @@ export function SearchableCombobox({
   const selectedOption = options.find((option) => option.value === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={true}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant={variant === "default" ? "outline" : "secondary"}
@@ -108,6 +108,7 @@ export function SearchableCombobox({
             className
           )}
           disabled={disabled}
+          onClick={() => setOpen(!open)}
         >
           {value && selectedOption ? (
             <div className="flex items-center gap-2 text-left">
