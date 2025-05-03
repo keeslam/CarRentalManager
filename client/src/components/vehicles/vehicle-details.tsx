@@ -784,7 +784,38 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                                     Print
                                   </a>
                                 </div>
-                                <button className="text-red-600 hover:text-red-800 text-sm">
+                                <button 
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                  onClick={async () => {
+                                    if (window.confirm(`Are you sure you want to delete the document "${document.fileName}"?`)) {
+                                      try {
+                                        const response = await fetch(`/api/documents/${document.id}`, {
+                                          method: 'DELETE',
+                                        });
+                                        
+                                        if (response.ok) {
+                                          // Refresh document list after successful deletion
+                                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                                          toast({
+                                            title: "Document deleted",
+                                            description: "The document has been deleted successfully.",
+                                          });
+                                        } else {
+                                          const errorData = await response.json();
+                                          throw new Error(errorData.message || "Failed to delete document");
+                                        }
+                                      } catch (error) {
+                                        console.error("Error deleting document:", error);
+                                        toast({
+                                          title: "Error",
+                                          description: error instanceof Error ? error.message : "Failed to delete document",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
                                   Delete
                                 </button>
                               </div>
