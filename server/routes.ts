@@ -854,8 +854,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Try to delete the file if it exists
-      if (document.filePath && fs.existsSync(document.filePath)) {
-        fs.unlinkSync(document.filePath);
+      if (document.filePath) {
+        // Convert relative path to absolute path
+        const absolutePath = path.join(process.cwd(), document.filePath);
+        console.log(`Attempting to delete file at: ${absolutePath}`);
+        
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+          console.log(`File deleted successfully: ${absolutePath}`);
+        } else {
+          console.log(`File not found at: ${absolutePath}`);
+        }
       }
 
       // Delete the document record

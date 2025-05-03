@@ -10,6 +10,7 @@ import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-uti
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
+import { useToast } from "@/hooks/use-toast";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -19,6 +20,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({

@@ -133,6 +133,8 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  receiptPath: z.string().nullable().optional(),
 });
 
 // Documents table
