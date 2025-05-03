@@ -804,7 +804,7 @@ export function QuickActions() {
                                                     />
                                                     <span className="flex flex-col">
                                                       <span className="flex items-center gap-2">
-                                                        {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                                        {displayLicensePlate(vehicle.licensePlate)} - {vehicle.model}
                                                         {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
                                                           <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
                                                             Opnaam
