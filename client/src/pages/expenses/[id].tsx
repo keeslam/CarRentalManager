@@ -24,14 +24,20 @@ import { Expense, Vehicle } from "@shared/schema";
 
 export default function ExpenseDetailsPage() {
   // Get expense ID from route parameter
-  const [_, params] = useLocation();
+  const [location, params] = useLocation();
+  console.log("Current location:", location);
+  console.log("URL params:", params);
+  
   const expenseId = params.id ? parseInt(params.id) : null;
+  console.log("Parsed expense ID:", expenseId);
   
   // Fetch expense details
   const { data: expense, isLoading, error: expenseError } = useQuery<Expense>({
     queryKey: [`/api/expenses/${expenseId}`],
     enabled: !!expenseId,
     retry: 1,
+    onSuccess: (data) => console.log("Successfully loaded expense:", data),
+    onError: (err) => console.error("Error loading expense:", err)
   });
   
   // Fetch associated vehicle details if expense is loaded

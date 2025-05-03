@@ -235,7 +235,7 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
         );
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
       
@@ -245,10 +245,17 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
         description: `The expense has been ${editMode ? "updated" : "added"} to the system.`,
       });
       
-      // Navigate back to expenses list or vehicle details
-      if (vehicleId) {
+      console.log("Created expense with response:", result);
+      
+      // Navigate to the newly created expense or back to vehicle details
+      if (result && result.id) {
+        // Go to the expense details page for the newly created expense
+        navigate(`/expenses/${result.id}`);
+      } else if (vehicleId) {
+        // Fallback to vehicle details if we somehow don't have the result
         navigate(`/vehicles/${vehicleId}`);
       } else {
+        // Fallback to expenses list
         navigate("/expenses");
       }
     },
