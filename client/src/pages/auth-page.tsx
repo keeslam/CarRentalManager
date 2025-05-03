@@ -157,7 +157,7 @@ export default function AuthPage() {
                           size="sm"
                           className="flex-1"
                           onClick={() => {
-                            loginMutation.mutate({ username: "admin", password: "password" });
+                            loginMutation.mutate({ username: "admin", password: "admin123" });
                           }}
                         >
                           Login as Admin
