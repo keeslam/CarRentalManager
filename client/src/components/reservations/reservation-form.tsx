@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { insertReservationSchema, insertVehicleSchema } from "@shared/schema";
+import { insertReservationSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { 
@@ -40,13 +40,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SearchableCombobox, ComboboxOption } from "@/components/ui/searchable-combobox";
-import { formatDate } from "@/lib/format-utils";
-import { doDateRangesOverlap } from "@/lib/date-utils";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
+import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
-import { Customer, Vehicle, Reservation, InsertVehicle, InsertCustomer } from "@shared/schema";
+import { Customer, Vehicle, Reservation } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
-import { formatLicensePlate } from "@/lib/format-utils";
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
@@ -65,35 +63,39 @@ const formSchema = insertReservationSchema.extend({
   damageCheckFile: z.instanceof(File).optional(),
 });
 
-// Vehicle form schema
-const vehicleFormSchema = insertVehicleSchema.extend({
-  licensePlate: z.string().min(1, "License plate is required"),
-  brand: z.string().min(1, "Brand is required"),
-  model: z.string().min(1, "Model is required"),
-});
-
-// Customer form schema
-// We use the CustomerForm component from @/components/customers/customer-form.tsx
-
 interface ReservationFormProps {
   editMode?: boolean;
   initialData?: any;
+  initialVehicleId?: string;
+  initialCustomerId?: string;
+  initialStartDate?: string;
 }
 
-export function ReservationForm({ editMode = false, initialData }: ReservationFormProps) {
+export function ReservationForm({ 
+  editMode = false, 
+  initialData,
+  initialVehicleId,
+  initialCustomerId,
+  initialStartDate
+}: ReservationFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
-  const [searchParams] = useLocation();
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [customerId, setCustomerId] = useState<string | null>(null);
-  const [selectedStartDate, setSelectedStartDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  
+  // Extract URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const preSelectedVehicleId = urlParams.get("vehicleId");
+  const preSelectedCustomerId = urlParams.get("customerId");
+  const preSelectedStartDate = urlParams.get("startDate");
+  
+  // Form states
+  const [selectedStartDate, setSelectedStartDate] = useState<string>(
+    initialStartDate || preSelectedStartDate || format(new Date(), "yyyy-MM-dd")
+  );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [isLookingUp, setIsLookingUp] = useState(false);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -130,26 +132,6 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     }
   };
   
-  // Get preselected IDs and dates from URL if available
-  useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const vehicleIdParam = urlParams.get("vehicleId");
-    const customerIdParam = urlParams.get("customerId");
-    const startDateParam = urlParams.get("startDate");
-    
-    if (vehicleIdParam) {
-      setVehicleId(vehicleIdParam);
-    }
-    
-    if (customerIdParam) {
-      setCustomerId(customerIdParam);
-    }
-    
-    if (startDateParam) {
-      setSelectedStartDate(startDateParam);
-    }
-  }, [searchParams]);
-  
   // Fetch customers for select field
   const { data: customers, isLoading: isLoadingCustomers } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
@@ -158,6 +140,19 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   // Fetch vehicles for select field
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+  
+  // Fetch selected vehicle details if vehicleId is provided
+  const actualVehicleId = initialVehicleId || preSelectedVehicleId;
+  const { data: preSelectedVehicle } = useQuery<Vehicle>({
+    queryKey: [`/api/vehicles/${actualVehicleId}`],
+    enabled: !!actualVehicleId,
+  });
+  
+  // Fetch selected customer details if customerId is provided
+  const { data: preSelectedCustomer } = useQuery<Customer>({
+    queryKey: [`/api/customers/${preSelectedCustomerId}`],
+    enabled: !!preSelectedCustomerId,
   });
   
   // Get today's date in YYYY-MM-DD format
@@ -169,8 +164,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId || "",
-      customerId: customerId || "", 
+      vehicleId: initialVehicleId || preSelectedVehicleId || "",
+      customerId: initialCustomerId || preSelectedCustomerId || "", 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       status: "pending",
@@ -178,175 +173,129 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       notes: ""
     },
   });
-
-  // Setup vehicle form with expanded fields
-  const vehicleForm = useForm<z.infer<typeof vehicleFormSchema>>({
-    resolver: zodResolver(vehicleFormSchema),
-    defaultValues: {
-      licensePlate: "",
-      brand: "",
-      model: "",
-      vehicleType: "sedan",
-      chassisNumber: "",
-      fuel: "gasoline"
-    }
-  });
-
-  // We use the CustomerForm component now
   
-  // If vehicleId or customerId changes from URL, update the form
-  useEffect(() => {
-    if (vehicleId && !editMode) {
-      form.setValue("vehicleId", vehicleId);
-    }
-    
-    if (customerId && !editMode) {
-      form.setValue("customerId", customerId);
-    }
-    
-    if (selectedStartDate) {
-      form.setValue("startDate", selectedStartDate);
-      form.setValue("endDate", format(addDays(parseISO(selectedStartDate), 3), "yyyy-MM-dd"));
-    }
-  }, [vehicleId, customerId, selectedStartDate, form, editMode]);
-  
-  // Check for overlapping reservations when vehicle or dates change
-  const vehicleIdWatch = form.watch("vehicleId");
+  // Watch for changes to calculate duration
   const startDateWatch = form.watch("startDate");
   const endDateWatch = form.watch("endDate");
+  const vehicleIdWatch = form.watch("vehicleId");
+  const customerIdWatch = form.watch("customerId");
   
-  // Update rental duration (days) on date change
+  // Find the selected vehicle and customer
+  const selectedVehicle = useMemo(() => {
+    if (!vehicles || !vehicleIdWatch) return null;
+    return vehicles.find(v => v.id === Number(vehicleIdWatch)) || null;
+  }, [vehicles, vehicleIdWatch]);
+  
+  const selectedCustomer = useMemo(() => {
+    if (!customers || !customerIdWatch) return null;
+    return customers.find(c => c.id === Number(customerIdWatch)) || null;
+  }, [customers, customerIdWatch]);
+  
+  // Calculate rental duration
   const rentalDuration = useMemo(() => {
-    if (!startDateWatch || !endDateWatch) return 0;
-    try {
-      const start = parseISO(startDateWatch);
-      const end = parseISO(endDateWatch);
-      return differenceInDays(end, start) + 1; // Include both start and end date
-    } catch {
-      return 0;
-    }
+    if (!startDateWatch || !endDateWatch) return 1;
+    const start = parseISO(startDateWatch);
+    const end = parseISO(endDateWatch);
+    const days = differenceInDays(end, start) + 1; // Include the start day
+    return days > 0 ? days : 1;
   }, [startDateWatch, endDateWatch]);
   
-  const { data: overlappingReservations } = useQuery<Reservation[]>({
-    queryKey: ["/api/reservations/check-availability", vehicleIdWatch, startDateWatch, endDateWatch],
-    enabled: !!vehicleIdWatch && !!startDateWatch && !!endDateWatch,
-  });
+  // Check for reservation conflicts
+  const [hasOverlap, setHasOverlap] = useState(false);
   
-  const hasOverlap = overlappingReservations?.some(reservation => 
-    reservation.id.toString() !== (initialData?.id?.toString() || "0") &&
-    doDateRangesOverlap(startDateWatch, endDateWatch, reservation.startDate, reservation.endDate)
-  );
+  useEffect(() => {
+    if (vehicleIdWatch && startDateWatch && endDateWatch && !editMode) {
+      const checkConflicts = async () => {
+        try {
+          const response = await fetch(
+            `/api/reservations/check-conflicts?vehicleId=${vehicleIdWatch}&startDate=${startDateWatch}&endDate=${endDateWatch}${initialData?.id ? `&excludeReservationId=${initialData.id}` : ""}`
+          );
+          if (response.ok) {
+            const conflicts = await response.json();
+            setHasOverlap(conflicts.length > 0);
+          }
+        } catch (error) {
+          console.error("Failed to check reservation conflicts:", error);
+        }
+      };
+      
+      checkConflicts();
+    }
+  }, [vehicleIdWatch, startDateWatch, endDateWatch, editMode, initialData?.id]);
   
-  // Convert vehicles to combobox options with improved search capabilities
-  const vehicleOptions: ComboboxOption[] = useMemo(() => {
-    if (!vehicles) return [];
-    
-    return vehicles.map(vehicle => ({
-      value: vehicle.id.toString(),
-      label: `${formatLicensePlate(vehicle.licensePlate)} - ${vehicle.brand} ${vehicle.model}`,
-      // Add search-friendly description with more details
-      description: `${vehicle.vehicleType || ''} | ${vehicle.fuel || ''} | ${vehicle.chassisNumber || ''}`,
-      group: vehicle.vehicleType || "Other",
-      tags: [vehicle.fuel || ""]
-    }));
-  }, [vehicles]);
-  
-  // Convert customers to combobox options with improved search capabilities
-  const customerOptions: ComboboxOption[] = useMemo(() => {
+  // Format customer options for searchable combobox
+  const customerOptions = useMemo(() => {
     if (!customers) return [];
-    
     return customers.map(customer => ({
       value: customer.id.toString(),
       label: customer.name,
-      // Add contact info for easier searching
-      description: [
-        customer.phone || '', 
-        customer.email || '', 
-        customer.city || ''
-      ].filter(Boolean).join(' | '),
-      group: customer.city || "Other",
-      tags: [customer.phone ? "☎" : ""]
+      description: customer.email || customer.phone || undefined,
     }));
   }, [customers]);
   
-  // Get selected vehicle and customer
-  const selectedVehicle = vehicles?.find(v => v.id.toString() === vehicleIdWatch?.toString());
-  const selectedCustomer = customers?.find(c => c.id.toString() === form.watch("customerId")?.toString());
-
-  // RDW Lookup mutation
-  const lookupVehicleMutation = useMutation({
-    mutationFn: async (licensePlate: string) => {
-      return await fetch(`/api/rdw/vehicle/${licensePlate}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+  // Format vehicle options for searchable combobox
+  const vehicleOptions = useMemo(() => {
+    if (!vehicles) return [];
+    
+    // Group by vehicle type
+    const vehiclesByType = vehicles.reduce((acc, vehicle) => {
+      const type = vehicle.vehicleType || "Other";
+      if (!acc[type]) {
+        acc[type] = [];
+      }
+      acc[type].push({
+        value: vehicle.id.toString(),
+        label: `${vehicle.brand} ${vehicle.model}`,
+        description: formatLicensePlate(vehicle.licensePlate),
       });
-    },
-    onSuccess: async (response) => {
-      const vehicleData = await response.json();
-      
-      // Fill form with retrieved data
-      Object.keys(vehicleData).forEach((key) => {
-        if (vehicleForm.getValues(key as any) !== undefined) {
-          vehicleForm.setValue(key as any, vehicleData[key]);
-        }
-      });
-      
-      toast({
-        title: "Information retrieved",
-        description: "Vehicle information has been retrieved successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lookup failed",
-        description: `Could not retrieve vehicle information: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      setIsLookingUp(false);
-    }
-  });
+      return acc;
+    }, {} as Record<string, Array<{value: string, label: string, description?: string}>>);
+    
+    // Convert to array of groups
+    return Object.entries(vehiclesByType).map(([type, options]) => ({
+      label: type,
+      options,
+    }));
+  }, [vehicles]);
+  
+  // Handle customer creation form
+  const handleCustomerCreated = (data: Customer) => {
+    // Set the new customer in the form
+    form.setValue("customerId", data.id.toString());
+    
+    // Close the dialog
+    setCustomerDialogOpen(false);
+    
+    // Show success toast
+    toast({
+      title: "Customer Created",
+      description: `${data.name} has been added.`,
+    });
+    
+    // Refresh customers list
+    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+  };
   
   // Create vehicle mutation
   const createVehicleMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof vehicleFormSchema>) => {
-      // Send request and parse response
-      const response = await fetch("/api/vehicles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create vehicle");
-      }
-      
-      return await response.json();
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/vehicles", "POST", data);
     },
     onSuccess: async (data) => {
-      // Invalidate vehicles query to refresh the list
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      
-      // Set the new vehicle as selected
+      // Set vehicle ID in the form
       form.setValue("vehicleId", data.id.toString());
       
-      // Close the dialog
+      // Close dialog
       setVehicleDialogOpen(false);
       
       // Show success message
       toast({
         title: "Vehicle created",
-        description: `Vehicle "${formatLicensePlate(data.licensePlate)}" has been created.`,
+        description: `${data.brand} ${data.model} has been created.`,
       });
-
-      // Reset form
-      vehicleForm.reset();
+      
+      // Invalidate vehicles query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
     },
     onError: (error) => {
       toast({
@@ -356,10 +305,13 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       });
     },
   });
-
-  // We use the CustomerForm component for customer creation now
   
-  // File upload handling for damage check
+  // Handle vehicle form submission 
+  const onVehicleSubmit = (data: any) => {
+    createVehicleMutation.mutate(data);
+  };
+  
+  // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -367,19 +319,19 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       form.setValue("damageCheckFile", file);
     }
   };
-
+  
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(true);
   };
-
+  
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
   };
-
+  
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -391,13 +343,10 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       form.setValue("damageCheckFile", file);
     }
   };
-
+  
   const removeDamageFile = () => {
     setDamageFile(null);
     form.setValue("damageCheckFile", undefined);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
   
   // Create or update reservation mutation
@@ -444,20 +393,15 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       
       // Show success message
       toast({
         title: `Reservation ${editMode ? "updated" : "created"} successfully`,
-        description: `The reservation has been ${editMode ? "updated" : "created"}.`,
+        description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
       });
       
-      // Navigate to reservation view or back to list
-      if (editMode) {
-        navigate("/reservations");
-      } else {
-        navigate(`/reservations/${data.id}`);
-      }
+      // Navigate back to reservations list
+      navigate("/reservations");
     },
     onError: (error) => {
       toast({
@@ -467,45 +411,6 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       });
     },
   });
-  
-  // Handle license plate lookup 
-  const handleLookup = () => {
-    const licensePlate = vehicleForm.getValues("licensePlate");
-    if (!licensePlate) {
-      toast({
-        title: "License plate required",
-        description: "Please enter a license plate to look up vehicle information.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsLookingUp(true);
-    lookupVehicleMutation.mutate(licensePlate);
-  };
-
-  // Handle vehicle form submission
-  const onVehicleSubmit = (data: z.infer<typeof vehicleFormSchema>) => {
-    createVehicleMutation.mutate(data);
-  };
-
-  // Handle customer form success
-  const handleCustomerCreated = (data: any) => {
-    // Set the new customer as selected
-    form.setValue("customerId", data.id.toString());
-    
-    // Save to recent customers
-    saveToRecent('recentCustomers', data.id.toString());
-    
-    // Close the dialog
-    setCustomerDialogOpen(false);
-    
-    // Show success message
-    toast({
-      title: "Customer created",
-      description: `Customer "${data.name}" has been created.`,
-    });
-  };
   
   // Handle reservation form submission
   const onSubmit = (data: z.infer<typeof formSchema>) => {
@@ -538,10 +443,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
             {/* Vehicle and Customer Selection Section */}
             <div className="space-y-6">
               <div className="text-lg font-medium">
-                {vehicleId ? "1. Selected Vehicle & Customer" : "1. Select Vehicle and Customer"}
+                {actualVehicleId ? "1. Selected Vehicle & Customer" : "1. Select Vehicle and Customer"}
               </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Vehicle Selection */}
+                {/* Vehicle Selection - Show read-only or selection based on preSelectedVehicleId */}
                 <FormField
                   control={form.control}
                   name="vehicleId"
@@ -549,15 +455,12 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                     <FormItem className="flex flex-col">
                       <FormLabel>Vehicle</FormLabel>
                       
-                      {vehicleId ? (
-                        // If vehicle is pre-selected from URL, show readonly display
-                        <div className="mb-2">
-                          <ReadonlyVehicleDisplay vehicleId={vehicleId} />
-                          <input type="hidden" {...form.register("vehicleId")} />
-                        </div>
+                      {actualVehicleId ? (
+                        // If vehicle is pre-selected, show as read-only
+                        <ReadonlyVehicleDisplay vehicleId={actualVehicleId} />
                       ) : (
-                        // Otherwise show vehicle selection UI
-                        <div>
+                        // Otherwise, show selection UI
+                        <>
                           <div className="flex justify-end mb-2">
                             <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
                               <DialogTrigger asChild>
@@ -574,218 +477,13 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4">
+                                  {/* Simplified vehicle form could go here */}
                                   <p className="text-center text-muted-foreground">
-                                    Please use the Vehicles section to add a new vehicle.
+                                    Vehicle creation form would go here. For this MVP version,
+                                    please use the Vehicles section to create a new vehicle first.
                                   </p>
                                 </div>
                                 <DialogFooter>
-                                  <Button 
-                                    type="button"
-                                    variant="outline" 
-                                    onClick={() => setVehicleDialogOpen(false)}
-                                  >
-                                    Close
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                                  <Tabs defaultValue="general">
-                                    <TabsList className="grid grid-cols-3 mb-4">
-                                      <TabsTrigger value="general">General</TabsTrigger>
-                                      <TabsTrigger value="technical">Technical</TabsTrigger>
-                                      <TabsTrigger value="dates">Important Dates</TabsTrigger>
-                                    </TabsList>
-                                  
-                                    <TabsContent value="general" className="space-y-4">
-                                    {/* General Information */}
-                                    <FormField
-                                      control={vehicleForm.control}
-                                      name="licensePlate"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>License Plate *</FormLabel>
-                                          <div className="flex gap-2">
-                                            <FormControl>
-                                              <Input placeholder="e.g. AB-123-C" {...field} />
-                                            </FormControl>
-                                            <Button 
-                                              type="button" 
-                                              variant="outline" 
-                                              onClick={handleLookup}
-                                              disabled={isLookingUp || lookupVehicleMutation.isPending}
-                                            >
-                                              {isLookingUp ? (
-                                                <span className="flex items-center">
-                                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                  </svg>
-                                                  Looking up...
-                                                </span>
-                                              ) : (
-                                                "Lookup"
-                                              )}
-                                            </Button>
-                                          </div>
-                                          <FormDescription>
-                                            Enter the license plate and click "Lookup" to auto-fill vehicle details from RDW.
-                                          </FormDescription>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <FormField
-                                        control={vehicleForm.control}
-                                        name="brand"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Brand *</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="e.g. Toyota" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={vehicleForm.control}
-                                        name="model"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Model *</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="e.g. Corolla" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <FormField
-                                        control={vehicleForm.control}
-                                        name="vehicleType"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Vehicle Type</FormLabel>
-                                            <Select 
-                                              onValueChange={field.onChange} 
-                                              defaultValue={field.value || "sedan"}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Select type" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                <SelectItem value="sedan">Sedan</SelectItem>
-                                                <SelectItem value="suv">SUV</SelectItem>
-                                                <SelectItem value="wagon">Wagon</SelectItem>
-                                                <SelectItem value="van">Van</SelectItem>
-                                                <SelectItem value="truck">Truck</SelectItem>
-                                                <SelectItem value="convertible">Convertible</SelectItem>
-                                                <SelectItem value="other">Other</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      {/* Removed constructionYear field that was causing errors */}
-                                    </div>
-                                  </TabsContent>
-                                
-                                  <TabsContent value="technical" className="space-y-4">
-                                    {/* Technical Information */}
-                                    <FormField
-                                      control={vehicleForm.control}
-                                      name="chassisNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Chassis/VIN Number</FormLabel>
-                                          <FormControl>
-                                            <Input placeholder="e.g. WBA12345678901234" {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <FormField
-                                        control={vehicleForm.control}
-                                        name="fuel"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Fuel Type</FormLabel>
-                                            <Select 
-                                              onValueChange={field.onChange} 
-                                              defaultValue={field.value || "gasoline"}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Select fuel" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                <SelectItem value="gasoline">Gasoline</SelectItem>
-                                                <SelectItem value="diesel">Diesel</SelectItem>
-                                                <SelectItem value="electric">Electric</SelectItem>
-                                                <SelectItem value="hybrid">Hybrid</SelectItem>
-                                                <SelectItem value="plugin_hybrid">Plug-in Hybrid</SelectItem>
-                                                <SelectItem value="other">Other</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={vehicleForm.control}
-                                        name="euroZone"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Euro Zone</FormLabel>
-                                            <Select 
-                                              onValueChange={field.onChange} 
-                                              defaultValue={field.value || ""}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Select" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                <SelectItem value="euro0">Euro 0</SelectItem>
-                                                <SelectItem value="euro1">Euro 1</SelectItem>
-                                                <SelectItem value="euro2">Euro 2</SelectItem>
-                                                <SelectItem value="euro3">Euro 3</SelectItem>
-                                                <SelectItem value="euro4">Euro 4</SelectItem>
-                                                <SelectItem value="euro5">Euro 5</SelectItem>
-                                                <SelectItem value="euro6">Euro 6</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                      {/* Removed mileage and registrationNumber fields that were causing errors */}
-                                    </div>
-                                  </TabsContent>
-                                
-                                  <TabsContent value="dates" className="space-y-4">
-                                    {/* Removed APK date field that was causing errors */}
-                                    <div className="text-muted-foreground text-sm p-4 bg-secondary/30 rounded-md">
-                                      You can set date fields after creating the vehicle.
-                                    </div>
-                                  </TabsContent>
-                                </Tabs>
-                                <DialogFooter className="mt-4">
                                   <Button 
                                     type="button" 
                                     variant="outline" 
@@ -793,73 +491,42 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                                   >
                                     Cancel
                                   </Button>
-                                  <Button 
-                                    type="submit" 
-                                    disabled={createVehicleMutation.isPending}
-                                  >
-                                    {createVehicleMutation.isPending ? "Creating..." : "Create Vehicle"}
-                                  </Button>
                                 </DialogFooter>
                               </DialogContent>
                             </Dialog>
                           </div>
-                        {vehicleId ? (
-                          // Pre-selected vehicle, just show a read-only view
-                          <div className="p-3 border rounded-md bg-muted/30">
-                            {selectedVehicle ? (
-                              <>
-                                <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
-                                <div className="text-sm text-muted-foreground">{formatLicensePlate(selectedVehicle.licensePlate)}</div>
-                                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                  {selectedVehicle.vehicleType && (
-                                    <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
-                                  )}
-                                  {selectedVehicle.fuel && (
-                                    <Badge variant="outline">{selectedVehicle.fuel}</Badge>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex items-center justify-center">
-                                <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span className="ml-2">Loading vehicle details...</span>
+                          
+                          <FormControl>
+                            <SearchableCombobox
+                              options={vehicleOptions}
+                              value={field.value ? field.value.toString() : ''}
+                              onChange={(value) => {
+                                field.onChange(value);
+                              }}
+                              placeholder="Search and select a vehicle..."
+                              searchPlaceholder="Search by license plate, brand, or model..."
+                              groups={true}
+                              recentValues={recentVehicles}
+                            />
+                          </FormControl>
+                          
+                          {selectedVehicle && !actualVehicleId && (
+                            <div className="mt-2 text-sm bg-muted p-2 rounded-md">
+                              <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                {selectedVehicle.vehicleType && (
+                                  <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
+                                )}
+                                {selectedVehicle.fuel && (
+                                  <Badge variant="outline">{selectedVehicle.fuel}</Badge>
+                                )}
                               </div>
-                            )}
-                        </div>
-                      ) : (
-                        // Regular vehicle selection
-                        <FormControl>
-                          <SearchableCombobox
-                            options={vehicleOptions}
-                            value={field.value ? field.value.toString() : ''}
-                            onChange={(value) => {
-                              console.log("Vehicle selected:", value); 
-                              field.onChange(value);
-                            }}
-                            placeholder="Search and select a vehicle..."
-                            searchPlaceholder="Search by license plate, brand, or model..."
-                            groups={true}
-                            recentValues={recentVehicles}
-                          />
-                        </FormControl>
+                            </div>
+                          )}
+                        </>
                       )}
+                      
                       <FormMessage />
-                      {!vehicleId && selectedVehicle && (
-                        <div className="mt-2 text-sm bg-muted p-2 rounded-md">
-                          <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            {selectedVehicle.vehicleType && (
-                              <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
-                            )}
-                            {selectedVehicle.fuel && (
-                              <Badge variant="outline">{selectedVehicle.fuel}</Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </FormItem>
                   )}
                 />
@@ -898,7 +565,6 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                           options={customerOptions}
                           value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
-                            console.log("Customer selected:", value);
                             field.onChange(value);
                           }}
                           placeholder="Search and select a customer..."
@@ -1035,6 +701,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                           placeholder="0.00" 
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
                         />
                       </FormControl>
                       <FormDescription>
@@ -1050,60 +717,74 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <FormLabel>Upload Damage Check</FormLabel>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <FileCheck className="h-3.5 w-3.5 mr-1" />
-                    Will be linked to vehicle documents
-                  </div>
+                  <div className="text-xs text-muted-foreground">Optional</div>
                 </div>
                 
                 <div 
-                  className={`border-2 border-dashed rounded-md p-6 transition-colors ${
-                    isDragActive ? 'border-primary bg-primary/5' : 'border-border'
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    isDragActive 
+                      ? "border-primary bg-primary/5" 
+                      : damageFile 
+                        ? "border-success bg-success/5" 
+                        : "border-muted-foreground/25 hover:border-muted-foreground/50"
                   }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  
-                  {damageFile ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FileCheck className="h-8 w-8 mr-2 text-green-500" />
-                        <div>
-                          <p className="font-medium text-sm">{damageFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                  {!damageFile ? (
+                    <>
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-muted-foreground/70" />
+                        <div className="text-sm font-medium">
+                          Drag & drop a damage check document here, or click to browse
+                        </div>
+                        <input
+                          type="file"
+                          id="damageCheckFile"
+                          className="hidden"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={handleFileChange}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => document.getElementById("damageCheckFile")?.click()}
+                        >
+                          Select File
+                        </Button>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Accepted formats: PDF, JPG, PNG (max 25MB)
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-success">
+                        <Check className="h-5 w-5" />
+                        <span className="font-medium">File uploaded</span>
+                      </div>
+                      <div className="flex items-center justify-center mt-2">
+                        <FileCheck className="h-12 w-12 text-muted-foreground/70 mr-3" />
+                        <div className="text-left">
+                          <div className="font-medium truncate max-w-[200px]">
+                            {damageFile.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
                             {(damageFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
+                          </div>
                         </div>
                       </div>
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeDamageFile();
-                        }}
+                        variant="outline" 
+                        size="sm" 
+                        onClick={removeDamageFile}
+                        className="mt-4"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4 mr-1" />
+                        Remove
                       </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-4">
-                      <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                      <p className="text-sm font-medium">Drag & drop or click to upload</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload a damage check document for this reservation (PDF, JPG, PNG)
-                      </p>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1113,41 +794,24 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
-                  <FormItem className="col-span-full">
+                  <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Any additional notes about this reservation" 
-                        className="min-h-[100px]"
-                        {...field} 
+                        placeholder="Add any additional notes or requirements..." 
+                        className="min-h-[100px]" 
+                        {...field}
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Add any special instructions or comments for this reservation
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
             
-            {/* Warning if there's an overlap */}
-            {hasOverlap && (
-              <div className="bg-destructive/10 text-destructive p-4 rounded-md text-sm">
-                <div className="flex gap-2 items-center mb-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  <strong>Booking Conflict Detected</strong>
-                </div>
-                <p>This vehicle is already reserved for the selected dates. Please choose different dates or another vehicle.</p>
-              </div>
-            )}
-            
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-2 pt-4">
+            {/* Submit Button */}
+            <div className="flex justify-end gap-4">
               <Button
                 type="button"
                 variant="outline"
@@ -1155,23 +819,28 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
                 disabled={createReservationMutation.isPending || hasOverlap}
               >
-                {createReservationMutation.isPending ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </span>
-                ) : (
-                  editMode ? "Update Reservation" : "Create Reservation"
-                )}
+                {createReservationMutation.isPending 
+                  ? "Saving..." 
+                  : editMode ? "Update Reservation" : "Create Reservation"
+                }
               </Button>
             </div>
+            
+            {/* Booking Conflict Warning */}
+            {hasOverlap && (
+              <div className="p-4 bg-destructive/10 border border-destructive rounded-md flex items-center gap-2 text-destructive mt-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div>This vehicle is already reserved for the selected dates. Please choose different dates or another vehicle.</div>
+              </div>
+            )}
           </form>
         </Form>
       </CardContent>
