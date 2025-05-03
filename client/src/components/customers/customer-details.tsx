@@ -52,6 +52,17 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
   
   return (
     <div className="space-y-6">
+      <div className="flex mb-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/customers">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="M5 12h14M5 12l4-4M5 12l4 4"/>
+            </svg>
+            Back to Customers
+          </Link>
+        </Button>
+      </div>
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">{customer.name}</h1>
