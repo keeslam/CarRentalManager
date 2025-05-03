@@ -133,7 +133,7 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
         formData.append("notes", data.notes);
       }
       
-      return await fetch("/api/documents/upload", {
+      return await fetch("/api/documents", {
         method: "POST",
         body: formData,
         credentials: "include",
