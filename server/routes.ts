@@ -92,6 +92,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid vehicle data", error });
     }
   });
+  
+  // Delete vehicle
+  app.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const deleted = await storage.deleteVehicle(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      res.json({ success: true, message: "Vehicle successfully deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting vehicle", error });
+    }
+  });
 
   // Lookup vehicle via RDW API
   app.get("/api/rdw/vehicle/:licensePlate", async (req, res) => {
