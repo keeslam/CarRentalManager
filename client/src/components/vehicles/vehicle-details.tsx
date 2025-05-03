@@ -401,7 +401,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <div className="flex justify-between items-center">
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Check Attachment</h4>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Pictures</h4>
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         preselectedType="Damage Photos"
