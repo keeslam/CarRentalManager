@@ -39,6 +39,7 @@ export interface IStorage {
   getReservation(id: number): Promise<Reservation | undefined>;
   createReservation(reservation: InsertReservation): Promise<Reservation>;
   updateReservation(id: number, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined>;
+  deleteReservation(id: number): Promise<boolean>;
   getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]>;
   getUpcomingReservations(): Promise<Reservation[]>;
   getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
