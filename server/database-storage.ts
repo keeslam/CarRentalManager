@@ -317,6 +317,14 @@ export class DatabaseStorage implements IStorage {
       customer
     };
   }
+  
+  async deleteReservation(id: number): Promise<boolean> {
+    const result = await db
+      .delete(reservations)
+      .where(eq(reservations.id, id));
+    
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
 
   async getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]> {
     const reservationsData = await db

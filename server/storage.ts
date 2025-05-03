@@ -504,6 +504,10 @@ export class MemStorage implements IStorage {
       customer: this.customers.get(updatedReservation.customerId)
     };
   }
+  
+  async deleteReservation(id: number): Promise<boolean> {
+    return this.reservations.delete(id);
+  }
 
   async getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]> {
     const reservations = Array.from(this.reservations.values()).filter(r => {
