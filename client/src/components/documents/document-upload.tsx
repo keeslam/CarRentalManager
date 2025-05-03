@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Vehicle } from "@shared/schema";
-import { formatFileSize } from "@/lib/format-utils";
+import { formatFileSize, formatLicensePlate } from "@/lib/format-utils";
 
 // Document types
 const documentTypes = [
@@ -235,7 +235,7 @@ export function DocumentUpload() {
                       <SelectContent>
                         {vehicles?.map((vehicle) => (
                           <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            {vehicle.licensePlate.replace(/-/g, '')} - {vehicle.brand} {vehicle.model}
+                            {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
                           </SelectItem>
                         ))}
                       </SelectContent>

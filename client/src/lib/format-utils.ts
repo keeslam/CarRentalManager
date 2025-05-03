@@ -40,8 +40,8 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 export function formatLicensePlate(licensePlate: string | null | undefined): string {
   if (!licensePlate) return '';
   
-  // Remove all non-alphanumeric characters and return uppercase
-  return licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  // Remove all hyphens and return uppercase
+  return licensePlate.replace(/-/g, '').toUpperCase();
 }
 
 /**

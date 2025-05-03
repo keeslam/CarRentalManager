@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format-utils";
+import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation } from "@shared/schema";
 
 // Function to calculate duration between two dates in days
@@ -92,7 +92,7 @@ export function UpcomingReservations() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">
-                          {reservation.vehicle?.licensePlate?.replace(/-/g, '')}
+                          {formatLicensePlate(reservation.vehicle?.licensePlate)}
                         </div>
                         <div className="ml-2 text-xs text-gray-500">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
                       </div>
