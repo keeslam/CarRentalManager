@@ -17,12 +17,17 @@ import { Expense, Vehicle } from "@shared/schema";
 import { PlusCircle, ArrowLeft } from "lucide-react";
 
 export default function VehicleExpensesPage() {
-  // Get vehicle ID from route parameter
-  const [_, params] = useLocation();
-  const vehicleId = params.id ? parseInt(params.id) : null;
+  // Get vehicle ID from route parameter using pathname directly
+  const [location] = useLocation();
   
-  console.log("VehicleExpensesPage - vehicleId:", vehicleId);
-  console.log("VehicleExpensesPage - route params:", params);
+  // Extract vehicleId from the URL path more reliably
+  const pathSegments = location.split('/');
+  const vehicleIdStr = pathSegments[pathSegments.length - 1];
+  const vehicleId = !isNaN(parseInt(vehicleIdStr)) ? parseInt(vehicleIdStr) : null;
+  
+  console.log("VehicleExpensesPage - current location:", location);
+  console.log("VehicleExpensesPage - path segments:", pathSegments);
+  console.log("VehicleExpensesPage - extracted vehicleId:", vehicleId);
   
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle, error: vehicleError } = useQuery<Vehicle>({
