@@ -208,9 +208,11 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     }
   });
   
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     // Process the form data before submission
     const formattedData: any = { ...data };
+    
+    console.log("Original form data:", data);
     
     // Handle empty string values for numeric fields
     if (formattedData.departureMileage === "") formattedData.departureMileage = null;
@@ -244,8 +246,50 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       }
     });
     
-    console.log("Submitting vehicle data:", formattedData);
-    createVehicleMutation.mutate(formattedData);
+    console.log("Processed vehicle data:", formattedData);
+    
+    try {
+      // Direct API call instead of using the mutation
+      const url = editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles";
+      console.log(`Sending direct API request to ${url}`);
+      
+      const response = await fetch(url, {
+        method: editMode ? "PATCH" : "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData)
+      });
+      
+      console.log("API response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API error:", errorData);
+        throw new Error(errorData.message || "Failed to save vehicle data");
+      }
+      
+      const responseData = await response.json();
+      console.log("API response data:", responseData);
+      
+      // Invalidate queries and show success message
+      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      
+      toast({
+        title: `Vehicle ${editMode ? "updated" : "created"} successfully`,
+        description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
+      });
+      
+      // Navigate back to vehicles list
+      navigate("/vehicles");
+    } catch (error: any) {
+      console.error("API request failed:", error);
+      toast({
+        title: "Error",
+        description: `Failed to ${editMode ? "update" : "create"} vehicle: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
   
   const handleLookup = () => {
@@ -966,8 +1010,26 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                 Cancel
               </Button>
               <Button
-                type="submit"
+                type="button" 
                 disabled={createVehicleMutation.isPending}
+                onClick={() => {
+                  // Get form values manually
+                  if (form.formState.isValid) {
+                    const data = form.getValues();
+                    onSubmit(data);
+                  } else {
+                    // Trigger form validation
+                    form.handleSubmit(onSubmit)();
+                    
+                    // Show validation errors
+                    console.error("Form validation errors:", form.formState.errors);
+                    toast({
+                      title: "Validation Error",
+                      description: "Please check the form for errors",
+                      variant: "destructive",
+                    });
+                  }
+                }}
               >
                 {createVehicleMutation.isPending ? (
                   <span className="flex items-center">
