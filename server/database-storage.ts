@@ -80,13 +80,17 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(vehicles);
     }
     
-    // Using SQL directly for the NOT IN clause
+    // When we have reserved vehicles, query for all those not in the reserved list
+    const reservedIdsArray = Array.from(reservedIds);
+    
+    // Handle each vehicle separately with individual OR conditions to avoid array parameter issues
+    const vehicleConditions = reservedIdsArray.map(id => sql`${vehicles.id} != ${id}`);
+    const combinedCondition = sql.join(vehicleConditions, sql` AND `);
+    
     return await db
       .select()
       .from(vehicles)
-      .where(
-        sql`${vehicles.id} NOT IN (${Array.from(reservedIds).join(',')})`
-      );
+      .where(combinedCondition);
   }
 
   async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
@@ -188,7 +192,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createReservation(reservationData: InsertReservation): Promise<Reservation> {
-    const [reservation] = await db.insert(reservations).values(reservationData).returning();
+    // Convert totalPrice to string if it's a number
+    const dataToInsert = {
+      ...reservationData,
+      // Convert totalPrice to string if present
+      totalPrice: reservationData.totalPrice !== undefined 
+        ? String(reservationData.totalPrice) 
+        : undefined
+    };
+    
+    const [reservation] = await db.insert(reservations).values(dataToInsert).returning();
     
     const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
     const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
@@ -201,9 +214,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateReservation(id: number, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined> {
+    // Convert totalPrice to string if it's a number
+    const dataToUpdate = {
+      ...reservationData,
+      // Convert totalPrice to string if present
+      totalPrice: reservationData.totalPrice !== undefined 
+        ? String(reservationData.totalPrice) 
+        : undefined
+    };
+    
     const [updatedReservation] = await db
       .update(reservations)
-      .set(reservationData)
+      .set(dataToUpdate)
       .where(eq(reservations.id, id))
       .returning();
     
