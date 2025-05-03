@@ -145,6 +145,35 @@ export default function AuthPage() {
                       >
                         {loginMutation.isPending ? "Logging in..." : "Login"}
                       </Button>
+                      
+                      {/* Test login buttons - remove in production */}
+                      <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                        <p className="text-xs text-gray-500 mb-2">Quick login for testing:</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            loginMutation.mutate({ username: "admin", password: "password" });
+                          }}
+                        >
+                          Login as Admin
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            loginMutation.mutate({ username: "user", password: "password" });
+                          }}
+                        >
+                          Login as User
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </CardContent>
