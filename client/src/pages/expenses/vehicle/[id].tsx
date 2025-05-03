@@ -130,11 +130,20 @@ export default function VehicleExpensesPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/expenses">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
-            </Link>
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/expenses">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
+              </Link>
+            </Button>
+            {vehicleId && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/vehicles/${vehicleId}`}>
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back to Vehicle
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
         <div className="space-y-4">
           <Skeleton className="h-10 w-1/3" />
@@ -155,11 +164,18 @@ export default function VehicleExpensesPage() {
         <p className="mt-2 text-muted-foreground">
           The vehicle you are looking for does not exist or has been removed.
         </p>
-        <Button variant="outline" className="mt-6" asChild>
-          <Link href="/expenses">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
-          </Link>
-        </Button>
+        <div className="flex space-x-2 mt-6 justify-center">
+          <Button variant="outline" asChild>
+            <Link href="/expenses">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/vehicles/${vehicleId}`}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Vehicle
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -168,11 +184,18 @@ export default function VehicleExpensesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/expenses">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
-            </Link>
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/expenses">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/vehicles/${vehicleId}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Vehicle
+              </Link>
+            </Button>
+          </div>
           <h1 className="text-2xl font-bold">
             Expenses for {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
           </h1>
