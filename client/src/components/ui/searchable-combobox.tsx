@@ -128,8 +128,10 @@ export function SearchableCombobox({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[350px] md:w-[450px] max-h-[600px] overflow-auto"
+          className="w-[280px] md:w-[350px] max-h-[400px] overflow-auto"
           align="start"
+          side="bottom"
+          sideOffset={4}
         >
           <div className="px-2 py-2">
             <div className="flex items-center px-1 mb-2">
@@ -158,7 +160,7 @@ export function SearchableCombobox({
                   {groupOptions.map((option) => (
                     <DropdownMenuItem
                       key={option.value}
-                      className="flex flex-col items-start py-2 cursor-pointer"
+                      className="flex flex-col items-start py-1 px-2 cursor-pointer text-sm"
                       onClick={() => {
                         onChange(option.value);
                         setOpen(false);
@@ -174,7 +176,7 @@ export function SearchableCombobox({
                             )}
                           </span>
                           {option.description && (
-                            <span className="text-xs text-muted-foreground mt-0.5">
+                            <span className="text-xs text-muted-foreground mt-0.5 truncate max-w-[220px]">
                               {option.description}
                             </span>
                           )}
