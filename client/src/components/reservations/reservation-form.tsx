@@ -317,7 +317,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       // Show success message
       toast({
         title: "Vehicle created",
-        description: `Vehicle "${data.licensePlate}" has been created.`,
+        description: `Vehicle "${formatLicensePlate(data.licensePlate)}" has been created.`,
       });
 
       // Reset form
