@@ -1,6 +1,7 @@
 import { useState, ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { UserMenu } from "@/components/user-menu";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -72,15 +73,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
               </svg>
             </button>
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user text-gray-600">
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-              </div>
-              <span className="ml-2 text-sm font-medium text-gray-700">Admin</span>
-            </div>
+            <UserMenu />
           </div>
         </div>
       </header>
