@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { insertReservationSchema, insertVehicleSchema, insertCustomerSchema } from "@shared/schema";
+import { insertReservationSchema, insertVehicleSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { 
@@ -72,9 +72,7 @@ const vehicleFormSchema = insertVehicleSchema.extend({
 });
 
 // Customer form schema
-const customerFormSchema = insertCustomerSchema.extend({
-  name: z.string().min(1, "Name is required"),
-});
+// We use the CustomerForm component from @/components/customers/customer-form.tsx
 
 interface ReservationFormProps {
   editMode?: boolean;
@@ -193,20 +191,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     }
   });
 
-  // Setup customer form with expanded fields
-  const customerForm = useForm<z.infer<typeof customerFormSchema>>({
-    resolver: zodResolver(customerFormSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      email: "",
-      address: "",
-      city: "",
-      postalCode: "",
-      country: "NL",
-      driverLicenseNumber: ""
-    }
-  });
+  // We use the CustomerForm component now
   
   // If vehicleId or customerId changes from URL, update the form
   useEffect(() => {
@@ -371,52 +356,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     },
   });
 
-  // Create customer mutation
-  const createCustomerMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof customerFormSchema>) => {
-      // Send request and parse response
-      const response = await fetch("/api/customers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create customer");
-      }
-      
-      return await response.json();
-    },
-    onSuccess: async (data) => {
-      // Invalidate customers query to refresh the list
-      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      
-      // Set the new customer as selected
-      form.setValue("customerId", data.id.toString());
-      
-      // Close the dialog
-      setCustomerDialogOpen(false);
-      
-      // Show success message
-      toast({
-        title: "Customer created",
-        description: `Customer "${data.name}" has been created.`,
-      });
-
-      // Reset form
-      customerForm.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create customer: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
+  // We use the CustomerForm component for customer creation now
   
   // File upload handling for damage check
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -564,9 +504,6 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       title: "Customer created",
       description: `Customer "${data.name}" has been created.`,
     });
-    
-    // Reset customer form
-    customerForm.reset();
   };
   
   // Handle reservation form submission

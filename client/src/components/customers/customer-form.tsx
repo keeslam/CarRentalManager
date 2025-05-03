@@ -263,7 +263,17 @@ export function CustomerForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/customers")}
+                onClick={() => {
+                  if (redirectToList) {
+                    navigate("/customers");
+                  } else {
+                    // For embedded forms (like in reservations), just close without navigation
+                    if (onSuccess) {
+                      // If onSuccess exists, the parent component will handle closing
+                      form.reset();
+                    }
+                  }
+                }}
               >
                 Cancel
               </Button>
