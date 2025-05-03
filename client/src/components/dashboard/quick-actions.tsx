@@ -172,6 +172,25 @@ function ActionIcon({ name, className = "" }: ActionIconProps) {
           <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
         </svg>
       );
+    case "hammer":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`lucide lucide-hammer ${className}`}
+        >
+          <path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9" />
+          <path d="M17.64 15 22 10.64" />
+          <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -223,6 +242,12 @@ const quickActions: QuickAction[] = [
     dialog: "registration",
     primary: false,
   },
+  {
+    label: "Upload Damage Form",
+    icon: "hammer",
+    dialog: "damage-form",
+    primary: false,
+  },
 ];
 
 export function QuickActions() {
@@ -231,6 +256,11 @@ export function QuickActions() {
   const [registrationStatus, setRegistrationStatus] = useState<"opnaam" | "bv">("opnaam");
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedDamageVehicle, setSelectedDamageVehicle] = useState<Vehicle | null>(null);
+  const [damageFormFile, setDamageFormFile] = useState<File | null>(null);
+  const [damagePhotos, setDamagePhotos] = useState<File[]>([]);
+  const [damageFormSearchQuery, setDamageFormSearchQuery] = useState<string>("");
+  const [isDamageUploading, setIsDamageUploading] = useState(false);
   const { toast } = useToast();
   
   // Fetch all vehicles for the selection list
@@ -343,6 +373,99 @@ export function QuickActions() {
     }
   };
   
+  // Handler for uploading damage form and photos
+  const handleDamageFormUpload = async () => {
+    if (!selectedDamageVehicle) {
+      toast({
+        title: "Error",
+        description: "Please select a vehicle",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!damageFormFile && damagePhotos.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please upload at least a damage form or damage photos",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsDamageUploading(true);
+    
+    try {
+      // Upload each document (form and photos) with proper document type
+      let uploadCount = 0;
+      let errorCount = 0;
+      
+      // Helper function to upload a document
+      const uploadDocument = async (file: File, documentType: string, notes?: string) => {
+        const formData = new FormData();
+        formData.append("vehicleId", selectedDamageVehicle.id.toString());
+        formData.append("documentType", documentType);
+        formData.append("file", file);
+        
+        if (notes) {
+          formData.append("notes", notes);
+        }
+        
+        const response = await fetch("/api/documents", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${documentType}: ${response.status}`);
+        }
+        
+        return await response.json();
+      };
+      
+      // Upload damage form if provided
+      if (damageFormFile) {
+        await uploadDocument(damageFormFile, "Damage Form", "Damage form uploaded from dashboard");
+        uploadCount++;
+      }
+      
+      // Upload damage photos if provided
+      for (const photo of damagePhotos) {
+        try {
+          await uploadDocument(photo, "Damage Photo", "Damage photo uploaded from dashboard");
+          uploadCount++;
+        } catch (error) {
+          console.error("Error uploading damage photo:", error);
+          errorCount++;
+        }
+      }
+      
+      // Show success message
+      toast({
+        title: uploadCount > 0 ? "Upload Successful" : "Upload Failed",
+        description: uploadCount > 0 
+          ? `Successfully uploaded ${uploadCount} document${uploadCount > 1 ? 's' : ''}${errorCount > 0 ? `, but ${errorCount} failed` : ''} for ${selectedDamageVehicle.licensePlate}`
+          : "Failed to upload any documents",
+        variant: uploadCount > 0 ? "default" : "destructive",
+      });
+      
+      // Reset form
+      setSelectedDamageVehicle(null);
+      setDamageFormFile(null);
+      setDamagePhotos([]);
+      setDamageFormSearchQuery("");
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload damage documents",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDamageUploading(false);
+    }
+  };
+  
   return (
     <Card className="mb-6">
       <CardHeader className="pb-2">
@@ -351,8 +474,231 @@ export function QuickActions() {
       <CardContent>
         <div className="flex flex-wrap gap-2">
           {quickActions.map((action) => {
+            // For damage form upload action, render a Dialog
+            if (action.dialog === "damage-form") {
+              return (
+                <Dialog key={action.label}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon || "hammer"} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Upload Damage Form</DialogTitle>
+                      <DialogDescription>
+                        Select a vehicle and upload damage form and/or photos.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                      {/* Vehicle search */}
+                      <div className="grid gap-2">
+                        <label htmlFor="damageFormSearch" className="text-sm font-medium">
+                          Select Vehicle
+                        </label>
+                        
+                        <Input
+                          id="damageFormSearch"
+                          placeholder="Search by license plate, brand or model"
+                          value={damageFormSearchQuery}
+                          onChange={(e) => setDamageFormSearchQuery(e.target.value.toLowerCase())}
+                          className="mb-2"
+                        />
+                        
+                        <div className="border rounded-md h-[200px] overflow-y-auto p-1">
+                          {vehicles && vehicles.length > 0 ? (
+                            (() => {
+                              // Filter vehicles based on search query
+                              const filteredVehicles = damageFormSearchQuery 
+                                ? vehicles.filter(v => 
+                                    v.licensePlate.toLowerCase().includes(damageFormSearchQuery) || 
+                                    (v.brand?.toLowerCase() || '').includes(damageFormSearchQuery) || 
+                                    (v.model?.toLowerCase() || '').includes(damageFormSearchQuery)
+                                  )
+                                : vehicles;
+                              
+                              return filteredVehicles.length === 0 ? (
+                                <div className="p-2 text-center text-sm text-muted-foreground">
+                                  No vehicles match your search
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {filteredVehicles.map(vehicle => (
+                                    <div 
+                                      key={vehicle.id}
+                                      className={`px-3 py-2 rounded cursor-pointer flex items-center justify-between ${
+                                        selectedDamageVehicle?.id === vehicle.id 
+                                          ? 'bg-primary-100 text-primary-700' 
+                                          : 'hover:bg-accent'
+                                      }`}
+                                      onClick={() => setSelectedDamageVehicle(vehicle)}
+                                    >
+                                      <div className="flex items-center">
+                                        <span className="font-medium">{formatLicensePlate(vehicle.licensePlate)}</span>
+                                        <span className="ml-2 text-sm text-muted-foreground">
+                                          {vehicle.brand} {vehicle.model}
+                                        </span>
+                                      </div>
+                                      {selectedDamageVehicle?.id === vehicle.id && (
+                                        <Check className="h-4 w-4 text-primary-600" />
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className="flex justify-center items-center h-full">
+                              <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* File Uploads */}
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="damageForm" className="text-sm font-medium">
+                            Damage Form (PDF/Image)
+                          </label>
+                          <div className="mt-1 flex items-center">
+                            <input
+                              id="damageForm"
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setDamageFormFile(e.target.files[0]);
+                                }
+                              }}
+                              className="w-full text-sm text-slate-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-md file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-primary-50 file:text-primary-700
+                                hover:file:bg-primary-100
+                                cursor-pointer"
+                            />
+                          </div>
+                          {damageFormFile && (
+                            <div className="mt-2 flex items-center space-x-2 text-sm">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span>{damageFormFile.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setDamageFormFile(null)}
+                                className="text-red-500 hover:text-red-700 text-xs"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="damagePhotos" className="text-sm font-medium">
+                            Damage Photos (Multiple)
+                          </label>
+                          <div className="mt-1 flex items-center">
+                            <input
+                              id="damagePhotos"
+                              type="file"
+                              accept=".jpg,.jpeg,.png"
+                              multiple
+                              onChange={(e) => {
+                                if (e.target.files) {
+                                  const filesArray = Array.from(e.target.files);
+                                  setDamagePhotos([...damagePhotos, ...filesArray]);
+                                }
+                              }}
+                              className="w-full text-sm text-slate-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-md file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-primary-50 file:text-primary-700
+                                hover:file:bg-primary-100
+                                cursor-pointer"
+                            />
+                          </div>
+                          {damagePhotos.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              <div className="text-sm font-medium">
+                                {damagePhotos.length} photo{damagePhotos.length > 1 ? 's' : ''} selected
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {damagePhotos.map((photo, index) => (
+                                  <div key={`${photo.name}-${index}`} className="relative">
+                                    <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500 overflow-hidden">
+                                      {photo.type.startsWith('image/') ? (
+                                        <img 
+                                          src={URL.createObjectURL(photo)} 
+                                          alt={`Preview ${index}`}
+                                          className="w-full h-full object-cover" 
+                                        />
+                                      ) : (
+                                        photo.name.slice(0, 4)
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newDamagePhotos = [...damagePhotos];
+                                        newDamagePhotos.splice(index, 1);
+                                        setDamagePhotos(newDamagePhotos);
+                                      }}
+                                      className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-xs"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setDamagePhotos([])}
+                                className="text-red-500 hover:text-red-700 text-xs"
+                              >
+                                Remove all
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline" type="button">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button 
+                        type="button" 
+                        onClick={handleDamageFormUpload}
+                        disabled={isDamageUploading || !selectedDamageVehicle || (!damageFormFile && damagePhotos.length === 0)}
+                      >
+                        {isDamageUploading ? (
+                          <>
+                            <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          "Upload"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
             // For registration action, render a Dialog
-            if (action.dialog === "registration") {
+            else if (action.dialog === "registration") {
               return (
                 <Dialog key={action.label}>
                   <DialogTrigger asChild>
