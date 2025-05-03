@@ -92,7 +92,6 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
-  const [searchParams] = useLocation();
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [receiptTab, setReceiptTab] = useState<string>("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -106,21 +105,18 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
   
-  // Get preselected vehicle ID from URL if available
+  // Set vehicle ID from preselectedVehicleId prop
   useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const vehicleIdParam = urlParams.get("vehicleId");
-    
-    if (vehicleIdParam) {
-      const parsedId = Number(vehicleIdParam);
-      setVehicleId(parsedId);
+    if (preselectedVehicleId && preselectedVehicleId > 0) {
+      console.log("Setting vehicleId from preselectedVehicleId:", preselectedVehicleId);
+      setVehicleId(preselectedVehicleId);
       
       // If form is already initialized, update the vehicleId field
       if (formInitialized && !editMode) {
-        form.setValue("vehicleId", parsedId);
+        form.setValue("vehicleId", preselectedVehicleId);
       }
     }
-  }, [searchParams, formInitialized, editMode]);
+  }, [preselectedVehicleId, formInitialized, editMode]);
   
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
@@ -135,27 +131,21 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
     },
   });
   
-  // When the form is first created, update with the vehicleId from URL parameter or preselectedVehicleId prop
+  // When the form is first created, update with the vehicleId from preselectedVehicleId prop
   useEffect(() => {
     // Only run this once after the form is initialized
     if (!formInitialized) {
-      // First check if vehicleId is set from URL query parameters
-      if (vehicleId && !editMode) {
+      if (vehicleId && vehicleId > 0 && !editMode) {
+        // Log that we're setting from vehicleId state variable
+        console.log("Setting form value from vehicleId state:", vehicleId);
         form.setValue("vehicleId", vehicleId);
         setFormInitialized(true);
-      } 
-      // Then check if preselectedVehicleId prop is provided
-      else if (preselectedVehicleId && !editMode) {
-        setVehicleId(preselectedVehicleId);
-        form.setValue("vehicleId", preselectedVehicleId);
-        setFormInitialized(true);
-      }
-      // Otherwise, just mark as initialized
-      else {
+      } else {
+        // Otherwise, just mark as initialized
         setFormInitialized(true);
       }
     }
-  }, [vehicleId, preselectedVehicleId, form, editMode, formInitialized]);
+  }, [vehicleId, form, editMode, formInitialized]);
   
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
