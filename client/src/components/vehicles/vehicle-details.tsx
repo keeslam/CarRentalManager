@@ -546,7 +546,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
               <CardHeader>
                 <CardTitle>Expense History</CardTitle>
                 <CardDescription>All expenses related to this vehicle</CardDescription>
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-2">
+                  <Link href={`/expenses/vehicle?vehicleId=${vehicleId}`}>
+                    <Button size="sm" variant="outline">View All Expenses</Button>
+                  </Link>
                   <Link href={`/expenses/add?vehicleId=${vehicleId}`}>
                     <Button size="sm">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
