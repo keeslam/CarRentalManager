@@ -28,14 +28,22 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   
+  // Define query keys for easier reference
+  const customerQueryKey = [`/api/customers/${customerId}`];
+  const customerReservationsQueryKey = [`/api/reservations/customer/${customerId}`];
+  
   // Fetch customer details
   const { data: customer, isLoading: isLoadingCustomer } = useQuery<Customer>({
-    queryKey: [`/api/customers/${customerId}`],
+    queryKey: customerQueryKey,
   });
   
   // Fetch customer reservations
-  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
-    queryKey: [`/api/reservations/customer/${customerId}`],
+  const { 
+    data: reservations, 
+    isLoading: isLoadingReservations,
+    refetch: refetchReservations
+  } = useQuery<Reservation[]>({
+    queryKey: customerReservationsQueryKey,
   });
   
   // Delete reservation mutation
@@ -48,14 +56,15 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
       }
       return await response.json();
     },
-    onSuccess: () => {
-      // Invalidate and refetch the reservations query to refresh the list
-      queryClient.invalidateQueries({ queryKey: [`/api/reservations/customer/${customerId}`] }).then(() => {
-        // Force a refetch after invalidation to ensure the latest data
-        queryClient.refetchQueries({ queryKey: [`/api/reservations/customer/${customerId}`], type: 'active' });
-        // Also update the general reservations list
-        queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      });
+    onSuccess: async () => {
+      // Wait for the invalidation to complete
+      await queryClient.invalidateQueries({ queryKey: customerReservationsQueryKey });
+      
+      // Explicitly force a refetch to ensure the UI updates
+      await refetchReservations();
+      
+      // Also update the general reservations list
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       
       toast({
         title: "Reservation deleted",

@@ -54,12 +54,12 @@ export default function ReservationsIndex() {
       }
       return await response.json();
     },
-    onSuccess: () => {
-      // Invalidate and refetch the reservations query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] }).then(() => {
-        // Force a refetch after invalidation to ensure the latest data
-        queryClient.refetchQueries({ queryKey: ["/api/reservations"], type: 'active' });
-      });
+    onSuccess: async () => {
+      // Wait for the invalidation to complete
+      await queryClient.invalidateQueries({ queryKey: reservationsQueryKey });
+      
+      // Explicitly force a refetch to ensure the UI updates
+      await refetchReservations();
       
       toast({
         title: "Reservation deleted",
@@ -76,9 +76,12 @@ export default function ReservationsIndex() {
     }
   });
   
+  // Define query key for easier reference
+  const reservationsQueryKey = ["/api/reservations"];
+  
   // Fetch reservations
-  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
-    queryKey: ["/api/reservations"],
+  const { data: reservations, isLoading: isLoadingReservations, refetch: refetchReservations } = useQuery<Reservation[]>({
+    queryKey: reservationsQueryKey,
   });
   
   // Fetch vehicles to help with filtering
