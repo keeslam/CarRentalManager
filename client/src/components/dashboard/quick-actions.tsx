@@ -66,22 +66,44 @@ const quickActions = [
 ];
 
 export function QuickActions() {
-  const [selectedVehicle, setSelectedVehicle] = useState<string>("");
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([]);
   const [registrationStatus, setRegistrationStatus] = useState<"opnaam" | "bv">("opnaam");
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
   
   // Fetch all vehicles for the dropdown
-  const { data: vehicles } = useQuery<Vehicle[]>({
+  const { data: vehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
   
+  // Handler for changing a single vehicle's registration
+  const handleChangeVehicleRegistration = async (vehicleId: number, newStatus: "opnaam" | "bv") => {
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleId}/toggle-registration`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update registration status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  };
+  
+  // Handler for changing multiple vehicles' registration
   const handleChangeRegistration = async () => {
-    if (!selectedVehicle) {
+    if (selectedVehicles.length === 0) {
       toast({
         title: "Error",
-        description: "Please select a vehicle",
+        description: "Please select at least one vehicle",
         variant: "destructive",
       });
       return;
@@ -89,29 +111,61 @@ export function QuickActions() {
     
     setIsLoading(true);
     
+    // Track results for reporting
+    const results = {
+      success: 0,
+      failed: 0,
+      vehicles: [] as { id: number; licensePlate: string; success: boolean }[]
+    };
+    
     try {
-      const vehicleId = parseInt(selectedVehicle);
-      const response = await fetch(`/api/vehicles/${vehicleId}/toggle-registration`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: registrationStatus }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update registration status: ${response.status}`);
+      // Process each vehicle in sequence
+      for (const vehicleIdStr of selectedVehicles) {
+        const vehicleId = parseInt(vehicleIdStr);
+        try {
+          const updatedVehicle = await handleChangeVehicleRegistration(vehicleId, registrationStatus);
+          results.success++;
+          results.vehicles.push({ 
+            id: vehicleId, 
+            licensePlate: updatedVehicle.licensePlate, 
+            success: true 
+          });
+        } catch (error) {
+          results.failed++;
+          const vehicle = vehicles?.find(v => v.id === vehicleId);
+          results.vehicles.push({ 
+            id: vehicleId, 
+            licensePlate: vehicle?.licensePlate || `ID: ${vehicleId}`, 
+            success: false 
+          });
+        }
       }
       
-      const updatedVehicle = await response.json();
+      // Determine appropriate message based on results
+      if (results.success > 0 && results.failed === 0) {
+        toast({
+          title: "Success",
+          description: `Registration updated to ${registrationStatus === "opnaam" ? "Opnaam" : "BV"} for ${results.success} vehicle${results.success > 1 ? 's' : ''}`,
+        });
+      } else if (results.success > 0 && results.failed > 0) {
+        toast({
+          title: "Partial Success",
+          description: `Updated ${results.success} vehicle${results.success > 1 ? 's' : ''}, but failed for ${results.failed} vehicle${results.failed > 1 ? 's' : ''}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed",
+          description: `Failed to update registration for all ${results.failed} selected vehicles`,
+          variant: "destructive",
+        });
+      }
       
-      toast({
-        title: "Success",
-        description: `Registration for ${updatedVehicle.licensePlate} updated to ${registrationStatus === "opnaam" ? "Opnaam" : "BV"}`,
-      });
+      // Refresh the vehicle list
+      refetchVehicles();
       
-      // Reset form
-      setSelectedVehicle("");
+      // Reset selection
+      setSelectedVehicles([]);
     } catch (error) {
       toast({
         title: "Error",
@@ -160,75 +214,117 @@ export function QuickActions() {
                     
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <label htmlFor="vehicle" className="text-sm font-medium">
-                          Vehicle
-                        </label>
-                        <div className="mb-2">
-                          <Input
-                            placeholder="Search by license plate, brand or model"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-                          />
+                        <div className="flex justify-between items-center mb-2">
+                          <label htmlFor="search" className="text-sm font-medium">
+                            Find Vehicles
+                          </label>
+                          <span className="text-xs text-muted-foreground">
+                            {selectedVehicles.length} selected
+                          </span>
                         </div>
-                        <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a vehicle" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            {/* Group vehicles by brand for better organization */}
-                            {vehicles && vehicles.length > 0 ? (
-                              (() => {
-                                // Filter vehicles based on search query
-                                const filteredVehicles = searchQuery 
-                                  ? vehicles.filter(v => 
-                                      v.licensePlate.toLowerCase().includes(searchQuery) || 
-                                      v.brand.toLowerCase().includes(searchQuery) || 
-                                      v.model.toLowerCase().includes(searchQuery)
-                                    )
-                                  : vehicles;
+                        
+                        <Input
+                          id="search"
+                          placeholder="Search by license plate, brand or model"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                          className="mb-2"
+                        />
+                        
+                        <div className="border rounded-md h-[250px] overflow-y-auto p-1">
+                          {vehicles && vehicles.length > 0 ? (
+                            (() => {
+                              // Filter vehicles based on search query
+                              const filteredVehicles = searchQuery 
+                                ? vehicles.filter(v => 
+                                    v.licensePlate.toLowerCase().includes(searchQuery) || 
+                                    v.brand.toLowerCase().includes(searchQuery) || 
+                                    v.model.toLowerCase().includes(searchQuery)
+                                  )
+                                : vehicles;
+                              
+                              // Group vehicles by registration status and then by brand
+                              const vehicleGroups: Record<string, Record<string, Vehicle[]>> = {
+                                'Opnaam (Person)': {},
+                                'BV (Company)': {},
+                                'Other': {}
+                              };
+                              
+                              filteredVehicles.forEach(vehicle => {
+                                let statusGroup = 'Other';
+                                if (vehicle.registeredTo) statusGroup = 'Opnaam (Person)';
+                                else if (vehicle.company) statusGroup = 'BV (Company)';
                                 
-                                // Group vehicles by brand
-                                const vehiclesByBrand = filteredVehicles.reduce((acc, vehicle) => {
-                                  const brand = vehicle.brand || 'Other';
-                                  if (!acc[brand]) acc[brand] = [];
-                                  acc[brand].push(vehicle);
-                                  return acc;
-                                }, {} as Record<string, Vehicle[]>);
-                                
-                                // Sort brands alphabetically
-                                const sortedBrands = Object.keys(vehiclesByBrand).sort();
-                                
-                                return filteredVehicles.length === 0 ? (
-                                  <div className="p-2 text-center text-sm text-muted-foreground">
-                                    No vehicles match your search
-                                  </div>
-                                ) : (
-                                  <>
-                                    {sortedBrands.map(brand => (
-                                      <SelectGroup key={brand}>
-                                        <SelectLabel>{brand}</SelectLabel>
-                                        {vehiclesByBrand[brand].map(vehicle => (
-                                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                                            {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    ))}
-                                  </>
-                                );
-                              })()
-                            ) : (
-                              <div className="p-2 text-center text-sm text-muted-foreground">
-                                No vehicles available
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
+                                const brand = vehicle.brand || 'Other';
+                                if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
+                                vehicleGroups[statusGroup][brand].push(vehicle);
+                              });
+                              
+                              return filteredVehicles.length === 0 ? (
+                                <div className="p-2 text-center text-sm text-muted-foreground">
+                                  No vehicles match your search
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {Object.entries(vehicleGroups).map(([status, brands]) => {
+                                    const hasVehicles = Object.values(brands).some(vehicles => vehicles.length > 0);
+                                    if (!hasVehicles) return null;
+                                    
+                                    return (
+                                      <div key={status} className="space-y-2">
+                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-semibold border-b">
+                                          {status}
+                                        </div>
+                                        {Object.entries(brands).map(([brand, brandVehicles]) => {
+                                          if (brandVehicles.length === 0) return null;
+                                          
+                                          return (
+                                            <div key={brand} className="pl-2 space-y-1">
+                                              <div className="text-xs font-medium text-muted-foreground">{brand}</div>
+                                              <div className="space-y-1">
+                                                {brandVehicles.map(vehicle => (
+                                                  <label 
+                                                    key={vehicle.id} 
+                                                    className="flex items-center space-x-2 p-1 rounded hover:bg-accent cursor-pointer text-sm"
+                                                  >
+                                                    <input 
+                                                      type="checkbox"
+                                                      className="rounded"
+                                                      checked={selectedVehicles.includes(vehicle.id.toString())}
+                                                      onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                          setSelectedVehicles([...selectedVehicles, vehicle.id.toString()]);
+                                                        } else {
+                                                          setSelectedVehicles(selectedVehicles.filter(id => id !== vehicle.id.toString()));
+                                                        }
+                                                      }}
+                                                    />
+                                                    <span>
+                                                      {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                                    </span>
+                                                  </label>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className="p-2 text-center text-sm text-muted-foreground">
+                              No vehicles available
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="grid gap-2">
                         <label htmlFor="registration" className="text-sm font-medium">
-                          Registration Type
+                          New Registration Status
                         </label>
                         <Select value={registrationStatus} onValueChange={(value: "opnaam" | "bv") => setRegistrationStatus(value)}>
                           <SelectTrigger>
@@ -248,9 +344,12 @@ export function QuickActions() {
                       </DialogClose>
                       <Button 
                         onClick={handleChangeRegistration} 
-                        disabled={isLoading || !selectedVehicle}
+                        disabled={isLoading || selectedVehicles.length === 0}
                       >
-                        {isLoading ? "Updating..." : "Update Registration"}
+                        {isLoading 
+                          ? "Updating..." 
+                          : `Update ${selectedVehicles.length} vehicle${selectedVehicles.length !== 1 ? 's' : ''}`
+                        }
                       </Button>
                     </DialogFooter>
                   </DialogContent>
