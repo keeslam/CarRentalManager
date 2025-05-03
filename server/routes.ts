@@ -572,17 +572,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const expenseReceiptUpload = multer({
     storage: expenseReceiptStorage,
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
+      fileSize: 25 * 1024 * 1024, // 25MB limit for PDFs and images
     },
     fileFilter: (req, file, cb) => {
       // Accept only specific file types
       const fileTypes = /jpeg|jpg|png|pdf/;
       const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = fileTypes.test(file.mimetype);
       
-      if (extname && mimetype) {
+      // PDF files sometimes have different MIME types
+      const allowedMimeTypes = [
+        'image/jpeg', 'image/jpg', 'image/png',
+        'application/pdf', 'application/x-pdf', 'text/pdf'
+      ];
+      
+      if (extname && (allowedMimeTypes.includes(file.mimetype) || file.mimetype.includes('pdf'))) {
         return cb(null, true);
       } else {
+        console.error(`File rejected: ${file.originalname}, mimetype: ${file.mimetype}`);
         cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
       }
     },
@@ -655,6 +661,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  // Create expense with receipt upload (Dedicated endpoint for file uploads)
+  app.post("/api/expenses/with-receipt", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
+    try {
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      
+      const expenseData = insertExpenseSchema.parse(req.body);
+      
+      // Add additional metadata from the uploaded file if present
+      const additionalData: any = {};
+      if (req.file) {
+        additionalData.receiptPath = getRelativePath(req.file.path);
+        additionalData.receiptFilePath = req.file.path;
+        additionalData.receiptFileSize = req.file.size;
+        additionalData.receiptContentType = req.file.mimetype;
+      }
+      
+      // Create expense record
+      const expense = await storage.createExpense({
+        ...expenseData,
+        ...additionalData
+      });
+      
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error("Error creating expense with receipt:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid expense data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to create expense", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
+    }
+  });
 
   // Update expense with receipt upload
   app.patch("/api/expenses/:id", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
@@ -670,10 +714,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const expenseData = insertExpenseSchema.parse(req.body);
       
+      // Add additional metadata from the uploaded file if present
+      const additionalData: any = {};
+      if (req.file) {
+        additionalData.receiptPath = getRelativePath(req.file.path);
+        additionalData.receiptFilePath = req.file.path;
+        additionalData.receiptFileSize = req.file.size;
+        additionalData.receiptContentType = req.file.mimetype;
+      }
+      
       // Update expense record
       const expense = await storage.updateExpense(id, {
         ...expenseData,
-        receiptPath: req.file ? getRelativePath(req.file.path) : undefined
+        ...additionalData
       });
       
       if (!expense) {
@@ -683,6 +736,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(expense);
     } catch (error) {
       console.error("Error updating expense:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid expense data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to update expense", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
+    }
+  });
+  
+  // Update expense with receipt upload (Dedicated endpoint for file uploads)
+  app.patch("/api/expenses/:id/with-receipt", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
+
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      
+      const expenseData = insertExpenseSchema.parse(req.body);
+      
+      // Add additional metadata from the uploaded file if present
+      const additionalData: any = {};
+      if (req.file) {
+        additionalData.receiptPath = getRelativePath(req.file.path);
+        additionalData.receiptFilePath = req.file.path;
+        additionalData.receiptFileSize = req.file.size;
+        additionalData.receiptContentType = req.file.mimetype;
+      }
+      
+      // Update expense record
+      const expense = await storage.updateExpense(id, {
+        ...expenseData,
+        ...additionalData
+      });
+      
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense with receipt:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid expense data", error: error.errors });
       } else {
