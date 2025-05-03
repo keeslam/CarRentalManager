@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { 
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Vehicle } from "@shared/schema";
 import { format } from "date-fns";
 import { formatFileSize } from "@/lib/format-utils";
+import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 
 // Expense categories
 const expenseCategories = [
@@ -99,11 +101,31 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
   const [receiptTab, setReceiptTab] = useState<string>("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formInitialized, setFormInitialized] = useState(false);
+  const [recentVehicles, setRecentVehicles] = useState<string[]>([]);
   
   // Fetch vehicles for select field
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
+  
+  // Get the selected vehicle object
+  const selectedVehicle = useMemo(() => {
+    if (!vehicles || !form?.getValues().vehicleId) return null;
+    return vehicles.find(v => v.id === form.getValues().vehicleId);
+  }, [vehicles, form?.getValues().vehicleId]);
+  
+  // Create vehicle options for the combobox
+  const vehicleOptions = useMemo(() => {
+    if (!vehicles) return [];
+    
+    return vehicles.map(vehicle => ({
+      value: vehicle.id.toString(),
+      label: `${vehicle.licensePlate} - ${vehicle.brand} ${vehicle.model}`,
+      description: vehicle.fuel || undefined,
+      group: vehicle.vehicleType || 'Other',
+      tags: vehicle.vehicleType ? [vehicle.vehicleType] : [],
+    }));
+  }, [vehicles]);
   
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
@@ -262,27 +284,35 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
                 control={form.control}
                 name="vehicleId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Vehicle</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={field.value > 0 ? field.value.toString() : undefined}
-                      value={field.value > 0 ? field.value.toString() : undefined}
-                      disabled={vehicleId !== null}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a vehicle" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vehicles?.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SearchableCombobox
+                        options={vehicleOptions}
+                        value={field.value > 0 ? field.value.toString() : ""}
+                        onChange={(value) => field.onChange(parseInt(value))}
+                        placeholder="Search and select a vehicle..."
+                        searchPlaceholder="Search by license plate, brand, or model..."
+                        groups={true}
+                        recentValues={recentVehicles}
+                        disabled={vehicleId !== null}
+                      />
+                    </FormControl>
+                    
+                    {selectedVehicle && !vehicleId && (
+                      <div className="mt-2 text-sm bg-muted p-2 rounded-md">
+                        <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
+                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                          {selectedVehicle.vehicleType && (
+                            <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
+                          )}
+                          {selectedVehicle.fuel && (
+                            <span>{selectedVehicle.fuel}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <FormMessage />
                   </FormItem>
                 )}
