@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
-import { formatDate } from "@/lib/format-utils";
+import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { getDaysUntil } from "@/lib/date-utils";
 
 export default function VehiclesIndex() {
@@ -36,8 +36,8 @@ export default function VehiclesIndex() {
       header: "License Plate",
       cell: ({ row }) => {
         const licensePlate = row.getValue("licensePlate") as string;
-        // Display without hyphens
-        return <div className="font-medium">{licensePlate.replace(/-/g, '')}</div>;
+        // Display without hyphens using formatLicensePlate utility
+        return <div className="font-medium">{formatLicensePlate(licensePlate)}</div>;
       },
     },
     {
