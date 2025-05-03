@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
@@ -25,6 +26,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<string>("default");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const { toast } = useToast();
@@ -102,7 +104,7 @@ export default function VehiclesIndex() {
     navigate(`/vehicles/${vehicle.id}/edit`);
   };
   
-  // Filter vehicles based on search query
+  // Filter and sort vehicles based on search query and sort option
   const filteredVehicles = vehicles?.filter(vehicle => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -111,6 +113,33 @@ export default function VehiclesIndex() {
       vehicle.model.toLowerCase().includes(searchLower) ||
       (vehicle.vehicleType && vehicle.vehicleType.toLowerCase().includes(searchLower))
     );
+  }).sort((a, b) => {
+    // Apply sorting based on selected option
+    switch (sortBy) {
+      case "apk-asc":
+        // Sort by APK date ascending (earliest first)
+        if (!a.apkDate) return 1; // No APK date comes last
+        if (!b.apkDate) return -1; // No APK date comes last
+        return new Date(a.apkDate).getTime() - new Date(b.apkDate).getTime();
+      
+      case "apk-desc":
+        // Sort by APK date descending (latest first)
+        if (!a.apkDate) return 1; // No APK date comes last
+        if (!b.apkDate) return -1; // No APK date comes last
+        return new Date(b.apkDate).getTime() - new Date(a.apkDate).getTime();
+      
+      case "brand":
+        // Sort by brand name alphabetically
+        return a.brand.localeCompare(b.brand);
+      
+      case "license":
+        // Sort by license plate alphabetically
+        return a.licensePlate.localeCompare(b.licensePlate);
+      
+      default:
+        // Default sort by ID
+        return a.id - b.id;
+    }
   });
   
   // Define table columns
