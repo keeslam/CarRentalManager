@@ -5,7 +5,10 @@ import { UserRole } from "@shared/schema";
 export function SidebarNav() {
   const [location] = useLocation();
   const { user } = useAuth();
+  console.log("SidebarNav rendering with user:", user);
+  console.log("UserRole.ADMIN =", UserRole.ADMIN);
   const isAdmin = user?.role === UserRole.ADMIN;
+  console.log("isAdmin =", isAdmin);
 
   // Define navigation items
   const navItems = [

@@ -30,8 +30,23 @@ export function ReservationCalendar() {
   });
   
   // Fetch reservations for the current week
+  const startDate = format(weekStart, "yyyy-MM-dd");
+  const endDate = format(weekEnd, "yyyy-MM-dd");
+  console.log("Fetching reservations for range:", startDate, "to", endDate);
+  
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
-    queryKey: ["/api/reservations/range", format(weekStart, "yyyy-MM-dd"), format(weekEnd, "yyyy-MM-dd")],
+    queryKey: ["/api/reservations/range", startDate, endDate],
+    queryFn: async () => {
+      const url = `/api/reservations/range?startDate=${startDate}&endDate=${endDate}`;
+      console.log("Fetching from URL:", url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Reservation range fetch error:", errorText);
+        throw new Error(errorText);
+      }
+      return response.json();
+    }
   });
   
   // Function to navigate to previous/next week
