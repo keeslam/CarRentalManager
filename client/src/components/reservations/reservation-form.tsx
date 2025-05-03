@@ -93,6 +93,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -285,6 +286,43 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const selectedVehicle = vehicles?.find(v => v.id.toString() === vehicleIdWatch?.toString());
   const selectedCustomer = customers?.find(c => c.id.toString() === form.watch("customerId")?.toString());
 
+  // RDW Lookup mutation
+  const lookupVehicleMutation = useMutation({
+    mutationFn: async (licensePlate: string) => {
+      return await fetch(`/api/rdw/vehicle/${licensePlate}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    onSuccess: async (response) => {
+      const vehicleData = await response.json();
+      
+      // Fill form with retrieved data
+      Object.keys(vehicleData).forEach((key) => {
+        if (vehicleForm.getValues(key as any) !== undefined) {
+          vehicleForm.setValue(key as any, vehicleData[key]);
+        }
+      });
+      
+      toast({
+        title: "Information retrieved",
+        description: "Vehicle information has been retrieved successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lookup failed",
+        description: `Could not retrieve vehicle information: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsLookingUp(false);
+    }
+  });
+  
   // Create vehicle mutation
   const createVehicleMutation = useMutation({
     mutationFn: async (data: z.infer<typeof vehicleFormSchema>) => {
@@ -488,6 +526,22 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     },
   });
   
+  // Handle license plate lookup 
+  const handleLookup = () => {
+    const licensePlate = vehicleForm.getValues("licensePlate");
+    if (!licensePlate) {
+      toast({
+        title: "License plate required",
+        description: "Please enter a license plate to look up vehicle information.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLookingUp(true);
+    lookupVehicleMutation.mutate(licensePlate);
+  };
+
   // Handle vehicle form submission
   const onVehicleSubmit = (data: z.infer<typeof vehicleFormSchema>) => {
     createVehicleMutation.mutate(data);
