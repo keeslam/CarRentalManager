@@ -1,22 +1,18 @@
 import * as React from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type ComboboxOption = {
   value: string;
@@ -66,17 +62,17 @@ export function SearchableCombobox({
         option.label.toLowerCase().includes(query) ||
         option.value.toLowerCase().includes(query) ||
         option.description?.toLowerCase().includes(query) ||
-        option.tags?.some(tag => tag.toLowerCase().includes(query))
+        option.tags?.some(tag => tag?.toLowerCase().includes(query))
     );
   }, [options, searchQuery]);
 
-  // Get grouped options
+  // Group the options
   const groupedOptions = React.useMemo(() => {
-    if (!groups) return { "All Items": filteredOptions };
+    if (!groups) return { "All": filteredOptions };
     
     const grouped: Record<string, ComboboxOption[]> = {};
     
-    // Add recent values to top of the list, if any
+    // Add recent options to the top
     if (recentValues && recentValues.length > 0) {
       const recentOptions = options.filter(option => 
         recentValues.includes(option.value)
@@ -86,7 +82,7 @@ export function SearchableCombobox({
       }
     }
     
-    // Group the filtered options
+    // Add the rest of filtered options grouped by their group
     filteredOptions.forEach(option => {
       const group = option.group || "Other";
       if (!grouped[group]) {
@@ -98,71 +94,72 @@ export function SearchableCombobox({
     return grouped;
   }, [filteredOptions, groups, options, recentValues]);
 
-  // Find the selected option for display
+  // Selected option for display
   const selectedOption = options.find(option => option.value === value);
-  
-  // Handle when user presses Enter in search field
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && filteredOptions.length > 0) {
-      onChange(filteredOptions[0].value);
-      setOpen(false);
-    }
-  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            "w-full justify-between",
-            !value && "text-muted-foreground",
-            className
-          )}
-          disabled={disabled}
-          onClick={() => setOpen(!open)}
-        >
-          <div className="flex items-center truncate">
-            {selectedOption ? (
-              <span className="flex items-center gap-2 truncate">
-                {selectedOption.label}
-                {selectedOption.tags && selectedOption.tags.length > 0 && (
-                  <Badge variant="outline" className="ml-1 text-xs font-normal">
-                    {selectedOption.tags[0]}
-                  </Badge>
-                )}
-              </span>
-            ) : (
-              <span>{placeholder}</span>
+    <div className="relative w-full">
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-between",
+              !value && "text-muted-foreground",
+              className
             )}
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="p-0 w-[350px] md:w-[450px]" align="start">
-        <Command>
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput 
-              placeholder={searchPlaceholder} 
-              onValueChange={setSearchQuery}
-              value={searchQuery}
-              className="h-9 flex-1"
-              onKeyDown={handleKeyDown}
-            />
-          </div>
-          <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <ScrollArea className="h-[400px] md:h-[500px]">
-              {Object.entries(groupedOptions).map(([group, groupOptions]) => (
-                <CommandGroup key={group} heading={group !== "All Items" ? group : undefined}>
+            disabled={disabled}
+          >
+            <div className="flex items-center truncate">
+              {selectedOption ? (
+                <span className="flex items-center gap-2 truncate">
+                  {selectedOption.label}
+                  {selectedOption.tags && selectedOption.tags.length > 0 && selectedOption.tags[0] && (
+                    <Badge variant="outline" className="ml-1 text-xs font-normal">
+                      {selectedOption.tags[0]}
+                    </Badge>
+                  )}
+                </span>
+              ) : (
+                <span>{placeholder}</span>
+              )}
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="w-[350px] md:w-[450px] max-h-[600px] overflow-auto"
+          align="start"
+        >
+          <div className="px-2 py-2">
+            <div className="flex items-center px-1 mb-2">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            
+            {Object.entries(groupedOptions).length === 0 && (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                {emptyMessage}
+              </div>
+            )}
+            
+            {Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
+              <React.Fragment key={group}>
+                {groupIndex > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuGroup>
+                  {group !== "All" && (
+                    <DropdownMenuLabel>{group}</DropdownMenuLabel>
+                  )}
                   {groupOptions.map((option) => (
-                    <CommandItem
+                    <DropdownMenuItem
                       key={option.value}
-                      value={option.value}
-                      onSelect={() => {
+                      className="flex flex-col items-start py-2 cursor-pointer"
+                      onClick={() => {
                         onChange(option.value);
                         setOpen(false);
                         setSearchQuery("");
@@ -170,34 +167,34 @@ export function SearchableCombobox({
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="flex flex-col">
-                          <span className="font-semibold">{option.label}</span>
+                          <span className="font-semibold">
+                            {option.label}
+                            {value === option.value && (
+                              <Check className="ml-2 h-4 w-4 text-primary inline" />
+                            )}
+                          </span>
                           {option.description && (
-                            <span className="text-xs text-muted-foreground mt-0.5 max-w-[300px] line-clamp-2">
+                            <span className="text-xs text-muted-foreground mt-0.5">
                               {option.description}
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="flex items-center gap-2">
-                            {option.tags && option.tags.length > 0 && option.tags[0] && (
-                              <Badge variant="outline" className="text-xs">
-                                {option.tags[0]}
-                              </Badge>
-                            )}
-                            {value === option.value && (
-                              <Check className="h-4 w-4 text-primary" />
-                            )}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          {option.tags && option.tags.length > 0 && option.tags[0] && (
+                            <Badge variant="outline" className="text-xs">
+                              {option.tags[0]}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    </CommandItem>
+                    </DropdownMenuItem>
                   ))}
-                </CommandGroup>
-              ))}
-            </ScrollArea>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                </DropdownMenuGroup>
+              </React.Fragment>
+            ))}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
