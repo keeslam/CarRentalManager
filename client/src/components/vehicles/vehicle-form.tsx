@@ -556,9 +556,9 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel>Registered To Person</FormLabel>
+                          <FormLabel>Registration: Opnaam</FormLabel>
                           <FormDescription>
-                            Vehicle is registered to a person
+                            Vehicle is registered to a person (Opnaam)
                           </FormDescription>
                           {field.value && (
                             <FormDescription className="text-xs text-muted-foreground">
@@ -590,9 +590,9 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel>Registered To Company</FormLabel>
+                          <FormLabel>Registration: BV</FormLabel>
                           <FormDescription>
-                            Vehicle is registered to a company
+                            Vehicle is registered to a company (BV)
                           </FormDescription>
                           {field.value && (
                             <FormDescription className="text-xs text-muted-foreground">

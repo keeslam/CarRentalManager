@@ -314,26 +314,17 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To Person</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To</h4>
                     <div className="flex items-center gap-2">
                       <Switch checked={vehicle.registeredTo === true || vehicle.registeredTo === "true"} disabled />
                       <span className="text-sm text-gray-500">
-                        {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? "Yes" : "No"}
+                        {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? "Opnaam" : 
+                         (vehicle.company === true || vehicle.company === "true" ? "BV" : "Not specified")}
                       </span>
                     </div>
                     {(vehicle.registeredTo === true || vehicle.registeredTo === "true") && vehicle.registeredToDate && (
                       <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.registeredToDate)}</p>
                     )}
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To Company</h4>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={vehicle.company === true || vehicle.company === "true"} disabled />
-                      <span className="text-sm text-gray-500">
-                        {vehicle.company === true || vehicle.company === "true" ? "Yes" : "No"}
-                      </span>
-                    </div>
                     {(vehicle.company === true || vehicle.company === "true") && vehicle.companyDate && (
                       <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.companyDate)}</p>
                     )}

@@ -211,19 +211,27 @@ export default function VehiclesIndex() {
       header: "Registration",
       cell: ({ row }) => {
         const vehicle = row.original;
-        const isRegistered = Boolean(vehicle.registeredTo);
+        const isRegisteredToPerson = vehicle.registeredTo === true || vehicle.registeredTo === "true";
+        const isRegisteredToCompany = vehicle.company === true || vehicle.company === "true";
         
         return (
           <div className="flex flex-col">
-            {isRegistered ? (
+            {isRegisteredToPerson ? (
               <>
-                <span className="text-sm font-medium">{vehicle.registeredTo}</span>
+                <Badge className="bg-blue-50 text-blue-700 py-0.5 px-1.5">Opnaam</Badge>
                 {vehicle.registeredToDate && (
-                  <span className="text-xs text-gray-500">Until: {formatDate(vehicle.registeredToDate)}</span>
+                  <span className="text-xs text-gray-500 mt-1">Since: {formatDate(vehicle.registeredToDate)}</span>
+                )}
+              </>
+            ) : isRegisteredToCompany ? (
+              <>
+                <Badge className="bg-green-50 text-green-700 py-0.5 px-1.5">BV</Badge>
+                {vehicle.companyDate && (
+                  <span className="text-xs text-gray-500 mt-1">Since: {formatDate(vehicle.companyDate)}</span>
                 )}
               </>
             ) : (
-              <span className="text-gray-500">Not registered</span>
+              <span className="text-gray-500">Not specified</span>
             )}
           </div>
         );
