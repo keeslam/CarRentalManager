@@ -248,28 +248,35 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     doDateRangesOverlap(startDateWatch, endDateWatch, reservation.startDate, reservation.endDate)
   );
   
-  // Convert vehicles to combobox options
+  // Convert vehicles to combobox options with improved search capabilities
   const vehicleOptions: ComboboxOption[] = useMemo(() => {
     if (!vehicles) return [];
     
     return vehicles.map(vehicle => ({
       value: vehicle.id.toString(),
       label: `${vehicle.licensePlate} - ${vehicle.brand} ${vehicle.model}`,
-      description: vehicle.vehicleType || undefined,
+      // Add search-friendly description with more details
+      description: `${vehicle.vehicleType || ''} | ${vehicle.fuel || ''} | ${vehicle.chassisNumber || ''}`,
       group: vehicle.vehicleType || "Other",
       tags: [vehicle.fuel || ""]
     }));
   }, [vehicles]);
   
-  // Convert customers to combobox options
+  // Convert customers to combobox options with improved search capabilities
   const customerOptions: ComboboxOption[] = useMemo(() => {
     if (!customers) return [];
     
     return customers.map(customer => ({
       value: customer.id.toString(),
       label: customer.name,
-      description: customer.phone || undefined,
-      tags: [customer.city || ""]
+      // Add contact info for easier searching
+      description: [
+        customer.phone || '', 
+        customer.email || '', 
+        customer.city || ''
+      ].filter(Boolean).join(' | '),
+      group: customer.city || "Other",
+      tags: [customer.phone ? "☎" : ""]
     }));
   }, [customers]);
   
