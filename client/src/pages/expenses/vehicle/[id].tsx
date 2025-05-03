@@ -43,24 +43,44 @@ export default function VehicleExpensesPage() {
   console.log("VehicleExpensesPage - path segments:", pathSegments);
   console.log("VehicleExpensesPage - extracted vehicleId:", vehicleId);
   
+  // Define query keys for easier reference
+  const expenseListQueryKey = ["/api/expenses"];
+  const vehicleExpensesQueryKey = vehicleId ? [`/api/expenses/vehicle/${vehicleId}`] : [];
+  
+  // Fetch expenses for this vehicle
+  const { 
+    data: expenses, 
+    isLoading: isLoadingExpenses, 
+    error: expensesError,
+    refetch: refetchExpenses 
+  } = useQuery<Expense[]>({
+    queryKey: vehicleExpensesQueryKey,
+    enabled: !!vehicleId,
+    retry: 1,
+  });
+  
   // Define delete expense mutation
   const deleteExpenseMutation = useMutation({
     mutationFn: async (expenseId: number) => {
-      return await apiRequest("DELETE", `/api/expenses/${expenseId}`);
+      const response = await apiRequest("DELETE", `/api/expenses/${expenseId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete expense');
+      }
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Expense deleted",
         description: "The expense has been successfully deleted."
       });
       
-      // Invalidate and refetch expenses list
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      // Invalidate queries and explicitly force a refetch
+      await queryClient.invalidateQueries({ queryKey: expenseListQueryKey });
+      await queryClient.invalidateQueries({ queryKey: vehicleExpensesQueryKey });
       
-      // Invalidate vehicle expenses
-      if (vehicleId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
-      }
+      // Explicitly force a refetch to update the UI
+      await refetchExpenses();
     },
     onError: (error: Error) => {
       toast({
@@ -74,13 +94,6 @@ export default function VehicleExpensesPage() {
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle, error: vehicleError } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${vehicleId}`],
-    enabled: !!vehicleId,
-    retry: 1,
-  });
-  
-  // Fetch expenses for this vehicle
-  const { data: expenses, isLoading: isLoadingExpenses, error: expensesError } = useQuery<Expense[]>({
-    queryKey: [`/api/expenses/vehicle/${vehicleId}`],
     enabled: !!vehicleId,
     retry: 1,
   });
