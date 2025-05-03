@@ -41,6 +41,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation } from "@shared/schema";
@@ -497,17 +498,17 @@ export function ReservationForm({
                           </div>
                           
                           <FormControl>
-                            <SearchableCombobox
-                              options={vehicleOptions}
-                              value={field.value ? field.value.toString() : ''}
-                              onChange={(value) => {
-                                field.onChange(value);
-                              }}
-                              placeholder="Search and select a vehicle..."
-                              searchPlaceholder="Search by license plate, brand, or model..."
-                              groups={true}
-                              recentValues={recentVehicles}
-                            />
+                            {vehicles && (
+                              <VehicleSelector
+                                vehicles={vehicles}
+                                value={field.value ? field.value.toString() : ''}
+                                onChange={(value) => {
+                                  field.onChange(value);
+                                }}
+                                placeholder="Search and select a vehicle..."
+                                recentVehicleIds={recentVehicles}
+                              />
+                            )}
                           </FormControl>
                           
                           {selectedVehicle && !actualVehicleId && (
