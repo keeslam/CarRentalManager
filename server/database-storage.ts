@@ -8,8 +8,14 @@ import {
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray, not } from "drizzle-orm";
 import { IStorage } from "./storage";
+
+// Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
+function notInArray(column: any, values: any[]) {
+  if (values.length === 0) return sql`1=1`; // Always true if no values
+  return not(inArray(column, values));
+}
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -74,10 +80,13 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(vehicles);
     }
     
+    // Using SQL directly for the NOT IN clause
     return await db
       .select()
       .from(vehicles)
-      .where(sql`${vehicles.id} NOT IN (${Array.from(reservedIds).join(',')})`);
+      .where(
+        sql`${vehicles.id} NOT IN (${Array.from(reservedIds).join(',')})`
+      );
   }
 
   async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
