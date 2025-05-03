@@ -207,6 +207,55 @@ export default function VehiclesIndex() {
       },
     },
     {
+      id: "registration",
+      header: "Registration",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        const isRegistered = Boolean(vehicle.registeredTo);
+        
+        return (
+          <div className="flex flex-col">
+            {isRegistered ? (
+              <>
+                <span className="text-sm font-medium">{vehicle.registeredTo}</span>
+                {vehicle.registeredToDate && (
+                  <span className="text-xs text-gray-500">Until: {formatDate(vehicle.registeredToDate)}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-gray-500">Not registered</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "features",
+      header: "Features",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        return (
+          <div className="flex flex-col gap-1">
+            {vehicle.gps && (
+              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 text-xs">
+                GPS
+              </Badge>
+            )}
+            {vehicle.radioCode && (
+              <Badge variant="outline" className="bg-purple-50 border-purple-200 text-purple-700 text-xs">
+                Radio Code: {vehicle.radioCode}
+              </Badge>
+            )}
+            {vehicle.tireSize && (
+              <Badge variant="outline" className="bg-gray-50 border-gray-200 text-gray-700 text-xs">
+                Tire: {vehicle.tireSize}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "apkDate",
       header: "APK Expires",
       cell: ({ row }) => {
