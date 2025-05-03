@@ -48,7 +48,13 @@ export default function VehiclesIndex() {
         throw new Error(`Failed to delete vehicle: ${response.status} ${response.statusText}`);
       }
       
-      return response.json();
+      // Try to parse JSON response, but don't fail if there isn't one
+      try {
+        return await response.json();
+      } catch (e) {
+        // Return an object with success=true if no valid JSON
+        return { success: true };
+      }
     },
     onSuccess: () => {
       toast({
