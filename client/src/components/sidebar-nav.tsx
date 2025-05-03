@@ -33,17 +33,16 @@ export function SidebarNav() {
             <Link 
               key={item.href} 
               href={item.href}
-            >
-              <a className={`flex items-center px-2 py-2 text-base font-medium rounded-md ${
+              className={`flex items-center px-2 py-2 text-base font-medium rounded-md ${
                 isActive
                   ? "bg-primary-50 text-primary-600"
                   : "text-gray-700 hover:bg-gray-100"
-              }`}>
-                <span className="mr-3 text-xl">
-                  {getNavIcon(item.icon, isActive)}
-                </span>
-                {item.label}
-              </a>
+              }`}
+            >
+              <span className="mr-3 text-xl">
+                {getNavIcon(item.icon, isActive)}
+              </span>
+              {item.label}
             </Link>
           );
         })}

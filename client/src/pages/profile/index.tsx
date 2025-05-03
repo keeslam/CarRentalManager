@@ -88,7 +88,7 @@ export default function ProfilePage() {
               <Shield className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Role</p>
-                <p className="font-medium">
+                <div className="font-medium">
                   {user.role === UserRole.ADMIN ? (
                     <Badge variant="destructive">Administrator</Badge>
                   ) : user.role === UserRole.MANAGER ? (
@@ -96,7 +96,7 @@ export default function ProfilePage() {
                   ) : (
                     <Badge variant="outline">Regular User</Badge>
                   )}
-                </p>
+                </div>
               </div>
             </div>
 
