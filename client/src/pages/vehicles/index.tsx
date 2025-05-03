@@ -70,7 +70,9 @@ export default function VehiclesIndex() {
   };
   
   const handleEditClick = (vehicle: Vehicle) => {
-    navigate(`/vehicles/edit/${vehicle.id}`);
+    // For now, just navigate to the vehicle details page
+    // since we haven't implemented a separate edit page yet
+    navigate(`/vehicles/${vehicle.id}`);
   };
   
   // Filter vehicles based on search query
