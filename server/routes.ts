@@ -348,6 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reservation = await storage.createReservation(reservationData);
       
       // If there's a file, create a document record linked to the vehicle
+      // and update the reservation with the damage check path
       if (req.file) {
         const documentData = {
           vehicleId: reservationData.vehicleId,
@@ -360,7 +361,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: `Damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
         };
         
-        await storage.createDocument(documentData);
+        const document = await storage.createDocument(documentData);
+        
+        // Update the reservation with the damage check path
+        await storage.updateReservation(reservation.id, {
+          damageCheckPath: req.file.path
+        });
       }
       
       res.status(201).json(reservation);
@@ -414,6 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If there's a file, create a document record linked to the vehicle
+      // and update the reservation with the damage check path
       if (req.file) {
         const documentData = {
           vehicleId: reservationData.vehicleId,
@@ -426,7 +433,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: `Updated damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
         };
         
-        await storage.createDocument(documentData);
+        const document = await storage.createDocument(documentData);
+        
+        // Update the reservation with the damage check path
+        await storage.updateReservation(reservation.id, {
+          damageCheckPath: req.file.path
+        });
       }
       
       res.json(reservation);

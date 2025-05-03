@@ -98,6 +98,7 @@ export const reservations = pgTable("reservations", {
   status: text("status").default("pending").notNull(),
   totalPrice: numeric("total_price"),
   notes: text("notes"),
+  damageCheckPath: text("damage_check_path"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
