@@ -16,8 +16,8 @@ export function SidebarNav() {
     { href: "/expenses", label: "Expenses", icon: "euro" },
     { href: "/documents", label: "Documents", icon: "description" },
     // Users menu item moved to user dropdown menu
-    { href: "/reports", label: "Reports", icon: "assessment" },
-    { href: "/profile", label: "My Profile", icon: "user_profile" }
+    { href: "/reports", label: "Reports", icon: "assessment" }
+    // My Profile moved to user dropdown menu
   ];
 
   return (

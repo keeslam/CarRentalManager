@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const [_, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   
   const logoutMutation = useMutation({
     mutationFn: async () => {
