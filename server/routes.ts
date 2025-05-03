@@ -291,11 +291,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
     filename: async (req, file, cb) => {
       try {
-        // Generate filename with reservation dates
-        const startDate = req.body.startDate || new Date().toISOString().split('T')[0];
         const timestamp = Date.now();
+        const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
         const extension = path.extname(file.originalname);
-        const fileName = `damage_check_${startDate}_${timestamp}${extension}`;
+        const startDate = req.body.startDate || dateString;
+        
+        // Get vehicle license plate
+        const vehicleId = parseInt(req.body.vehicleId);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (!vehicle) {
+          throw new Error("Vehicle not found");
+        }
+        
+        // Sanitize license plate for filename (remove spaces, etc.)
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Create filename with license plate, document type, and date
+        const fileName = `${sanitizedPlate}_damage_check_${startDate}_${timestamp}${extension}`;
         
         cb(null, fileName);
       } catch (error) {
@@ -502,14 +515,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, result);
       });
     },
-    filename: (req, file, cb) => {
-      const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
-      const category = req.body.category || 'unknown';
-      const timestamp = Date.now();
-      const extension = path.extname(file.originalname);
-      const fileName = `receipt_${category}_${expenseDate}_${timestamp}${extension}`;
-      
-      cb(null, fileName);
+    filename: async (req, file, cb) => {
+      try {
+        const timestamp = Date.now();
+        const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
+        const category = req.body.category || 'unknown';
+        const extension = path.extname(file.originalname);
+        
+        // Get vehicle license plate
+        const vehicleId = parseInt(req.body.vehicleId);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (!vehicle) {
+          throw new Error("Vehicle not found");
+        }
+        
+        // Sanitize license plate for filename (remove spaces, etc.)
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Create filename with license plate, expense category, and date
+        const fileName = `${sanitizedPlate}_receipt_${category}_${expenseDate}_${timestamp}${extension}`;
+        
+        cb(null, fileName);
+      } catch (error) {
+        console.error("Error creating filename for expense receipt:", error);
+        const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
+        const category = req.body.category || 'unknown';
+        const timestamp = Date.now();
+        const extension = path.extname(file.originalname);
+        const fallbackName = `receipt_${category}_${expenseDate}_${timestamp}${extension}`;
+        cb(null, fallbackName);
+      }
     }
   });
   
@@ -686,19 +722,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, result);
       });
     },
-    filename: (req, file, cb) => {
-      // Use original filename if it looks safe, otherwise generate a new one
-      const timestamp = Date.now();
-      const originalName = file.originalname;
-      const safeFilenameRegex = /^[a-zA-Z0-9_\-\. ]+$/;
-      
-      if (safeFilenameRegex.test(originalName)) {
-        cb(null, `${timestamp}_${originalName}`);
-      } else {
-        const extension = path.extname(originalName);
+    filename: async (req, file, cb) => {
+      try {
+        const timestamp = Date.now();
+        const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const extension = path.extname(file.originalname);
         const documentType = req.body.documentType || 'document';
-        const safeName = `${documentType}_${timestamp}${extension}`;
-        cb(null, safeName);
+        
+        // Get vehicle license plate
+        const vehicleId = parseInt(req.body.vehicleId);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (!vehicle) {
+          throw new Error("Vehicle not found");
+        }
+        
+        // Sanitize license plate for filename (remove spaces, etc.)
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Create filename with license plate, document type, and date
+        const newFilename = `${sanitizedPlate}_${documentType.replace(/\s+/g, '_')}_${dateString}_${timestamp}${extension}`;
+        
+        cb(null, newFilename);
+      } catch (error) {
+        console.error("Error creating filename:", error);
+        // Fallback to simple timestamped name if there's an error
+        const timestamp = Date.now();
+        const extension = path.extname(file.originalname);
+        const documentType = req.body.documentType || 'document';
+        const fallbackName = `${documentType.replace(/\s+/g, '_')}_${timestamp}${extension}`;
+        cb(null, fallbackName);
       }
     }
   });
