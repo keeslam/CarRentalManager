@@ -254,7 +254,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     
     return vehicles.map(vehicle => ({
       value: vehicle.id.toString(),
-      label: `${vehicle.licensePlate} - ${vehicle.brand} ${vehicle.model}`,
+      label: `${vehicle.licensePlate.replace(/-/g, '')} - ${vehicle.brand} ${vehicle.model}`,
       // Add search-friendly description with more details
       description: `${vehicle.vehicleType || ''} | ${vehicle.fuel || ''} | ${vehicle.chassisNumber || ''}`,
       group: vehicle.vehicleType || "Other",

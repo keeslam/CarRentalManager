@@ -235,7 +235,7 @@ export function DocumentUpload() {
                       <SelectContent>
                         {vehicles?.map((vehicle) => (
                           <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
+                            {vehicle.licensePlate.replace(/-/g, '')} - {vehicle.brand} {vehicle.model}
                           </SelectItem>
                         ))}
                       </SelectContent>

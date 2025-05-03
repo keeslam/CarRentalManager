@@ -91,7 +91,9 @@ export function UpcomingReservations() {
                   <tr key={reservation.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">{reservation.vehicle?.licensePlate}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {reservation.vehicle?.licensePlate?.replace(/-/g, '')}
+                        </div>
                         <div className="ml-2 text-xs text-gray-500">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
                       </div>
                     </td>
