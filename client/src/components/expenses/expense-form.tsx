@@ -42,13 +42,16 @@ const expenseCategories = [
   "Other"
 ];
 
-// Maximum file size (5 MB)
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Maximum file size (25 MB) - matching server configuration
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 // Allowed file types
 const ACCEPTED_FILE_TYPES = [
   "application/pdf",
+  "application/x-pdf",
+  "text/pdf",
   "image/jpeg",
+  "image/jpg",
   "image/png",
   "image/gif"
 ];
@@ -161,6 +164,13 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       // If we have a file, we need to use FormData instead of JSON
       if (selectedFile && receiptTab === "upload") {
+        console.log("Preparing expense with receipt file upload", {
+          file: selectedFile,
+          filename: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size
+        });
+        
         const formData = new FormData();
         
         // Add all the regular fields
@@ -174,13 +184,16 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
         }
         
         // Add the file
-        formData.append("receiptFile", selectedFile);
+        formData.append("receiptFile", selectedFile, selectedFile.name);
+        
+        console.log("FormData prepared, sending request to:", 
+          editMode ? `/api/expenses/${initialData?.id}/with-receipt` : "/api/expenses/with-receipt");
         
         // Use fetch directly instead of apiRequest which is JSON-only
         const response = await fetch(
           editMode ? `/api/expenses/${initialData?.id}/with-receipt` : "/api/expenses/with-receipt", 
           {
-            method: "POST",
+            method: editMode ? "PATCH" : "POST",
             body: formData,
             credentials: "include",
           }
@@ -188,11 +201,15 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
         
         if (!response.ok) {
           const errorData = await response.json();
+          console.error("Error response from server:", errorData);
           throw new Error(errorData.message || "Failed to upload receipt");
         }
         
-        return await response.json();
+        const result = await response.json();
+        console.log("Server response:", result);
+        return result;
       } else {
+        console.log("Sending regular JSON expense without file");
         // Regular JSON request for URL-based receipts
         return await apiRequest(
           editMode ? "PATCH" : "POST", 
@@ -392,7 +409,7 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
                             <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                            <p className="text-xs text-muted-foreground">PDF, PNG, JPG or GIF (max. 5MB)</p>
+                            <p className="text-xs text-muted-foreground">PDF, PNG, JPG or GIF (max. 25MB)</p>
                           </div>
                           <input 
                             id="receipt-file-upload" 
@@ -432,7 +449,7 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
                       )}
                       
                       <FormDescription>
-                        Upload a PDF receipt or invoice directly. The file will be stored securely.
+                        Upload a PDF receipt or invoice directly. PDF documents up to 25MB are supported to accommodate larger files such as detailed invoices. The file will be stored securely and organized by vehicle license plate.
                       </FormDescription>
                       {form.formState.errors.receiptFile && (
                         <p className="text-sm font-medium text-destructive">

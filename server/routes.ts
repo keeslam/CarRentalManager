@@ -508,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return callback(new Error("Vehicle not found"), false);
       }
       
-      // Create folders if they don't exist
+      // Create folders if they don't exist - follow the same pattern used by document uploads
       const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
       const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
       const receiptsDir = path.join(baseDir, 'receipts');
@@ -520,6 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.mkdirSync(receiptsDir, { recursive: true });
       }
       
+      console.log(`Receipt upload storage: ${receiptsDir}`);
       callback(null, receiptsDir);
     } catch (error) {
       console.error("Error with expense receipt upload:", error);
@@ -538,9 +539,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     filename: async (req, file, cb) => {
       try {
         const timestamp = Date.now();
-        const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
+        const dateString = req.body.date || new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
         const category = req.body.category || 'unknown';
-        const extension = path.extname(file.originalname);
+        const extension = path.extname(file.originalname) || '.pdf'; // Default to .pdf if no extension
         
         // Get vehicle license plate
         const vehicleId = parseInt(req.body.vehicleId);
@@ -550,20 +551,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error("Vehicle not found");
         }
         
-        // Sanitize license plate for filename (remove spaces, etc.)
+        // Sanitize license plate for filename (remove spaces, etc.) - match the document pattern
         const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
         
-        // Create filename with license plate, expense category, and date
-        const fileName = `${sanitizedPlate}_receipt_${category}_${expenseDate}_${timestamp}${extension}`;
+        // Create filename with license plate, expense category, and date - match document pattern
+        const fileName = `${sanitizedPlate}_receipt_${category.toLowerCase().replace(/\s+/g, '_')}_${dateString}_${timestamp}${extension}`;
         
+        console.log(`Generated receipt filename: ${fileName}`);
         cb(null, fileName);
       } catch (error) {
         console.error("Error creating filename for expense receipt:", error);
-        const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
-        const category = req.body.category || 'unknown';
+        // Fallback to simple timestamped name if there's an error - match document pattern
         const timestamp = Date.now();
-        const extension = path.extname(file.originalname);
-        const fallbackName = `receipt_${category}_${expenseDate}_${timestamp}${extension}`;
+        const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const category = req.body.category || 'unknown';
+        const extension = path.extname(file.originalname) || '.pdf'; // Default to .pdf if no extension
+        const fallbackName = `receipt_${category.toLowerCase().replace(/\s+/g, '_')}_${dateString}_${timestamp}${extension}`;
+        console.log(`Using fallback receipt filename: ${fallbackName}`);
         cb(null, fallbackName);
       }
     }
@@ -575,9 +579,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileSize: 25 * 1024 * 1024, // 25MB limit for PDFs and images
     },
     fileFilter: (req, file, cb) => {
+      // Log file info for debugging
+      console.log("File upload attempt:", {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size
+      });
+      
       // Accept only specific file types
       const fileTypes = /jpeg|jpg|png|pdf/;
-      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+      // Extract the extension and convert to lowercase
+      const fileExt = path.extname(file.originalname).toLowerCase();
+      const extname = fileTypes.test(fileExt);
       
       // PDF files sometimes have different MIME types
       const allowedMimeTypes = [
@@ -585,11 +598,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'application/pdf', 'application/x-pdf', 'text/pdf'
       ];
       
-      if (extname && (allowedMimeTypes.includes(file.mimetype) || file.mimetype.includes('pdf'))) {
+      // If the mimetype includes 'pdf' (anywhere in the string), consider it a PDF
+      const isPDF = file.mimetype.includes('pdf') || fileExt === '.pdf';
+      const isAllowedMimetype = allowedMimeTypes.includes(file.mimetype);
+      
+      console.log("File validation:", {
+        fileExt,
+        extname,
+        isPDF,
+        isAllowedMimetype
+      });
+      
+      if (extname && (isAllowedMimetype || isPDF)) {
+        console.log("File accepted");
         return cb(null, true);
       } else {
-        console.error(`File rejected: ${file.originalname}, mimetype: ${file.mimetype}`);
-        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
+        console.error(`File rejected: ${file.originalname}, mimetype: ${file.mimetype}, extension: ${fileExt}`);
+        cb(new Error(`Only .jpg, .jpeg, .png, and .pdf files are allowed. Received: ${fileExt} with mimetype: ${file.mimetype}`) as any, false);
       }
     },
   });
@@ -665,27 +690,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create expense with receipt upload (Dedicated endpoint for file uploads)
   app.post("/api/expenses/with-receipt", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
     try {
+      console.log("Handling expense with receipt upload");
+      console.log("Request body:", req.body);
+      console.log("File info:", req.file);
+      
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
       
       const expenseData = insertExpenseSchema.parse(req.body);
+      console.log("Parsed expense data:", expenseData);
       
       // Add additional metadata from the uploaded file if present
       const additionalData: any = {};
       if (req.file) {
+        console.log("Processing uploaded receipt file");
         additionalData.receiptPath = getRelativePath(req.file.path);
         additionalData.receiptFilePath = req.file.path;
         additionalData.receiptFileSize = req.file.size;
         additionalData.receiptContentType = req.file.mimetype;
+        console.log("File metadata:", additionalData);
+      } else {
+        console.log("No receipt file found in request");
       }
       
       // Create expense record
+      console.log("Creating expense record with data:", { ...expenseData, ...additionalData });
       const expense = await storage.createExpense({
         ...expenseData,
         ...additionalData
       });
       
+      console.log("Expense created successfully:", expense);
       res.status(201).json(expense);
     } catch (error) {
       console.error("Error creating expense with receipt:", error);
