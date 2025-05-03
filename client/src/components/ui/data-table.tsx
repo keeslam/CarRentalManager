@@ -28,6 +28,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchColumn?: string;
   searchPlaceholder?: string;
+  pagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
