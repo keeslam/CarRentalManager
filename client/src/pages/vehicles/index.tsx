@@ -37,7 +37,18 @@ export default function VehiclesIndex() {
   
   const deleteVehicleMutation = useMutation({
     mutationFn: async (vehicleId: number) => {
-      return apiRequest(`/api/vehicles/${vehicleId}`, "DELETE");
+      const response = await fetch(`/api/vehicles/${vehicleId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete vehicle: ${response.status} ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
