@@ -386,15 +386,12 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                     </div>
                     <div>
                       {documentsByCategory["Damage Report"]?.length > 0 ? (
-                        <div>
-                          <p className="text-base">{vehicle.damageCheckDate ? formatDate(vehicle.damageCheckDate) : formatDate(new Date(documentsByCategory["Damage Report"][0].uploadDate).toISOString().split('T')[0])}</p>
-                          <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
-                              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                            </svg>
-                            <span>Report added on {documentsByCategory["Damage Report"]?.[0]?.uploadDate ? formatDate(new Date(documentsByCategory["Damage Report"][0].uploadDate).toISOString().split('T')[0]) : 'Unknown date'}</span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                          </svg>
+                          <span>{formatDate(new Date(documentsByCategory["Damage Report"][0].uploadDate).toISOString().split('T')[0])}</span>
                         </div>
                       ) : (
                         <p className="text-base">{vehicle.damageCheckDate ? formatDate(vehicle.damageCheckDate) : "N/A"}</p>
