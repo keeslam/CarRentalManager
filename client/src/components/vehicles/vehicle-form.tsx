@@ -352,24 +352,43 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                   <FormField
                     control={form.control}
                     name="euroZone"
+                    render={({ field }) => {
+                      return (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <Switch
+                              checked={!!field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked ? 'Euro 6' : '');
+                              }}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              Euro Zone
+                            </FormLabel>
+                            <FormDescription>
+                              Enable this if the vehicle has a Euro classification
+                            </FormDescription>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="euroZoneEndDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Euro Zone</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select euro zone" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {euroZones.map(zone => (
-                              <SelectItem key={zone} value={zone}>{zone}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Euro Zone End Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Date when the Euro Zone classification expires
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -408,20 +427,6 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                         <FormDescription>
                           Date when the warranty expires
                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="euroZoneEndDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Euro Zone End Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
