@@ -24,11 +24,14 @@ import { Expense, Vehicle } from "@shared/schema";
 
 export default function ExpenseDetailsPage() {
   // Get expense ID from route parameter
-  const [location, params] = useLocation();
+  const [location] = useLocation();
   console.log("Current location:", location);
-  console.log("URL params:", params);
   
-  const expenseId = params.id ? parseInt(params.id) : null;
+  // Parse the expense ID from the URL directly
+  const expenseId = location.match(/\/expenses\/(\d+)/)?.[1] ? 
+    parseInt(location.match(/\/expenses\/(\d+)/)?.[1] as string) : 
+    null;
+  
   console.log("Parsed expense ID:", expenseId);
   
   // Fetch expense details

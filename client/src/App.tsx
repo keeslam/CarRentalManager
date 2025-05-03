@@ -54,6 +54,7 @@ function AppRoutes() {
         <ProtectedRoute path="/expenses" component={ExpensesIndex} />
         <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
         <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />
+        <ProtectedRoute path="/expenses/edit/:id" component={ExpenseAdd} />
         <ProtectedRoute path="/expenses/:id" component={ExpenseDetails} />
         <ProtectedRoute path="/documents" component={DocumentsIndex} />
         <ProtectedRoute path="/users" component={UsersIndex} />
