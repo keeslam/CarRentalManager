@@ -18,33 +18,45 @@ import ExpensesIndex from "@/pages/expenses/index";
 import ExpenseAdd from "@/pages/expenses/add";
 import DocumentsIndex from "@/pages/documents/index";
 import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/protected-route";
 
-function App() {
+function AppRoutes() {
   return (
     <MainLayout>
       <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/vehicles" component={VehiclesIndex} />
-        <Route path="/vehicles/add" component={VehicleAdd} />
-        <Route path="/vehicles/bulk-import" component={VehicleBulkImport} />
-        <Route path="/vehicles/:id/edit" component={VehicleEdit} />
-        <Route path="/vehicles/:id" component={VehicleDetails} />
-        <Route path="/customers" component={CustomersIndex} />
-        <Route path="/customers/add" component={CustomerAdd} />
-        <Route path="/customers/:id/edit" component={CustomerEdit} />
-        <Route path="/customers/:id" component={CustomerDetails} />
-        <Route path="/reservations" component={ReservationsIndex} />
-        <Route path="/reservations/add" component={ReservationAdd} />
-        <Route path="/reservations/calendar" component={ReservationCalendar} />
-        <Route path="/reservations/edit/:id" component={ReservationEdit} />
-        <Route path="/reservations/:id" component={ReservationDetails} />
-        <Route path="/expenses" component={ExpensesIndex} />
-        <Route path="/expenses/add" component={ExpenseAdd} />
-        <Route path="/documents" component={DocumentsIndex} />
+        <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/vehicles" component={VehiclesIndex} />
+        <ProtectedRoute path="/vehicles/add" component={VehicleAdd} />
+        <ProtectedRoute path="/vehicles/bulk-import" component={VehicleBulkImport} />
+        <ProtectedRoute path="/vehicles/:id/edit" component={VehicleEdit} />
+        <ProtectedRoute path="/vehicles/:id" component={VehicleDetails} />
+        <ProtectedRoute path="/customers" component={CustomersIndex} />
+        <ProtectedRoute path="/customers/add" component={CustomerAdd} />
+        <ProtectedRoute path="/customers/:id/edit" component={CustomerEdit} />
+        <ProtectedRoute path="/customers/:id" component={CustomerDetails} />
+        <ProtectedRoute path="/reservations" component={ReservationsIndex} />
+        <ProtectedRoute path="/reservations/add" component={ReservationAdd} />
+        <ProtectedRoute path="/reservations/calendar" component={ReservationCalendar} />
+        <ProtectedRoute path="/reservations/edit/:id" component={ReservationEdit} />
+        <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
+        <ProtectedRoute path="/expenses" component={ExpensesIndex} />
+        <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
+        <ProtectedRoute path="/documents" component={DocumentsIndex} />
+        <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 

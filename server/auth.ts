@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -10,9 +10,11 @@ import { pool } from "./db";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 
+// Extend Express.User interface with our User type properties
 declare global {
   namespace Express {
-    interface User extends User {}
+    // Use 'type' instead of 'interface' to avoid self-referencing issue
+    type User = Omit<import('@shared/schema').User, 'password'>;
   }
 }
 
@@ -99,7 +101,7 @@ export function setupAuth(app: Express) {
   });
 
   // Authentication middleware
-  const requireAuth = (req, res, next) => {
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -107,7 +109,7 @@ export function setupAuth(app: Express) {
   };
 
   // Register authentication routes
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(req.body.username);
@@ -123,7 +125,7 @@ export function setupAuth(app: Express) {
       });
 
       // Log user in
-      req.login(user, (err) => {
+      req.login(user, (err: any) => {
         if (err) return next(err);
         // Return user without password
         const { password, ...userWithoutPassword } = user;
@@ -134,12 +136,12 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+  app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate("local", (err: any, user: User | false, info: { message?: string }) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Authentication failed" });
       
-      req.login(user, (err) => {
+      req.login(user, (err: any) => {
         if (err) return next(err);
         // Return user without password
         const { password, ...userWithoutPassword } = user;
