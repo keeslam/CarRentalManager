@@ -515,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update reservation with damage check upload
-  app.patch("/api/reservations/:id", damageCheckUpload.single('damageCheckFile'), async (req, res) => {
+  app.patch("/api/reservations/:id", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -544,7 +544,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const reservation = await storage.updateReservation(id, reservationData);
+      // Add user tracking information for updates
+      const user = req.user;
+      const dataWithTracking = {
+        ...reservationData,
+        updatedBy: user ? user.username : null
+      };
+      
+      const reservation = await storage.updateReservation(id, dataWithTracking);
       
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
@@ -560,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           filePath: getRelativePath(req.file.path),
           fileSize: req.file.size,
           contentType: req.file.mimetype,
-          createdBy: `Reservation #${reservation.id} (Updated)`,
+          createdBy: user ? user.username : `Reservation #${reservation.id} (Updated)`,
           notes: `Updated damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
         };
         
@@ -752,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create expense with receipt upload
-  app.post("/api/expenses", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
+  app.post("/api/expenses", requireAuth, expenseReceiptUpload.single('receiptFile'), async (req: Request, res: Response) => {
     try {
       // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
@@ -761,11 +768,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Standard endpoint - data being passed to schema:", req.body);
       const expenseData = insertExpenseSchema.parse(req.body);
       
-      // Create expense record
-      const expense = await storage.createExpense({
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
         ...expenseData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null,
         receiptPath: req.file ? getRelativePath(req.file.path) : null
-      });
+      };
+      
+      // Create expense record
+      const expense = await storage.createExpense(dataWithTracking);
       
       res.status(201).json(expense);
     } catch (error) {
@@ -1060,7 +1073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload document
-  app.post("/api/documents", documentUpload.single('file'), async (req, res) => {
+  app.post("/api/documents", requireAuth, documentUpload.single('file'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -1072,12 +1085,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the filename from the path (which is the formatted name)
       const formattedFileName = path.basename(req.file.path);
       
+      // Add user tracking information
+      const user = req.user;
+      
       const documentData = insertDocumentSchema.parse({
         ...req.body,
         fileName: formattedFileName,
         filePath: getRelativePath(req.file.path),
         fileSize: req.file.size,
-        contentType: req.file.mimetype
+        contentType: req.file.mimetype,
+        createdBy: user ? user.username : null
       });
       
       const document = await storage.createDocument(documentData);
@@ -1096,7 +1113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update document
-  app.patch("/api/documents/:id", async (req, res) => {
+  app.patch("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1109,10 +1126,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Document not found" });
       }
 
+      // Add user tracking information
+      const user = req.user;
+      
       // Update only allowed fields (documentType and notes)
       const documentData = {
         ...(req.body.documentType && { documentType: req.body.documentType }),
-        ...(req.body.notes !== undefined && { notes: req.body.notes })
+        ...(req.body.notes !== undefined && { notes: req.body.notes }),
+        updatedBy: user ? user.username : null
       };
       
       const updatedDocument = await storage.updateDocument(id, documentData);
@@ -1131,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete document
-  app.delete("/api/documents/:id", async (req, res) => {
+  app.delete("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1176,7 +1197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== CONTRACT GENERATION ====================
   // Generate rental contract PDF
-  app.get("/api/contracts/generate/:reservationId", async (req, res) => {
+  app.get("/api/contracts/generate/:reservationId", requireAuth, async (req: Request, res: Response) => {
     try {
       const reservationId = parseInt(req.params.reservationId);
       if (isNaN(reservationId)) {
