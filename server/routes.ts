@@ -116,14 +116,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (status === 'opnaam') {
         updateData = {
-          registeredTo: "true",
-          company: "false",
+          registeredTo: true,
+          company: false,
           registeredToDate: currentDate
         };
       } else {
         updateData = {
-          registeredTo: "false",
-          company: "true",
+          registeredTo: false,
+          company: true,
           companyDate: currentDate
         };
       }
