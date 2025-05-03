@@ -87,7 +87,7 @@ export default function ReservationDetails() {
           <p className="text-gray-500">Reservation #{reservation.id}</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/reservations/${id}/edit`}>
+          <Link href={`/reservations/edit/${id}`}>
             <Button variant="outline">
               Edit Reservation
             </Button>

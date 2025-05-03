@@ -10,6 +10,8 @@ import CustomerAdd from "@/pages/customers/add";
 import CustomerDetails from "@/pages/customers/[id]";
 import ReservationsIndex from "@/pages/reservations/index";
 import ReservationAdd from "@/pages/reservations/add";
+import ReservationDetails from "@/pages/reservations/[id]";
+import ReservationEdit from "@/pages/reservations/edit/[id]";
 import ReservationCalendar from "@/pages/reservations/calendar";
 import ExpensesIndex from "@/pages/expenses/index";
 import ExpenseAdd from "@/pages/expenses/add";
@@ -33,6 +35,8 @@ function App() {
         <Route path="/reservations" component={ReservationsIndex} />
         <Route path="/reservations/add" component={ReservationAdd} />
         <Route path="/reservations/calendar" component={ReservationCalendar} />
+        <Route path="/reservations/edit/:id" component={ReservationEdit} />
+        <Route path="/reservations/:id" component={ReservationDetails} />
         <Route path="/expenses" component={ExpensesIndex} />
         <Route path="/expenses/add" component={ExpenseAdd} />
         <Route path="/documents" component={DocumentsIndex} />
