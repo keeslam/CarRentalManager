@@ -380,9 +380,6 @@ export function QuickActions() {
                           <label htmlFor="search" className="text-sm font-medium">
                             Find Vehicles
                           </label>
-                          <span className="text-xs text-muted-foreground">
-                            {selectedVehicles.length} selected
-                          </span>
                         </div>
                         
                         <Input
