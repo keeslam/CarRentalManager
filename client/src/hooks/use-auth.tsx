@@ -7,6 +7,7 @@ import {
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: User | null;
@@ -82,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const [_, navigate] = useLocation();
+  
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
@@ -91,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Logged out successfully",
       });
+      // Redirect to login page
+      navigate("/auth");
     },
     onError: (error: Error) => {
       toast({
