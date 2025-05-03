@@ -536,13 +536,17 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     )}
                   />
                   
+                  <div className="col-span-2 mb-4">
+                    <h3 className="text-sm font-medium mb-2">Registration Status (select one or none)</h3>
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="registeredTo"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel>Registered To</FormLabel>
+                          <FormLabel>Registered To Person</FormLabel>
                           <FormDescription>
                             Vehicle is registered to a person
                           </FormDescription>
@@ -576,7 +580,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel>Company</FormLabel>
+                          <FormLabel>Registered To Company</FormLabel>
                           <FormDescription>
                             Vehicle is registered to a company
                           </FormDescription>
