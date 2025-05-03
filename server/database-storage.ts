@@ -58,6 +58,15 @@ export class DatabaseStorage implements IStorage {
     
     return updatedVehicle || undefined;
   }
+  
+  async deleteVehicle(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(vehicles)
+      .where(eq(vehicles.id, id))
+      .returning();
+    
+    return !!deleted;
+  }
 
   async getAvailableVehicles(): Promise<Vehicle[]> {
     const today = new Date().toISOString().split('T')[0];

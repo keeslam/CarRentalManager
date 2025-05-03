@@ -19,6 +19,7 @@ export interface IStorage {
   getVehicle(id: number): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: number, vehicleData: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  deleteVehicle(id: number): Promise<boolean>;
   getAvailableVehicles(): Promise<Vehicle[]>;
   getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]>;
   getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]>;
@@ -280,6 +281,10 @@ export class MemStorage implements IStorage {
     
     this.vehicles.set(id, updatedVehicle);
     return updatedVehicle;
+  }
+  
+  async deleteVehicle(id: number): Promise<boolean> {
+    return this.vehicles.delete(id);
   }
 
   async getAvailableVehicles(): Promise<Vehicle[]> {
