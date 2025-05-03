@@ -84,8 +84,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   const [searchParams] = useLocation();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [vehicleId, setVehicleId] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -136,11 +136,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     const startDateParam = urlParams.get("startDate");
     
     if (vehicleIdParam) {
-      setVehicleId(Number(vehicleIdParam));
+      setVehicleId(vehicleIdParam);
     }
     
     if (customerIdParam) {
-      setCustomerId(Number(customerIdParam));
+      setCustomerId(customerIdParam);
     }
     
     if (startDateParam) {
@@ -167,8 +167,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId ? vehicleId.toString() : "",
-      customerId: customerId ? customerId.toString() : "", 
+      vehicleId: vehicleId || "",
+      customerId: customerId || "", 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       status: "pending",
@@ -213,11 +213,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   // If vehicleId or customerId changes from URL, update the form
   useEffect(() => {
     if (vehicleId && !editMode) {
-      form.setValue("vehicleId", vehicleId.toString());
+      form.setValue("vehicleId", vehicleId);
     }
     
     if (customerId && !editMode) {
-      form.setValue("customerId", customerId.toString());
+      form.setValue("customerId", customerId);
     }
     
     if (selectedStartDate) {
@@ -249,7 +249,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   });
   
   const hasOverlap = overlappingReservations?.some(reservation => 
-    reservation.id !== (initialData?.id || 0) &&
+    reservation.id.toString() !== (initialData?.id?.toString() || "0") &&
     doDateRangesOverlap(startDateWatch, endDateWatch, reservation.startDate, reservation.endDate)
   );
   
