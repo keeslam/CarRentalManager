@@ -178,36 +178,50 @@ function ActionIcon({ name, className = "" }: ActionIconProps) {
 }
 
 // Define quick actions for the dashboard
-const quickActions = [
+interface QuickAction {
+  label: string;
+  href?: string;
+  icon: string;
+  dialog?: string;
+  primary?: boolean;
+}
+
+const quickActions: QuickAction[] = [
   {
     label: "New Reservation",
     href: "/reservations/add",
     icon: "calendar-plus",
+    primary: false,
   },
   {
     label: "Add Vehicle",
     href: "/vehicles/add",
     icon: "car",
+    primary: false,
   },
   {
     label: "Add Customer",
     href: "/customers/add",
     icon: "user-plus",
+    primary: false,
   },
   {
     label: "Upload Document",
     href: "/documents/upload",
     icon: "upload",
+    primary: false,
   },
   {
     label: "Log Expense",
     href: "/expenses/add",
     icon: "receipt",
+    primary: false,
   },
   {
     label: "Change Registration",
     icon: "refresh-cw",
     dialog: "registration",
+    primary: false,
   },
 ];
 
@@ -400,8 +414,8 @@ export function QuickActions() {
                               
                               filteredVehicles.forEach(vehicle => {
                                 let statusGroup = 'Other';
-                                if (vehicle.registeredTo === true) statusGroup = 'Opnaam (Person)';
-                                else if (vehicle.company === true) statusGroup = 'BV (Company)';
+                                if (vehicle.registeredTo) statusGroup = 'Opnaam (Person)';
+                                else if (vehicle.company) statusGroup = 'BV (Company)';
                                 
                                 const brand = vehicle.brand || 'Other';
                                 if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
@@ -447,8 +461,25 @@ export function QuickActions() {
                                                         }
                                                       }}
                                                     />
-                                                    <span>
-                                                      {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                                    <span className="flex flex-col">
+                                                      <span className="flex items-center gap-2">
+                                                        {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                                        {vehicle.registeredTo && (
+                                                          <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                            Opnaam
+                                                          </span>
+                                                        )}
+                                                        {vehicle.company && (
+                                                          <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                            BV
+                                                          </span>
+                                                        )}
+                                                      </span>
+                                                      <span className="text-xs text-muted-foreground">
+                                                        {vehicle.registeredToDate ? 
+                                                          `Since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
+                                                          'Not registered'}
+                                                      </span>
                                                     </span>
                                                   </label>
                                                 ))}
