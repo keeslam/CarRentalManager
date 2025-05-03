@@ -71,20 +71,12 @@ export default function AuthPage() {
   });
   
   function onLoginSubmit(values: LoginFormValues) {
-    loginMutation.mutate(values, {
-      onSuccess: () => {
-        navigate("/");
-      },
-    });
+    loginMutation.mutate(values);
   }
   
   function onRegisterSubmit(values: RegisterFormValues) {
     const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData, {
-      onSuccess: () => {
-        navigate("/");
-      },
-    });
+    registerMutation.mutate(registerData);
   }
   
   return (
