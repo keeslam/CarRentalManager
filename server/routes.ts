@@ -17,7 +17,7 @@ import {
   UserPermission
 } from "@shared/schema";
 import multer from "multer";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword, comparePasswords } from "./auth";
 
 // Helper function to convert absolute paths to relative paths
 function getRelativePath(absolutePath: string): string {
@@ -34,6 +34,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes and middleware
   const { requireAuth } = setupAuth(app);
 
+  // ==================== USER MANAGEMENT ROUTES ====================
+  // A middleware to check for admin permissions
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    if (req.user.role !== UserRole.ADMIN) {
+      return res.status(403).json({ message: "Not authorized. Admin access required." });
+    }
+    
+    next();
+  };
+  
+  // Check if user has specific permission
+  const hasPermission = (permission: string) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Admin role always has all permissions
+      if (req.user.role === UserRole.ADMIN) {
+        return next();
+      }
+      
+      const userPermissions = req.user.permissions || [];
+      if (!userPermissions.includes(permission)) {
+        return res.status(403).json({ 
+          message: `Not authorized. '${permission}' permission required.` 
+        });
+      }
+      
+      next();
+    };
+  };
+  
+  // Get all users (admin only)
+  app.get("/api/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Don't send passwords to client
+      const safeUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  // Get single user (admin only)
+  app.get("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't send password to client
+      const { password, ...userWithoutPassword } = user;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Create user (admin only)
+  app.post("/api/users", requireAdmin, async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Add audit trail
+      const currentUser = req.user;
+      const enrichedUserData = {
+        ...userData,
+        createdBy: currentUser.username,
+        updatedBy: currentUser.username
+      };
+      
+      // Hash password before storing
+      const hashedPassword = await hashPassword(userData.password);
+      
+      const newUser = await storage.createUser({
+        ...enrichedUserData,
+        password: hashedPassword
+      });
+      
+      // Don't send password back to client
+      const { password, ...userWithoutPassword } = newUser;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(400).json({ 
+        message: "Failed to create user", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Update user (admin only)
+  app.patch("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // If updating username, check if new username already exists
+      if (req.body.username && req.body.username !== user.username) {
+        const existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      }
+      
+      // Add audit trail
+      const currentUser = req.user;
+      const userData = {
+        ...req.body,
+        updatedBy: currentUser.username
+      };
+      
+      // Handle password separately
+      if (userData.password) {
+        // Separate password from other data
+        const { password, ...otherData } = userData;
+        
+        // Update user data without password
+        const updatedUser = await storage.updateUser(id, otherData);
+        
+        // Update password separately with proper hashing
+        const hashedPassword = await hashPassword(password);
+        await storage.updateUserPassword(id, hashedPassword);
+        
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Don't send password back to client
+        const { password: pwd, ...userWithoutPassword } = updatedUser;
+        return res.json(userWithoutPassword);
+      } else {
+        // Regular update without password change
+        const updatedUser = await storage.updateUser(id, userData);
+        
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Don't send password back to client
+        const { password, ...userWithoutPassword } = updatedUser;
+        return res.json(userWithoutPassword);
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(400).json({ 
+        message: "Failed to update user", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Delete user (admin only)
+  app.delete("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Prevent deletion of the current user
+      if (id === req.user.id) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      const deleted = await storage.deleteUser(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ success: true, message: "User successfully deleted" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ 
+        message: "Failed to delete user", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Update current user's password
+  app.post("/api/users/change-password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+      
+      // Get current user
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify current password
+      const isPasswordValid = await comparePasswords(currentPassword, user.password);
+      
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash and update new password
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUserPassword(user.id, hashedPassword);
+      
+      res.json({ success: true, message: "Password successfully updated" });
+    } catch (error) {
+      console.error("Error updating password:", error);
+      res.status(500).json({ 
+        message: "Failed to update password", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // ==================== VEHICLE ROUTES ====================
   // Get available vehicles
   app.get("/api/vehicles/available", async (req, res) => {
