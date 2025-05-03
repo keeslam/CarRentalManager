@@ -461,20 +461,20 @@ export function QuickActions() {
                                                     <span className="flex flex-col">
                                                       <span className="flex items-center gap-2">
                                                         {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
-                                                        {vehicle.registeredTo ? (
+                                                        {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
                                                           <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
                                                             Opnaam
                                                           </span>
-                                                        ) : vehicle.company ? (
+                                                        ) : vehicle.company === true || vehicle.company === "true" ? (
                                                           <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
                                                             BV
                                                           </span>
                                                         ) : null}
                                                       </span>
                                                       <span className="text-xs text-muted-foreground">
-                                                        {vehicle.registeredToDate && vehicle.registeredTo ? 
+                                                        {vehicle.registeredToDate && (vehicle.registeredTo === true || vehicle.registeredTo === "true") ? 
                                                           `Registered since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
-                                                          vehicle.company ? 
+                                                          (vehicle.company === true || vehicle.company === "true") ? 
                                                             vehicle.companyDate ? 
                                                               `In BV since: ${new Date(vehicle.companyDate).toLocaleDateString()}` : 
                                                               'In BV (date unknown)' 
