@@ -48,14 +48,14 @@ import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
 
 // Extended schema with validation
 const formSchema = insertReservationSchema.extend({
-  vehicleId: z.number({
-    required_error: "Please select a vehicle",
-    invalid_type_error: "Please select a vehicle",
-  }),
-  customerId: z.number({
-    required_error: "Please select a customer",
-    invalid_type_error: "Please select a customer",
-  }),
+  vehicleId: z.union([
+    z.number().min(1, "Please select a vehicle"),
+    z.string().min(1, "Please select a vehicle").transform(val => parseInt(val)),
+  ]),
+  customerId: z.union([
+    z.number().min(1, "Please select a customer"),
+    z.string().min(1, "Please select a customer").transform(val => parseInt(val)),
+  ]),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   totalPrice: z.number().optional(),
@@ -167,8 +167,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId || 0,
-      customerId: customerId || 0, 
+      vehicleId: vehicleId ? vehicleId.toString() : "",
+      customerId: customerId ? customerId.toString() : "", 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       status: "pending",
@@ -213,11 +213,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   // If vehicleId or customerId changes from URL, update the form
   useEffect(() => {
     if (vehicleId && !editMode) {
-      form.setValue("vehicleId", vehicleId);
+      form.setValue("vehicleId", vehicleId.toString());
     }
     
     if (customerId && !editMode) {
-      form.setValue("customerId", customerId);
+      form.setValue("customerId", customerId.toString());
     }
     
     if (selectedStartDate) {
