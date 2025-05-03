@@ -2,16 +2,50 @@ import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// User Roles enum
+export const UserRole = {
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+  USER: 'user',
+} as const;
+
+// Permissions
+export const UserPermission = {
+  MANAGE_USERS: 'manage_users',
+  MANAGE_VEHICLES: 'manage_vehicles',
+  MANAGE_CUSTOMERS: 'manage_customers',
+  MANAGE_RESERVATIONS: 'manage_reservations',
+  MANAGE_EXPENSES: 'manage_expenses',
+  MANAGE_DOCUMENTS: 'manage_documents',
+  VIEW_DASHBOARD: 'view_dashboard',
+} as const;
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  fullName: text("full_name"),
+  email: text("email"),
+  role: text("role").notNull().default(UserRole.USER),
+  permissions: jsonb("permissions").$type<string[]>().default([]).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  fullName: true,
+  email: true,
+  role: true,
+  permissions: true,
+  active: true,
+  createdBy: true,
+  updatedBy: true,
 });
 
 // Vehicles table

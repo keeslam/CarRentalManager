@@ -6,7 +6,16 @@ import { generateRentalContract } from "./utils/pdf-generator";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
-import { insertVehicleSchema, insertCustomerSchema, insertReservationSchema, insertExpenseSchema, insertDocumentSchema } from "@shared/schema";
+import { 
+  insertVehicleSchema, 
+  insertCustomerSchema, 
+  insertReservationSchema, 
+  insertExpenseSchema, 
+  insertDocumentSchema,
+  insertUserSchema,
+  UserRole,
+  UserPermission
+} from "@shared/schema";
 import multer from "multer";
 import { setupAuth } from "./auth";
 

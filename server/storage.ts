@@ -13,6 +13,10 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+  updateUserPassword(id: number, hashedPassword: string): Promise<boolean>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Vehicle methods
   getAllVehicles(): Promise<Vehicle[]>;
@@ -248,6 +252,51 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id, createdAt: now, updatedAt: now };
     this.users.set(id, user);
     return user;
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values()).sort((a, b) => a.username.localeCompare(b.username));
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      return undefined;
+    }
+    
+    // Don't allow updating password through this method
+    if (userData.password) {
+      delete userData.password;
+    }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...userData,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserPassword(id: number, hashedPassword: string): Promise<boolean> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      return false;
+    }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      password: hashedPassword,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return true;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
   }
 
   // Vehicle methods

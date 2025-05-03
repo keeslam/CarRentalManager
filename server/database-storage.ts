@@ -33,6 +33,54 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(users.username);
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    // Don't allow updating the password through this method
+    // Password updates should use a dedicated method with proper hashing
+    if (userData.password) {
+      delete userData.password;
+    }
+    
+    // Add updatedAt timestamp
+    const updateData = {
+      ...userData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+      
+    return updatedUser;
+  }
+  
+  async updateUserPassword(id: number, hashedPassword: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+      
+    return result.rowCount > 0;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(users).where(eq(users.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
 
   // Vehicle methods
   async getAllVehicles(): Promise<Vehicle[]> {
