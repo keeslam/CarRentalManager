@@ -134,6 +134,10 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
+  amount: z.union([
+    z.number(),
+    z.string().transform(val => parseFloat(val) || 0)
+  ]),
   receiptPath: z.string().nullable().optional(),
 });
 

@@ -463,7 +463,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExpense(expenseData: InsertExpense): Promise<Expense> {
-    const [expense] = await db.insert(expenses).values(expenseData).returning();
+    // Ensure amount is a string if it's a number
+    const finalData = {
+      ...expenseData,
+      amount: typeof expenseData.amount === 'number' ? String(expenseData.amount) : expenseData.amount
+    };
+    
+    console.log("Database - creating expense with data:", finalData);
+    const [expense] = await db.insert(expenses).values(finalData).returning();
     
     const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, expense.vehicleId));
     

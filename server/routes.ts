@@ -661,10 +661,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create expense with receipt upload
   app.post("/api/expenses", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
     try {
-      // Convert string fields to the correct types
+      // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      // We don't convert amount because the schema now handles both string and number
       
+      console.log("Standard endpoint - data being passed to schema:", req.body);
       const expenseData = insertExpenseSchema.parse(req.body);
       
       // Create expense record
@@ -694,10 +695,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Request body:", req.body);
       console.log("File info:", req.file);
       
-      // Convert string fields to the correct types
+      // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      // We don't convert amount because the schema now handles both string and number
       
+      console.log("Data being passed to schema:", req.body);
       const expenseData = insertExpenseSchema.parse(req.body);
       console.log("Parsed expense data:", expenseData);
       
@@ -744,10 +746,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid expense ID" });
       }
 
-      // Convert string fields to the correct types
+      // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      // We don't convert amount because the schema now handles both string and number
       
+      console.log("Update data being passed to schema:", req.body);
       const expenseData = insertExpenseSchema.parse(req.body);
       
       // Add additional metadata from the uploaded file if present
@@ -791,10 +794,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid expense ID" });
       }
 
-      // Convert string fields to the correct types
+      // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      // We don't convert amount because the schema now handles both string and number
       
+      console.log("Update data being passed to schema:", req.body);
       const expenseData = insertExpenseSchema.parse(req.body);
       
       // Add additional metadata from the uploaded file if present
