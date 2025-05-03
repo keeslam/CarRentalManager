@@ -479,15 +479,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Handle registration fields
+      // Handle registration fields - convert to strings since they're stored as text in the DB
       if ('registeredTo' in sanitizedData) {
         const value = sanitizedData.registeredTo;
-        sanitizedData.registeredTo = value === true || value === 'true' || value === 1 || value === '1';
+        sanitizedData.registeredTo = (value === true || value === 'true' || value === 1 || value === '1') ? "true" : "false";
       }
       
       if ('company' in sanitizedData) {
         const value = sanitizedData.company;
-        sanitizedData.company = value === true || value === 'true' || value === 1 || value === '1';
+        sanitizedData.company = (value === true || value === 'true' || value === 1 || value === '1') ? "true" : "false";
       }
       
       // Clean date fields that are empty strings
@@ -561,15 +561,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Handle registration fields
+      // Handle registration fields - convert to strings since they're stored as text in the DB
       if ('registeredTo' in sanitizedData) {
         const value = sanitizedData.registeredTo;
-        sanitizedData.registeredTo = value === true || value === 'true' || value === 1 || value === '1';
+        sanitizedData.registeredTo = (value === true || value === 'true' || value === 1 || value === '1') ? "true" : "false";
       }
       
       if ('company' in sanitizedData) {
         const value = sanitizedData.company;
-        sanitizedData.company = value === true || value === 'true' || value === 1 || value === '1';
+        sanitizedData.company = (value === true || value === 'true' || value === 1 || value === '1') ? "true" : "false";
       }
       
       // Clean date fields that are empty strings
