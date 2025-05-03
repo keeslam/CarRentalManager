@@ -95,16 +95,7 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [receiptTab, setReceiptTab] = useState<string>("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  // Get preselected vehicle ID from URL if available
-  useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const vehicleIdParam = urlParams.get("vehicleId");
-    
-    if (vehicleIdParam) {
-      setVehicleId(Number(vehicleIdParam));
-    }
-  }, [searchParams]);
+  const [formInitialized, setFormInitialized] = useState(false);
   
   // Fetch vehicles for select field
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
@@ -114,11 +105,27 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
   
+  // Get preselected vehicle ID from URL if available
+  useEffect(() => {
+    const urlParams = new URLSearchParams(searchParams);
+    const vehicleIdParam = urlParams.get("vehicleId");
+    
+    if (vehicleIdParam) {
+      const parsedId = Number(vehicleIdParam);
+      setVehicleId(parsedId);
+      
+      // If form is already initialized, update the vehicleId field
+      if (formInitialized && !editMode) {
+        form.setValue("vehicleId", parsedId);
+      }
+    }
+  }, [searchParams, formInitialized, editMode]);
+  
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
-      vehicleId: vehicleId || 0,
+      vehicleId: 0, // Will be updated after initialization
       category: "",
       amount: 0,
       date: today,
@@ -127,12 +134,16 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
     },
   });
   
-  // If vehicleId changes from URL, update the form
+  // When the form is first created, update with the vehicleId from URL if available
   useEffect(() => {
-    if (vehicleId && !editMode) {
-      form.setValue("vehicleId", vehicleId);
+    // Only run this once after the form is initialized
+    if (!formInitialized) {
+      if (vehicleId && !editMode) {
+        form.setValue("vehicleId", vehicleId);
+      }
+      setFormInitialized(true);
     }
-  }, [vehicleId, form, editMode]);
+  }, [vehicleId, form, editMode, formInitialized]);
   
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,9 +247,9 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
                     <FormLabel>Vehicle</FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={field.value.toString()}
-                      value={field.value.toString()}
-                      disabled={!!vehicleId}
+                      defaultValue={field.value > 0 ? field.value.toString() : undefined}
+                      value={field.value > 0 ? field.value.toString() : undefined}
+                      disabled={vehicleId !== null}
                     >
                       <FormControl>
                         <SelectTrigger>
