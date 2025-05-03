@@ -30,9 +30,16 @@ const formSchema = insertCustomerSchema.extend({
 interface CustomerFormProps {
   editMode?: boolean;
   initialData?: any;
+  onSuccess?: (data: any) => void;
+  redirectToList?: boolean;
 }
 
-export function CustomerForm({ editMode = false, initialData }: CustomerFormProps) {
+export function CustomerForm({ 
+  editMode = false, 
+  initialData, 
+  onSuccess, 
+  redirectToList = true 
+}: CustomerFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -61,7 +68,7 @@ export function CustomerForm({ editMode = false, initialData }: CustomerFormProp
         data
       );
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       
@@ -71,8 +78,14 @@ export function CustomerForm({ editMode = false, initialData }: CustomerFormProp
         description: `The customer has been ${editMode ? "updated" : "added"} to your system.`,
       });
       
-      // Navigate back to customers list
-      navigate("/customers");
+      // Call the onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess(data);
+      } 
+      // Or navigate back to customers list if redirectToList is true
+      else if (redirectToList) {
+        navigate("/customers");
+      }
     },
     onError: (error) => {
       toast({
