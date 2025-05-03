@@ -38,6 +38,9 @@ const formSchema = insertVehicleSchema.extend({
   // Make these fields truly optional
   registeredTo: z.boolean().optional(),
   company: z.boolean().optional(),
+  // Make mileage fields optional
+  departureMileage: z.number().optional().nullable(),
+  returnMileage: z.number().optional().nullable(),
 });
 
 // Vehicle types
@@ -623,12 +626,22 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     name="departureMileage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Departure Mileage (km)</FormLabel>
+                        <FormLabel>Departure Mileage (km) <span className="text-sm font-normal text-muted-foreground">(Optional)</span></FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <Input 
+                            type="number" 
+                            placeholder="0" 
+                            {...field} 
+                            value={field.value || ''}
+                            onChange={e => {
+                              // Allow empty value
+                              const value = e.target.value === '' ? null : Number(e.target.value);
+                              field.onChange(value);
+                            }}
+                          />
                         </FormControl>
                         <FormDescription>
-                          Optional: Enter the current mileage if known
+                          Enter the current mileage if known
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -640,10 +653,23 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     name="returnMileage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Return Mileage (km)</FormLabel>
+                        <FormLabel>Return Mileage (km) <span className="text-sm font-normal text-muted-foreground">(Optional)</span></FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <Input 
+                            type="number" 
+                            placeholder="0" 
+                            {...field} 
+                            value={field.value || ''}
+                            onChange={e => {
+                              // Allow empty value
+                              const value = e.target.value === '' ? null : Number(e.target.value);
+                              field.onChange(value);
+                            }}
+                          />
                         </FormControl>
+                        <FormDescription>
+                          Enter return mileage if known
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
