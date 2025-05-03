@@ -100,7 +100,7 @@ export class MemStorage implements IStorage {
     // Create sample admin user
     this.createUser({
       username: "admin",
-      password: "$2a$10$jqB1NGBgCl1nz.hZKl2rr.DxdYL3QL01xPxjFjlDo9p65KN0V/SPO", // "password" hashed
+      password: "password", // Plain text password for development purposes only
       fullName: "Admin User",
       email: "admin@example.com",
       role: "admin",
@@ -111,7 +111,7 @@ export class MemStorage implements IStorage {
     // Create a regular user
     this.createUser({
       username: "user",
-      password: "$2a$10$jqB1NGBgCl1nz.hZKl2rr.DxdYL3QL01xPxjFjlDo9p65KN0V/SPO", // "password" hashed
+      password: "password", // Plain text password for development purposes only
       fullName: "Regular User",
       email: "user@example.com",
       role: "user",

@@ -27,6 +27,12 @@ export async function hashPassword(password: string) {
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
+  // For development only: allow plain text password comparison
+  // In a real app, you would never store passwords in plain text
+  if (stored === "password") {
+    return supplied === "password";
+  }
+  
   // Check if it's a bcrypt hash (starts with $2a$, $2b$, etc.)
   if (stored.startsWith('$2')) {
     return supplied === "password"; // Simple comparison for fixed password in our test data
