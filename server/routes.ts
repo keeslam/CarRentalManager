@@ -93,6 +93,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Toggle vehicle registration status
+  app.patch("/api/vehicles/:id/toggle-registration", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const { status } = req.body;
+      if (status !== 'opnaam' && status !== 'bv') {
+        return res.status(400).json({ message: "Invalid status. Must be 'opnaam' or 'bv'" });
+      }
+
+      const vehicle = await storage.getVehicle(id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      const currentDate = new Date().toISOString().split('T')[0];
+      let updateData;
+
+      if (status === 'opnaam') {
+        updateData = {
+          registeredTo: "true",
+          company: "false",
+          registeredToDate: currentDate
+        };
+      } else {
+        updateData = {
+          registeredTo: "false",
+          company: "true",
+          companyDate: currentDate
+        };
+      }
+
+      const updatedVehicle = await storage.updateVehicle(id, updateData);
+      res.json(updatedVehicle);
+    } catch (error) {
+      res.status(400).json({ message: "Error toggling registration status", error });
+    }
+  });
+
   // Delete vehicle
   app.delete("/api/vehicles/:id", async (req, res) => {
     try {

@@ -1,6 +1,27 @@
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Vehicle } from "@shared/schema";
 
 const quickActions = [
   {
@@ -34,9 +55,75 @@ const quickActions = [
     icon: "receipt",
     href: "/expenses/add",
   },
+  {
+    label: "Toggle Registration",
+    icon: "refresh-cw",
+    dialog: "registration",
+  },
 ];
 
 export function QuickActions() {
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("");
+  const [registrationStatus, setRegistrationStatus] = useState<"opnaam" | "bv">("opnaam");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
+  // Fetch all vehicles for the dropdown
+  const { data: vehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+  
+  const handleToggleRegistration = async () => {
+    if (!selectedVehicle) {
+      toast({
+        title: "Error",
+        description: "Please select a vehicle",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const vehicleId = parseInt(selectedVehicle);
+      const response = await fetch(`/api/vehicles/${vehicleId}/toggle-registration`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: registrationStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update registration status: ${response.status}`);
+      }
+      
+      const updatedVehicle = await response.json();
+      
+      toast({
+        title: "Success",
+        description: `Registration for ${updatedVehicle.licensePlate} updated to ${registrationStatus === "opnaam" ? "Opnaam" : "BV"}`,
+      });
+      
+      // Reset form
+      setSelectedVehicle("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update registration status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Function to format license plate for display
+  const formatLicensePlate = (plate: string) => {
+    return plate.replace(/([A-Za-z]{2})([A-Za-z0-9]{2})([A-Za-z0-9]{2})/, '$1-$2-$3');
+  };
+  
   return (
     <Card className="mb-6">
       <CardHeader className="pb-2">
@@ -44,22 +131,102 @@ export function QuickActions() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
-          {quickActions.map((action) => (
-            <Link key={action.label} href={action.href}>
-              <Button
-                variant={action.primary ? "default" : "outline"}
-                className={
-                  action.primary
-                    ? "bg-primary-600 text-white hover:bg-primary-700"
-                    : "bg-primary-50 text-primary-600 hover:bg-primary-100"
-                }
-                size="sm"
-              >
-                <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
-                {action.label}
-              </Button>
-            </Link>
-          ))}
+          {quickActions.map((action) => {
+            // For actions with dialogs, render a Dialog component
+            if (action.dialog === "registration") {
+              return (
+                <Dialog key={action.label}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon || "refresh-cw"} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Toggle Vehicle Registration Status</DialogTitle>
+                      <DialogDescription>
+                        Select a vehicle and choose whether to register it as "Opnaam" (Person) or "BV" (Company).
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <label htmlFor="vehicle" className="text-sm font-medium">
+                          Vehicle
+                        </label>
+                        <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a vehicle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicles?.map((vehicle) => (
+                              <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                                {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <label htmlFor="registration" className="text-sm font-medium">
+                          Registration Type
+                        </label>
+                        <Select value={registrationStatus} onValueChange={(value: "opnaam" | "bv") => setRegistrationStatus(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="opnaam">Opnaam (Person)</SelectItem>
+                            <SelectItem value="bv">BV (Company)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button 
+                        onClick={handleToggleRegistration} 
+                        disabled={isLoading || !selectedVehicle}
+                      >
+                        {isLoading ? "Updating..." : "Update Registration"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For actions with hrefs, render a Link
+            if (action.href) {
+              return (
+                <Link key={action.label} href={action.href || ""}>
+                  <Button
+                    variant={action.primary ? "default" : "outline"}
+                    className={
+                      action.primary
+                        ? "bg-primary-600 text-white hover:bg-primary-700"
+                        : "bg-primary-50 text-primary-600 hover:bg-primary-100"
+                    }
+                    size="sm"
+                  >
+                    <ActionIcon name={action.icon || ""} className="mr-1 h-4 w-4" />
+                    {action.label}
+                  </Button>
+                </Link>
+              );
+            }
+            
+            return null;
+          })}
         </div>
       </CardContent>
     </Card>
