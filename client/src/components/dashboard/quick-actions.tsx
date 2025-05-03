@@ -18,7 +18,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Vehicle } from "@shared/schema";
@@ -56,7 +59,7 @@ const quickActions = [
     href: "/expenses/add",
   },
   {
-    label: "Toggle Registration",
+    label: "Change Registration",
     icon: "refresh-cw",
     dialog: "registration",
   },
@@ -66,6 +69,7 @@ export function QuickActions() {
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
   const [registrationStatus, setRegistrationStatus] = useState<"opnaam" | "bv">("opnaam");
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
   
   // Fetch all vehicles for the dropdown
@@ -73,7 +77,7 @@ export function QuickActions() {
     queryKey: ["/api/vehicles"],
   });
   
-  const handleToggleRegistration = async () => {
+  const handleChangeRegistration = async () => {
     if (!selectedVehicle) {
       toast({
         title: "Error",
@@ -148,7 +152,7 @@ export function QuickActions() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Toggle Vehicle Registration Status</DialogTitle>
+                      <DialogTitle>Change Vehicle Registration Status</DialogTitle>
                       <DialogDescription>
                         Select a vehicle and choose whether to register it as "Opnaam" (Person) or "BV" (Company).
                       </DialogDescription>
@@ -159,16 +163,65 @@ export function QuickActions() {
                         <label htmlFor="vehicle" className="text-sm font-medium">
                           Vehicle
                         </label>
+                        <div className="mb-2">
+                          <Input
+                            placeholder="Search by license plate, brand or model"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                          />
+                        </div>
                         <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a vehicle" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {vehicles?.map((vehicle) => (
-                              <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                                {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="max-h-[300px]">
+                            {/* Group vehicles by brand for better organization */}
+                            {vehicles && vehicles.length > 0 ? (
+                              (() => {
+                                // Filter vehicles based on search query
+                                const filteredVehicles = searchQuery 
+                                  ? vehicles.filter(v => 
+                                      v.licensePlate.toLowerCase().includes(searchQuery) || 
+                                      v.brand.toLowerCase().includes(searchQuery) || 
+                                      v.model.toLowerCase().includes(searchQuery)
+                                    )
+                                  : vehicles;
+                                
+                                // Group vehicles by brand
+                                const vehiclesByBrand = filteredVehicles.reduce((acc, vehicle) => {
+                                  const brand = vehicle.brand || 'Other';
+                                  if (!acc[brand]) acc[brand] = [];
+                                  acc[brand].push(vehicle);
+                                  return acc;
+                                }, {} as Record<string, Vehicle[]>);
+                                
+                                // Sort brands alphabetically
+                                const sortedBrands = Object.keys(vehiclesByBrand).sort();
+                                
+                                return filteredVehicles.length === 0 ? (
+                                  <div className="p-2 text-center text-sm text-muted-foreground">
+                                    No vehicles match your search
+                                  </div>
+                                ) : (
+                                  <>
+                                    {sortedBrands.map(brand => (
+                                      <SelectGroup key={brand}>
+                                        <SelectLabel>{brand}</SelectLabel>
+                                        {vehiclesByBrand[brand].map(vehicle => (
+                                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                                            {formatLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    ))}
+                                  </>
+                                );
+                              })()
+                            ) : (
+                              <div className="p-2 text-center text-sm text-muted-foreground">
+                                No vehicles available
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -194,7 +247,7 @@ export function QuickActions() {
                         <Button variant="outline">Cancel</Button>
                       </DialogClose>
                       <Button 
-                        onClick={handleToggleRegistration} 
+                        onClick={handleChangeRegistration} 
                         disabled={isLoading || !selectedVehicle}
                       >
                         {isLoading ? "Updating..." : "Update Registration"}
