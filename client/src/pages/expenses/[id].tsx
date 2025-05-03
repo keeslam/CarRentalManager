@@ -187,10 +187,10 @@ export default function ExpenseDetailsPage() {
               
               <div className="border-t pt-4 mt-4">
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <div>Created: {formatDate(new Date(expense.createdAt))}</div>
+                  <div>Created: {expense.createdAt ? formatDate(new Date(expense.createdAt)) : 'N/A'}</div>
                   {expense.createdBy && <div>By: {expense.createdBy}</div>}
                 </div>
-                {expense.updatedAt !== expense.createdAt && (
+                {expense.updatedAt && expense.createdAt && expense.updatedAt !== expense.createdAt && (
                   <div className="flex justify-between text-sm text-muted-foreground mt-1">
                     <div>Updated: {formatDate(new Date(expense.updatedAt))}</div>
                     {expense.updatedBy && <div>By: {expense.updatedBy}</div>}
