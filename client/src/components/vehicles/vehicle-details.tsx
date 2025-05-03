@@ -34,6 +34,35 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Delete vehicle mutation
+  const deleteVehicleMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/vehicles/${vehicleId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete vehicle');
+      }
+      return await response.json();
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Vehicle deleted",
+        description: "The vehicle has been successfully deleted."
+      });
+      
+      // Invalidate and redirect
+      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      navigate("/vehicles");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting vehicle",
+        description: error.message || "Failed to delete vehicle. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${vehicleId}`],
@@ -161,6 +190,17 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
           <p className="text-lg font-medium text-gray-600">{formatLicensePlate(vehicle.licensePlate)}</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/vehicles")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left mr-2">
+              <path d="m12 19-7-7 7-7"/>
+              <path d="M19 12H5"/>
+            </svg>
+            Back to Vehicles
+          </Button>
+
           <Link href={`/vehicles/${vehicleId}/edit`}>
             <Button variant="outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-2">
@@ -169,6 +209,43 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
               Edit
             </Button>
           </Link>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="text-red-600 hover:text-red-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2 mr-2">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  <line x1="10" x2="10" y1="11" y2="17"/>
+                  <line x1="14" x2="14" y1="11" y2="17"/>
+                </svg>
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the vehicle {vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)}).
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    deleteVehicleMutation.mutate();
+                  }}
+                  className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Link href={`/reservations/add?vehicleId=${vehicleId}`}>
             <Button>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
