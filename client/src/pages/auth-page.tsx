@@ -81,9 +81,9 @@ export default function AuthPage() {
   
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8 bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8 bg-white rounded-xl shadow-lg overflow-hidden mx-auto my-auto">
         {/* Form Side */}
-        <div className="p-5 flex flex-col justify-center">
+        <div className="p-5 flex flex-col justify-center h-full">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Vehicle Fleet Manager</h1>
             <p className="text-gray-600">Sign in to continue to your dashboard</p>
@@ -223,7 +223,7 @@ export default function AuthPage() {
         </div>
         
         {/* Info Side */}
-        <div className="hidden md:block bg-gradient-to-r from-primary-500 to-primary-700 text-white p-10 flex flex-col justify-center">
+        <div className="hidden md:flex bg-gradient-to-r from-primary-500 to-primary-700 text-white p-10 flex-col justify-center h-full">
           <h2 className="text-4xl font-bold mb-4">Fleet Management System</h2>
           <p className="text-lg mb-6">Streamline your vehicle rental operations with our comprehensive management system.</p>
           <ul className="space-y-3">
