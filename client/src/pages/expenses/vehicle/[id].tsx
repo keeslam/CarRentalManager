@@ -19,18 +19,20 @@ import { PlusCircle, ArrowLeft } from "lucide-react";
 export default function VehicleExpensesPage() {
   // Get vehicle ID from route parameter
   const [_, params] = useLocation();
-  const vehicleId = parseInt(params.id);
+  const vehicleId = params.id ? parseInt(params.id) : null;
   
   // Fetch vehicle details
-  const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({
+  const { data: vehicle, isLoading: isLoadingVehicle, error: vehicleError } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${vehicleId}`],
     enabled: !!vehicleId,
+    retry: 1,
   });
   
   // Fetch expenses for this vehicle
-  const { data: expenses, isLoading: isLoadingExpenses } = useQuery<Expense[]>({
+  const { data: expenses, isLoading: isLoadingExpenses, error: expensesError } = useQuery<Expense[]>({
     queryKey: [`/api/expenses/vehicle/${vehicleId}`],
     enabled: !!vehicleId,
+    retry: 1,
   });
   
   // Calculate totals

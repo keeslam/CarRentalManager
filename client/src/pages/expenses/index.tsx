@@ -16,8 +16,9 @@ export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   
-  const { data: expenses, isLoading } = useQuery<Expense[]>({
+  const { data: expenses, isLoading, error } = useQuery<Expense[]>({
     queryKey: ["/api/expenses"],
+    retry: 1,
   });
   
   // Get unique categories from expenses
@@ -27,11 +28,15 @@ export default function ExpensesIndex() {
   
   // Filter expenses based on search query and category filter
   const filteredExpenses = expenses?.filter(expense => {
+    if (!expense) return false;
+    
     const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = (
-      (expense.vehicle?.licensePlate?.toLowerCase().includes(searchLower)) ||
-      (expense.description?.toLowerCase().includes(searchLower))
-    );
+    const licensePlate = expense.vehicle?.licensePlate || '';
+    const description = expense.description || '';
+    
+    const matchesSearch = 
+      licensePlate.toLowerCase().includes(searchLower) ||
+      description.toLowerCase().includes(searchLower);
     
     const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
     
