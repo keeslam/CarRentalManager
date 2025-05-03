@@ -481,9 +481,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateExpense(id: number, expenseData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    // Ensure amount is a string if it's a number
+    const finalData = {
+      ...expenseData
+    };
+    
+    if (finalData.amount !== undefined && typeof finalData.amount === 'number') {
+      finalData.amount = String(finalData.amount);
+    }
+    
+    console.log("Database - updating expense with data:", finalData);
     const [updatedExpense] = await db
       .update(expenses)
-      .set(expenseData)
+      .set(finalData)
       .where(eq(expenses.id, id))
       .returning();
     
