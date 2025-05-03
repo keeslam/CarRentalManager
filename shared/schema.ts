@@ -102,15 +102,24 @@ export const customers = pgTable("customers", {
   status: text("status"),
   statusDate: text("status_date"),
   
+  // Notes
   notes: text("notes"),
+  
+  // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+  createdByUser: integer("created_by_user_id").references(() => users.id),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdByUser: true,
+  updatedByUser: true,
 });
 
 // Reservations table
@@ -124,14 +133,22 @@ export const reservations = pgTable("reservations", {
   totalPrice: numeric("total_price"),
   notes: text("notes"),
   damageCheckPath: text("damage_check_path"),
+  
+  // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+  createdByUser: integer("created_by_user_id").references(() => users.id),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
 });
 
 export const insertReservationSchema = createInsertSchema(reservations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdByUser: true,
+  updatedByUser: true,
 })
 .extend({
   totalPrice: z.number().optional().or(z.string().transform(val => Number(val) || 0))
@@ -150,14 +167,22 @@ export const expenses = pgTable("expenses", {
   receiptFilePath: text("receipt_file_path"), // Stores the path to the file
   receiptFileSize: integer("receipt_file_size"), // Stores the file size
   receiptContentType: text("receipt_content_type"), // Stores the file content type
+  
+  // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+  createdByUser: integer("created_by_user_id").references(() => users.id),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
 });
 
 export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdByUser: true,
+  updatedByUser: true,
 }).extend({
   amount: z.union([
     z.number(),
@@ -176,8 +201,13 @@ export const documents = pgTable("documents", {
   fileSize: integer("file_size").notNull(),
   contentType: text("content_type").notNull(),
   uploadDate: timestamp("upload_date").defaultNow().notNull(),
-  createdBy: text("created_by"),
   notes: text("notes"),
+  
+  // Tracking
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+  createdByUser: integer("created_by_user_id").references(() => users.id),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
 });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
