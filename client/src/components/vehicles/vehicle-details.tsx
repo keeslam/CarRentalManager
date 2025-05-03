@@ -419,10 +419,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <div className="flex justify-between items-center">
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Damage Pictures</h4>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Vehicle Photos</h4>
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
-                        preselectedType="Damage Photos"
+                        preselectedType="Vehicle Photos"
                         onSuccess={() => {
                           // Refresh vehicle details after upload
                           queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
@@ -435,17 +435,17 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       </InlineDocumentUpload>
                     </div>
                     <div>
-                      {documentsByCategory["Damage Photos"]?.length > 0 ? (
+                      {documentsByCategory["Vehicle Photos"]?.length > 0 ? (
                         <div className="text-base">
                           <div className="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
                               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                               <polyline points="22 4 12 14.01 9 11.01"></polyline>
                             </svg>
-                            <span>Damage picture attachments</span>
+                            <span>Vehicle photo attachments</span>
                           </div>
                           <p className="text-sm text-gray-500 mt-1">
-                            {documentsByCategory["Damage Photos"].length} document(s)
+                            {documentsByCategory["Vehicle Photos"].length} document(s)
                           </p>
                         </div>
                       ) : (
