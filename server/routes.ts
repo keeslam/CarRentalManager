@@ -1212,7 +1212,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
-  // Get recent expenses
+  // Delete reservation
+  app.delete("/api/reservations/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+      
+      // Check if reservation exists
+      const reservation = await storage.getReservation(id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      const success = await storage.deleteReservation(id);
+      if (success) {
+        res.status(200).json({ message: "Reservation deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete reservation" });
+      }
+    } catch (error) {
+      console.error("Error deleting reservation:", error);
+      res.status(500).json({ 
+        message: "Failed to delete reservation", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   app.get("/api/expenses/recent", async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     const expenses = await storage.getRecentExpenses(limit);
