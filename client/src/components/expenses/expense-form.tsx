@@ -108,12 +108,6 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
     queryKey: ["/api/vehicles"],
   });
   
-  // Get the selected vehicle object
-  const selectedVehicle = useMemo(() => {
-    if (!vehicles || !form?.getValues().vehicleId) return null;
-    return vehicles.find(v => v.id === form.getValues().vehicleId);
-  }, [vehicles, form?.getValues().vehicleId]);
-  
   // Create vehicle options for the combobox
   const vehicleOptions = useMemo(() => {
     if (!vehicles) return [];
@@ -266,6 +260,12 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
     },
   });
   
+  // Get the selected vehicle object
+  const selectedVehicle = useMemo(() => {
+    if (!vehicles || !form.getValues().vehicleId) return null;
+    return vehicles.find(v => v.id === form.getValues().vehicleId);
+  }, [vehicles, form?.getValues().vehicleId]);
+  
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     createExpenseMutation.mutate(data);
   };
@@ -299,17 +299,25 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
                       />
                     </FormControl>
                     
-                    {selectedVehicle && !vehicleId && (
+                    {field.value > 0 && vehicles && (
                       <div className="mt-2 text-sm bg-muted p-2 rounded-md">
-                        <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                          {selectedVehicle.vehicleType && (
-                            <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
-                          )}
-                          {selectedVehicle.fuel && (
-                            <span>{selectedVehicle.fuel}</span>
-                          )}
-                        </div>
+                        {(() => {
+                          const selVehicle = vehicles.find(v => v.id === field.value);
+                          if (!selVehicle) return null;
+                          return (
+                            <div>
+                              <div className="font-medium">{selVehicle.brand} {selVehicle.model}</div>
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                {selVehicle.vehicleType && (
+                                  <Badge variant="outline">{selVehicle.vehicleType}</Badge>
+                                )}
+                                {selVehicle.fuel && (
+                                  <span>{selVehicle.fuel}</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                     
