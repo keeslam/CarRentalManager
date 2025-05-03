@@ -126,42 +126,163 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               <CardTitle>Customer Details</CardTitle>
               <CardDescription>Personal information and contact details</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Full Name</h3>
-                <p className="text-base">{customer.name}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Email</h3>
-                <p className="text-base">{customer.email || "Not provided"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Phone</h3>
-                <p className="text-base">{customer.phone ? formatPhoneNumber(customer.phone) : "Not provided"}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Driver License</h3>
-                <p className="text-base">{customer.driverLicenseNumber || "Not provided"}</p>
-              </div>
-              
-              <div className="md:col-span-2">
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Address</h3>
-                <p className="text-base">{[
-                  customer.address,
-                  customer.postalCode && customer.city ? `${customer.postalCode} ${customer.city}` : (customer.postalCode || customer.city),
-                  customer.country
-                ].filter(Boolean).join(", ") || "No address provided"}</p>
-              </div>
-              
-              {customer.notes && (
-                <div className="md:col-span-2">
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
-                  <p className="text-base">{customer.notes}</p>
+            <CardContent>
+              {/* Personal Info Section */}
+              <div className="border-b pb-4 mb-4">
+                <h3 className="text-lg font-medium mb-3">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Full Name</h4>
+                    <p className="text-base">{customer.name}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Debtor Number</h4>
+                    <p className="text-base">{customer.debtorNumber || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">First Name</h4>
+                    <p className="text-base">{customer.firstName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Last Name</h4>
+                    <p className="text-base">{customer.lastName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Driver Name</h4>
+                    <p className="text-base">{customer.driverName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Driver License</h4>
+                    <p className="text-base">{customer.driverLicenseNumber || "Not provided"}</p>
+                  </div>
                 </div>
-              )}
+              </div>
+              
+              {/* Contact Info Section */}
+              <div className="border-b pb-4 mb-4">
+                <h3 className="text-lg font-medium mb-3">Contact Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Primary Email</h4>
+                    <p className="text-base">{customer.email || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Primary Phone</h4>
+                    <p className="text-base">{customer.phone ? formatPhoneNumber(customer.phone) : "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Email for MOT</h4>
+                    <p className="text-base">{customer.emailForMOT || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Email for Invoices</h4>
+                    <p className="text-base">{customer.emailForInvoices || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">General Email</h4>
+                    <p className="text-base">{customer.emailGeneral || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Driver Phone</h4>
+                    <p className="text-base">{customer.driverPhone ? formatPhoneNumber(customer.driverPhone) : "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Address Section */}
+              <div className="border-b pb-4 mb-4">
+                <h3 className="text-lg font-medium mb-3">Address Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Street Name</h4>
+                    <p className="text-base">{customer.streetName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Address</h4>
+                    <p className="text-base">{customer.address || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Postal Code</h4>
+                    <p className="text-base">{customer.postalCode || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">City</h4>
+                    <p className="text-base">{customer.city || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Country</h4>
+                    <p className="text-base">{customer.country || "Nederland"}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Company Information */}
+              <div className="border-b pb-4 mb-4">
+                <h3 className="text-lg font-medium mb-3">Company Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Company Name</h4>
+                    <p className="text-base">{customer.companyName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Person</h4>
+                    <p className="text-base">{customer.contactPerson || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Chamber of Commerce Number (KvK)</h4>
+                    <p className="text-base">{customer.chamberOfCommerceNumber || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">VAT Number</h4>
+                    <p className="text-base">{customer.vatNumber || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">RSIN</h4>
+                    <p className="text-base">{customer.rsin || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Additional Information */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Additional Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status</h4>
+                    <p className="text-base">{customer.status || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status Date</h4>
+                    <p className="text-base">{customer.statusDate ? formatDate(customer.statusDate) : "Not provided"}</p>
+                  </div>
+                </div>
+                
+                {customer.notes && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Notes</h4>
+                    <p className="text-base">{customer.notes}</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
