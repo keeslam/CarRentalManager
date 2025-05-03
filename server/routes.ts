@@ -154,8 +154,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update user (admin only)
-  app.patch("/api/users/:id", requireAdmin, async (req, res) => {
+  // Update user with self-update for own profile
+  app.patch("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Allow users to update their own profile, but require admin for others
+      const isSelfUpdate = id === req.user.id;
+      const isAdmin = req.user.role === UserRole.ADMIN;
+      
+      if (!isSelfUpdate && !isAdmin) {
+        return res.status(403).json({ message: "Not authorized to update other user accounts" });
+      }
+      
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // If updating username, check if new username already exists
+      if (req.body.username && req.body.username !== user.username) {
+        const existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      }
+      
+      // For self-update, only allow certain fields (username, fullName, email)
+      let userData;
+      if (isSelfUpdate && !isAdmin) {
+        const { username, fullName, email } = req.body;
+        userData = {
+          username,
+          fullName,
+          email,
+          updatedBy: req.user.username
+        };
+        
+        // Filter out undefined values
+        Object.keys(userData).forEach(key => 
+          userData[key] === undefined && delete userData[key]
+        );
+      } else {
+        // Admin can update all fields
+        userData = {
+          ...req.body,
+          updatedBy: req.user.username
+        };
+      }
+      
+      // Special handling for admin-only operations
+      if (!isAdmin) {
+        // Non-admins can't change roles or permissions
+        delete userData.role;
+        delete userData.permissions;
+        delete userData.active;
+      }
+      
+      // Handle password separately
+      if (userData.password) {
+        // Separate password from other data
+        const { password, ...otherData } = userData;
+        
+        // Update user data without password
+        const updatedUser = await storage.updateUser(id, otherData);
+        
+        // Update password separately with proper hashing
+        const hashedPassword = await hashPassword(password);
+        await storage.updateUserPassword(id, hashedPassword);
+        
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Don't send password back to client
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        
+        res.json(userWithoutPassword);
+      } else {
+        // Update user without password change
+        const updatedUser = await storage.updateUser(id, userData);
+        
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Don't send password back to client
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        
+        res.json(userWithoutPassword);
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(400).json({ 
+        message: "Failed to update user", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Original update user for backward compatibility
+  app.patch("/api/users/:id/admin", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       

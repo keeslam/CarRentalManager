@@ -74,27 +74,39 @@ export function UserMenu() {
           </div>
           
           <div className="py-1">
-            <Link href="/profile" onClick={() => setIsOpen(false)}>
-              <a className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                <User className="mr-2 h-4 w-4" />
-                My Profile
-              </a>
-            </Link>
+            <button 
+              onClick={() => {
+                setIsOpen(false);
+                window.location.href = "/profile";
+              }}
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+            >
+              <User className="mr-2 h-4 w-4" />
+              My Profile
+            </button>
             
-            <Link href="/profile/edit" onClick={() => setIsOpen(false)}>
-              <a className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Profile
-              </a>
-            </Link>
+            <button 
+              onClick={() => {
+                setIsOpen(false);
+                window.location.href = "/profile/edit";
+              }}
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Edit Profile
+            </button>
 
             {user.role === UserRole.ADMIN && (
-              <Link href="/users" onClick={() => setIsOpen(false)}>
-                <a className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <UserCog className="mr-2 h-4 w-4" />
-                  User Management
-                </a>
-              </Link>
+              <button 
+                onClick={() => {
+                  setIsOpen(false);
+                  window.location.href = "/users";
+                }}
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+              >
+                <UserCog className="mr-2 h-4 w-4" />
+                User Management
+              </button>
             )}
           </div>
           
