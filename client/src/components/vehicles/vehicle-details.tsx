@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ interface VehicleDetailsProps {
 export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
+  const queryClient = useQueryClient();
   
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({
@@ -276,6 +277,11 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         preselectedType="APK Inspection"
+                        onSuccess={() => {
+                          // Refresh vehicle details after upload
+                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        }}
                       >
                         <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                           + Upload APK
@@ -291,6 +297,11 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         preselectedType="Warranty"
+                        onSuccess={() => {
+                          // Refresh vehicle details after upload
+                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        }}
                       >
                         <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                           + Upload warranty
@@ -378,6 +389,11 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         preselectedType="Damage Report"
+                        onSuccess={() => {
+                          // Refresh vehicle details after upload
+                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        }}
                       >
                         <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                           + Add report
@@ -405,6 +421,11 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         preselectedType="Damage Photos"
+                        onSuccess={() => {
+                          // Refresh vehicle details after upload
+                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        }}
                       >
                         <span className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
                           + Add photos
@@ -621,6 +642,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   vehicleId={vehicleId} 
                   onSuccess={() => {
                     // Refresh the documents list after upload
+                    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
                   }}
                 />
               </div>
@@ -634,6 +657,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                     <InlineDocumentUpload 
                       vehicleId={vehicleId} 
                       preselectedType="APK Inspection"
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                      }}
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-blue-500">
