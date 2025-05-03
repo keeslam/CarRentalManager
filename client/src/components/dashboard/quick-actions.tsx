@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Vehicle } from "@shared/schema";
 import { Check, RotateCw } from "lucide-react";
-import { formatLicensePlate } from "@/lib/utils";
+import { displayLicensePlate } from "@/lib/utils";
 
 interface ActionIconProps {
   name: string;
@@ -538,7 +538,7 @@ export function QuickActions() {
                                       onClick={() => setSelectedDamageVehicle(vehicle)}
                                     >
                                       <div className="flex items-center">
-                                        <span className="font-medium">{formatLicensePlate(vehicle.licensePlate)}</span>
+                                        <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
                                         <span className="ml-2 text-sm text-muted-foreground">
                                           {vehicle.brand} {vehicle.model}
                                         </span>
