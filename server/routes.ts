@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
@@ -8,6 +8,7 @@ import fs from "fs";
 import { z } from "zod";
 import { insertVehicleSchema, insertCustomerSchema, insertReservationSchema, insertExpenseSchema, insertDocumentSchema } from "@shared/schema";
 import multer from "multer";
+import { setupAuth } from "./auth";
 
 // Helper function to convert absolute paths to relative paths
 function getRelativePath(absolutePath: string): string {
@@ -20,6 +21,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
+  
+  // Set up authentication routes and middleware
+  const { requireAuth } = setupAuth(app);
 
   // ==================== VEHICLE ROUTES ====================
   // Get available vehicles
@@ -62,10 +66,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create vehicle
-  app.post("/api/vehicles", async (req, res) => {
+  app.post("/api/vehicles", requireAuth, async (req: Request, res: Response) => {
     try {
       const vehicleData = insertVehicleSchema.parse(req.body);
-      const vehicle = await storage.createVehicle(vehicleData);
+      
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...vehicleData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      const vehicle = await storage.createVehicle(dataWithTracking);
       res.status(201).json(vehicle);
     } catch (error) {
       res.status(400).json({ message: "Invalid vehicle data", error });
@@ -73,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update vehicle
-  app.patch("/api/vehicles/:id", async (req, res) => {
+  app.patch("/api/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -81,7 +94,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const vehicleData = insertVehicleSchema.parse(req.body);
-      const vehicle = await storage.updateVehicle(id, vehicleData);
+      
+      // Add user tracking information for updates
+      const user = req.user;
+      const dataWithTracking = {
+        ...vehicleData,
+        updatedBy: user ? user.username : null
+      };
+      
+      const vehicle = await storage.updateVehicle(id, dataWithTracking);
       
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
@@ -94,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Toggle vehicle registration status
-  app.patch("/api/vehicles/:id/toggle-registration", async (req, res) => {
+  app.patch("/api/vehicles/:id/toggle-registration", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -112,19 +133,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const currentDate = new Date().toISOString().split('T')[0];
+      
+      // Add user tracking information
+      const user = req.user;
       let updateData;
 
       if (status === 'opnaam') {
         updateData = {
           registeredTo: true,
           company: false,
-          registeredToDate: currentDate
+          registeredToDate: currentDate,
+          updatedBy: user ? user.username : null
         };
       } else {
         updateData = {
           registeredTo: false,
           company: true,
-          companyDate: currentDate
+          companyDate: currentDate,
+          updatedBy: user ? user.username : null
         };
       }
 
@@ -136,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete vehicle
-  app.delete("/api/vehicles/:id", async (req, res) => {
+  app.delete("/api/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -192,10 +218,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create customer
-  app.post("/api/customers", async (req, res) => {
+  app.post("/api/customers", requireAuth, async (req: Request, res: Response) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
-      const customer = await storage.createCustomer(customerData);
+      
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...customerData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      const customer = await storage.createCustomer(dataWithTracking);
       res.status(201).json(customer);
     } catch (error) {
       res.status(400).json({ message: "Invalid customer data", error });
@@ -203,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update customer
-  app.patch("/api/customers/:id", async (req, res) => {
+  app.patch("/api/customers/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -211,7 +246,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const customerData = insertCustomerSchema.parse(req.body);
-      const customer = await storage.updateCustomer(id, customerData);
+      
+      // Add user tracking information for updates
+      const user = req.user;
+      const dataWithTracking = {
+        ...customerData,
+        updatedBy: user ? user.username : null
+      };
+      
+      const customer = await storage.updateCustomer(id, dataWithTracking);
       
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
@@ -401,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create reservation with damage check upload
-  app.post("/api/reservations", damageCheckUpload.single('damageCheckFile'), async (req, res) => {
+  app.post("/api/reservations", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
@@ -425,7 +468,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const reservation = await storage.createReservation(reservationData);
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...reservationData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      const reservation = await storage.createReservation(dataWithTracking);
       
       // If there's a file, create a document record linked to the vehicle
       // and update the reservation with the damage check path
@@ -437,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           filePath: getRelativePath(req.file.path),
           fileSize: req.file.size,
           contentType: req.file.mimetype,
-          createdBy: `Reservation #${reservation.id}`,
+          createdBy: user ? user.username : `Reservation #${reservation.id}`,
           notes: `Damage check for reservation from ${reservationData.startDate} to ${reservationData.endDate}`
         };
         
