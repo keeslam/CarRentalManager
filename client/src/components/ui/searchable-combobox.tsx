@@ -50,7 +50,17 @@ export function SearchableCombobox({
   recentValues = [],
 }: SearchableComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const [searchInput, setSearchInput] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
+  
+  // Set up debounce for search query
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Filter options based on search query
   const filteredOptions = React.useMemo(() => {
@@ -140,8 +150,8 @@ export function SearchableCombobox({
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <Input
                 placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-8"
               />
             </div>
@@ -166,6 +176,7 @@ export function SearchableCombobox({
                       onClick={() => {
                         onChange(option.value);
                         setOpen(false);
+                        setSearchInput("");
                         setSearchQuery("");
                       }}
                     >
