@@ -33,6 +33,7 @@ import { Vehicle } from "@shared/schema";
 import { format } from "date-fns";
 import { formatFileSize } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 
 // Expense categories
 const expenseCategories = [
@@ -287,40 +288,15 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
                   <FormItem className="md:col-span-2">
                     <FormLabel>Vehicle</FormLabel>
                     <FormControl>
-                      <SearchableCombobox
-                        options={vehicleOptions}
+                      <VehicleSelector
+                        vehicles={vehicles || []}
                         value={field.value > 0 ? field.value.toString() : ""}
                         onChange={(value) => field.onChange(parseInt(value))}
                         placeholder="Search and select a vehicle..."
-                        searchPlaceholder="Search by license plate, brand, or model..."
-                        groups={true}
-                        recentValues={recentVehicles}
                         disabled={vehicleId !== null}
+                        recentVehicleIds={recentVehicles}
                       />
                     </FormControl>
-                    
-                    {field.value > 0 && vehicles && (
-                      <div className="mt-2 text-sm bg-muted p-2 rounded-md">
-                        {(() => {
-                          const selVehicle = vehicles.find(v => v.id === field.value);
-                          if (!selVehicle) return null;
-                          return (
-                            <div>
-                              <div className="font-medium">{selVehicle.brand} {selVehicle.model}</div>
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                {selVehicle.vehicleType && (
-                                  <Badge variant="outline">{selVehicle.vehicleType}</Badge>
-                                )}
-                                {selVehicle.fuel && (
-                                  <span>{selVehicle.fuel}</span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-                    
                     <FormMessage />
                   </FormItem>
                 )}
