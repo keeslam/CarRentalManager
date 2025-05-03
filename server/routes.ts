@@ -842,6 +842,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update document
+  app.patch("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid document ID" });
+      }
+
+      // Get existing document
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Update only allowed fields (documentType and notes)
+      const documentData = {
+        ...(req.body.documentType && { documentType: req.body.documentType }),
+        ...(req.body.notes !== undefined && { notes: req.body.notes })
+      };
+      
+      const updatedDocument = await storage.updateDocument(id, documentData);
+      if (!updatedDocument) {
+        return res.status(404).json({ message: "Failed to update document" });
+      }
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res.status(400).json({ 
+        message: "Failed to update document", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Delete document
   app.delete("/api/documents/:id", async (req, res) => {
     try {

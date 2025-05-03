@@ -615,6 +615,21 @@ export class MemStorage implements IStorage {
     this.documents.set(id, document);
     return document;
   }
+  
+  async updateDocument(id: number, documentData: Partial<InsertDocument>): Promise<Document | undefined> {
+    const existingDocument = this.documents.get(id);
+    if (!existingDocument) {
+      return undefined;
+    }
+    
+    const updatedDocument: Document = {
+      ...existingDocument,
+      ...documentData
+    };
+    
+    this.documents.set(id, updatedDocument);
+    return updatedDocument;
+  }
 
   async getDocumentsByVehicle(vehicleId: number): Promise<Document[]> {
     return Array.from(this.documents.values())

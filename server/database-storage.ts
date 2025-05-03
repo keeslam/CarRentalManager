@@ -516,6 +516,16 @@ export class DatabaseStorage implements IStorage {
     return document;
   }
 
+  async updateDocument(id: number, documentData: Partial<InsertDocument>): Promise<Document | undefined> {
+    const [updatedDocument] = await db
+      .update(documents)
+      .set(documentData)
+      .where(eq(documents.id, id))
+      .returning();
+    
+    return updatedDocument || undefined;
+  }
+
   async getDocumentsByVehicle(vehicleId: number): Promise<Document[]> {
     return await db
       .select()
