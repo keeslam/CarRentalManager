@@ -38,8 +38,11 @@ const documentTypes = [
   "Maintenance Record",
   "Receipt",
   "Registration",
-  "Vehicle Picture",
+  "Vehicle Photos", // Updated to match inline-document-upload.tsx
   "Warranty",
+  "Tire Replacement",
+  "Front Window Replacement",
+  "Repair Report",
   "Other"
 ];
 

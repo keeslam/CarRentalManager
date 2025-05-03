@@ -34,9 +34,8 @@ const documentTypes = [
   "Maintenance Record",
   "Receipt",
   "Registration",
-  "Vehicle Picture",
+  "Vehicle Photos", // Consolidated "Vehicle Picture" and "Damage Photos" into one category
   "Warranty",
-  "Damage Photos",
   "Tire Replacement",
   "Front Window Replacement",
   "Repair Report",
