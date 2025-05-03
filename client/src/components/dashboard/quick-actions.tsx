@@ -516,7 +516,7 @@ export function QuickActions() {
                               </div>
                             </div>
                             
-                            <div className="border rounded-md h-[200px] overflow-y-auto p-1 mb-2">
+                            <div className="border rounded-md h-[140px] overflow-y-auto p-1 mb-2">
                               {(() => {
                                 // Filter vehicles based on search query
                                 const filteredVehicles = damageFormSearchQuery 
@@ -541,31 +541,31 @@ export function QuickActions() {
                                     No vehicles match your search
                                   </div>
                                 ) : (
-                                  <div className="space-y-4">
+                                  <div className="space-y-2">
                                     {Object.entries(vehicleGroups).map(([vehicleType, vehicles]) => (
-                                      <div key={vehicleType} className="space-y-2">
-                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-semibold border-b">
+                                      <div key={vehicleType} className="space-y-1">
+                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-xs font-semibold border-b">
                                           {vehicleType}
                                         </div>
-                                        <div className="space-y-1">
+                                        <div>
                                           {vehicles.map(vehicle => (
                                             <div 
                                               key={vehicle.id}
-                                              className={`px-3 py-2 rounded cursor-pointer flex items-center justify-between ${
+                                              className={`px-2 py-1 rounded cursor-pointer flex items-center justify-between text-xs ${
                                                 selectedDamageVehicle?.id === vehicle.id 
-                                                  ? 'bg-primary-100 text-primary-700' 
+                                                  ? 'bg-primary-50 text-primary-700 font-medium' 
                                                   : 'hover:bg-accent'
                                               }`}
                                               onClick={() => setSelectedDamageVehicle(vehicle)}
                                             >
-                                              <div className="flex items-center">
+                                              <div className="flex items-center gap-1">
                                                 <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
-                                                <span className="ml-2 text-sm text-muted-foreground">
+                                                <span className="text-muted-foreground">
                                                   {vehicle.brand} {vehicle.model}
                                                 </span>
                                               </div>
                                               {selectedDamageVehicle?.id === vehicle.id && (
-                                                <Check className="h-4 w-4 text-primary-600" />
+                                                <Check className="h-3 w-3 text-primary-600" />
                                               )}
                                             </div>
                                           ))}
@@ -777,7 +777,7 @@ export function QuickActions() {
                                 </div>
                               </div>
                               
-                              <div className="border rounded-md h-[200px] overflow-y-auto p-1 mb-2">
+                              <div className="border rounded-md h-[150px] overflow-y-auto p-1 mb-2">
                                 {(() => {
                                   // Filter vehicles based on search query
                                   const filteredVehicles = searchQuery 
@@ -797,8 +797,8 @@ export function QuickActions() {
                                   
                                   filteredVehicles.forEach(vehicle => {
                                     let statusGroup = 'Other';
-                                    if (vehicle.registeredTo) statusGroup = 'Opnaam (Person)';
-                                    else if (vehicle.company) statusGroup = 'BV (Company)';
+                                    if (vehicle.registeredTo === true || vehicle.registeredTo === "true") statusGroup = 'Opnaam (Person)';
+                                    else if (vehicle.company === true || vehicle.company === "true") statusGroup = 'BV (Company)';
                                     
                                     const brand = vehicle.brand || 'Other';
                                     if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
@@ -810,14 +810,14 @@ export function QuickActions() {
                                       No vehicles match your search
                                     </div>
                                   ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-2">
                                       {Object.entries(vehicleGroups).map(([status, brands]) => {
                                         const hasVehicles = Object.values(brands).some(vehicles => vehicles.length > 0);
                                         if (!hasVehicles) return null;
                                         
                                         return (
-                                          <div key={status} className="space-y-2">
-                                            <div className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-semibold border-b">
+                                          <div key={status} className="space-y-1">
+                                            <div className="sticky top-0 z-10 bg-background px-2 py-1 text-xs font-semibold border-b">
                                               {status}
                                             </div>
                                             {Object.entries(brands).map(([brand, brandVehicles]) => {
@@ -826,11 +826,11 @@ export function QuickActions() {
                                               return (
                                                 <div key={brand} className="pl-2 space-y-1">
                                                   <div className="text-xs font-medium text-muted-foreground">{brand}</div>
-                                                  <div className="space-y-1">
+                                                  <div>
                                                     {brandVehicles.map(vehicle => (
                                                       <label 
                                                         key={vehicle.id} 
-                                                        className="flex items-center space-x-2 p-1 rounded hover:bg-accent cursor-pointer text-sm"
+                                                        className="flex items-center space-x-2 p-1 rounded hover:bg-accent cursor-pointer text-xs"
                                                       >
                                                         <input 
                                                           type="checkbox"
@@ -844,28 +844,18 @@ export function QuickActions() {
                                                             }
                                                           }}
                                                         />
-                                                        <span className="flex flex-col">
-                                                          <span className="flex items-center gap-2">
-                                                            {displayLicensePlate(vehicle.licensePlate)} - {vehicle.model}
-                                                            {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
-                                                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-                                                                Opnaam
-                                                              </span>
-                                                            ) : vehicle.company === true || vehicle.company === "true" ? (
-                                                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
-                                                                BV
-                                                              </span>
-                                                            ) : null}
-                                                          </span>
-                                                          <span className="text-xs text-muted-foreground">
-                                                            {vehicle.registeredToDate && (vehicle.registeredTo === true || vehicle.registeredTo === "true") ? 
-                                                              `Registered since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
-                                                              (vehicle.company === true || vehicle.company === "true") ? 
-                                                                vehicle.companyDate ? 
-                                                                  `In BV since: ${new Date(vehicle.companyDate).toLocaleDateString()}` : 
-                                                                  'In BV (date unknown)' 
-                                                                : 'Not registered'}
-                                                          </span>
+                                                        <span className="flex items-center gap-1 flex-wrap">
+                                                          <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span> 
+                                                          <span className="text-muted-foreground">{vehicle.model}</span>
+                                                          {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
+                                                            <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                              Opnaam
+                                                            </span>
+                                                          ) : vehicle.company === true || vehicle.company === "true" ? (
+                                                            <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                              BV
+                                                            </span>
+                                                          ) : null}
                                                         </span>
                                                       </label>
                                                     ))}
@@ -882,7 +872,7 @@ export function QuickActions() {
                               </div>
                             </div>
                             
-                            <div className="border rounded-md h-[200px] overflow-y-auto p-2">
+                            <div className="border rounded-md h-[120px] overflow-y-auto p-2">
                               {selectedVehicles.length === 0 ? (
                                 <div className="p-2 text-center text-sm text-muted-foreground">
                                   No vehicles selected. Use the search box above to add vehicles.
