@@ -390,15 +390,25 @@ export function ReservationForm({
         saveToRecent('recentCustomers', form.watch("customerId").toString());
       }
       
-      // Invalidate relevant queries
+      // Invalidate all relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      
+      // Also invalidate vehicle-specific reservation queries
+      if (vehicleIdWatch) {
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/reservations/vehicle/${vehicleIdWatch}`] 
+        });
+      }
       
       // Show success message
       toast({
         title: `Reservation ${editMode ? "updated" : "created"} successfully`,
         description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
       });
+      
+      // Force refetch if needed
+      queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
       
       // Navigate back to reservations list
       navigate("/reservations");
