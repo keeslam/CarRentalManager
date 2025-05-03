@@ -85,9 +85,10 @@ const formSchema = insertExpenseSchema.extend({
 interface ExpenseFormProps {
   editMode?: boolean;
   initialData?: any;
+  preselectedVehicleId?: number | null;
 }
 
-export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps) {
+export function ExpenseForm({ editMode = false, initialData, preselectedVehicleId }: ExpenseFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -134,16 +135,27 @@ export function ExpenseForm({ editMode = false, initialData }: ExpenseFormProps)
     },
   });
   
-  // When the form is first created, update with the vehicleId from URL if available
+  // When the form is first created, update with the vehicleId from URL parameter or preselectedVehicleId prop
   useEffect(() => {
     // Only run this once after the form is initialized
     if (!formInitialized) {
+      // First check if vehicleId is set from URL query parameters
       if (vehicleId && !editMode) {
         form.setValue("vehicleId", vehicleId);
+        setFormInitialized(true);
+      } 
+      // Then check if preselectedVehicleId prop is provided
+      else if (preselectedVehicleId && !editMode) {
+        setVehicleId(preselectedVehicleId);
+        form.setValue("vehicleId", preselectedVehicleId);
+        setFormInitialized(true);
       }
-      setFormInitialized(true);
+      // Otherwise, just mark as initialized
+      else {
+        setFormInitialized(true);
+      }
     }
-  }, [vehicleId, form, editMode, formInitialized]);
+  }, [vehicleId, preselectedVehicleId, form, editMode, formInitialized]);
   
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
