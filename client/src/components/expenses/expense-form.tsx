@@ -236,8 +236,18 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
       }
     },
     onSuccess: async (result) => {
+      // Extract vehicle ID from result or use current vehicleId state
+      const expenseVehicleId = result?.vehicleId || vehicleId || (result && 'id' in result ? result.id : null);
+      
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      
+      // If we have a vehicle ID, also invalidate vehicle-specific expenses
+      if (expenseVehicleId) {
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/expenses/vehicle/${expenseVehicleId}`] 
+        });
+      }
       
       // Show success message
       toast({
@@ -247,15 +257,14 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
       
       console.log("Created expense with response:", result);
       
-      // Navigate to the newly created expense or back to vehicle details
-      if (result && result.id) {
-        // Go to the expense details page for the newly created expense
+      // Always navigate to the vehicle expenses page when a vehicle ID is available
+      if (expenseVehicleId) {
+        navigate(`/expenses/vehicle/${expenseVehicleId}`);
+      } else if (result && result.id) {
+        // Fallback to the expense details page if no vehicle ID but we have expense ID
         navigate(`/expenses/${result.id}`);
-      } else if (vehicleId) {
-        // Fallback to vehicle details if we somehow don't have the result
-        navigate(`/vehicles/${vehicleId}`);
       } else {
-        // Fallback to expenses list
+        // Last fallback to expenses list
         navigate("/expenses");
       }
     },
@@ -487,7 +496,7 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => vehicleId ? navigate(`/vehicles/${vehicleId}`) : navigate("/expenses")}
+                onClick={() => vehicleId ? navigate(`/expenses/vehicle/${vehicleId}`) : navigate("/expenses")}
               >
                 Cancel
               </Button>
