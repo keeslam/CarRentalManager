@@ -39,8 +39,16 @@ const formSchema = insertVehicleSchema.extend({
   registeredTo: z.boolean().optional(),
   company: z.boolean().optional(),
   // Make mileage fields optional
-  departureMileage: z.number().optional().nullable(),
-  returnMileage: z.number().optional().nullable(),
+  departureMileage: z.union([
+    z.string().optional(),
+    z.number().optional(),
+    z.null()
+  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val)),
+  returnMileage: z.union([
+    z.string().optional(),
+    z.number().optional(),
+    z.null()
+  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val)),
 });
 
 // Vehicle types
@@ -624,19 +632,18 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                   <FormField
                     control={form.control}
                     name="departureMileage"
-                    render={({ field }) => (
+                    render={({ field: { onChange, ...restField } }) => (
                       <FormItem>
                         <FormLabel>Departure Mileage (km) <span className="text-sm font-normal text-muted-foreground">(Optional)</span></FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
                             placeholder="0" 
-                            {...field} 
-                            value={field.value || ''}
-                            onChange={e => {
-                              // Allow empty value
-                              const value = e.target.value === '' ? null : Number(e.target.value);
-                              field.onChange(value);
+                            {...restField}
+                            value={restField.value ?? ''} 
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? '' : e.target.value;
+                              onChange(value);
                             }}
                           />
                         </FormControl>
@@ -651,19 +658,18 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                   <FormField
                     control={form.control}
                     name="returnMileage"
-                    render={({ field }) => (
+                    render={({ field: { onChange, ...restField } }) => (
                       <FormItem>
                         <FormLabel>Return Mileage (km) <span className="text-sm font-normal text-muted-foreground">(Optional)</span></FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
                             placeholder="0" 
-                            {...field} 
-                            value={field.value || ''}
-                            onChange={e => {
-                              // Allow empty value
-                              const value = e.target.value === '' ? null : Number(e.target.value);
-                              field.onChange(value);
+                            {...restField} 
+                            value={restField.value ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? '' : e.target.value;
+                              onChange(value);
                             }}
                           />
                         </FormControl>
