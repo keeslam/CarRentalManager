@@ -20,17 +20,7 @@ import { PlusCircle, ArrowLeft } from "lucide-react";
 
 export default function VehicleExpensesPage() {
   const [_, params] = useLocation();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-  
-  // Extract vehicleId from URL parameters
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const vehicleIdParam = urlParams.get("vehicleId");
-    
-    if (vehicleIdParam) {
-      setVehicleId(parseInt(vehicleIdParam));
-    }
-  }, []);
+  const vehicleId = params?.id ? parseInt(params.id) : null;
   
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({

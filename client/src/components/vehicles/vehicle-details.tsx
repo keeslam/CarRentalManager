@@ -547,7 +547,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                 <CardTitle>Expense History</CardTitle>
                 <CardDescription>All expenses related to this vehicle</CardDescription>
                 <div className="flex justify-end space-x-2">
-                  <Link href={`/expenses/vehicle?vehicleId=${vehicleId}`}>
+                  <Link href={`/expenses/vehicle/${vehicleId}`}>
                     <Button size="sm" variant="outline">View All Expenses</Button>
                   </Link>
                   <Link href={`/expenses/add?vehicleId=${vehicleId}`}>

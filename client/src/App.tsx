@@ -52,7 +52,7 @@ function AppRoutes() {
         <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
         <ProtectedRoute path="/expenses" component={ExpensesIndex} />
         <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
-        <ProtectedRoute path="/expenses/vehicle" component={VehicleExpensesPage} />
+        <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />
         <ProtectedRoute path="/documents" component={DocumentsIndex} />
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
