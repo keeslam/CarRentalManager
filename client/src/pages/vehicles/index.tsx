@@ -230,29 +230,33 @@ export default function VehiclesIndex() {
       },
     },
     {
-      id: "features",
-      header: "Features",
+      id: "gps",
+      header: "GPS",
       cell: ({ row }) => {
         const vehicle = row.original;
-        return (
-          <div className="flex flex-col gap-1">
-            {vehicle.gps && (
-              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 text-xs">
-                GPS
-              </Badge>
-            )}
-            {vehicle.radioCode && (
-              <Badge variant="outline" className="bg-purple-50 border-purple-200 text-purple-700 text-xs">
-                Radio Code: {vehicle.radioCode}
-              </Badge>
-            )}
-            {vehicle.tireSize && (
-              <Badge variant="outline" className="bg-gray-50 border-gray-200 text-gray-700 text-xs">
-                Tire: {vehicle.tireSize}
-              </Badge>
-            )}
-          </div>
-        );
+        return vehicle.gps ? 
+          <Badge className="bg-blue-50 text-blue-700">Yes</Badge> : 
+          <span className="text-gray-400">No</span>;
+      },
+    },
+    {
+      id: "radioCode",
+      header: "Radio Code",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        return vehicle.radioCode ? 
+          <span className="font-medium text-purple-700">{vehicle.radioCode}</span> : 
+          <span className="text-gray-400">N/A</span>;
+      },
+    },
+    {
+      id: "tireSize",
+      header: "Tire Size",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        return vehicle.tireSize ? 
+          <span className="font-medium">{vehicle.tireSize}</span> : 
+          <span className="text-gray-400">N/A</span>;
       },
     },
     {
