@@ -453,16 +453,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Convert empty string mileage values to null
-      if (req.body.departureMileage === '') {
-        req.body.departureMileage = null;
-      }
-      if (req.body.returnMileage === '') {
-        req.body.returnMileage = null;
+      // Create a sanitized copy of the request body
+      const sanitizedData = { ...req.body };
+      
+      // Ensure all values are properly formatted
+
+      // Convert empty string values to null for numeric fields
+      if (sanitizedData.departureMileage === '') sanitizedData.departureMileage = null;
+      if (sanitizedData.returnMileage === '') sanitizedData.returnMileage = null;
+      if (sanitizedData.monthlyPrice === '') sanitizedData.monthlyPrice = null;
+      if (sanitizedData.dailyPrice === '') sanitizedData.dailyPrice = null;
+      
+      // Convert values for boolean fields
+      const booleanFields = [
+        'damageCheck', 'winterTires', 'roadsideAssistance', 'spareKey', 
+        'wokNotification', 'seatcovers', 'backupbeepers', 'gps', 'adBlue'
+      ];
+      
+      booleanFields.forEach(field => {
+        if (field in sanitizedData) {
+          const value = sanitizedData[field];
+          sanitizedData[field] = value === true || value === 'true' || value === 1 || value === '1';
+        } else {
+          sanitizedData[field] = false;
+        }
+      });
+      
+      // Handle registration fields
+      if ('registeredTo' in sanitizedData) {
+        const value = sanitizedData.registeredTo;
+        sanitizedData.registeredTo = value === true || value === 'true' || value === 1 || value === '1';
       }
       
+      if ('company' in sanitizedData) {
+        const value = sanitizedData.company;
+        sanitizedData.company = value === true || value === 'true' || value === 1 || value === '1';
+      }
+      
+      // Clean date fields that are empty strings
+      Object.keys(sanitizedData).forEach(key => {
+        if (key.toLowerCase().includes('date') && sanitizedData[key] === "") {
+          sanitizedData[key] = null;
+        }
+      });
+      
+      console.log("Sanitized vehicle data:", JSON.stringify(sanitizedData));
+      
       try {
-        const vehicleData = insertVehicleSchema.parse(req.body);
+        const vehicleData = insertVehicleSchema.parse(sanitizedData);
         
         // Add user tracking information
         const user = req.user;
@@ -494,8 +532,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid vehicle ID" });
       }
+      
+      console.log("Received vehicle update data:", JSON.stringify(req.body));
+      
+      // Create a sanitized copy of the request body
+      const sanitizedData = { ...req.body };
+      
+      // Ensure all values are properly formatted
 
-      const vehicleData = insertVehicleSchema.parse(req.body);
+      // Convert empty string values to null for numeric fields
+      if (sanitizedData.departureMileage === '') sanitizedData.departureMileage = null;
+      if (sanitizedData.returnMileage === '') sanitizedData.returnMileage = null;
+      if (sanitizedData.monthlyPrice === '') sanitizedData.monthlyPrice = null;
+      if (sanitizedData.dailyPrice === '') sanitizedData.dailyPrice = null;
+      
+      // Convert values for boolean fields
+      const booleanFields = [
+        'damageCheck', 'winterTires', 'roadsideAssistance', 'spareKey', 
+        'wokNotification', 'seatcovers', 'backupbeepers', 'gps', 'adBlue'
+      ];
+      
+      booleanFields.forEach(field => {
+        if (field in sanitizedData) {
+          const value = sanitizedData[field];
+          sanitizedData[field] = value === true || value === 'true' || value === 1 || value === '1';
+        } else {
+          sanitizedData[field] = false;
+        }
+      });
+      
+      // Handle registration fields
+      if ('registeredTo' in sanitizedData) {
+        const value = sanitizedData.registeredTo;
+        sanitizedData.registeredTo = value === true || value === 'true' || value === 1 || value === '1';
+      }
+      
+      if ('company' in sanitizedData) {
+        const value = sanitizedData.company;
+        sanitizedData.company = value === true || value === 'true' || value === 1 || value === '1';
+      }
+      
+      // Clean date fields that are empty strings
+      Object.keys(sanitizedData).forEach(key => {
+        if (key.toLowerCase().includes('date') && sanitizedData[key] === "") {
+          sanitizedData[key] = null;
+        }
+      });
+      
+      console.log("Sanitized vehicle update data:", JSON.stringify(sanitizedData));
+
+      // Parse the sanitized data
+      const vehicleData = insertVehicleSchema.parse(sanitizedData);
       
       // Add user tracking information for updates
       const user = req.user;
@@ -512,7 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(vehicle);
     } catch (error) {
-      res.status(400).json({ message: "Invalid vehicle data", error });
+      console.error("Error updating vehicle:", error);
+      res.status(400).json({ 
+        message: "Invalid vehicle data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
   

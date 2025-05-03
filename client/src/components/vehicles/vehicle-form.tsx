@@ -71,10 +71,26 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   
+  // Process initial data to ensure boolean fields are properly formatted
+  const processedInitialData = initialData ? {
+    ...initialData,
+    adBlue: Boolean(initialData.adBlue),
+    registeredTo: Boolean(initialData.registeredTo),
+    company: Boolean(initialData.company),
+    gps: Boolean(initialData.gps),
+    damageCheck: Boolean(initialData.damageCheck),
+    roadsideAssistance: Boolean(initialData.roadsideAssistance),
+    spareKey: Boolean(initialData.spareKey),
+    winterTires: Boolean(initialData.winterTires),
+    wokNotification: Boolean(initialData.wokNotification),
+    seatcovers: Boolean(initialData.seatcovers),
+    backupbeepers: Boolean(initialData.backupbeepers),
+  } : null;
+
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: processedInitialData || {
       licensePlate: "",
       brand: "",
       model: "",
@@ -96,7 +112,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       dateIn: "",
       dateOut: "",
       contractNumber: "",
-      damageCheck: "",
+      damageCheck: false,  // Changed from empty string to false
       damageCheckDate: "",
       damageCheckAttachment: "",
       damageCheckAttachmentDate: "",
