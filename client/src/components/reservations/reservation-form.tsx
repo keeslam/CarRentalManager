@@ -765,10 +765,10 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={vehicleOptions}
-                          value={field.value ? field.value.toString() : ''}
+                          value={field.value}
                           onChange={(value) => {
+                            console.log("Vehicle selected:", value); 
                             field.onChange(value);
-                            // Field value is now a string, kept as-is
                           }}
                           placeholder="Search and select a vehicle..."
                           searchPlaceholder="Search by license plate, brand, or model..."
@@ -979,8 +979,11 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                       <FormControl>
                         <SearchableCombobox
                           options={customerOptions}
-                          value={field.value ? field.value.toString() : ''}
-                          onChange={(value) => field.onChange(value)}
+                          value={field.value}
+                          onChange={(value) => {
+                            console.log("Customer selected:", value);
+                            field.onChange(value);
+                          }}
                           placeholder="Search and select a customer..."
                           searchPlaceholder="Search by name, phone, or city..."
                           groups={false}
