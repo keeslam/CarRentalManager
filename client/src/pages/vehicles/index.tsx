@@ -34,9 +34,11 @@ export default function VehiclesIndex() {
     {
       accessorKey: "licensePlate",
       header: "License Plate",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("licensePlate")}</div>
-      ),
+      cell: ({ row }) => {
+        const licensePlate = row.getValue("licensePlate") as string;
+        // Display without hyphens
+        return <div className="font-medium">{licensePlate.replace(/-/g, '')}</div>;
+      },
     },
     {
       accessorKey: "brand",

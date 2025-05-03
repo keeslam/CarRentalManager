@@ -128,10 +128,12 @@ export function SearchableCombobox({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[280px] md:w-[350px] max-h-[400px] overflow-auto"
+          className="w-[280px] md:w-[350px] max-h-[300px] overflow-auto"
           align="start"
           side="bottom"
           sideOffset={4}
+          avoidCollisions={true}
+          sticky="always"
         >
           <div className="px-2 py-2">
             <div className="flex items-center px-1 mb-2">

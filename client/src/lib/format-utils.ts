@@ -35,27 +35,21 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 }
 
 /**
- * Format a license plate with standard Dutch format
+ * Format a license plate without hyphens (as requested by user)
  */
 export function formatLicensePlate(licensePlate: string | null | undefined): string {
   if (!licensePlate) return '';
   
-  // Remove all non-alphanumeric characters
-  const cleaned = licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  
-  // Format based on common Dutch license plate formats
-  if (cleaned.length === 6) {
-    // Format XX-XX-XX
-    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 6)}`;
-  } else if (cleaned.length === 7) {
-    // Format XX-XXX-X
-    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 5)}-${cleaned.slice(5, 7)}`;
-  } else if (cleaned.length === 8) {
-    // Format XX-XX-XXX
-    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 8)}`;
-  }
-  
-  return cleaned;
+  // Remove all non-alphanumeric characters and return uppercase
+  return licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+/**
+ * Get the raw license plate without formatting
+ */
+export function getRawLicensePlate(licensePlate: string | null | undefined): string {
+  if (!licensePlate) return '';
+  return licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 }
 
 /**
