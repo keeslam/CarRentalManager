@@ -263,9 +263,12 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       formattedData.company = false;
     }
     
-    // Handle other boolean fields
+    // Separate normal boolean fields from string-boolean fields
     const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
-      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps'];
+      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps', 'adBlue'];
+    
+    // These fields are stored as strings in the database despite being boolean in the UI
+    const stringBooleanFields = ['registeredTo', 'company'];
     
     booleanFields.forEach(field => {
       // Convert any value to a proper boolean
@@ -278,6 +281,21 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       } else {
         // If field is missing, set it to false
         formattedData[field] = false; 
+      }
+    });
+    
+    // Handle string-boolean fields differently - convert to strings "true" or "false"
+    stringBooleanFields.forEach(field => {
+      // Convert any value to a string representation of boolean
+      if (field in formattedData) {
+        if (formattedData[field] === "" || formattedData[field] === "false" || formattedData[field] === false || formattedData[field] === null || formattedData[field] === undefined) {
+          formattedData[field] = "false";
+        } else {
+          formattedData[field] = "true";
+        }
+      } else {
+        // If field is missing, set it to "false"
+        formattedData[field] = "false"; 
       }
     });
     

@@ -633,15 +633,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (status === 'opnaam') {
         updateData = {
-          registeredTo: true,
-          company: false,
+          registeredTo: "true", // Use string "true" to match database schema
+          company: "false",     // Use string "false" to match database schema
           registeredToDate: currentDate,
           updatedBy: user ? user.username : null
         };
       } else {
         updateData = {
-          registeredTo: false,
-          company: true,
+          registeredTo: "false", // Use string "false" to match database schema
+          company: "true",       // Use string "true" to match database schema
           companyDate: currentDate,
           updatedBy: user ? user.username : null
         };
