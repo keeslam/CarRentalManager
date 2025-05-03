@@ -114,12 +114,18 @@ function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Clear user data from cache
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Clear all queries in the cache to force a clean state
+      queryClient.clear();
+      
       toast({
         title: "Logged out successfully",
       });
-      navigate("/auth");
+      
+      // Force navigation to auth page and refresh
+      window.location.href = "/auth";
     },
     onError: (error: Error) => {
       toast({
