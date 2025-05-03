@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertReservationSchema, insertVehicleSchema, insertCustomerSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { CustomerForm } from "@/components/customers/customer-form";
 import { 
   Form, 
   FormControl, 
@@ -547,9 +548,25 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
     createVehicleMutation.mutate(data);
   };
 
-  // Handle customer form submission
-  const onCustomerSubmit = (data: z.infer<typeof customerFormSchema>) => {
-    createCustomerMutation.mutate(data);
+  // Handle customer form success
+  const handleCustomerCreated = (data: any) => {
+    // Set the new customer as selected
+    form.setValue("customerId", data.id.toString());
+    
+    // Save to recent customers
+    saveToRecent('recentCustomers', data.id.toString());
+    
+    // Close the dialog
+    setCustomerDialogOpen(false);
+    
+    // Show success message
+    toast({
+      title: "Customer created",
+      description: `Customer "${data.name}" has been created.`,
+    });
+    
+    // Reset customer form
+    customerForm.reset();
   };
   
   // Handle reservation form submission
@@ -877,163 +894,10 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                                 Create a new customer to add to the reservation
                               </DialogDescription>
                             </DialogHeader>
-                            <Form {...customerForm}>
-                              <form onSubmit={customerForm.handleSubmit(onCustomerSubmit)} className="space-y-4">
-                                <Tabs defaultValue="basic">
-                                  <TabsList className="grid grid-cols-2 mb-4">
-                                    <TabsTrigger value="basic">Basic Information</TabsTrigger>
-                                    <TabsTrigger value="contact">Contact & Address</TabsTrigger>
-                                  </TabsList>
-                                  
-                                  <TabsContent value="basic" className="space-y-4">
-                                    <FormField
-                                      control={customerForm.control}
-                                      name="name"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Full Name *</FormLabel>
-                                          <FormControl>
-                                            <Input placeholder="Customer name" {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <FormField
-                                        control={customerForm.control}
-                                        name="phone"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Phone Number</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="+31 1234 567890" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={customerForm.control}
-                                        name="email"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Email</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="customer@example.com" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                    <FormField
-                                      control={customerForm.control}
-                                      name="driverLicenseNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Driver License Number</FormLabel>
-                                          <FormControl>
-                                            <Input placeholder="e.g. D123456789" {...field} />
-                                          </FormControl>
-                                          <FormDescription>
-                                            This is required for vehicle rental verification
-                                          </FormDescription>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </TabsContent>
-                                  
-                                  <TabsContent value="contact" className="space-y-4">
-                                    <FormField
-                                      control={customerForm.control}
-                                      name="address"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Address</FormLabel>
-                                          <FormControl>
-                                            <Input placeholder="Street address" {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <div className="grid grid-cols-3 gap-4">
-                                      <FormField
-                                        control={customerForm.control}
-                                        name="city"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>City</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="City" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={customerForm.control}
-                                        name="postalCode"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Postal Code</FormLabel>
-                                            <FormControl>
-                                              <Input placeholder="1234 AB" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={customerForm.control}
-                                        name="country"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Country</FormLabel>
-                                            <Select 
-                                              onValueChange={field.onChange} 
-                                              defaultValue={field.value || "NL"}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Select country" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                <SelectItem value="NL">Netherlands</SelectItem>
-                                                <SelectItem value="BE">Belgium</SelectItem>
-                                                <SelectItem value="DE">Germany</SelectItem>
-                                                <SelectItem value="FR">France</SelectItem>
-                                                <SelectItem value="GB">United Kingdom</SelectItem>
-                                                <SelectItem value="OTHER">Other</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                  </TabsContent>
-                                </Tabs>
-                                <DialogFooter className="mt-4">
-                                  <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    onClick={() => setCustomerDialogOpen(false)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button 
-                                    type="submit" 
-                                    disabled={createCustomerMutation.isPending}
-                                  >
-                                    {createCustomerMutation.isPending ? "Creating..." : "Create Customer"}
-                                  </Button>
-                                </DialogFooter>
-                              </form>
-                            </Form>
+                            <CustomerForm 
+                              onSuccess={handleCustomerCreated} 
+                              redirectToList={false} 
+                            />
                           </DialogContent>
                         </Dialog>
                       </div>
