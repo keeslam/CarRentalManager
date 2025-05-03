@@ -1219,13 +1219,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(expenses);
   });
   
+  // Get expenses by vehicle - This MUST come before the generic :id route
+  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+    
+    console.log(`Getting expenses for vehicle ID: ${vehicleId}`);
+    const expenses = await storage.getExpensesByVehicle(vehicleId);
+    res.json(expenses);
+  });
+  
   // Get all expenses
   app.get("/api/expenses", async (req, res) => {
     const expenses = await storage.getAllExpenses();
     res.json(expenses);
   });
 
-  // Get single expense
+  // Get single expense - This MUST come after the more specific routes
   app.get("/api/expenses/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -1238,17 +1250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json(expense);
-  });
-
-  // Get expenses by vehicle
-  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
-    const vehicleId = parseInt(req.params.vehicleId);
-    if (isNaN(vehicleId)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
-
-    const expenses = await storage.getExpensesByVehicle(vehicleId);
-    res.json(expenses);
   });
   
   // Delete expense
