@@ -36,15 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    refetch: refetchUser
   } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    onSuccess: (data) => {
-      console.log("User data received:", data);
-    },
-    onError: (err) => {
-      console.error("Error fetching user data:", err);
-    }
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false
   });
 
   const loginMutation = useMutation({
