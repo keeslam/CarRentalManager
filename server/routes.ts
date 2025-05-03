@@ -1250,6 +1250,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const expenses = await storage.getExpensesByVehicle(vehicleId);
     res.json(expenses);
   });
+  
+  // Delete expense
+  app.delete("/api/expenses/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
+      
+      // Get the expense first to check if it exists
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      // Delete the expense
+      const success = await storage.deleteExpense(id);
+      
+      if (success) {
+        res.status(200).json({ message: "Expense deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete expense" });
+      }
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ 
+        message: "Failed to delete expense", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   // Create expense with receipt upload
   app.post("/api/expenses", requireAuth, expenseReceiptUpload.single('receiptFile'), async (req: Request, res: Response) => {

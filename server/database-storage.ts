@@ -592,6 +592,20 @@ export class DatabaseStorage implements IStorage {
     
     return result;
   }
+  
+  async deleteExpense(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(expenses)
+        .where(eq(expenses.id, id));
+      
+      // Check if any rows were affected by the deletion
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      return false;
+    }
+  }
 
   // Document methods
   async getAllDocuments(): Promise<Document[]> {

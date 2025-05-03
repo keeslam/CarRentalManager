@@ -52,6 +52,7 @@ export interface IStorage {
   updateExpense(id: number, expenseData: Partial<InsertExpense>): Promise<Expense | undefined>;
   getExpensesByVehicle(vehicleId: number): Promise<Expense[]>;
   getRecentExpenses(limit: number): Promise<Expense[]>;
+  deleteExpense(id: number): Promise<boolean>;
   
   // Document methods
   getAllDocuments(): Promise<Document[]>;
