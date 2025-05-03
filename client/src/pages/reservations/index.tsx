@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Reservation, Vehicle } from "@shared/schema";
-import { formatDate, formatCurrency } from "@/lib/format-utils";
+import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { getDuration } from "@/lib/date-utils";
 import { format, differenceInDays, addDays, parseISO, startOfToday, endOfToday, isBefore, isAfter } from "date-fns";
 
@@ -195,7 +195,7 @@ export default function ReservationsIndex() {
         const vehicle = row.original.vehicle;
         return vehicle ? (
           <div>
-            <div className="font-medium">{vehicle.licensePlate}</div>
+            <div className="font-medium">{formatLicensePlate(vehicle.licensePlate)}</div>
             <div className="text-sm text-gray-500">
               {vehicle.brand} {vehicle.model}
               {vehicle.vehicleType && <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-100">{vehicle.vehicleType}</span>}

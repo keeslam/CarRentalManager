@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
+import { formatLicensePlate } from "@/lib/format-utils";
 import { 
   Select, 
   SelectContent, 
