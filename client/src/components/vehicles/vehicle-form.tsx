@@ -72,9 +72,9 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       euroZoneEndDate: "",
       apkDate: "",
       warrantyEndDate: "",
-      registeredTo: "",
+      registeredTo: false,
       registeredToDate: "",
-      company: "",
+      company: false,
       companyDate: "",
       gps: false,
       monthlyPrice: "",
@@ -540,12 +540,32 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="registeredTo"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Registered To</FormLabel>
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Registered To</FormLabel>
+                          <FormDescription>
+                            Vehicle is registered to a person
+                          </FormDescription>
+                          {field.value && (
+                            <FormDescription className="text-xs text-muted-foreground">
+                              Last updated: {form.getValues().registeredToDate || 'Not set'}
+                            </FormDescription>
+                          )}
+                        </div>
                         <FormControl>
-                          <Input placeholder="Registered to" {...field} />
+                          <Switch
+                            checked={Boolean(field.value)}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                // If registeredTo is turned on, turn off company
+                                form.setValue('company', false);
+                                // Update registeredToDate with current date
+                                form.setValue('registeredToDate', new Date().toISOString().split('T')[0]);
+                              }
+                            }}
+                          />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -554,12 +574,32 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     control={form.control}
                     name="company"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company</FormLabel>
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Company</FormLabel>
+                          <FormDescription>
+                            Vehicle is registered to a company
+                          </FormDescription>
+                          {field.value && (
+                            <FormDescription className="text-xs text-muted-foreground">
+                              Last updated: {form.getValues().companyDate || 'Not set'}
+                            </FormDescription>
+                          )}
+                        </div>
                         <FormControl>
-                          <Input placeholder="Company name" {...field} />
+                          <Switch
+                            checked={Boolean(field.value)}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                // If company is turned on, turn off registeredTo
+                                form.setValue('registeredTo', false);
+                                // Update companyDate with current date
+                                form.setValue('companyDate', new Date().toISOString().split('T')[0]);
+                              }
+                            }}
+                          />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
