@@ -816,9 +816,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert vehicleId to number
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       
+      // Get the filename from the path (which is the formatted name)
+      const formattedFileName = path.basename(req.file.path);
+      
       const documentData = insertDocumentSchema.parse({
         ...req.body,
-        fileName: req.file.originalname,
+        fileName: formattedFileName,
         filePath: getRelativePath(req.file.path),
         fileSize: req.file.size,
         contentType: req.file.mimetype
