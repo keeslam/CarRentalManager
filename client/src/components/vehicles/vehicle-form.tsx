@@ -488,33 +488,7 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="damageCheckDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Damage Check Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="damageCheckAttachmentDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Damage Check Attachment Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                 </div>
               </TabsContent>
               
@@ -797,34 +771,6 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                         <FormLabel>Radio Code</FormLabel>
                         <FormControl>
                           <Input placeholder="Radio code" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="damageCheck"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Damage Check</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Damage check details" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="damageCheckAttachment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Damage Check Attachment</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Attachment reference" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
