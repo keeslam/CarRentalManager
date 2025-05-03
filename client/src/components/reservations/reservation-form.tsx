@@ -47,6 +47,7 @@ import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation, InsertVehicle, InsertCustomer } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
+import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
 const formSchema = insertReservationSchema.extend({
@@ -536,7 +537,9 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Vehicle and Customer Selection Section */}
             <div className="space-y-6">
-              <div className="text-lg font-medium">1. Select Vehicle and Customer</div>
+              <div className="text-lg font-medium">
+                {vehicleId ? "1. Selected Vehicle & Customer" : "1. Select Vehicle and Customer"}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Vehicle Selection */}
                 <FormField
@@ -544,32 +547,57 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                   name="vehicleId"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <div className="flex justify-between items-center">
-                        <FormLabel>Vehicle</FormLabel>
-                        <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                              Add New
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Add New Vehicle</DialogTitle>
-                              <DialogDescription>
-                                Create a new vehicle to add to the reservation
-                              </DialogDescription>
-                            </DialogHeader>
-                            <Form {...vehicleForm}>
-                              <form onSubmit={vehicleForm.handleSubmit(onVehicleSubmit)} className="space-y-4">
-                                <Tabs defaultValue="general">
-                                  <TabsList className="grid grid-cols-3 mb-4">
-                                    <TabsTrigger value="general">General</TabsTrigger>
-                                    <TabsTrigger value="technical">Technical</TabsTrigger>
-                                    <TabsTrigger value="dates">Important Dates</TabsTrigger>
-                                  </TabsList>
-                                
-                                  <TabsContent value="general" className="space-y-4">
+                      <FormLabel>Vehicle</FormLabel>
+                      
+                      {vehicleId ? (
+                        // If vehicle is pre-selected from URL, show readonly display
+                        <div className="mb-2">
+                          <ReadonlyVehicleDisplay vehicleId={vehicleId} />
+                          <input type="hidden" {...form.register("vehicleId")} />
+                        </div>
+                      ) : (
+                        // Otherwise show vehicle selection UI
+                        <div>
+                          <div className="flex justify-end mb-2">
+                            <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                                  Add New
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Add New Vehicle</DialogTitle>
+                                  <DialogDescription>
+                                    Create a new vehicle to add to the reservation
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4">
+                                  <p className="text-center text-muted-foreground">
+                                    Please use the Vehicles section to add a new vehicle.
+                                  </p>
+                                </div>
+                                <DialogFooter>
+                                  <Button 
+                                    type="button"
+                                    variant="outline" 
+                                    onClick={() => setVehicleDialogOpen(false)}
+                                  >
+                                    Close
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                                  <Tabs defaultValue="general">
+                                    <TabsList className="grid grid-cols-3 mb-4">
+                                      <TabsTrigger value="general">General</TabsTrigger>
+                                      <TabsTrigger value="technical">Technical</TabsTrigger>
+                                      <TabsTrigger value="dates">Important Dates</TabsTrigger>
+                                    </TabsList>
+                                  
+                                    <TabsContent value="general" className="space-y-4">
                                     {/* General Information */}
                                     <FormField
                                       control={vehicleForm.control}
@@ -772,27 +800,54 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                                     {createVehicleMutation.isPending ? "Creating..." : "Create Vehicle"}
                                   </Button>
                                 </DialogFooter>
-                              </form>
-                            </Form>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                      <FormControl>
-                        <SearchableCombobox
-                          options={vehicleOptions}
-                          value={field.value ? field.value.toString() : ''}
-                          onChange={(value) => {
-                            console.log("Vehicle selected:", value); 
-                            field.onChange(value);
-                          }}
-                          placeholder="Search and select a vehicle..."
-                          searchPlaceholder="Search by license plate, brand, or model..."
-                          groups={true}
-                          recentValues={recentVehicles}
-                        />
-                      </FormControl>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        {vehicleId ? (
+                          // Pre-selected vehicle, just show a read-only view
+                          <div className="p-3 border rounded-md bg-muted/30">
+                            {selectedVehicle ? (
+                              <>
+                                <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
+                                <div className="text-sm text-muted-foreground">{formatLicensePlate(selectedVehicle.licensePlate)}</div>
+                                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                  {selectedVehicle.vehicleType && (
+                                    <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
+                                  )}
+                                  {selectedVehicle.fuel && (
+                                    <Badge variant="outline">{selectedVehicle.fuel}</Badge>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex items-center justify-center">
+                                <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span className="ml-2">Loading vehicle details...</span>
+                              </div>
+                            )}
+                        </div>
+                      ) : (
+                        // Regular vehicle selection
+                        <FormControl>
+                          <SearchableCombobox
+                            options={vehicleOptions}
+                            value={field.value ? field.value.toString() : ''}
+                            onChange={(value) => {
+                              console.log("Vehicle selected:", value); 
+                              field.onChange(value);
+                            }}
+                            placeholder="Search and select a vehicle..."
+                            searchPlaceholder="Search by license plate, brand, or model..."
+                            groups={true}
+                            recentValues={recentVehicles}
+                          />
+                        </FormControl>
+                      )}
                       <FormMessage />
-                      {selectedVehicle && (
+                      {!vehicleId && selectedVehicle && (
                         <div className="mt-2 text-sm bg-muted p-2 rounded-md">
                           <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
                           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
