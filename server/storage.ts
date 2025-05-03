@@ -97,6 +97,28 @@ export class MemStorage implements IStorage {
   }
 
   private initializeSampleData() {
+    // Create sample admin user
+    this.createUser({
+      username: "admin",
+      password: "$2a$10$jqB1NGBgCl1nz.hZKl2rr.DxdYL3QL01xPxjFjlDo9p65KN0V/SPO", // "password" hashed
+      fullName: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+      permissions: ["manage_users", "manage_vehicles", "manage_customers", "manage_reservations", "manage_expenses", "manage_documents", "view_dashboard"],
+      active: true
+    });
+
+    // Create a regular user
+    this.createUser({
+      username: "user",
+      password: "$2a$10$jqB1NGBgCl1nz.hZKl2rr.DxdYL3QL01xPxjFjlDo9p65KN0V/SPO", // "password" hashed
+      fullName: "Regular User",
+      email: "user@example.com",
+      role: "user",
+      permissions: ["view_dashboard"],
+      active: true
+    });
+    
     // Sample vehicles
     this.createVehicle({
       licensePlate: "AB-123-C",
