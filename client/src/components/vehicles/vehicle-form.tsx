@@ -221,12 +221,30 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     if (formattedData.dailyPrice === "") formattedData.dailyPrice = null;
     
     // Convert boolean values to match the database schema expectations
-    if (typeof formattedData.registeredTo === 'boolean') {
-      formattedData.registeredTo = formattedData.registeredTo ? true : false;
+    // Force boolean values for registeredTo
+    if ('registeredTo' in formattedData) {
+      if (formattedData.registeredTo === "" || formattedData.registeredTo === "false" || 
+          formattedData.registeredTo === false || formattedData.registeredTo === null || 
+          formattedData.registeredTo === undefined) {
+        formattedData.registeredTo = false;
+      } else {
+        formattedData.registeredTo = true;
+      }
+    } else {
+      formattedData.registeredTo = false;
     }
     
-    if (typeof formattedData.company === 'boolean') {
-      formattedData.company = formattedData.company ? true : false;
+    // Force boolean values for company
+    if ('company' in formattedData) {
+      if (formattedData.company === "" || formattedData.company === "false" || 
+          formattedData.company === false || formattedData.company === null || 
+          formattedData.company === undefined) {
+        formattedData.company = false;
+      } else {
+        formattedData.company = true;
+      }
+    } else {
+      formattedData.company = false;
     }
     
     // Handle other boolean fields
@@ -234,8 +252,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps'];
     
     booleanFields.forEach(field => {
-      if (typeof formattedData[field] === 'boolean') {
-        formattedData[field] = formattedData[field] ? true : false;
+      // Convert any value to a proper boolean
+      if (field in formattedData) {
+        if (formattedData[field] === "" || formattedData[field] === "false" || formattedData[field] === false || formattedData[field] === null || formattedData[field] === undefined) {
+          formattedData[field] = false;
+        } else {
+          formattedData[field] = true;
+        }
+      } else {
+        // If field is missing, set it to false
+        formattedData[field] = false; 
       }
     });
     
