@@ -45,6 +45,7 @@ import { doDateRangesOverlap } from "@/lib/date-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation, InsertVehicle, InsertCustomer } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
+import { formatLicensePlate } from "@/lib/format-utils";
 
 // Extended schema with validation
 const formSchema = insertReservationSchema.extend({
