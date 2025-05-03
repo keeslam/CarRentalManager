@@ -19,12 +19,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Extended schema with validation
 const formSchema = insertCustomerSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address.").optional().or(z.literal("")),
   phone: z.string().min(10, "Phone number must be at least 10 digits.").optional().or(z.literal("")),
+  emailForMOT: z.string().email("Invalid email address.").optional().or(z.literal("")),
+  emailForInvoices: z.string().email("Invalid email address.").optional().or(z.literal("")),
+  emailGeneral: z.string().email("Invalid email address.").optional().or(z.literal("")),
+  driverPhone: z.string().optional().or(z.literal("")),
+  vatNumber: z.string().optional().or(z.literal("")),
+  rsin: z.string().optional().or(z.literal("")),
+  chamberOfCommerceNumber: z.string().optional().or(z.literal("")),
+  statusDate: z.string().optional().or(z.literal(""))
 });
 
 interface CustomerFormProps {
@@ -48,14 +57,40 @@ export function CustomerForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
+      // Basic info
       name: "",
+      debtorNumber: "",
+      firstName: "",
+      lastName: "",
+      companyName: "",
+      driverName: "",
+      contactPerson: "",
+      
+      // Communication
       email: "",
+      emailForMOT: "",
+      emailForInvoices: "",
+      emailGeneral: "",
       phone: "",
+      driverPhone: "",
+      
+      // Address
+      streetName: "",
       address: "",
       city: "",
       postalCode: "",
       country: "Nederland",
+      
+      // Identification
       driverLicenseNumber: "",
+      chamberOfCommerceNumber: "",
+      rsin: "", 
+      vatNumber: "",
+      
+      // Status
+      status: "",
+      statusDate: "",
+      
       notes: ""
     },
   });
@@ -108,158 +143,427 @@ export function CustomerForm({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Personal Information */}
-              <div className="space-y-4 md:col-span-2">
-                <h3 className="text-lg font-medium">Personal Information</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="john.doe@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid grid-cols-4 mb-6">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="contact">Contact</TabsTrigger>
+                <TabsTrigger value="company">Company</TabsTrigger>
+                <TabsTrigger value="additional">Additional</TabsTrigger>
+              </TabsList>
+              
+              {/* Basic Information Tab */}
+              <TabsContent value="basic" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Personal Information */}
+                  <div className="space-y-4 md:col-span-2">
+                    <h3 className="text-lg font-medium">Personal Information</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="debtorNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Debtor Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="123456" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="driverName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Driver Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="driverLicenseNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Driver License Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="License number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Address Information */}
+                  <div className="space-y-4 md:col-span-2">
+                    <h3 className="text-lg font-medium">Address Information</h3>
+                    
+                    <FormField
+                      control={form.control}
+                      name="streetName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Main Street" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123 Main St" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="postalCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="1234 AB" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Amsterdam" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nederland" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              {/* Contact Information Tab */}
+              <TabsContent value="contact" className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Communication Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="john.doe@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+31 6 12345678" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="emailForMOT"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email for APK Inspection</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="apk@example.com" {...field} />
+                          </FormControl>
+                          <FormDescription>Email for MOT/APK inspection notifications</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="emailForInvoices"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email for Invoices</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="invoices@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="emailGeneral"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>General Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="info@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="driverPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Driver Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+31 6 87654321" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              {/* Company Information Tab */}
+              <TabsContent value="company" className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Company Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Acme Corporation" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactPerson"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Person</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Jane Smith" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="chamberOfCommerceNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chamber of Commerce Number (CoC)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="12345678" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="vatNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>VAT Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="NL123456789B01" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <FormField
                     control={form.control}
-                    name="phone"
+                    name="rsin"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>RSIN (Legal Entity Identification Number)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+31 6 12345678" {...field} />
+                          <Input placeholder="123456789" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="driverLicenseNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Driver License Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="License number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              </TabsContent>
               
-              {/* Address Information */}
-              <div className="space-y-4 md:col-span-2">
-                <h3 className="text-lg font-medium">Address Information</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123 Main St" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="postalCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Postal Code</FormLabel>
-                        <FormControl>
-                          <Input placeholder="1234 AB" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              {/* Additional Information Tab */}
+              <TabsContent value="additional" className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Status & Additional Information</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Active" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="statusDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <FormField
                     control={form.control}
-                    name="city"
+                    name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>Notes</FormLabel>
                         <FormControl>
-                          <Input placeholder="Amsterdam" {...field} />
+                          <Textarea 
+                            placeholder="Any additional notes about this customer" 
+                            className="min-h-[100px]"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nederland" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              {/* Additional Information */}
-              <div className="space-y-4 md:col-span-2">
-                <h3 className="text-lg font-medium">Additional Information</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Any additional notes about this customer" 
-                          className="min-h-[100px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
             
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"

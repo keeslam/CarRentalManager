@@ -70,13 +70,38 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  debtorNumber: text("debtor_number"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  companyName: text("company_name"),
+  driverName: text("driver_name"),
+  contactPerson: text("contact_person"),
+  
+  // Communication
   email: text("email"),
+  emailForMOT: text("email_for_mot"), // For APK inspection
+  emailForInvoices: text("email_for_invoices"),
+  emailGeneral: text("email_general"),
   phone: text("phone"),
+  driverPhone: text("driver_phone"),
+  
+  // Address
+  streetName: text("street_name"),
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
   country: text("country").default("Nederland"),
+  
+  // Identification
   driverLicenseNumber: text("driver_license_number"),
+  chamberOfCommerceNumber: text("chamber_of_commerce_number"), // CoC
+  rsin: text("rsin"), // Legal Entity Identification Number
+  vatNumber: text("vat_number"),
+  
+  // Status
+  status: text("status"),
+  statusDate: text("status_date"),
+  
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
