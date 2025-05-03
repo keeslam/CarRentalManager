@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Vehicle } from "@shared/schema";
 import { Check, RotateCw } from "lucide-react";
+import { formatLicensePlate } from "@/lib/utils";
 
 interface ActionIconProps {
   name: string;
@@ -268,10 +269,7 @@ export function QuickActions() {
     queryKey: ["/api/vehicles"],
   });
   
-  // Helper function to format license plates nicely
-  const formatLicensePlate = (plate: string) => {
-    return plate.replace(/([A-Za-z]{2})([A-Za-z0-9]{2})([A-Za-z0-9]{2})/, '$1-$2-$3');
-  };
+  // Removed the local formatLicensePlate function as we're now importing it from utils
   
   // Handler for changing a single vehicle's registration
   const handleChangeVehicleRegistration = async (vehicleId: number, newStatus: "opnaam" | "bv") => {

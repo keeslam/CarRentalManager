@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-utils";
+import { formatLicensePlate } from "@/lib/utils";
 import { Link } from "wouter";
 import { Vehicle } from "@shared/schema";
 
@@ -72,7 +73,7 @@ export function ApkExpirationWidget() {
                   </svg>
                 </div>
                 <div className="ml-3 flex-grow">
-                  <div className="text-sm font-medium text-gray-900">{vehicle.licensePlate}</div>
+                  <div className="text-sm font-medium text-gray-900">{formatLicensePlate(vehicle.licensePlate)}</div>
                   <div className="flex items-center">
                     <div className="text-xs text-gray-500">{formatDate(vehicle.apkDate || '')}</div>
                     <div className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${getUrgencyClass(vehicle.daysUntilExpiration)}`}>
