@@ -16,7 +16,8 @@ import ReservationEdit from "@/pages/reservations/edit/[id]";
 import ReservationCalendar from "@/pages/reservations/calendar";
 import ExpensesIndex from "@/pages/expenses/index";
 import ExpenseAdd from "@/pages/expenses/add";
-import VehicleExpensesPage from "@/pages/expenses/vehicle";
+import ExpenseDetails from "@/pages/expenses/[id]";
+import VehicleExpensesPage from "@/pages/expenses/vehicle/[id]";
 import DocumentsIndex from "@/pages/documents/index";
 import UsersIndex from "@/pages/users/index";
 import UserAdd from "@/pages/users/add";
@@ -53,6 +54,7 @@ function AppRoutes() {
         <ProtectedRoute path="/expenses" component={ExpensesIndex} />
         <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
         <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />
+        <ProtectedRoute path="/expenses/:id" component={ExpenseDetails} />
         <ProtectedRoute path="/documents" component={DocumentsIndex} />
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
