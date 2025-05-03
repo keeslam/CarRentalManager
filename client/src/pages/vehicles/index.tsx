@@ -31,7 +31,7 @@ export default function VehiclesIndex() {
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
+  const { data: vehicles, isLoading, refetch } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
   
@@ -56,21 +56,32 @@ export default function VehiclesIndex() {
         return { success: true };
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Vehicle deleted",
         description: `Vehicle ${vehicleToDelete?.licensePlate} has been successfully deleted.`,
       });
+      
+      // Force a refresh of the data
+      await refetch();
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       setVehicleToDelete(null);
     },
     onError: (error) => {
+      console.error("Error deleting vehicle:", error);
+      
+      let errorMessage = "Failed to delete vehicle. Please try again.";
+      
+      // Check if the error contains a message about foreign key violation
+      if (error instanceof Error && error.message.includes("constraint")) {
+        errorMessage = "Cannot delete vehicle as it has related records (reservations, etc.) that need to be deleted first.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to delete vehicle. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
-      console.error("Error deleting vehicle:", error);
     },
   });
   

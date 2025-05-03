@@ -60,12 +60,30 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteVehicle(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(vehicles)
-      .where(eq(vehicles.id, id))
-      .returning();
-    
-    return !!deleted;
+    // Start a transaction to ensure all related records are deleted
+    return await db.transaction(async (tx) => {
+      try {
+        // Delete related documents first
+        await tx.delete(documents).where(eq(documents.vehicleId, id));
+        
+        // Delete related expenses
+        await tx.delete(expenses).where(eq(expenses.vehicleId, id));
+        
+        // Delete related reservations
+        await tx.delete(reservations).where(eq(reservations.vehicleId, id));
+        
+        // Finally delete the vehicle
+        const [deleted] = await tx
+          .delete(vehicles)
+          .where(eq(vehicles.id, id))
+          .returning();
+        
+        return !!deleted;
+      } catch (error) {
+        console.error("Error during vehicle deletion transaction:", error);
+        throw error;
+      }
+    });
   }
 
   async getAvailableVehicles(): Promise<Vehicle[]> {
