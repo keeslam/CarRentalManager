@@ -279,8 +279,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
   }, [customers]);
   
   // Get selected vehicle and customer
-  const selectedVehicle = vehicles?.find(v => v.id === vehicleIdWatch);
-  const selectedCustomer = customers?.find(c => c.id === form.watch("customerId"));
+  const selectedVehicle = vehicles?.find(v => v.id.toString() === vehicleIdWatch);
+  const selectedCustomer = customers?.find(c => c.id.toString() === form.watch("customerId"));
 
   // Create vehicle mutation
   const createVehicleMutation = useMutation({
@@ -292,7 +292,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
       // Set the new vehicle as selected
-      form.setValue("vehicleId", data.id);
+      form.setValue("vehicleId", data.id.toString());
       
       // Close the dialog
       setVehicleDialogOpen(false);
@@ -325,7 +325,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
       await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       
       // Set the new customer as selected
-      form.setValue("customerId", data.id);
+      form.setValue("customerId", data.id.toString());
       
       // Close the dialog
       setCustomerDialogOpen(false);
@@ -767,11 +767,8 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                           options={vehicleOptions}
                           value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
-                            field.onChange(parseInt(value));
-                            // If switching vehicles, check for conflicts
-                            if (parseInt(value) !== vehicleIdWatch) {
-                              // Logic already handled via watch
-                            }
+                            field.onChange(value);
+                            // Field value is now a string, kept as-is
                           }}
                           placeholder="Search and select a vehicle..."
                           searchPlaceholder="Search by license plate, brand, or model..."
@@ -983,7 +980,7 @@ export function ReservationForm({ editMode = false, initialData }: ReservationFo
                         <SearchableCombobox
                           options={customerOptions}
                           value={field.value ? field.value.toString() : ''}
-                          onChange={(value) => field.onChange(parseInt(value))}
+                          onChange={(value) => field.onChange(value)}
                           placeholder="Search and select a customer..."
                           searchPlaceholder="Search by name, phone, or city..."
                           groups={false}
