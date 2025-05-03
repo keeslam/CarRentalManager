@@ -94,6 +94,12 @@ export class MemStorage implements IStorage {
     
     // Initialize with sample data for demo
     this.initializeSampleData();
+    
+    // Debug log users
+    console.log("Sample users initialized:");
+    for (const user of this.users.values()) {
+      console.log(`User ${user.id}: username=${user.username}, password=${user.password}`);
+    }
   }
 
   private initializeSampleData() {
