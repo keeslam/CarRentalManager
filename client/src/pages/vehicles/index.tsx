@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export default function VehiclesIndex() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [visibleVehicleCount, setVisibleVehicleCount] = useState(5); // Show only 5 vehicles initially
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -102,6 +103,11 @@ export default function VehiclesIndex() {
   const handleEditClick = (vehicle: Vehicle) => {
     // Navigate to the edit page for this vehicle
     navigate(`/vehicles/${vehicle.id}/edit`);
+  };
+  
+  // Function to load more vehicles
+  const loadMoreVehicles = () => {
+    setVisibleVehicleCount(prevCount => prevCount + 5);
   };
   
   // Filter and sort vehicles based on search query and sort option
@@ -434,12 +440,27 @@ export default function VehiclesIndex() {
               </svg>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={filteredVehicles || []}
-              searchColumn="licensePlate"
-              searchPlaceholder="Filter by license plate..."
-            />
+            <>
+              <DataTable
+                columns={columns}
+                data={(filteredVehicles || []).slice(0, visibleVehicleCount)}
+                searchColumn="licensePlate"
+                searchPlaceholder="Filter by license plate..."
+              />
+              
+              {/* Load more button */}
+              {filteredVehicles && filteredVehicles.length > visibleVehicleCount && (
+                <div className="mt-4 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={loadMoreVehicles}
+                    className="w-full max-w-sm"
+                  >
+                    Load More Vehicles
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
