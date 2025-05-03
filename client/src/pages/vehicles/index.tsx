@@ -128,6 +128,24 @@ export default function VehiclesIndex() {
         if (!b.apkDate) return -1; // No APK date comes last
         return new Date(b.apkDate).getTime() - new Date(a.apkDate).getTime();
       
+      case "availability-asc":
+        // Sort by availability - use dateOut as an indicator
+        // A vehicle is considered "out" if it has a dateOut value but no dateIn
+        const aIsOut = Boolean(a.dateOut) && !a.dateIn;
+        const bIsOut = Boolean(b.dateOut) && !b.dateIn;
+        if (!aIsOut && bIsOut) return -1; // Available vehicles first
+        if (aIsOut && !bIsOut) return 1;
+        return 0;
+        
+      case "availability-desc":
+        // Sort by availability - use dateOut as an indicator
+        // A vehicle is considered "out" if it has a dateOut value but no dateIn
+        const aIsOut2 = Boolean(a.dateOut) && !a.dateIn;
+        const bIsOut2 = Boolean(b.dateOut) && !b.dateIn;
+        if (!aIsOut2 && bIsOut2) return 1; // Put "out" vehicles first
+        if (aIsOut2 && !bIsOut2) return -1;
+        return 0;
+      
       case "brand":
         // Sort by brand name alphabetically
         return a.brand.localeCompare(b.brand);
@@ -167,6 +185,25 @@ export default function VehiclesIndex() {
       cell: ({ row }) => {
         const vehicleType = row.getValue("vehicleType") as string;
         return vehicleType || "N/A";
+      },
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        const isOut = Boolean(vehicle.dateOut) && !vehicle.dateIn;
+        
+        return (
+          <Badge 
+            className={isOut 
+              ? "bg-warning-50 text-warning-600" 
+              : "bg-success-50 text-success-600"
+            }
+          >
+            {isOut ? "Reserved" : "Available"}
+          </Badge>
+        );
       },
     },
     {
@@ -302,13 +339,30 @@ export default function VehiclesIndex() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="mb-4 flex gap-4 items-center">
             <Input
               placeholder="Search by license plate, brand, or model..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"
             />
+            <div className="flex items-center">
+              <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default (ID)</SelectItem>
+                  <SelectItem value="license">License Plate</SelectItem>
+                  <SelectItem value="brand">Brand</SelectItem>
+                  <SelectItem value="apk-asc">APK Date (earliest first)</SelectItem>
+                  <SelectItem value="apk-desc">APK Date (latest first)</SelectItem>
+                  <SelectItem value="availability-asc">Availability (available first)</SelectItem>
+                  <SelectItem value="availability-desc">Availability (reserved first)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           {isLoading ? (
