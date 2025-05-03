@@ -476,9 +476,9 @@ export function QuickActions() {
                                                         )}
                                                       </span>
                                                       <span className="text-xs text-muted-foreground">
-                                                        {vehicle.registeredToDate ? 
-                                                          `Since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
-                                                          'Not registered'}
+                                                        {vehicle.registeredToDate && vehicle.registeredTo ? 
+                                                          `Registered since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
+                                                          vehicle.company ? 'In BV since registration' : 'Not registered'}
                                                       </span>
                                                     </span>
                                                   </label>
