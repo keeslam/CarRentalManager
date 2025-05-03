@@ -21,6 +21,9 @@ export default function VehicleExpensesPage() {
   const [_, params] = useLocation();
   const vehicleId = params.id ? parseInt(params.id) : null;
   
+  console.log("VehicleExpensesPage - vehicleId:", vehicleId);
+  console.log("VehicleExpensesPage - route params:", params);
+  
   // Fetch vehicle details
   const { data: vehicle, isLoading: isLoadingVehicle, error: vehicleError } = useQuery<Vehicle>({
     queryKey: [`/api/vehicles/${vehicleId}`],
@@ -34,6 +37,11 @@ export default function VehicleExpensesPage() {
     enabled: !!vehicleId,
     retry: 1,
   });
+  
+  // Log the query results for debugging
+  console.log("VehicleExpensesPage - vehicle data:", vehicle);
+  console.log("VehicleExpensesPage - expenses data:", expenses);
+  console.log("VehicleExpensesPage - errors:", { vehicleError, expensesError });
   
   // Calculate totals
   const totalExpenses = expenses?.reduce((sum, expense) => 
