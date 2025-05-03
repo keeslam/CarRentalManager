@@ -5,10 +5,7 @@ import { UserRole } from "@shared/schema";
 export function SidebarNav() {
   const [location] = useLocation();
   const { user } = useAuth();
-  console.log("SidebarNav rendering with user:", user);
-  console.log("UserRole.ADMIN =", UserRole.ADMIN);
   const isAdmin = user?.role === UserRole.ADMIN;
-  console.log("isAdmin =", isAdmin);
 
   // Define navigation items
   const navItems = [
@@ -18,8 +15,7 @@ export function SidebarNav() {
     { href: "/reservations", label: "Reservations", icon: "event" },
     { href: "/expenses", label: "Expenses", icon: "euro" },
     { href: "/documents", label: "Documents", icon: "description" },
-    // Only show Users link to admins
-    ...(isAdmin ? [{ href: "/users", label: "Users", icon: "users_management" }] : []),
+    // Users menu item moved to user dropdown menu
     { href: "/reports", label: "Reports", icon: "assessment" },
     { href: "/profile", label: "My Profile", icon: "user_profile" }
   ];

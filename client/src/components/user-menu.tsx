@@ -74,39 +74,39 @@ export function UserMenu() {
           </div>
           
           <div className="py-1">
-            <button 
-              onClick={() => {
-                setIsOpen(false);
-                window.location.href = "/profile";
-              }}
+            <Link 
+              href="/profile"
+              onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
             >
               <User className="mr-2 h-4 w-4" />
               My Profile
-            </button>
+            </Link>
             
-            <button 
-              onClick={() => {
-                setIsOpen(false);
-                window.location.href = "/profile/edit";
-              }}
+            <Link 
+              href="/profile/edit"
+              onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
             >
               <Settings className="mr-2 h-4 w-4" />
               Edit Profile
-            </button>
+            </Link>
 
+            {/* Admin-only menu items */}
             {user.role === UserRole.ADMIN && (
-              <button 
-                onClick={() => {
-                  setIsOpen(false);
-                  window.location.href = "/users";
-                }}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
-              >
-                <UserCog className="mr-2 h-4 w-4" />
-                User Management
-              </button>
+              <>
+                <div className="px-3 py-1 border-t border-gray-100">
+                  <p className="text-xs font-medium text-gray-500">Administration</p>
+                </div>
+                <Link
+                  href="/users"
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                >
+                  <UserCog className="mr-2 h-4 w-4" />
+                  User Management
+                </Link>
+              </>
             )}
           </div>
           
