@@ -118,13 +118,34 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
   
   const createVehicleMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest(
-        editMode ? "PATCH" : "POST", 
-        editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles", 
-        data
-      );
+      console.log("Vehicle data being sent:", JSON.stringify(data));
+      
+      const url = editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles";
+      console.log(`Sending request to ${url}`);
+      
+      try {
+        const response = await apiRequest(
+          editMode ? "PATCH" : "POST", 
+          url, 
+          data
+        );
+        
+        console.log("Response received:", response);
+        // Parse the response to see if there's a more detailed error message
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("API error:", errorData);
+          throw new Error(errorData.message || "Failed to save vehicle data");
+        }
+        
+        return response;
+      } catch (error) {
+        console.error("Request failed:", error);
+        throw error;
+      }
     },
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      console.log("Vehicle saved successfully");
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
@@ -137,7 +158,8 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       // Navigate back to vehicles list
       navigate("/vehicles");
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Mutation error:", error);
       toast({
         title: "Error",
         description: `Failed to ${editMode ? "update" : "create"} vehicle: ${error.message}`,
