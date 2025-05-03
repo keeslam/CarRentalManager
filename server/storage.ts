@@ -681,6 +681,10 @@ export class MemStorage implements IStorage {
       vehicle: this.vehicles.get(expense.vehicleId)
     }));
   }
+  
+  async deleteExpense(id: number): Promise<boolean> {
+    return this.expenses.delete(id);
+  }
 
   // Document methods
   async getAllDocuments(): Promise<Document[]> {
