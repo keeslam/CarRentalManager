@@ -1,17 +1,25 @@
 import { useLocation, Link } from "wouter";
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
-  { href: "/vehicles", label: "Vehicles", icon: "directions_car" },
-  { href: "/customers", label: "Customers", icon: "people" },
-  { href: "/reservations", label: "Reservations", icon: "event" },
-  { href: "/expenses", label: "Expenses", icon: "euro" },
-  { href: "/documents", label: "Documents", icon: "description" },
-  { href: "/reports", label: "Reports", icon: "assessment" }
-];
+import { useAuth } from "@/hooks/use-auth";
+import { UserRole } from "@shared/schema";
 
 export function SidebarNav() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
+
+  // Define navigation items
+  const navItems = [
+    { href: "/", label: "Dashboard", icon: "dashboard" },
+    { href: "/vehicles", label: "Vehicles", icon: "directions_car" },
+    { href: "/customers", label: "Customers", icon: "people" },
+    { href: "/reservations", label: "Reservations", icon: "event" },
+    { href: "/expenses", label: "Expenses", icon: "euro" },
+    { href: "/documents", label: "Documents", icon: "description" },
+    // Only show Users link to admins
+    ...(isAdmin ? [{ href: "/users", label: "Users", icon: "users_management" }] : []),
+    { href: "/reports", label: "Reports", icon: "assessment" },
+    { href: "/profile", label: "My Profile", icon: "user_profile" }
+  ];
 
   return (
     <nav className="mt-4 px-2">
@@ -108,6 +116,28 @@ function getNavIcon(iconName: string, isActive: boolean) {
           <path d="M18 17V9" />
           <path d="M13 17V5" />
           <path d="M8 17v-3" />
+        </svg>
+      );
+    case "users_management":
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-users-cog ${className}`}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <circle cx="19" cy="11" r="2" />
+          <path d="M19 8v1" />
+          <path d="M19 13v1" />
+          <path d="M21.6 9.5l-.87.5" />
+          <path d="M17.27 12l-.87.5" />
+          <path d="M21.6 12.5l-.87-.5" />
+          <path d="M17.27 10l-.87-.5" />
+        </svg>
+      );
+    case "user_profile":
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-user-circle-2 ${className}`}>
+          <path d="M18 20a6 6 0 0 0-12 0" />
+          <circle cx="12" cy="10" r="4" />
+          <circle cx="12" cy="12" r="10" />
         </svg>
       );
     default:
