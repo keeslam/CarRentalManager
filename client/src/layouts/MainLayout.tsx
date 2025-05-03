@@ -1,7 +1,8 @@
 import { useState, ReactNode } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -10,8 +11,16 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
+  const { user } = useAuth();
   
   const title = getPageTitle(location);
+  
+  // If we're at the auth page or not logged in, render without layout
+  const isAuthPage = location === "/auth";
+  
+  if (isAuthPage || !user) {
+    return <>{children}</>;
+  }
   
   return (
     <div className="min-h-screen bg-gray-50">
