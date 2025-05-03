@@ -35,6 +35,9 @@ const formSchema = insertVehicleSchema.extend({
   licensePlate: z.string().min(1, "License plate is required"),
   brand: z.string().min(1, "Brand is required"),
   model: z.string().min(1, "Model is required"),
+  // Make these fields truly optional
+  registeredTo: z.boolean().optional(),
+  company: z.boolean().optional(),
 });
 
 // Vehicle types
