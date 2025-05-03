@@ -123,7 +123,7 @@ export function VehicleSelector({
           align="start"
           side="bottom"
           sideOffset={4}
-          avoidCollisions={true}
+          avoidCollisions={false}
           sticky="always"
         >
           <div className="p-4">

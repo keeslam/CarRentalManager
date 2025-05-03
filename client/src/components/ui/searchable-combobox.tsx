@@ -132,7 +132,7 @@ export function SearchableCombobox({
           align="start"
           side="bottom"
           sideOffset={4}
-          avoidCollisions={true}
+          avoidCollisions={false}
           sticky="always"
         >
           <div className="px-2 py-2">
