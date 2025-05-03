@@ -215,7 +215,7 @@ export default function ReservationDetails() {
               <h3 className="text-sm font-medium text-gray-500 mb-2">Damage Check</h3>
               {reservation.damageCheckPath ? (
                 <a 
-                  href={`/uploads/${reservation.damageCheckPath}`} 
+                  href={`/${reservation.damageCheckPath}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50"
