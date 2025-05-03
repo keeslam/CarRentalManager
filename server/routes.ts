@@ -359,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vehicleId: reservationData.vehicleId,
           documentType: "Damage Check",
           fileName: req.file.originalname,
-          filePath: req.file.path,
+          filePath: getRelativePath(req.file.path),
           fileSize: req.file.size,
           contentType: req.file.mimetype,
           createdBy: `Reservation #${reservation.id}`,
@@ -368,9 +368,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const document = await storage.createDocument(documentData);
         
-        // Update the reservation with the damage check path
+        // Update the reservation with the damage check path (using relative path)
         await storage.updateReservation(reservation.id, {
-          damageCheckPath: req.file.path
+          damageCheckPath: getRelativePath(req.file.path)
         });
       }
       
@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vehicleId: reservationData.vehicleId,
           documentType: "Damage Check",
           fileName: req.file.originalname,
-          filePath: req.file.path,
+          filePath: getRelativePath(req.file.path),
           fileSize: req.file.size,
           contentType: req.file.mimetype,
           createdBy: `Reservation #${reservation.id} (Updated)`,
@@ -440,9 +440,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const document = await storage.createDocument(documentData);
         
-        // Update the reservation with the damage check path
+        // Update the reservation with the damage check path (using relative path)
         await storage.updateReservation(reservation.id, {
-          damageCheckPath: req.file.path
+          damageCheckPath: getRelativePath(req.file.path)
         });
       }
       
@@ -460,54 +460,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate rental contract PDF
-  app.get("/api/reservations/:id/contract", async (req, res) => {
+  // ==================== EXPENSE ROUTES ====================
+  // Setup storage for expense receipt uploads
+  const createExpenseReceiptStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid reservation ID" });
+      const vehicleId = req.body.vehicleId;
+      if (!vehicleId) {
+        return callback(new Error("Vehicle ID is required"), false);
       }
-
-      const reservation = await storage.getReservation(id);
-      if (!reservation) {
-        return res.status(404).json({ message: "Reservation not found" });
-      }
-
-      const pdfBuffer = await generateRentalContract(reservation);
       
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="contract_${id}.pdf"`);
-      res.send(pdfBuffer);
+      // Get vehicle details for organizing files
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      if (!vehicle) {
+        return callback(new Error("Vehicle not found"), false);
+      }
+      
+      // Create folders if they don't exist
+      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      const receiptsDir = path.join(baseDir, 'receipts');
+      
+      if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+      }
+      if (!fs.existsSync(receiptsDir)) {
+        fs.mkdirSync(receiptsDir, { recursive: true });
+      }
+      
+      callback(null, receiptsDir);
     } catch (error) {
-      res.status(500).json({ 
-        message: "Failed to generate contract",
-        error: error instanceof Error ? error.message : "Unknown error"
+      console.error("Error with expense receipt upload:", error);
+      callback(error, false);
+    }
+  };
+
+  // Configure multer for expense receipt uploads
+  const expenseReceiptStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      createExpenseReceiptStorage(req, file, (err: any, result: any) => {
+        if (err) return cb(err, '');
+        cb(null, result);
       });
+    },
+    filename: (req, file, cb) => {
+      const expenseDate = req.body.date || new Date().toISOString().split('T')[0];
+      const category = req.body.category || 'unknown';
+      const timestamp = Date.now();
+      const extension = path.extname(file.originalname);
+      const fileName = `receipt_${category}_${expenseDate}_${timestamp}${extension}`;
+      
+      cb(null, fileName);
     }
   });
-
-  // ==================== EXPENSE ROUTES ====================
-  // Get expenses by vehicle
-  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
-    const vehicleId = parseInt(req.params.vehicleId);
-    if (isNaN(vehicleId)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
-
-    const expenses = await storage.getExpensesByVehicle(vehicleId);
-    res.json(expenses);
+  
+  const expenseReceiptUpload = multer({
+    storage: expenseReceiptStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only specific file types
+      const fileTypes = /jpeg|jpg|png|pdf/;
+      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = fileTypes.test(file.mimetype);
+      
+      if (extname && mimetype) {
+        return cb(null, true);
+      } else {
+        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
+      }
+    },
   });
 
   // Get recent expenses
   app.get("/api/expenses/recent", async (req, res) => {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
-      const expenses = await storage.getRecentExpenses(limit);
-      res.json(expenses);
-    } catch (error) {
-      console.error("Error getting recent expenses:", error);
-      res.status(500).json({ message: "Error getting recent expenses" });
-    }
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const expenses = await storage.getRecentExpenses(limit);
+    res.json(expenses);
   });
   
   // Get all expenses
@@ -531,191 +560,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(expense);
   });
 
-  // Create expense
-  app.post("/api/expenses", async (req, res) => {
+  // Get expenses by vehicle
+  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const expenses = await storage.getExpensesByVehicle(vehicleId);
+    res.json(expenses);
+  });
+
+  // Create expense with receipt upload
+  app.post("/api/expenses", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
     try {
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
+      
       const expenseData = insertExpenseSchema.parse(req.body);
-      const expense = await storage.createExpense(expenseData);
+      
+      // Create expense record
+      const expense = await storage.createExpense({
+        ...expenseData,
+        receiptPath: req.file ? getRelativePath(req.file.path) : null
+      });
+      
       res.status(201).json(expense);
     } catch (error) {
-      res.status(400).json({ message: "Invalid expense data", error });
-    }
-  });
-
-  // Update expense
-  app.patch("/api/expenses/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid expense ID" });
-      }
-
-      const expenseData = insertExpenseSchema.parse(req.body);
-      const expense = await storage.updateExpense(id, expenseData);
-      
-      if (!expense) {
-        return res.status(404).json({ message: "Expense not found" });
-      }
-      
-      res.json(expense);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid expense data", error });
-    }
-  });
-  
-  // Setup storage for expense receipts
-  const createExpenseReceiptStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
-    try {
-      // Get the vehicle ID from the request
-      const vehicleId = req.body.vehicleId;
-      
-      if (!vehicleId) {
-        return callback(new Error("Vehicle ID is required"));
-      }
-      
-      // Get the vehicle to get the license plate
-      const vehicle = await storage.getVehicle(parseInt(vehicleId));
-      
-      if (!vehicle) {
-        return callback(new Error("Vehicle not found"));
-      }
-      
-      const licensePlate = vehicle.licensePlate;
-      
-      // Create folder structure if it doesn't exist
-      // Format: /uploads/[license_plate]/expenses
-      const folderPath = path.join(process.cwd(), "uploads", licensePlate, "expenses");
-      
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-      }
-      
-      callback(null, folderPath);
-    } catch (error) {
-      console.error("Error setting up expense receipt storage:", error);
-      callback(error);
-    }
-  };
-  
-  // Configure multer for expense receipt uploads
-  const expenseReceiptStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      createExpenseReceiptStorage(req, file, (err: any, result: any) => {
-        if (err) return cb(err, '');
-        cb(null, result);
-      });
-    },
-    filename: async (req, file, cb) => {
-      try {
-        // Get vehicle info to retrieve license plate
-        const vehicleId = req.body.vehicleId;
-        const vehicle = await storage.getVehicle(parseInt(vehicleId));
-        
-        if (!vehicle) {
-          return cb(new Error("Vehicle not found"), "" as any);
-        }
-        
-        const licensePlate = vehicle.licensePlate;
-        
-        // Format the current date as YYYY-MM-DD
-        const now = new Date();
-        const dateString = now.toISOString().split('T')[0];
-        
-        // Create filename in the format: licensePlate-receipt-date-uniqueSuffix.extension
-        const extension = path.extname(file.originalname);
-        const uniqueSuffix = Math.round(Math.random() * 1E6);
-        const sanitizedLicensePlate = licensePlate.replace(/[^a-zA-Z0-9-]/g, '');
-        const filename = `${sanitizedLicensePlate}-receipt-${dateString}-${uniqueSuffix}${extension}`;
-        
-        cb(null, filename);
-      } catch (error) {
-        console.error("Error creating filename for expense receipt:", error);
-        // If there's an error, use a fallback naming strategy
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(file.originalname);
-        const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
-        cb(null, filename);
-      }
-    }
-  });
-  
-  const uploadExpenseReceipt = multer({ 
-    storage: expenseReceiptStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (_req, file, cb) => {
-      // Accept PDF, JPG, JPEG, PNG and GIF files
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
+      console.error("Error creating expense:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid expense data", error: error.errors });
       } else {
-        cb(new Error('Invalid file type. Only PDF, JPG, PNG and GIF files are allowed.') as any, false);
+        res.status(400).json({ 
+          message: "Failed to create expense", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     }
   });
-  
-  // Create expense with receipt file
-  app.post("/api/expenses/with-receipt", uploadExpenseReceipt.single('receiptFile'), async (req, res) => {
-    try {
-      const file = req.file;
-      const { vehicleId, category, amount, date, description } = req.body;
-      
-      if (!vehicleId || !category || !amount || !date || !file) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      // Create expense data with receipt file information
-      const expenseData = {
-        vehicleId: parseInt(vehicleId),
-        category,
-        amount: parseFloat(amount).toString(), // Convert to string as per schema
-        date,
-        description: description || null,
-        receiptFile: file.filename,
-        receiptFilePath: file.path,
-        receiptFileSize: file.size,
-        receiptContentType: file.mimetype
-      };
-      
-      const expense = await storage.createExpense(expenseData);
-      res.status(201).json(expense);
-    } catch (error) {
-      console.error("Error creating expense with receipt:", error);
-      res.status(400).json({ 
-        message: "Invalid expense data", 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-  
-  // Update expense with receipt file
-  app.post("/api/expenses/:id/with-receipt", uploadExpenseReceipt.single('receiptFile'), async (req, res) => {
+
+  // Update expense with receipt upload
+  app.patch("/api/expenses/:id", expenseReceiptUpload.single('receiptFile'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid expense ID" });
       }
+
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.amount) req.body.amount = parseFloat(req.body.amount);
       
-      const file = req.file;
-      const { vehicleId, category, amount, date, description } = req.body;
+      const expenseData = insertExpenseSchema.parse(req.body);
       
-      if (!vehicleId || !category || !amount || !date || !file) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      // Create expense data with receipt file information
-      const expenseData = {
-        vehicleId: parseInt(vehicleId),
-        category,
-        amount: parseFloat(amount).toString(), // Convert to string as per schema
-        date,
-        description: description || null,
-        receiptFile: file.filename,
-        receiptFilePath: file.path,
-        receiptFileSize: file.size,
-        receiptContentType: file.mimetype
-      };
-      
-      const expense = await storage.updateExpense(id, expenseData);
+      // Update expense record
+      const expense = await storage.updateExpense(id, {
+        ...expenseData,
+        receiptPath: req.file ? getRelativePath(req.file.path) : undefined
+      });
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
@@ -723,125 +626,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(expense);
     } catch (error) {
-      console.error("Error updating expense with receipt:", error);
-      res.status(400).json({ 
-        message: "Invalid expense data", 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
+      console.error("Error updating expense:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid expense data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to update expense", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
     }
   });
 
   // ==================== DOCUMENT ROUTES ====================
-  // Configure storage for multer
+  // Setup storage for document uploads
   const createDocumentUploadStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
     try {
-      // Get vehicle info based on vehicleId to retrieve license plate
       const vehicleId = req.body.vehicleId;
       if (!vehicleId) {
-        return callback(new Error("Vehicle ID is required"), null);
+        return callback(new Error("Vehicle ID is required"), false);
       }
       
+      // Get vehicle details for organizing files
       const vehicle = await storage.getVehicle(parseInt(vehicleId));
       if (!vehicle) {
-        return callback(new Error("Vehicle not found"), null);
+        return callback(new Error("Vehicle not found"), false);
       }
       
-      const licensePlate = vehicle.licensePlate;
-      const documentType = req.body.documentType || "Other";
+      // Create folders if they don't exist
+      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      let documentsDir = baseDir;
       
-      // Create directory structure if it doesn't exist
-      const dirPath = path.join(process.cwd(), "uploads", licensePlate, documentType);
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
+      // Organize by document type if provided
+      if (req.body.documentType) {
+        const sanitizedType = req.body.documentType.toLowerCase().replace(/\s+/g, '_');
+        documentsDir = path.join(baseDir, sanitizedType);
       }
       
-      callback(null, dirPath);
+      if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+      }
+      if (!fs.existsSync(documentsDir)) {
+        fs.mkdirSync(documentsDir, { recursive: true });
+      }
+      
+      callback(null, documentsDir);
     } catch (error) {
-      callback(error, null);
+      console.error("Error with document upload:", error);
+      callback(error, false);
     }
   };
-  
-  const multerStorage = multer.diskStorage({
-    destination: createDocumentUploadStorage,
-    filename: async (req, file, callback) => {
-      try {
-        // Get vehicle info to retrieve license plate
-        const vehicleId = req.body.vehicleId;
-        const vehicle = await storage.getVehicle(parseInt(vehicleId));
-        
-        if (!vehicle) {
-          return callback(new Error("Vehicle not found"), "" as any);
-        }
-        
-        const licensePlate = vehicle.licensePlate;
-        const documentType = req.body.documentType || "Other";
-        
-        // Format the current date as YYYY-MM-DD
-        const now = new Date();
-        const dateString = now.toISOString().split('T')[0];
-        
-        // Create filename in the format: licensePlate-documentType-date-uniqueSuffix.extension
-        const extension = path.extname(file.originalname);
-        const uniqueSuffix = Math.round(Math.random() * 1E6);
-        const filename = `${licensePlate} - ${documentType} - ${dateString} - ${uniqueSuffix}${extension}`;
-        
-        callback(null, filename);
-      } catch (error) {
-        // If there's an error, use a fallback naming strategy
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(file.originalname);
-        const filename = file.originalname.replace(extension, '') + '-' + uniqueSuffix + extension;
-        callback(null, filename);
-      }
-    }
-  });
-  
-  const upload = multer({ 
-    storage: multerStorage,
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
-    }
-  });
-  
-  // Upload document
-  app.post("/api/documents/upload", upload.single('file'), async (req, res) => {
-    try {
-      const file = req.file;
-      const { vehicleId, documentType, notes, createdBy } = req.body;
-      
-      if (!vehicleId || !documentType || !file) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      // Get the license plate for storing in the correct folder
-      const vehicle = await storage.getVehicle(parseInt(vehicleId));
-      if (!vehicle) {
-        return res.status(404).json({ message: "Vehicle not found" });
-      }
-      
-      const licensePlate = vehicle.licensePlate;
-      
-      // Prepare document data
-      const documentData = {
-        vehicleId: parseInt(vehicleId),
-        documentType,
-        fileName: file.filename, // Use the renamed filename instead of originalname
-        filePath: file.path,
-        fileSize: file.size,
-        contentType: file.mimetype,
-        createdBy: createdBy || 'System',
-        notes: notes || null
-      };
 
-      const document = await storage.createDocument(documentData);
-      res.status(201).json(document);
-    } catch (error) {
-      console.error("Error uploading document:", error);
-      res.status(400).json({ 
-        message: "Invalid document data", 
-        error: error instanceof Error ? error.message : "Unknown error" 
+  // Configure multer for document uploads
+  const documentStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      createDocumentUploadStorage(req, file, (err: any, result: any) => {
+        if (err) return cb(err, '');
+        cb(null, result);
       });
+    },
+    filename: (req, file, cb) => {
+      // Use original filename if it looks safe, otherwise generate a new one
+      const timestamp = Date.now();
+      const originalName = file.originalname;
+      const safeFilenameRegex = /^[a-zA-Z0-9_\-\. ]+$/;
+      
+      if (safeFilenameRegex.test(originalName)) {
+        cb(null, `${timestamp}_${originalName}`);
+      } else {
+        const extension = path.extname(originalName);
+        const documentType = req.body.documentType || 'document';
+        const safeName = `${documentType}_${timestamp}${extension}`;
+        cb(null, safeName);
+      }
     }
+  });
+  
+  const documentUpload = multer({
+    storage: documentStorage,
+    limits: {
+      fileSize: 25 * 1024 * 1024, // 25MB limit for documents
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept common document types
+      const fileTypes = /jpeg|jpg|png|pdf|doc|docx|xls|xlsx|txt|csv/;
+      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+      
+      if (extname) {
+        return cb(null, true);
+      } else {
+        cb(new Error("Unsupported file type") as any, false);
+      }
+    },
+  });
+
+  // Get all documents
+  app.get("/api/documents", async (req, res) => {
+    const documents = await storage.getAllDocuments();
+    res.json(documents);
   });
 
   // Get documents by vehicle
@@ -852,35 +735,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const documents = await storage.getDocumentsByVehicle(vehicleId);
-    res.json(documents);
-  });
-
-  // Download document
-  app.get("/api/documents/download/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid document ID" });
-    }
-
-    const document = await storage.getDocument(id);
-    if (!document) {
-      return res.status(404).json({ message: "Document not found" });
-    }
-
-    // Check if file exists
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ message: "File not found on disk" });
-    }
-
-    // Serve the actual file
-    res.setHeader('Content-Type', document.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
-    res.sendFile(document.filePath);
-  });
-  
-  // Get all documents
-  app.get("/api/documents", async (req, res) => {
-    const documents = await storage.getAllDocuments();
     res.json(documents);
   });
 
@@ -899,83 +753,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(document);
   });
 
-  // Delete document
-  app.delete("/api/documents/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid document ID" });
-    }
+  // Upload document
+  app.post("/api/documents", documentUpload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
 
-    // Get document before deleting to know the file path
-    const document = await storage.getDocument(id);
-    if (!document) {
-      return res.status(404).json({ message: "Document not found" });
-    }
-    
-    // Delete the file from disk if it exists
-    if (document.filePath && fs.existsSync(document.filePath)) {
-      try {
-        fs.unlinkSync(document.filePath);
-      } catch (error) {
-        console.error("Failed to delete file from disk:", error);
-        // Continue with the database deletion even if file deletion fails
+      // Convert vehicleId to number
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      
+      const documentData = insertDocumentSchema.parse({
+        ...req.body,
+        fileName: req.file.originalname,
+        filePath: getRelativePath(req.file.path),
+        fileSize: req.file.size,
+        contentType: req.file.mimetype
+      });
+      
+      const document = await storage.createDocument(documentData);
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid document data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to upload document", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     }
-
-    const success = await storage.deleteDocument(id);
-    if (!success) {
-      return res.status(404).json({ message: "Document not found in database" });
-    }
-
-    res.status(204).end();
   });
 
-  // ==================== BULK IMPORT ROUTES ====================
-  // Bulk import vehicles by license plates
-  app.post("/api/vehicles/bulk-import-plates", async (req, res) => {
+  // Delete document
+  app.delete("/api/documents/:id", async (req, res) => {
     try {
-      // Expect an array of license plates
-      const { licensePlates } = req.body;
-      
-      if (!Array.isArray(licensePlates) || licensePlates.length === 0) {
-        return res.status(400).json({ message: "Please provide a non-empty array of license plates" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid document ID" });
       }
-      
-      const results = {
-        imported: [] as any[],
-        failed: [] as any[]
-      };
-      
-      // Process each license plate
-      for (const licensePlate of licensePlates) {
-        try {
-          // Fetch vehicle info from RDW API
-          const vehicleInfo = await fetchVehicleInfoByLicensePlate(licensePlate);
-          
-          if (vehicleInfo) {
-            // Create the vehicle in the database
-            const vehicle = await storage.createVehicle(vehicleInfo);
-            results.imported.push({ licensePlate, vehicle });
-          } else {
-            results.failed.push({ licensePlate, error: "No vehicle information found" });
-          }
-        } catch (error) {
-          results.failed.push({ 
-            licensePlate, 
-            error: error instanceof Error ? error.message : "Unknown error" 
-          });
-        }
+
+      // Get document to check if file exists
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
       }
-      
-      res.status(200).json(results);
+
+      // Try to delete the file if it exists
+      if (document.filePath && fs.existsSync(document.filePath)) {
+        fs.unlinkSync(document.filePath);
+      }
+
+      // Delete the document record
+      const success = await storage.deleteDocument(id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete document record" });
+      }
+
+      res.json({ message: "Document deleted successfully" });
     } catch (error) {
+      console.error("Error deleting document:", error);
       res.status(500).json({ 
-        message: "Failed to process bulk import", 
+        message: "Failed to delete document", 
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // ==================== CONTRACT GENERATION ====================
+  // Generate rental contract PDF
+  app.get("/api/contracts/generate/:reservationId", async (req, res) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Generate PDF contract
+      const pdfBuffer = await generateRentalContract(reservation);
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=rental_contract_${reservationId}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating contract:", error);
+      res.status(500).json({ 
+        message: "Failed to generate contract", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Setup static file serving for uploads
+  app.use('/uploads', (req, res, next) => {
+    const filePath = path.join(process.cwd(), 'uploads', req.path);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        // If file not found, continue to next handler
+        next();
+      }
+    });
+  });
+
+  // Create HTTP server and return it
+  return createServer(app);
 }
