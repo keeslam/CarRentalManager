@@ -24,16 +24,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Extended schema with validation
 const formSchema = insertCustomerSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  email: z.string().email("Invalid email address.").optional().or(z.literal("")),
-  phone: z.string().min(10, "Phone number must be at least 10 digits.").optional().or(z.literal("")),
-  emailForMOT: z.string().email("Invalid email address.").optional().or(z.literal("")),
-  emailForInvoices: z.string().email("Invalid email address.").optional().or(z.literal("")),
-  emailGeneral: z.string().email("Invalid email address.").optional().or(z.literal("")),
+  // Make all fields optional with empty string fallback
+  email: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  debtorNumber: z.string().optional().or(z.literal("")),
+  firstName: z.string().optional().or(z.literal("")),
+  lastName: z.string().optional().or(z.literal("")),
+  companyName: z.string().optional().or(z.literal("")),
+  driverName: z.string().optional().or(z.literal("")),
+  contactPerson: z.string().optional().or(z.literal("")),
+  emailForMOT: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
+  emailForInvoices: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
+  emailGeneral: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
   driverPhone: z.string().optional().or(z.literal("")),
-  vatNumber: z.string().optional().or(z.literal("")),
-  rsin: z.string().optional().or(z.literal("")),
+  streetName: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  postalCode: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
+  driverLicenseNumber: z.string().optional().or(z.literal("")),
   chamberOfCommerceNumber: z.string().optional().or(z.literal("")),
-  statusDate: z.string().optional().or(z.literal(""))
+  rsin: z.string().optional().or(z.literal("")),
+  vatNumber: z.string().optional().or(z.literal("")),
+  status: z.string().optional().or(z.literal("")),
+  statusDate: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal(""))
 });
 
 interface CustomerFormProps {
@@ -53,10 +68,27 @@ export function CustomerForm({
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   
+  // Helper function to transform null values to empty strings
+  const transformInitialData = (data: any) => {
+    if (!data) return null;
+    
+    // Create a new object with the same properties as data
+    const transformed = { ...data };
+    
+    // Replace null values with empty strings
+    Object.keys(transformed).forEach(key => {
+      if (transformed[key] === null) {
+        transformed[key] = "";
+      }
+    });
+    
+    return transformed;
+  };
+
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: transformInitialData(initialData) || {
       // Basic info
       name: "",
       debtorNumber: "",
