@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
-import { formatLicensePlate } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { 
   Select, 
   SelectContent, 
@@ -434,9 +434,9 @@ export default function ReservationCalendarPage() {
                               <Link key={res.id} href={`/reservations/${res.id}`}>
                                 <div 
                                   className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isSameDay(day, parseISO(res.startDate)), isSameDay(day, parseISO(res.endDate)))}`}
-                                  title={`${formatLicensePlate(res.vehicle?.licensePlate)} - ${res.customer?.name || 'Reserved'}`}
+                                  title={`${displayLicensePlate(res.vehicle?.licensePlate)} - ${res.customer?.name || 'Reserved'}`}
                                 >
-                                  {formatLicensePlate(res.vehicle?.licensePlate)} 
+                                  {displayLicensePlate(res.vehicle?.licensePlate)} 
                                 </div>
                               </Link>
                             ))}
@@ -521,7 +521,7 @@ export default function ReservationCalendarPage() {
                         <div className="flex items-center">
                           <Link href={`/vehicles/${vehicle.id}`}>
                             <div className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">
-                              {formatLicensePlate(vehicle.licensePlate)}
+                              {displayLicensePlate(vehicle.licensePlate)}
                             </div>
                           </Link>
                           <div className="ml-2 text-xs text-gray-500">

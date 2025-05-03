@@ -10,6 +10,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Expense } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 
 export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,7 +60,7 @@ export default function ExpensesIndex() {
         const vehicle = row.original.vehicle;
         return vehicle ? (
           <div>
-            <div className="font-medium">{vehicle.licensePlate}</div>
+            <div className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</div>
             <div className="text-sm text-gray-500">{vehicle.brand} {vehicle.model}</div>
           </div>
         ) : "—";
