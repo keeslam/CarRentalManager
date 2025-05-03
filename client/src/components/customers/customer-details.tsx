@@ -49,8 +49,14 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
       return await response.json();
     },
     onSuccess: () => {
-      // Invalidate the reservations query to refresh the list
-      queryClient.invalidateQueries({ queryKey: [`/api/reservations/customer/${customerId}`] });
+      // Invalidate and refetch the reservations query to refresh the list
+      queryClient.invalidateQueries({ queryKey: [`/api/reservations/customer/${customerId}`] }).then(() => {
+        // Force a refetch after invalidation to ensure the latest data
+        queryClient.refetchQueries({ queryKey: [`/api/reservations/customer/${customerId}`], type: 'active' });
+        // Also update the general reservations list
+        queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      });
+      
       toast({
         title: "Reservation deleted",
         description: "The reservation has been successfully deleted.",

@@ -55,8 +55,12 @@ export default function ReservationsIndex() {
       return await response.json();
     },
     onSuccess: () => {
-      // Invalidate the reservations query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      // Invalidate and refetch the reservations query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] }).then(() => {
+        // Force a refetch after invalidation to ensure the latest data
+        queryClient.refetchQueries({ queryKey: ["/api/reservations"], type: 'active' });
+      });
+      
       toast({
         title: "Reservation deleted",
         description: "The reservation has been successfully deleted.",
