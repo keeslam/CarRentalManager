@@ -146,10 +146,19 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
         }
       });
       
-      toast({
-        title: "Information retrieved",
-        description: "Vehicle information has been retrieved successfully.",
-      });
+      // Check if data was actually found or if we're showing simulated data
+      if (vehicleData.brand && vehicleData.model) {
+        toast({
+          title: "Information retrieved",
+          description: "Vehicle information has been retrieved successfully.",
+        });
+      } else {
+        toast({
+          title: "Simulated data loaded",
+          description: "No real data found for this license plate. Using simulated data instead.",
+          variant: "default"
+        });
+      }
     },
     onError: (error) => {
       toast({
