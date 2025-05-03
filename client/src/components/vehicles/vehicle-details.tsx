@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,18 @@ import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -47,9 +59,50 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
     return grouped;
   }, {} as Record<string, Document[]>) || {};
   
+  // Define query keys for easier reference
+  const vehicleReservationsQueryKey = [`/api/reservations/vehicle/${vehicleId}`];
+  
   // Fetch vehicle reservations
-  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
-    queryKey: [`/api/reservations/vehicle/${vehicleId}`],
+  const { 
+    data: reservations, 
+    isLoading: isLoadingReservations,
+    refetch: refetchReservations 
+  } = useQuery<Reservation[]>({
+    queryKey: vehicleReservationsQueryKey,
+  });
+  
+  // Delete reservation mutation
+  const deleteReservationMutation = useMutation({
+    mutationFn: async (reservationId: number) => {
+      const response = await apiRequest('DELETE', `/api/reservations/${reservationId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete reservation');
+      }
+      return await response.json();
+    },
+    onSuccess: async () => {
+      // Invalidate and refetch reservations for this vehicle
+      await queryClient.invalidateQueries({ queryKey: vehicleReservationsQueryKey });
+      
+      // Explicitly force a refetch to ensure the UI updates
+      await refetchReservations();
+      
+      // Also update the general reservations list
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      
+      toast({
+        title: "Reservation deleted",
+        description: "The reservation has been successfully deleted."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete reservation",
+        variant: "destructive"
+      });
+    }
   });
   
   // Calculate days until APK expiration
@@ -911,11 +964,69 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                             {formatCurrency(reservation.totalPrice)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link href={`/reservations/${reservation.id}`}>
-                              <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800">
-                                View
-                              </Button>
-                            </Link>
+                            <div className="flex items-center justify-end space-x-2">
+                              <Link href={`/reservations/${reservation.id}`}>
+                                <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800">
+                                  View
+                                </Button>
+                              </Link>
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-red-600 hover:text-red-800"
+                                    disabled={deleteReservationMutation.isPending}
+                                  >
+                                    {deleteReservationMutation.isPending ? (
+                                      <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                                          <path d="M3 6h18"></path>
+                                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                        </svg>
+                                        Delete
+                                      </>
+                                    )}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete this reservation from {vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)}).
+                                      <p className="mt-2 font-medium">
+                                        {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                                      </p>
+                                      <p className="mt-1 text-sm text-gray-500">
+                                        Customer: {reservation.customer?.name}
+                                      </p>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        deleteReservationMutation.mutate(reservation.id);
+                                      }}
+                                      className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </td>
                         </tr>
                       ))}
