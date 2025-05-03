@@ -187,13 +187,42 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    // Convert boolean toggle values to text for database compatibility
-    const formattedData = {
-      ...data,
-      // Convert boolean values to "true"/"false" strings for DB compatibility
-      company: data.company ? "true" : "false",
-      registeredTo: data.registeredTo ? "true" : "false"
-    } as any; // Use type assertion to bypass TypeScript check
+    // Process the form data before submission
+    const formattedData: any = { ...data };
+    
+    // Handle empty string values for numeric fields
+    if (formattedData.departureMileage === "") formattedData.departureMileage = null;
+    if (formattedData.returnMileage === "") formattedData.returnMileage = null;
+    if (formattedData.monthlyPrice === "") formattedData.monthlyPrice = null;
+    if (formattedData.dailyPrice === "") formattedData.dailyPrice = null;
+    
+    // Convert boolean values to match the database schema expectations
+    if (typeof formattedData.registeredTo === 'boolean') {
+      formattedData.registeredTo = formattedData.registeredTo ? true : false;
+    }
+    
+    if (typeof formattedData.company === 'boolean') {
+      formattedData.company = formattedData.company ? true : false;
+    }
+    
+    // Handle other boolean fields
+    const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
+      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps'];
+    
+    booleanFields.forEach(field => {
+      if (typeof formattedData[field] === 'boolean') {
+        formattedData[field] = formattedData[field] ? true : false;
+      }
+    });
+    
+    // Clean up date fields if they're empty strings
+    Object.keys(formattedData).forEach(key => {
+      if (key.toLowerCase().includes('date') && formattedData[key] === "") {
+        formattedData[key] = null;
+      }
+    });
+    
+    console.log("Submitting vehicle data:", formattedData);
     createVehicleMutation.mutate(formattedData);
   };
   
