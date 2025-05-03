@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Vehicle } from "@shared/schema";
-import { Check, RotateCw } from "lucide-react";
+import { Check, RotateCw, Search } from "lucide-react";
 import { displayLicensePlate } from "@/lib/utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 
@@ -504,26 +504,78 @@ export function QuickActions() {
                         
                         {vehicles && vehicles.length > 0 ? (
                           <>
-                            <SearchableCombobox
-                              options={vehicles.map(vehicle => ({
-                                value: vehicle.id.toString(),
-                                label: displayLicensePlate(vehicle.licensePlate),
-                                description: `${vehicle.brand || ''} ${vehicle.model || ''}`.trim(),
-                                group: vehicle.vehicleType || 'Other',
-                                tags: [vehicle.vehicleType || '']
-                              }))}
-                              value={selectedDamageVehicle ? selectedDamageVehicle.id.toString() : ""}
-                              onChange={(value) => {
-                                const vehicle = vehicles.find(v => v.id.toString() === value);
-                                if (vehicle) {
-                                  setSelectedDamageVehicle(vehicle);
-                                }
-                              }}
-                              placeholder="Select a vehicle"
-                              searchPlaceholder="Search by license plate, brand or model"
-                              emptyMessage="No vehicles match your search"
-                              groups={true}
-                            />
+                            <div className="relative">
+                              <Input
+                                placeholder="Search by license plate, brand or model"
+                                value={damageFormSearchQuery}
+                                onChange={(e) => setDamageFormSearchQuery(e.target.value.toLowerCase())}
+                                className="mb-2"
+                              />
+                              <div className="absolute right-2 top-2 opacity-50">
+                                <Search className="h-4 w-4" />
+                              </div>
+                            </div>
+                            
+                            <div className="border rounded-md h-[200px] overflow-y-auto p-1 mb-2">
+                              {(() => {
+                                // Filter vehicles based on search query
+                                const filteredVehicles = damageFormSearchQuery 
+                                  ? vehicles.filter(v => 
+                                      v.licensePlate.toLowerCase().includes(damageFormSearchQuery) || 
+                                      (v.brand?.toLowerCase() || '').includes(damageFormSearchQuery) || 
+                                      (v.model?.toLowerCase() || '').includes(damageFormSearchQuery)
+                                    )
+                                  : vehicles;
+                                
+                                // Group vehicles by type
+                                const vehicleGroups: Record<string, Vehicle[]> = {};
+                                
+                                filteredVehicles.forEach(vehicle => {
+                                  const vehicleType = vehicle.vehicleType || 'Other';
+                                  if (!vehicleGroups[vehicleType]) vehicleGroups[vehicleType] = [];
+                                  vehicleGroups[vehicleType].push(vehicle);
+                                });
+                                
+                                return filteredVehicles.length === 0 ? (
+                                  <div className="p-2 text-center text-sm text-muted-foreground">
+                                    No vehicles match your search
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    {Object.entries(vehicleGroups).map(([vehicleType, vehicles]) => (
+                                      <div key={vehicleType} className="space-y-2">
+                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-semibold border-b">
+                                          {vehicleType}
+                                        </div>
+                                        <div className="space-y-1">
+                                          {vehicles.map(vehicle => (
+                                            <div 
+                                              key={vehicle.id}
+                                              className={`px-3 py-2 rounded cursor-pointer flex items-center justify-between ${
+                                                selectedDamageVehicle?.id === vehicle.id 
+                                                  ? 'bg-primary-100 text-primary-700' 
+                                                  : 'hover:bg-accent'
+                                              }`}
+                                              onClick={() => setSelectedDamageVehicle(vehicle)}
+                                            >
+                                              <div className="flex items-center">
+                                                <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
+                                                <span className="ml-2 text-sm text-muted-foreground">
+                                                  {vehicle.brand} {vehicle.model}
+                                                </span>
+                                              </div>
+                                              {selectedDamageVehicle?.id === vehicle.id && (
+                                                <Check className="h-4 w-4 text-primary-600" />
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                            </div>
                             
                             {selectedDamageVehicle && (
                               <div className="mt-2 p-3 bg-muted/30 border rounded-md">
@@ -713,30 +765,121 @@ export function QuickActions() {
                         {vehicles && vehicles.length > 0 ? (
                           <>
                             <div className="mb-2">
-                              <SearchableCombobox
-                                options={vehicles.map(vehicle => ({
-                                  value: vehicle.id.toString(),
-                                  label: displayLicensePlate(vehicle.licensePlate),
-                                  description: `${vehicle.brand || ''} ${vehicle.model || ''}`.trim(),
-                                  group: vehicle.registeredTo === true || vehicle.registeredTo === "true" 
-                                    ? 'Opnaam (Person)' 
-                                    : vehicle.company === true || vehicle.company === "true" 
-                                      ? 'BV (Company)' 
-                                      : 'Other',
-                                  tags: [vehicle.vehicleType || '']
-                                }))}
-                                value=""
-                                onChange={(value) => {
-                                  // If the value is not already in the selected list, add it
-                                  if (!selectedVehicles.includes(value)) {
-                                    setSelectedVehicles(prev => [...prev, value]);
-                                  }
-                                }}
-                                placeholder="Search and select a vehicle to add to the list"
-                                searchPlaceholder="Search by license plate, brand or model"
-                                emptyMessage="No vehicles match your search"
-                                groups={true}
-                              />
+                              <div className="relative">
+                                <Input
+                                  placeholder="Search by license plate, brand or model"
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                                  className="mb-2"
+                                />
+                                <div className="absolute right-2 top-2 opacity-50">
+                                  <Search className="h-4 w-4" />
+                                </div>
+                              </div>
+                              
+                              <div className="border rounded-md h-[200px] overflow-y-auto p-1 mb-2">
+                                {(() => {
+                                  // Filter vehicles based on search query
+                                  const filteredVehicles = searchQuery 
+                                    ? vehicles.filter(v => 
+                                        v.licensePlate.toLowerCase().includes(searchQuery) || 
+                                        (v.brand?.toLowerCase() || '').includes(searchQuery) || 
+                                        (v.model?.toLowerCase() || '').includes(searchQuery)
+                                      )
+                                    : vehicles;
+                                  
+                                  // Group vehicles by registration status and then by brand
+                                  const vehicleGroups: Record<string, Record<string, Vehicle[]>> = {
+                                    'Opnaam (Person)': {},
+                                    'BV (Company)': {},
+                                    'Other': {}
+                                  };
+                                  
+                                  filteredVehicles.forEach(vehicle => {
+                                    let statusGroup = 'Other';
+                                    if (vehicle.registeredTo) statusGroup = 'Opnaam (Person)';
+                                    else if (vehicle.company) statusGroup = 'BV (Company)';
+                                    
+                                    const brand = vehicle.brand || 'Other';
+                                    if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
+                                    vehicleGroups[statusGroup][brand].push(vehicle);
+                                  });
+                                  
+                                  return filteredVehicles.length === 0 ? (
+                                    <div className="p-2 text-center text-sm text-muted-foreground">
+                                      No vehicles match your search
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-4">
+                                      {Object.entries(vehicleGroups).map(([status, brands]) => {
+                                        const hasVehicles = Object.values(brands).some(vehicles => vehicles.length > 0);
+                                        if (!hasVehicles) return null;
+                                        
+                                        return (
+                                          <div key={status} className="space-y-2">
+                                            <div className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-semibold border-b">
+                                              {status}
+                                            </div>
+                                            {Object.entries(brands).map(([brand, brandVehicles]) => {
+                                              if (brandVehicles.length === 0) return null;
+                                              
+                                              return (
+                                                <div key={brand} className="pl-2 space-y-1">
+                                                  <div className="text-xs font-medium text-muted-foreground">{brand}</div>
+                                                  <div className="space-y-1">
+                                                    {brandVehicles.map(vehicle => (
+                                                      <label 
+                                                        key={vehicle.id} 
+                                                        className="flex items-center space-x-2 p-1 rounded hover:bg-accent cursor-pointer text-sm"
+                                                      >
+                                                        <input 
+                                                          type="checkbox"
+                                                          className="rounded"
+                                                          checked={selectedVehicles.includes(vehicle.id.toString())}
+                                                          onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                              setSelectedVehicles([...selectedVehicles, vehicle.id.toString()]);
+                                                            } else {
+                                                              setSelectedVehicles(selectedVehicles.filter(id => id !== vehicle.id.toString()));
+                                                            }
+                                                          }}
+                                                        />
+                                                        <span className="flex flex-col">
+                                                          <span className="flex items-center gap-2">
+                                                            {displayLicensePlate(vehicle.licensePlate)} - {vehicle.model}
+                                                            {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
+                                                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                                Opnaam
+                                                              </span>
+                                                            ) : vehicle.company === true || vehicle.company === "true" ? (
+                                                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                                BV
+                                                              </span>
+                                                            ) : null}
+                                                          </span>
+                                                          <span className="text-xs text-muted-foreground">
+                                                            {vehicle.registeredToDate && (vehicle.registeredTo === true || vehicle.registeredTo === "true") ? 
+                                                              `Registered since: ${new Date(vehicle.registeredToDate).toLocaleDateString()}` : 
+                                                              (vehicle.company === true || vehicle.company === "true") ? 
+                                                                vehicle.companyDate ? 
+                                                                  `In BV since: ${new Date(vehicle.companyDate).toLocaleDateString()}` : 
+                                                                  'In BV (date unknown)' 
+                                                                : 'Not registered'}
+                                                          </span>
+                                                        </span>
+                                                      </label>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                             </div>
                             
                             <div className="border rounded-md h-[200px] overflow-y-auto p-2">
