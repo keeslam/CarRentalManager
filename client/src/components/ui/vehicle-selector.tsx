@@ -125,7 +125,7 @@ export function VehicleSelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[320px] md:w-[550px] max-h-[500px] overflow-auto p-0"
+          className="w-[320px] md:w-[750px] max-h-[500px] overflow-auto p-0"
           align="start"
           side="bottom"
           sideOffset={4}
@@ -184,7 +184,7 @@ export function VehicleSelector({
     }
     
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         {displayedVehicles.map(vehicle => (
           <div 
             key={vehicle.id}
