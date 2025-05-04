@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document, Vehicle } from "@shared/schema";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
 import PDFTemplateEditor from "./template-editor";
+import { FileEdit, Star } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +25,11 @@ export default function DocumentsIndex() {
   // Fetch vehicles for filter
   const { data: vehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+  
+  // Fetch templates
+  const { data: templates, isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ['/api/pdf-templates'],
   });
   
   // Get unique document types
@@ -237,18 +243,78 @@ export default function DocumentsIndex() {
                 Manage contract templates for your reservations
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4 items-center">
-              <p>Open the dedicated template editor to create and manage contract templates.</p>
-              <Link href="/documents/template-editor">
-                <Button>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-edit mr-2">
-                    <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"/>
+            <CardContent>
+              <div className="mb-6">
+                <p className="mb-4">Open the dedicated template editor to create and manage contract templates.</p>
+                <Link href="/documents/template-editor">
+                  <Button>
+                    <FileEdit className="mr-2 h-4 w-4" />
+                    Open Template Editor
+                  </Button>
+                </Link>
+              </div>
+              
+              {isLoadingTemplates ? (
+                <div className="flex justify-center items-center h-32">
+                  <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Open Template Editor
-                </Button>
-              </Link>
+                </div>
+              ) : templates && Array.isArray(templates) && templates.length > 0 ? (
+                <div>
+                  <h3 className="text-lg font-medium mb-4 border-b pb-2">Available Templates</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {templates.map((template: any) => (
+                      <Card key={template.id} className="overflow-hidden">
+                        <div className="bg-gray-100 p-8 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text text-gray-600">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" x2="8" y1="13" y2="13" />
+                            <line x1="16" x2="8" y1="17" y2="17" />
+                            <line x1="10" x2="8" y1="9" y2="9" />
+                          </svg>
+                        </div>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium mb-1 truncate" title={template.name}>
+                              {template.name}
+                            </h4>
+                            {template.isDefault && (
+                              <Badge variant="secondary" className="ml-2">
+                                <Star className="h-3 w-3 mr-1" />
+                                Default
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="mt-4 flex justify-between">
+                            <Link href="/documents/template-editor">
+                              <Button variant="outline" size="sm">
+                                <FileEdit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                            </Link>
+                            <a 
+                              href={`/api/pdf-templates/${template.id}/preview`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 py-2"
+                            >
+                              Preview
+                            </a>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No templates found. Create your first template using the editor.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
