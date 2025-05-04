@@ -132,13 +132,24 @@ const PDFTemplateEditor = () => {
   });
 
   const generatePreviewMutation = useMutation({
-    mutationFn: async ({ reservationId, templateId }: { reservationId: string, templateId: number }) => {
-      const res = await apiRequest('GET', `/api/contracts/generate/${reservationId}?templateId=${templateId}`);
+    mutationFn: async ({ templateId }: { reservationId?: string, templateId: number }) => {
+      // Use the dedicated template preview endpoint with our test data
+      // This endpoint uses field labels as values for better visibility in preview
+      console.log(`Generating preview for template ID: ${templateId}`);
+      const res = await apiRequest('GET', `/api/pdf-templates/${templateId}/preview`);
       return await res.blob();
     },
     onSuccess: (data) => {
+      // Revoke any previous URLs to avoid memory leaks
+      if (previewPdfUrl) {
+        URL.revokeObjectURL(previewPdfUrl);
+      }
       const url = URL.createObjectURL(data);
       setPreviewPdfUrl(url);
+      toast({
+        title: "Preview Generated",
+        description: "Preview shows field labels for better visibility of positions and alignment",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -146,6 +157,7 @@ const PDFTemplateEditor = () => {
         description: `Failed to generate preview: ${error.message}`,
         variant: "destructive",
       });
+      console.error('Preview generation error:', error);
       setPreviewPdfUrl(null);
     }
   });
@@ -372,9 +384,19 @@ const PDFTemplateEditor = () => {
   };
 
   const handlePreviewGenerate = () => {
-    if (!currentTemplate || !previewReservationId) return;
+    if (!currentTemplate) return;
+    
+    // Save the template first if there are unsaved changes
+    if (saveTemplateMutation.isPending) {
+      toast({
+        title: "Template is saving",
+        description: "Please wait until the template is saved before generating preview",
+      });
+      return;
+    }
+    
+    // Use our new preview endpoint that shows field labels as values
     generatePreviewMutation.mutate({ 
-      reservationId: previewReservationId, 
       templateId: currentTemplate.id 
     });
   };
