@@ -284,8 +284,8 @@ export default function ExpensesIndex() {
                               <DataTable
                                 columns={columns}
                                 data={categoryExpenses}
-                                searchColumn="description"
-                                searchPlaceholder="Filter by description..."
+                                searchColumns={["description", "vehicle"]}
+                                searchPlaceholder="Filter by vehicle or description..."
                                 pagination={false}
                               />
                               <div className="mt-2 flex justify-end">

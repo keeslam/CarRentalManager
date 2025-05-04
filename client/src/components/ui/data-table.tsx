@@ -27,19 +27,55 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchColumn?: string;
+  searchColumns?: string[];
   searchPlaceholder?: string;
   pagination?: boolean;
+  globalFilterFn?: (value: any, filterValue: string) => boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchColumn,
+  searchColumns,
   searchPlaceholder = "Search...",
   pagination = true,
+  globalFilterFn,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  
+  // Custom filter function to handle license plates with and without dashes
+  const defaultGlobalFilterFn = (row: any, id: string, filterValue: string) => {
+    const value = row.getValue(id) as any;
+    
+    // Skip filtering for empty values or column ids not in searchColumns
+    if (!value || (searchColumns && !searchColumns.includes(id))) return false;
+    
+    // If value is an object (like vehicle), try to access its properties based on column id
+    if (typeof value === 'object' && value !== null) {
+      if (id === 'vehicle' && value.licensePlate) {
+        // Special handling for license plates: normalize by removing dashes
+        const searchNoFormat = filterValue.toLowerCase().replace(/-/g, '');
+        const licenseNoFormat = value.licensePlate.toLowerCase().replace(/-/g, '');
+        
+        // Check if license plate matches search (with or without dashes)
+        return licenseNoFormat.includes(searchNoFormat) || 
+               value.licensePlate.toLowerCase().includes(filterValue.toLowerCase());
+      }
+      
+      // For other object types, stringify and search
+      return JSON.stringify(value)
+        .toLowerCase()
+        .includes(filterValue.toLowerCase());
+    }
+    
+    // For strings, perform case-insensitive search
+    return String(value)
+      .toLowerCase()
+      .includes(filterValue.toLowerCase());
+  };
   
   const table = useReactTable({
     data,
@@ -50,15 +86,28 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: globalFilterFn || defaultGlobalFilterFn,
+    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
+      globalFilter,
     },
   });
 
   return (
     <div>
-      {searchColumn && (
+      {/* Render either global search or column-specific search based on which props are provided */}
+      {searchColumns ? (
+        <div className="flex items-center py-4">
+          <Input
+            placeholder={searchPlaceholder}
+            value={globalFilter}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+      ) : searchColumn ? (
         <div className="flex items-center py-4">
           <Input
             placeholder={searchPlaceholder}
@@ -69,7 +118,7 @@ export function DataTable<TData, TValue>({
             className="max-w-sm"
           />
         </div>
-      )}
+      ) : null}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
