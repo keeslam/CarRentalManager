@@ -305,7 +305,7 @@ export function QuickActions() {
   // State for the document upload dialog
   const [selectedUploadVehicle, setSelectedUploadVehicle] = useState<Vehicle | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [documentCategory, setDocumentCategory] = useState<string>("general");
+  const [documentCategory, setDocumentCategory] = useState<string>("APK Inspection");
   const [documentNotes, setDocumentNotes] = useState<string>("");
   const [isDocumentUploading, setIsDocumentUploading] = useState(false);
   
@@ -810,16 +810,18 @@ export function QuickActions() {
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="general">General</SelectItem>
-                              <SelectItem value="registration">Registration</SelectItem>
-                              <SelectItem value="insurance">Insurance</SelectItem>
-                              <SelectItem value="maintenance">Maintenance</SelectItem>
-                              <SelectItem value="inspection">Inspection</SelectItem>
-                              <SelectItem value="apk">APK</SelectItem>
-                              <SelectItem value="warranty">Warranty</SelectItem>
-                              <SelectItem value="damage_checks">Damage Checks</SelectItem>
-                              <SelectItem value="invoice">Invoice</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="APK Inspection">APK Inspection</SelectItem>
+                              <SelectItem value="Damage Report">Damage Report</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="Maintenance Record">Maintenance Record</SelectItem>
+                              <SelectItem value="Receipt">Receipt</SelectItem>
+                              <SelectItem value="Registration">Registration</SelectItem>
+                              <SelectItem value="Vehicle Photos">Vehicle Photos</SelectItem>
+                              <SelectItem value="Warranty">Warranty</SelectItem>
+                              <SelectItem value="Tire Replacement">Tire Replacement</SelectItem>
+                              <SelectItem value="Front Window Replacement">Front Window Replacement</SelectItem>
+                              <SelectItem value="Repair Report">Repair Report</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
