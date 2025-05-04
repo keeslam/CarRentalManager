@@ -8,6 +8,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
 import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+// Import contract background image
+import contractBackground from "../../assets/contract-background.jpg";
 import { 
   Dialog,
   DialogContent,
@@ -49,6 +51,7 @@ const PDFTemplateEditor = () => {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [previewReservationId, setPreviewReservationId] = useState<string>('');
   const [reservations, setReservations] = useState<any[]>([]);
+  const [draggedField, setDraggedField] = useState<TemplateField | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -238,19 +241,24 @@ const PDFTemplateEditor = () => {
     setIsAddFieldDialogOpen(false);
   };
 
-  const handleFieldMove = (e: React.MouseEvent, field: TemplateField) => {
+  const handleMouseDown = (e: React.MouseEvent, field: TemplateField) => {
     if (!isMoving || !currentTemplate) return;
-    
-    const containerRect = pdfContainerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
+    e.preventDefault();
+    setDraggedField(field);
+  };
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMoving || !draggedField || !currentTemplate || !pdfContainerRef.current) return;
+    
+    const containerRect = pdfContainerRef.current.getBoundingClientRect();
+    
     // Calculate new position relative to the container
-    const x = e.clientX - containerRect.left;
-    const y = e.clientY - containerRect.top;
+    const x = Math.max(0, Math.min(e.clientX - containerRect.left, containerRect.width));
+    const y = Math.max(0, Math.min(e.clientY - containerRect.top, containerRect.height));
 
     // Update the field position
     const updatedFields = currentTemplate.fields.map(f => 
-      f.id === field.id ? { ...f, x, y } : f
+      f.id === draggedField.id ? { ...f, x, y } : f
     );
 
     setCurrentTemplate({
@@ -259,8 +267,14 @@ const PDFTemplateEditor = () => {
     });
   };
 
+  const handleMouseUp = () => {
+    setDraggedField(null);
+  };
+
   const handleFieldClick = (field: TemplateField) => {
-    setSelectedField(field);
+    if (!isMoving) {
+      setSelectedField(field);
+    }
   };
 
   const handleFontSizeChange = (size: number) => {
@@ -575,8 +589,15 @@ const PDFTemplateEditor = () => {
                         style={{ 
                           width: '595px', 
                           height: '842px',
-                          margin: '0 auto'
+                          margin: '0 auto',
+                          backgroundImage: `url(${contractBackground})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat'
                         }}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
                       >
                         {currentTemplate.fields.map(field => (
                           <div
@@ -589,10 +610,11 @@ const PDFTemplateEditor = () => {
                               top: `${field.y}px`,
                               fontSize: `${field.fontSize}px`,
                               fontWeight: field.isBold ? 'bold' : 'normal',
-                              transform: 'translate(-50%, -50%)'
+                              transform: 'translate(-50%, -50%)',
+                              backgroundColor: 'rgba(255, 255, 255, 0.6)'
                             }}
                             onClick={() => handleFieldClick(field)}
-                            onMouseMove={(e) => handleFieldMove(e, field)}
+                            onMouseDown={(e) => handleMouseDown(e, field)}
                           >
                             {field.name}
                           </div>
