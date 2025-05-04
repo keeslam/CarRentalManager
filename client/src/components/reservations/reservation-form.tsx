@@ -809,12 +809,12 @@ export function ReservationForm({
                   </div>
                 )}
                 
-                {/* Departure Mileage field when status is completed */}
+                {/* Mileage When Returned field when status is completed */}
                 {currentStatus === "completed" && (
                   <div className="col-span-1">
                     <div className="flex flex-col space-y-1.5">
                       <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Departure Mileage
+                        Mileage When Returned
                       </label>
                       <input
                         id="departureMileage"
