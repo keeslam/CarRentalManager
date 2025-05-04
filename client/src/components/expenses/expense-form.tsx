@@ -92,9 +92,15 @@ interface ExpenseFormProps {
   editMode?: boolean;
   initialData?: any;
   preselectedVehicleId?: number | null;
+  preselectedCategory?: string | null;
 }
 
-export function ExpenseForm({ editMode = false, initialData, preselectedVehicleId }: ExpenseFormProps) {
+export function ExpenseForm({ 
+  editMode = false, 
+  initialData, 
+  preselectedVehicleId,
+  preselectedCategory
+}: ExpenseFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -137,6 +143,19 @@ export function ExpenseForm({ editMode = false, initialData, preselectedVehicleI
       }
     }
   }, [preselectedVehicleId, formInitialized, editMode]);
+  
+  // Set category from preselectedCategory prop
+  useEffect(() => {
+    if (preselectedCategory && !editMode && formInitialized) {
+      // Check if it's a valid category and capitalize first letter to match options
+      const normalizedCategory = preselectedCategory.charAt(0).toUpperCase() + preselectedCategory.slice(1).toLowerCase();
+      
+      if (expenseCategories.includes(normalizedCategory)) {
+        console.log("Setting category from preselectedCategory:", normalizedCategory);
+        form.setValue("category", normalizedCategory);
+      }
+    }
+  }, [preselectedCategory, formInitialized, editMode]);
   
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({

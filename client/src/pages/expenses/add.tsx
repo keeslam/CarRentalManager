@@ -11,6 +11,9 @@ export default function ExpenseAdd() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [expenseId, setExpenseId] = useState<number | null>(null);
   
+  // State for preselected category
+  const [preselectedCategory, setPreselectedCategory] = useState<string | null>(null);
+  
   // Check if we're in edit mode by looking at the URL pattern
   useEffect(() => {
     // First, check if we're in edit mode by matching the URL pattern
@@ -21,13 +24,21 @@ export default function ExpenseAdd() {
       setIsEditMode(true);
       setExpenseId(id);
     } else {
-      // If we're not in edit mode, check if there's a vehicleId query parameter
+      // If we're not in edit mode, check for query parameters
       const urlParams = new URLSearchParams(window.location.search);
-      const vehicleIdParam = urlParams.get("vehicleId");
       
+      // Check for vehicleId parameter
+      const vehicleIdParam = urlParams.get("vehicleId");
       if (vehicleIdParam) {
         console.log("Found vehicleId in URL:", vehicleIdParam);
         setVehicleId(Number(vehicleIdParam));
+      }
+      
+      // Check for category parameter
+      const categoryParam = urlParams.get("category");
+      if (categoryParam) {
+        console.log("Found category in URL:", categoryParam);
+        setPreselectedCategory(categoryParam);
       }
     }
   }, [location]);
@@ -60,7 +71,8 @@ export default function ExpenseAdd() {
       <ExpenseForm 
         editMode={isEditMode}
         initialData={expense}
-        preselectedVehicleId={isEditMode ? null : vehicleId} 
+        preselectedVehicleId={isEditMode ? null : vehicleId}
+        preselectedCategory={isEditMode ? null : preselectedCategory}
       />
     </div>
   );
