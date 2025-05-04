@@ -24,10 +24,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
-import { Vehicle } from "@shared/schema";
-import { Check, RotateCw, Search } from "lucide-react";
+import { Reservation, Vehicle } from "@shared/schema";
+import { Check, RotateCw, Search, CalendarClock } from "lucide-react";
 import { displayLicensePlate, isTrueValue } from "@/lib/utils";
+import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
+import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 
 interface ActionIconProps {
   name: string;
@@ -36,6 +38,28 @@ interface ActionIconProps {
 
 function ActionIcon({ name, className = "" }: ActionIconProps) {
   switch (name) {
+    case "calendar-clock":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`lucide lucide-calendar-clock ${className}`}
+        >
+          <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h18" />
+          <circle cx="18" cy="18" r="4" />
+          <path d="M18 16.5v1.5h1.5" />
+        </svg>
+      );
     case "calendar-plus":
       return (
         <svg
@@ -239,6 +263,12 @@ const quickActions: QuickAction[] = [
     primary: false,
   },
   {
+    label: "Change Reservation Status",
+    icon: "calendar-clock",
+    dialog: "reservation-status",
+    primary: false,
+  },
+  {
     label: "Change Registration",
     icon: "refresh-cw",
     dialog: "registration",
@@ -263,6 +293,11 @@ export function QuickActions() {
   const [damagePhotos, setDamagePhotos] = useState<File[]>([]);
   const [damageFormSearchQuery, setDamageFormSearchQuery] = useState<string>("");
   const [isDamageUploading, setIsDamageUploading] = useState(false);
+  
+  // State for the reservation status dialog
+  const [selectedReservation, setSelectedReservation] = useState<number | null>(null);
+  const [reservationStatusDialogOpen, setReservationStatusDialogOpen] = useState(false);
+  
   const { toast } = useToast();
   
   // Get queryClient for cache invalidation
@@ -273,7 +308,10 @@ export function QuickActions() {
     queryKey: ["/api/vehicles"],
   });
   
-  // Removed the local formatLicensePlate function as we're now importing it from utils
+  // Fetch upcoming reservations
+  const { data: upcomingReservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
+    queryKey: ["/api/reservations/upcoming"],
+  });
   
   // Handler for changing a single vehicle's registration
   const handleChangeVehicleRegistration = async (vehicleId: number, newStatus: "opnaam" | "bv") => {
@@ -526,14 +564,139 @@ export function QuickActions() {
     }
   };
   
+  // Handler for when a reservation status has been updated
+  const handleReservationStatusUpdated = () => {
+    // Refetch upcoming reservations to update the list
+    queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+    // Reset the selected reservation
+    setSelectedReservation(null);
+    // Show a success toast
+    toast({
+      title: "Success",
+      description: "Reservation status updated successfully",
+    });
+  };
+  
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium text-gray-800">Quick Actions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
+    <>
+      {/* Display StatusChangeDialog when a reservation is selected */}
+      {selectedReservation && (
+        <StatusChangeDialog
+          reservationId={selectedReservation}
+          open={true}
+          onOpenChange={() => setSelectedReservation(null)}
+          onStatusChanged={handleReservationStatusUpdated}
+          initialStatus=""
+        />
+      )}
+      
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-medium text-gray-800">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
           {quickActions.map((action) => {
+            // For reservation status change dialog
+            if (action.dialog === "reservation-status") {
+              return (
+                <Dialog
+                  key={action.label}
+                  open={reservationStatusDialogOpen}
+                  onOpenChange={setReservationStatusDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon || "calendar-clock"} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Change Reservation Status</DialogTitle>
+                      <DialogDescription>
+                        Select a reservation to change its status.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                      {isLoadingReservations ? (
+                        <div className="flex items-center justify-center py-4">
+                          <RotateCw className="h-5 w-5 animate-spin text-primary-600" />
+                          <span className="ml-2">Loading reservations...</span>
+                        </div>
+                      ) : !upcomingReservations || upcomingReservations.length === 0 ? (
+                        <div className="py-4 text-center text-gray-500">
+                          <p>No upcoming reservations found.</p>
+                        </div>
+                      ) : (
+                        <div className="max-h-96 overflow-y-auto">
+                          <table className="w-full text-sm">
+                            <thead className="sticky top-0 bg-white">
+                              <tr className="border-b">
+                                <th className="px-2 py-2 text-left">ID</th>
+                                <th className="px-2 py-2 text-left">Vehicle</th>
+                                <th className="px-2 py-2 text-left">Customer</th>
+                                <th className="px-2 py-2 text-left">Status</th>
+                                <th className="px-2 py-2 text-center">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {upcomingReservations.map((reservation) => {
+                                return (
+                                  <tr 
+                                    key={reservation.id} 
+                                    className="border-b hover:bg-gray-50"
+                                  >
+                                    <td className="px-2 py-2">#{reservation.id}</td>
+                                    <td className="px-2 py-2">
+                                      {displayLicensePlate(reservation.vehicleLicensePlate || reservation.vehicle?.licensePlate)}
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      {reservation.customerName || reservation.customer?.name}
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <span className={`
+                                        inline-block rounded-full px-2 py-1 text-xs
+                                        ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
+                                        ${reservation.status === 'ongoing' ? 'bg-amber-100 text-amber-800' : ''}
+                                        ${reservation.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                                        ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                        ${reservation.status === 'pending' ? 'bg-gray-100 text-gray-800' : ''}
+                                      `}>
+                                        {reservation.status?.charAt(0).toUpperCase() + reservation.status?.slice(1)}
+                                      </span>
+                                    </td>
+                                    <td className="px-2 py-2 text-center">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedReservation(reservation.id);
+                                          setReservationStatusDialogOpen(false);
+                                        }}
+                                      >
+                                        <CalendarClock className="mr-1 h-3 w-3" />
+                                        Change
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
             // For damage form upload action, render a Dialog
             if (action.dialog === "damage-form") {
               return (
@@ -710,7 +873,7 @@ export function QuickActions() {
                         
                         <div>
                           <label htmlFor="damagePhotos" className="text-sm font-medium">
-                            Damage Photos (Multiple)
+                            Damage Photos (Optional)
                           </label>
                           <div className="mt-1 flex items-center">
                             <input
@@ -720,8 +883,8 @@ export function QuickActions() {
                               multiple
                               onChange={(e) => {
                                 if (e.target.files) {
-                                  const filesArray = Array.from(e.target.files);
-                                  setDamagePhotos([...damagePhotos, ...filesArray]);
+                                  const newPhotos = Array.from(e.target.files);
+                                  setDamagePhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
                                 }
                               }}
                               className="w-full text-sm text-slate-500
@@ -736,43 +899,36 @@ export function QuickActions() {
                           {damagePhotos.length > 0 && (
                             <div className="mt-2 space-y-1">
                               <div className="text-sm font-medium">
-                                {damagePhotos.length} photo{damagePhotos.length > 1 ? 's' : ''} selected
+                                Selected Photos ({damagePhotos.length})
                               </div>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="space-y-1 max-h-24 overflow-y-auto pr-2">
                                 {damagePhotos.map((photo, index) => (
-                                  <div key={`${photo.name}-${index}`} className="relative">
-                                    <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500 overflow-hidden">
-                                      {photo.type.startsWith('image/') ? (
-                                        <img 
-                                          src={URL.createObjectURL(photo)} 
-                                          alt={`Preview ${index}`}
-                                          className="w-full h-full object-cover" 
-                                        />
-                                      ) : (
-                                        photo.name.slice(0, 4)
-                                      )}
-                                    </div>
+                                  <div key={index} className="flex items-center space-x-2 text-xs">
+                                    <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                    <span className="truncate flex-1">{photo.name}</span>
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const newDamagePhotos = [...damagePhotos];
-                                        newDamagePhotos.splice(index, 1);
-                                        setDamagePhotos(newDamagePhotos);
+                                        setDamagePhotos(prevPhotos => 
+                                          prevPhotos.filter((_, i) => i !== index)
+                                        );
                                       }}
-                                      className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-xs"
+                                      className="text-red-500 hover:text-red-700 flex-shrink-0"
                                     >
-                                      ×
+                                      Remove
                                     </button>
                                   </div>
                                 ))}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setDamagePhotos([])}
-                                className="text-red-500 hover:text-red-700 text-xs"
-                              >
-                                Remove all
-                              </button>
+                              {damagePhotos.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDamagePhotos([])}
+                                  className="text-red-500 hover:text-red-700 text-xs"
+                                >
+                                  Remove All Photos
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -780,36 +936,29 @@ export function QuickActions() {
                     </div>
                     
                     <DialogFooter>
-                      <DialogClose asChild>
-                        <Button 
-                          ref={damageDialogCloseRef}
-                          variant="outline" 
-                          type="button"
-                        >
+                      <DialogClose ref={damageDialogCloseRef} asChild>
+                        <Button variant="outline" type="button">
                           Cancel
                         </Button>
                       </DialogClose>
                       <Button 
-                        type="button" 
+                        type="button"
                         onClick={handleDamageFormUpload}
-                        disabled={isDamageUploading || !selectedDamageVehicle || (!damageFormFile && damagePhotos.length === 0)}
+                        disabled={!selectedDamageVehicle || (!damageFormFile && damagePhotos.length === 0) || isDamageUploading}
                       >
-                        {isDamageUploading ? (
-                          <>
-                            <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          "Upload"
+                        {isDamageUploading && (
+                          <RotateCw className="mr-2 h-4 w-4 animate-spin" />
                         )}
+                        Upload
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               );
             }
-            // For registration action, render a Dialog
-            else if (action.dialog === "registration") {
+            
+            // For registration change dialog, render a Dialog
+            if (action.dialog === "registration") {
               return (
                 <Dialog key={action.label}>
                   <DialogTrigger asChild>
@@ -818,273 +967,189 @@ export function QuickActions() {
                       className="bg-primary-50 text-primary-600 hover:bg-primary-100"
                       size="sm"
                     >
-                      <ActionIcon name={action.icon || "refresh-cw"} className="mr-1 h-4 w-4" />
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
                       {action.label}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Change Vehicle Registration Status</DialogTitle>
+                      <DialogTitle>Change Vehicle Registration</DialogTitle>
                       <DialogDescription>
-                        Select vehicles to change registration status to "Opnaam" (Person) or "BV" (Company).
+                        Select vehicles and change their registration status to either "Opnaam" or "BV".
                       </DialogDescription>
                     </DialogHeader>
                     
                     <div className="grid gap-4 py-4">
-                      {/* Search and selection area */}
-                      <div className="grid gap-2">
-                        <div className="flex justify-between items-center mb-2">
-                          <label className="text-sm font-medium">
-                            Select Vehicles to Change Status
-                          </label>
+                      {/* Search and select vehicles */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Select Vehicles
+                        </label>
+                        
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search by license plate, brand or model"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                            className="mb-2 pl-8"
+                          />
+                          {searchQuery && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="absolute right-0 top-0 h-full px-3" 
+                              onClick={() => setSearchQuery("")}
+                            >
+                              ✕
+                            </Button>
+                          )}
                         </div>
                         
-                        {vehicles && vehicles.length > 0 ? (
-                          <>
-                            <div className="mb-2">
-                              <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search by license plate, brand or model"
-                                  value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-                                  className="mb-2 pl-8"
-                                />
-                                {searchQuery && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="absolute right-0 top-0 h-full px-3" 
-                                    onClick={() => setSearchQuery("")}
-                                  >
-                                    ✕
-                                  </Button>
-                                )}
-                              </div>
+                        <div className="border rounded h-[200px] overflow-y-auto p-1">
+                          {vehicles ? (
+                            (() => {
+                              // Apply filtering based on search
+                              const filteredVehicles = searchQuery
+                                ? vehicles.filter(v => {
+                                    // Format license plates with and without dashes for flexible searching
+                                    const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
+                                    const formattedQuery = searchQuery.replace(/-/g, '').toLowerCase();
+                                    
+                                    return formattedLicensePlate.includes(formattedQuery) || 
+                                      (v.brand?.toLowerCase() || '').includes(searchQuery) || 
+                                      (v.model?.toLowerCase() || '').includes(searchQuery);
+                                  })
+                                : vehicles;
                               
-                              <div className="border rounded-md h-[150px] overflow-y-auto p-1 mb-2">
-                                {(() => {
-                                  // Filter vehicles based on search query with improved license plate handling
-                                  const filteredVehicles = searchQuery 
-                                    ? vehicles.filter(v => {
-                                        // Format license plates with and without dashes for flexible searching
-                                        const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
-                                        const formattedQuery = searchQuery.replace(/-/g, '').toLowerCase();
-                                        
-                                        return formattedLicensePlate.includes(formattedQuery) || 
-                                          (v.brand?.toLowerCase() || '').includes(searchQuery) || 
-                                          (v.model?.toLowerCase() || '').includes(searchQuery);
-                                      })
-                                    : vehicles;
-                                  
-                                  // Group vehicles by registration status and then by brand
-                                  const vehicleGroups: Record<string, Record<string, Vehicle[]>> = {
-                                    'Opnaam (Person)': {},
-                                    'BV (Company)': {},
-                                    'Other': {}
-                                  };
-                                  
-                                  filteredVehicles.forEach(vehicle => {
-                                    let statusGroup = 'Other';
-                                    // Use the utility function for consistent boolean/string checks
-                                    const isRegisteredTo = isTrueValue(vehicle.registeredTo);
-                                    const isCompany = isTrueValue(vehicle.company);
-                                    
-                                    if (isRegisteredTo) statusGroup = 'Opnaam (Person)';
-                                    else if (isCompany) statusGroup = 'BV (Company)';
-                                    
-                                    const brand = vehicle.brand || 'Other';
-                                    if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
-                                    vehicleGroups[statusGroup][brand].push(vehicle);
-                                  });
-                                  
-                                  return filteredVehicles.length === 0 ? (
-                                    <div className="p-2 text-center text-sm text-muted-foreground">
-                                      No vehicles match your search
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      {Object.entries(vehicleGroups).map(([status, brands]) => {
-                                        const hasVehicles = Object.values(brands).some(vehicles => vehicles.length > 0);
-                                        if (!hasVehicles) return null;
-                                        
-                                        return (
-                                          <div key={status} className="space-y-1">
-                                            <div className="sticky top-0 z-10 bg-background px-2 py-1 text-xs font-semibold border-b">
-                                              {status}
-                                            </div>
-                                            {Object.entries(brands).map(([brand, brandVehicles]) => {
-                                              if (brandVehicles.length === 0) return null;
-                                              
-                                              return (
-                                                <div key={brand} className="pl-2 space-y-1">
-                                                  <div className="text-xs font-medium text-muted-foreground">{brand}</div>
-                                                  <div>
-                                                    {brandVehicles.map(vehicle => (
-                                                      <label 
-                                                        key={vehicle.id} 
-                                                        className="flex items-center space-x-2 p-1 rounded hover:bg-accent cursor-pointer text-xs"
-                                                      >
-                                                        <input 
-                                                          type="checkbox"
-                                                          className="rounded"
-                                                          checked={selectedVehicles.includes(vehicle.id.toString())}
-                                                          onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                              setSelectedVehicles([...selectedVehicles, vehicle.id.toString()]);
-                                                            } else {
-                                                              setSelectedVehicles(selectedVehicles.filter(id => id !== vehicle.id.toString()));
-                                                            }
-                                                          }}
-                                                        />
-                                                        <span className="flex items-center gap-1 flex-wrap">
-                                                          <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span> 
-                                                          <span className="text-muted-foreground">{vehicle.model}</span>
-                                                          {(() => {
-                                                            // Use the utility function for consistent boolean/string checks
-                                                            const isRegisteredTo = isTrueValue(vehicle.registeredTo);
-                                                            const isCompany = isTrueValue(vehicle.company);
-                                                            
-                                                            if (isRegisteredTo) {
-                                                              return (
-                                                                <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-                                                                  Opnaam
-                                                                </span>
-                                                              );
-                                                            } else if (isCompany) {
-                                                              return (
-                                                                <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
-                                                                  BV
-                                                                </span>
-                                                              );
-                                                            }
-                                                            return null;
-                                                          })()}
-                                                        </span>
-                                                      </label>
-                                                    ))}
-                                                  </div>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                            
-                            <div className="border rounded-md h-[120px] overflow-y-auto p-2">
-                              {selectedVehicles.length === 0 ? (
+                              // Group by registration status
+                              const vehicleGroups: Record<string, Vehicle[]> = {
+                                "Opnaam": [],
+                                "BV": [],
+                                "Unspecified": []
+                              };
+                              
+                              filteredVehicles.forEach(vehicle => {
+                                if (!vehicle.registeredTo && !vehicle.company) {
+                                  vehicleGroups["Unspecified"].push(vehicle);
+                                } else if (isTrueValue(vehicle.registeredTo)) {
+                                  vehicleGroups["Opnaam"].push(vehicle);
+                                } else if (isTrueValue(vehicle.company)) {
+                                  vehicleGroups["BV"].push(vehicle);
+                                } else {
+                                  vehicleGroups["Unspecified"].push(vehicle);
+                                }
+                              });
+                              
+                              return filteredVehicles.length === 0 ? (
                                 <div className="p-2 text-center text-sm text-muted-foreground">
-                                  No vehicles selected. Use the search box above to add vehicles.
+                                  No vehicles match your search
                                 </div>
                               ) : (
                                 <div className="space-y-2">
-                                  {selectedVehicles.map(vehicleId => {
-                                    const vehicle = vehicles.find(v => v.id.toString() === vehicleId);
-                                    if (!vehicle) return null;
+                                  {Object.entries(vehicleGroups).map(([status, vehicles]) => {
+                                    // Skip empty groups
+                                    if (vehicles.length === 0) return null;
                                     
                                     return (
-                                      <div 
-                                        key={vehicleId}
-                                        className="flex items-center justify-between p-2 bg-muted/30 rounded-md"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
-                                          <span className="text-sm text-muted-foreground">
-                                            {vehicle.brand} {vehicle.model}
-                                          </span>
-                                          {(() => {
-                                            // Use the utility function for consistent boolean/string checks
-                                            const isRegisteredTo = isTrueValue(vehicle.registeredTo);
-                                            const isCompany = isTrueValue(vehicle.company);
-                                            
-                                            if (isRegisteredTo) {
-                                              return (
-                                                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-                                                  Opnaam
-                                                </span>
-                                              );
-                                            } else if (isCompany) {
-                                              return (
-                                                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
-                                                  BV
-                                                </span>
-                                              );
-                                            }
-                                            return null;
-                                          })()}
+                                      <div key={status} className="space-y-1">
+                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-xs font-semibold border-b">
+                                          {status} ({vehicles.length})
                                         </div>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          className="h-8 w-8 p-0" 
-                                          onClick={() => {
-                                            setSelectedVehicles(prev => prev.filter(v => v !== vehicleId));
-                                          }}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="lucide lucide-x"
-                                          >
-                                            <path d="M18 6 6 18" />
-                                            <path d="m6 6 12 12" />
-                                          </svg>
-                                        </Button>
+                                        <div>
+                                          {vehicles.map(vehicle => (
+                                            <div 
+                                              key={vehicle.id}
+                                              className="flex items-center py-1 px-2 text-xs hover:bg-accent rounded"
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                id={`vehicle-${vehicle.id}`}
+                                                value={vehicle.id}
+                                                checked={selectedVehicles.includes(vehicle.id.toString())}
+                                                onChange={(e) => {
+                                                  if (e.target.checked) {
+                                                    setSelectedVehicles([...selectedVehicles, vehicle.id.toString()]);
+                                                  } else {
+                                                    setSelectedVehicles(selectedVehicles.filter(id => id !== vehicle.id.toString()));
+                                                  }
+                                                }}
+                                                className="mr-2"
+                                              />
+                                              <label 
+                                                htmlFor={`vehicle-${vehicle.id}`}
+                                                className="flex items-center cursor-pointer flex-1"
+                                              >
+                                                <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
+                                                <span className="ml-1 text-muted-foreground">
+                                                  {vehicle.brand} {vehicle.model}
+                                                </span>
+                                              </label>
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                     );
                                   })}
                                 </div>
-                              )}
+                              );
+                            })()
+                          ) : (
+                            <div className="flex justify-center items-center h-full">
+                              <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
                             </div>
-                          </>
-                        ) : (
-                          <div className="p-2 text-center text-sm text-muted-foreground">
-                            No vehicles available
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-sm">
+                          <div>
+                            Selected: {selectedVehicles.length} vehicle{selectedVehicles.length !== 1 && 's'}
                           </div>
-                        )}
+                          {selectedVehicles.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedVehicles([])}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* Registration type selection */}
-                      <div className="grid gap-2">
-                        <label htmlFor="registration" className="text-sm font-medium">
-                          New Registration Status
+                      {/* Registration Status */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Registration Status
                         </label>
-                        <Select value={registrationStatus} onValueChange={(value: "opnaam" | "bv") => setRegistrationStatus(value)}>
+                        <Select
+                          value={registrationStatus}
+                          onValueChange={(value) => setRegistrationStatus(value as "opnaam" | "bv")}
+                        >
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="opnaam">Opnaam (Person)</SelectItem>
-                            <SelectItem value="bv">BV (Company)</SelectItem>
+                            <SelectItem value="opnaam">Opnaam</SelectItem>
+                            <SelectItem value="bv">BV</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                     
                     <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                      </DialogClose>
+                      <Button variant="outline" type="button" onClick={() => {}}>
+                        Cancel
+                      </Button>
                       <Button 
-                        onClick={handleChangeRegistration} 
-                        disabled={isLoading || selectedVehicles.length === 0}
+                        type="button"
+                        onClick={handleChangeRegistration}
+                        disabled={selectedVehicles.length === 0 || isLoading}
                       >
-                        {isLoading 
-                          ? <><RotateCw className="mr-2 h-4 w-4 animate-spin" /> Updating...</>
-                          : <><Check className="mr-2 h-4 w-4" /> Update {selectedVehicles.length} vehicle{selectedVehicles.length !== 1 ? 's' : ''}</>
-                        }
+                        {isLoading && (
+                          <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Apply Changes
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -1092,30 +1157,40 @@ export function QuickActions() {
               );
             }
             
-            // For actions with hrefs, render a Link
+            // For actions with href, render a Link
             if (action.href) {
               return (
-                <Link key={action.label} href={action.href || ""}>
-                  <Button
-                    variant={action.primary ? "default" : "outline"}
-                    className={
-                      action.primary
-                        ? "bg-primary-600 text-white hover:bg-primary-700"
-                        : "bg-primary-50 text-primary-600 hover:bg-primary-100"
-                    }
-                    size="sm"
-                  >
-                    <ActionIcon name={action.icon || ""} className="mr-1 h-4 w-4" />
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                  size="sm"
+                  asChild
+                >
+                  <Link to={action.href}>
+                    <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
                     {action.label}
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               );
             }
             
-            return null;
+            // Fallback for any other action types
+            return (
+              <Button
+                key={action.label}
+                variant="outline"
+                className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                size="sm"
+              >
+                <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                {action.label}
+              </Button>
+            );
           })}
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
