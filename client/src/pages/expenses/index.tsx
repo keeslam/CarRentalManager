@@ -49,7 +49,7 @@ export default function ExpensesIndex() {
   
   // Get unique categories from expenses
   const allCategories = expenses
-    ? [...new Set(expenses.map(expense => expense.category || "Unknown"))]
+    ? Array.from(new Set(expenses.map(expense => expense.category || "Unknown")))
     : [];
   const categories = ["all", ...allCategories];
   

@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { Expense, Vehicle } from "@shared/schema";
 
 export default function ExpenseDetailsPage() {
@@ -261,7 +262,7 @@ export default function ExpenseDetailsPage() {
                         <Skeleton className="h-6 w-28" />
                       ) : vehicle ? (
                         <Link href={`/vehicles/${vehicle.id}`} className="text-blue-600 hover:underline">
-                          {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
+                          {vehicle.brand} {vehicle.model} ({displayLicensePlate(vehicle.licensePlate)})
                         </Link>
                       ) : (
                         <span className="text-muted-foreground">Vehicle not found</span>

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { Expense, Vehicle } from "@shared/schema";
 import { PlusCircle, ArrowLeft, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -219,7 +220,7 @@ export default function VehicleExpensesPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete this expense record for {vehicle.brand} {vehicle.model} ({vehicle.licensePlate}).
+                    This will permanently delete this expense record for {vehicle.brand} {vehicle.model} ({displayLicensePlate(vehicle.licensePlate)}).
                     <p className="mt-2 font-medium">
                       {formatCurrency(Number(expense.amount))} - {expense.category} - {formatDate(expense.date)}
                     </p>
@@ -321,7 +322,7 @@ export default function VehicleExpensesPage() {
             </Button>
           </div>
           <h1 className="text-2xl font-bold">
-            Expenses for {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
+            Expenses for {vehicle.brand} {vehicle.model} ({displayLicensePlate(vehicle.licensePlate)})
           </h1>
         </div>
         <Button asChild>
