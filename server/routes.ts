@@ -1924,8 +1924,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pdfBuffer = await generateRentalContract(reservation);
           }
         } else {
-          console.log("No template ID provided, using standard template");
-          pdfBuffer = await generateRentalContract(reservation);
+          // Try to get the default template first
+          const defaultTemplate = await storage.getDefaultPdfTemplate();
+          
+          if (defaultTemplate) {
+            console.log(`Using default template: ${defaultTemplate.name}`);
+            const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+            pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
+          } else {
+            console.log("No default template found, using standard template");
+            pdfBuffer = await generateRentalContract(reservation);
+          }
         }
       } catch (error) {
         console.error("Error using custom template:", error);
