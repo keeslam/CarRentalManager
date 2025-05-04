@@ -2153,10 +2153,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add user tracking information
       const user = req.user;
       
+      // Process the request body to ensure fields are properly formatted
+      const requestBody = { ...req.body };
+      
+      // Convert fields to string if it's an object (this fixes the date handling issue)
+      if (requestBody.fields && typeof requestBody.fields === 'object') {
+        requestBody.fields = JSON.stringify(requestBody.fields);
+      }
+      
+      // Remove any undefined or invalid date properties to prevent database errors
+      if (requestBody.updatedAt && !(requestBody.updatedAt instanceof Date)) {
+        delete requestBody.updatedAt;
+      }
+      
       const templateData = {
-        ...req.body,
+        ...requestBody,
         updatedBy: user ? user.username : null
       };
+      
+      console.log('Updating template with processed data:', {
+        id,
+        ...templateData,
+        fields: templateData.fields ? 'JSON string' : undefined
+      });
       
       const updatedTemplate = await storage.updatePdfTemplate(id, templateData);
       if (!updatedTemplate) {

@@ -362,7 +362,28 @@ const PDFTemplateEditor = () => {
 
   const handleSaveTemplate = () => {
     if (!currentTemplate) return;
-    saveTemplateMutation.mutate(currentTemplate);
+    
+    // Create a clean template object without any potentially problematic properties
+    const templateToSave = {
+      id: currentTemplate.id,
+      name: currentTemplate.name,
+      isDefault: currentTemplate.isDefault,
+      // The fields need to be explicitly processed to make sure we're sending just
+      // the data we need and not any unexpected properties
+      fields: currentTemplate.fields.map(field => ({
+        id: field.id,
+        name: field.name,
+        x: field.x,
+        y: field.y,
+        fontSize: field.fontSize,
+        isBold: field.isBold,
+        source: field.source,
+        textAlign: field.textAlign
+      }))
+    };
+    
+    console.log('Saving template with processed data:', templateToSave);
+    saveTemplateMutation.mutate(templateToSave);
   };
 
   const handleDeleteTemplate = () => {
@@ -375,12 +396,25 @@ const PDFTemplateEditor = () => {
   const handleSetDefaultTemplate = () => {
     if (!currentTemplate) return;
     
-    const updatedTemplate = {
-      ...currentTemplate,
-      isDefault: true
+    // Create a clean template object with only what we need to avoid date/field issues
+    const templateToSave = {
+      id: currentTemplate.id,
+      name: currentTemplate.name,
+      isDefault: true,
+      fields: currentTemplate.fields.map(field => ({
+        id: field.id,
+        name: field.name,
+        x: field.x,
+        y: field.y,
+        fontSize: field.fontSize, 
+        isBold: field.isBold,
+        source: field.source,
+        textAlign: field.textAlign
+      }))
     };
     
-    saveTemplateMutation.mutate(updatedTemplate);
+    console.log('Setting template as default:', templateToSave);
+    saveTemplateMutation.mutate(templateToSave);
   };
 
   const handlePreviewGenerate = () => {
