@@ -566,26 +566,38 @@ export function QuickActions() {
                         {vehicles && vehicles.length > 0 ? (
                           <>
                             <div className="relative">
+                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                               <Input
                                 placeholder="Search by license plate, brand or model"
                                 value={damageFormSearchQuery}
                                 onChange={(e) => setDamageFormSearchQuery(e.target.value.toLowerCase())}
-                                className="mb-2"
+                                className="mb-2 pl-8"
                               />
-                              <div className="absolute right-2 top-2 opacity-50">
-                                <Search className="h-4 w-4" />
-                              </div>
+                              {damageFormSearchQuery && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="absolute right-0 top-0 h-full px-3" 
+                                  onClick={() => setDamageFormSearchQuery("")}
+                                >
+                                  ✕
+                                </Button>
+                              )}
                             </div>
                             
                             <div className="border rounded-md h-[140px] overflow-y-auto p-1 mb-2">
                               {(() => {
-                                // Filter vehicles based on search query
+                                // Filter vehicles based on search query with improved license plate handling
                                 const filteredVehicles = damageFormSearchQuery 
-                                  ? vehicles.filter(v => 
-                                      v.licensePlate.toLowerCase().includes(damageFormSearchQuery) || 
-                                      (v.brand?.toLowerCase() || '').includes(damageFormSearchQuery) || 
-                                      (v.model?.toLowerCase() || '').includes(damageFormSearchQuery)
-                                    )
+                                  ? vehicles.filter(v => {
+                                      // Format license plates with and without dashes for flexible searching
+                                      const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
+                                      const formattedQuery = damageFormSearchQuery.replace(/-/g, '').toLowerCase();
+                                      
+                                      return formattedLicensePlate.includes(formattedQuery) || 
+                                        (v.brand?.toLowerCase() || '').includes(damageFormSearchQuery) || 
+                                        (v.model?.toLowerCase() || '').includes(damageFormSearchQuery);
+                                    })
                                   : vehicles;
                                 
                                 // Group vehicles by type
@@ -844,13 +856,17 @@ export function QuickActions() {
                               
                               <div className="border rounded-md h-[150px] overflow-y-auto p-1 mb-2">
                                 {(() => {
-                                  // Filter vehicles based on search query
+                                  // Filter vehicles based on search query with improved license plate handling
                                   const filteredVehicles = searchQuery 
-                                    ? vehicles.filter(v => 
-                                        v.licensePlate.toLowerCase().includes(searchQuery) || 
-                                        (v.brand?.toLowerCase() || '').includes(searchQuery) || 
-                                        (v.model?.toLowerCase() || '').includes(searchQuery)
-                                      )
+                                    ? vehicles.filter(v => {
+                                        // Format license plates with and without dashes for flexible searching
+                                        const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
+                                        const formattedQuery = searchQuery.replace(/-/g, '').toLowerCase();
+                                        
+                                        return formattedLicensePlate.includes(formattedQuery) || 
+                                          (v.brand?.toLowerCase() || '').includes(searchQuery) || 
+                                          (v.model?.toLowerCase() || '').includes(searchQuery);
+                                      })
                                     : vehicles;
                                   
                                   // Group vehicles by registration status and then by brand
