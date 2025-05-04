@@ -1,13 +1,98 @@
 /**
  * PDF generation utility to create rental contracts
- * Using the ELENA AVL ALL contract template
+ * Using the ELENA AVL ALL contract template or custom templates
  */
 
-import { Reservation } from "@shared/schema";
+import { Reservation, PdfTemplate } from "@shared/schema";
 import { format } from "date-fns";
 import * as fs from 'fs';
 import * as path from 'path';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, TextAlignment } from 'pdf-lib';
+
+/**
+ * Generates a rental contract PDF using a custom template
+ * @param reservation Reservation data
+ * @param template Optional PDF template. If not provided, the default template will be used.
+ */
+export async function generateRentalContractFromTemplate(reservation: Reservation, template?: PdfTemplate): Promise<Buffer> {
+  try {
+    // Extract data for the contract
+    const contractData = prepareContractData(reservation);
+    
+    // Create a new PDF document with A4 size (595 x 842 points)
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]);
+    
+    // Get fonts
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Default text color
+    const textColor = rgb(0, 0, 0);
+    
+    // If template is provided, process template fields
+    if (template && template.fields) {
+      // Parse fields if they're stored as a string
+      const fields = typeof template.fields === 'string' 
+        ? JSON.parse(template.fields) 
+        : template.fields;
+      
+      // Draw each field
+      for (const field of fields) {
+        // Get the field value from the contract data based on the source
+        let value = '';
+        if (field.source === 'customerName') value = contractData.customerName;
+        else if (field.source === 'customerAddress') value = contractData.customerAddress;
+        else if (field.source === 'customerCity') value = contractData.customerCity;
+        else if (field.source === 'customerPostalCode') value = contractData.customerPostalCode;
+        else if (field.source === 'customerPhone') value = contractData.customerPhone;
+        else if (field.source === 'driverLicense') value = contractData.driverLicense;
+        else if (field.source === 'contractNumber') value = contractData.contractNumber;
+        else if (field.source === 'contractDate') value = contractData.contractDate;
+        else if (field.source === 'licensePlate') value = contractData.licensePlate;
+        else if (field.source === 'brand') value = contractData.brand;
+        else if (field.source === 'model') value = contractData.model;
+        else if (field.source === 'chassisNumber') value = contractData.chassisNumber;
+        else if (field.source === 'startDate') value = contractData.startDate;
+        else if (field.source === 'endDate') value = contractData.endDate;
+        else if (field.source === 'duration') value = contractData.duration;
+        else if (field.source === 'totalPrice') value = contractData.totalPrice;
+        
+        // Determine text alignment
+        let textAlignment: TextAlignment = TextAlignment.Left;
+        if (field.textAlign === 'center') textAlignment = TextAlignment.Center;
+        else if (field.textAlign === 'right') textAlignment = TextAlignment.Right;
+        
+        // Draw the text field with proper alignment
+        const options: any = {
+          x: field.x,
+          y: 842 - field.y, // Flip Y-coordinate (PDF origin is bottom-left)
+          size: field.fontSize || 12,
+          font: field.isBold ? helveticaBold : helveticaFont,
+          color: textColor
+        };
+        
+        // Add alignment property only if it's not left (default)
+        if (textAlignment !== TextAlignment.Left) {
+          options.textAlign = textAlignment;
+        }
+        
+        page.drawText(value, options);
+      }
+    }
+    
+    // Save the PDF
+    const pdfBytes = await pdfDoc.save();
+    
+    // Return the PDF as a buffer
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    console.error('Error generating PDF contract from template:', error);
+    // If there's an error, return a simple text-based contract as a fallback
+    const contractData = prepareContractData(reservation);
+    return generateFallbackContract(contractData);
+  }
+}
 
 /**
  * Generates a rental contract PDF based on the ELENA AVL ALL contract template

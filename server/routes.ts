@@ -1893,9 +1893,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+      
+      // Load related vehicle and customer details
+      if (reservation.vehicleId) {
+        reservation.vehicle = await storage.getVehicle(reservation.vehicleId);
+      }
+      
+      if (reservation.customerId) {
+        reservation.customer = await storage.getCustomer(reservation.customerId);
+      }
 
-      // Generate PDF contract
-      const pdfBuffer = await generateRentalContract(reservation);
+      // Check if a specific template was requested
+      let pdfBuffer: Buffer;
+      const templateId = req.query.templateId ? parseInt(req.query.templateId as string) : undefined;
+      
+      if (templateId) {
+        // Get the requested template
+        const template = await storage.getPdfTemplate(templateId);
+        if (!template) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+        
+        // Generate PDF using the template
+        pdfBuffer = await generateRentalContractFromTemplate(reservation, template);
+      } else {
+        // Try to get the default template
+        const defaultTemplate = await storage.getDefaultPdfTemplate();
+        
+        if (defaultTemplate) {
+          // Generate PDF using the default template
+          pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
+        } else {
+          // Fall back to the old fixed template format
+          pdfBuffer = await generateRentalContract(reservation);
+        }
+      }
       
       // Set headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
