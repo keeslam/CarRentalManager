@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Vehicle, Reservation } from "@shared/schema";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
-import { formatDate } from "@/lib/format-utils";
+import { formatDate, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -255,12 +255,11 @@ export function VehicleReservationsStatusDialog({
                                 <span className={`
                                   inline-block rounded-full px-2 py-1 text-xs
                                   ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
-                                  ${reservation.status === 'ongoing' ? 'bg-amber-100 text-amber-800' : ''}
-                                  ${reservation.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                                  ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
                                   ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                  ${reservation.status === 'pending' ? 'bg-gray-100 text-gray-800' : ''}
+                                  ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800' : ''}
                                 `}>
-                                  {reservation.status?.charAt(0).toUpperCase() + reservation.status?.slice(1) || 'Unknown'}
+                                  {formatReservationStatus(reservation.status || '')}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-center">
