@@ -29,6 +29,7 @@ interface TemplateField {
   fontSize: number;
   isBold: boolean;
   source: string; // The data source field
+  textAlign: 'left' | 'center' | 'right';
 }
 
 interface Template {
@@ -238,7 +239,8 @@ const PDFTemplateEditor = () => {
       y,
       fontSize: 12,
       isBold: false,
-      source: newFieldSource
+      source: newFieldSource,
+      textAlign: 'left'
     };
 
     const updatedTemplate = {
@@ -318,6 +320,20 @@ const PDFTemplateEditor = () => {
       fields: updatedFields
     });
     setSelectedField({ ...selectedField, isBold });
+  };
+  
+  const handleTextAlignChange = (textAlign: 'left' | 'center' | 'right') => {
+    if (!selectedField || !currentTemplate) return;
+
+    const updatedFields = currentTemplate.fields.map(f => 
+      f.id === selectedField.id ? { ...f, textAlign } : f
+    );
+
+    setCurrentTemplate({
+      ...currentTemplate,
+      fields: updatedFields
+    });
+    setSelectedField({ ...selectedField, textAlign });
   };
 
   const handleDeleteField = () => {
@@ -1063,6 +1079,35 @@ const PDFTemplateEditor = () => {
                               id="bold-text"
                             />
                             <Label htmlFor="bold-text">Bold Text</Label>
+                          </div>
+                          <div>
+                            <Label>Text Alignment</Label>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Button
+                                variant={selectedField.textAlign === 'left' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleTextAlignChange('left')}
+                                title="Align Left"
+                              >
+                                <AlignLeft className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant={selectedField.textAlign === 'center' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleTextAlignChange('center')}
+                                title="Align Center"
+                              >
+                                <AlignCenter className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant={selectedField.textAlign === 'right' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleTextAlignChange('right')}
+                                title="Align Right"
+                              >
+                                <AlignRight className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                           <Button 
                             variant="destructive" 
