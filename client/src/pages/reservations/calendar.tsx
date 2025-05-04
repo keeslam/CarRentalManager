@@ -409,20 +409,23 @@ export default function ReservationCalendarPage() {
                             const isReturnDay = isSameDay(day, parseISO(res.endDate));
                             
                             return (
-                              <Link key={res.id} href={`/reservations/${res.id}`}>
-                                <div 
-                                  className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
-                                  title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'} (${isPickupDay ? 'Pickup' : isReturnDay ? 'Return' : 'Reserved'})`}
-                                >
-                                  {displayLicensePlate(res.vehicle?.licensePlate || '')}
-                                  {isPickupDay && 
-                                    <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
-                                  }
-                                  {isReturnDay && 
-                                    <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
-                                  }
-                                </div>
-                              </Link>
+                              <div 
+                                key={res.id}
+                                className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                                title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'} (${isPickupDay ? 'Pickup' : isReturnDay ? 'Return' : 'Reserved'})`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/reservations/${res.id}`;
+                                }}
+                              >
+                                {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                {isPickupDay && 
+                                  <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                }
+                                {isReturnDay && 
+                                  <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                }
+                              </div>
                             );
                           })}
                           
