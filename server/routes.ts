@@ -1088,6 +1088,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status value" });
       }
       
+      // Get the current reservation to check for vehicle info
+      const existingReservation = await storage.getReservation(id);
+      
+      if (!existingReservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      // If status is "completed", check mileage validation
+      if (status === "completed" && existingReservation.vehicleId && req.body.departureMileage) {
+        const vehicle = await storage.getVehicle(existingReservation.vehicleId);
+        
+        if (vehicle && vehicle.departureMileage) {
+          const returnMileage = parseInt(req.body.departureMileage);
+          
+          // Validate that return mileage is not less than departure mileage
+          if (returnMileage < vehicle.departureMileage) {
+            return res.status(400).json({ 
+              message: "Return mileage cannot be less than start mileage",
+              details: {
+                startMileage: vehicle.departureMileage,
+                returnMileage: returnMileage
+              }
+            });
+          }
+        }
+      }
+      
       // Add user tracking information for updates
       const user = req.user;
       const dataWithTracking = {

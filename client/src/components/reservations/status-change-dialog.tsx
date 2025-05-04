@@ -35,7 +35,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
-const statusChangeSchema = z.object({
+// Create the base schema first
+const baseStatusChangeSchema = z.object({
   status: z.string().min(1, { message: "Status is required" }),
   startMileage: z.union([
     z.number().min(1, "Please enter a valid mileage"),
@@ -46,6 +47,21 @@ const statusChangeSchema = z.object({
     z.string().transform(val => parseInt(val) || undefined),
   ]).optional(),
 });
+
+// Then refine it with a custom validator for comparing mileage values
+const statusChangeSchema = baseStatusChangeSchema.refine(
+  (data) => {
+    // Only validate when we have both values and status is "completed"
+    if (data.status === "completed" && data.startMileage && data.departureMileage) {
+      return data.departureMileage >= data.startMileage;
+    }
+    return true; // Skip validation if not relevant
+  },
+  {
+    message: "Return mileage must be greater than or equal to the start mileage",
+    path: ["departureMileage"], // This will show the error under the departureMileage field
+  }
+);
 
 type StatusChangeFormType = z.infer<typeof statusChangeSchema>;
 
