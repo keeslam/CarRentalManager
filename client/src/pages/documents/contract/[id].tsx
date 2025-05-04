@@ -1,48 +1,77 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText, Download, ArrowLeft } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+
+// Type for contract data returned from API
+interface ContractData {
+  contractNumber: string;
+  contractDate: string;
+  licensePlate: string;
+  brand: string;
+  model: string;
+  chassisNumber: string;
+  customerName: string;
+  customerAddress: string;
+  customerCity: string;
+  customerPostalCode: string;
+  customerPhone: string;
+  driverLicense: string;
+  startDate: string;
+  endDate: string;
+  duration: string;
+  totalPrice: string;
+}
 
 export default function ContractViewer() {
   const [, setLocation] = useLocation();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [contractData, setContractData] = useState<ContractData | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // Load the contract PDF when the component mounts
+  // Load the contract data when the component mounts
   useEffect(() => {
     if (!id) return;
 
-    const fetchContract = async () => {
+    const fetchContractData = async () => {
       setLoading(true);
       try {
-        // Create a direct URL to the API endpoint for PDF generation
-        const response = await fetch(`/api/contracts/generate/${id}`, {
+        // Fetch contract data as JSON
+        const response = await fetch(`/api/contracts/data/${id}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch contract data: ${response.statusText}`);
+        }
+
+        // Parse contract data
+        const data = await response.json();
+        setContractData(data);
+
+        // Also fetch the PDF version for download
+        const pdfResponse = await fetch(`/api/contracts/generate/${id}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/pdf',
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch contract: ${response.statusText}`);
+        if (pdfResponse.ok) {
+          const blob = await pdfResponse.blob();
+          const url = URL.createObjectURL(blob);
+          setPdfUrl(url);
         }
-
-        // Get the PDF as a blob
-        const blob = await response.blob();
-        
-        // Create a URL for the blob
-        const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
       } catch (error) {
         console.error('Error fetching contract:', error);
         toast({
@@ -55,7 +84,7 @@ export default function ContractViewer() {
       }
     };
 
-    fetchContract();
+    fetchContractData();
 
     // Clean up the object URL when the component unmounts
     return () => {
@@ -75,10 +104,7 @@ export default function ContractViewer() {
             variant="outline"
             className="flex items-center"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="m12 19-7-7 7-7"/>
-              <path d="M19 12H5"/>
-            </svg>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Reservations
           </Button>
         </div>
@@ -97,41 +123,159 @@ export default function ContractViewer() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2">Loading contract...</span>
             </div>
-          ) : pdfUrl ? (
-            <div className="w-full flex flex-col items-center justify-center py-10">
-              <p className="mb-6 text-center text-gray-600">
-                Contract successfully loaded but cannot be displayed inline due to browser security restrictions.
-              </p>
-              <div className="flex space-x-4">
-                <Button 
-                  onClick={() => window.open(pdfUrl, '_blank')}
-                  className="flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
-                  View Contract
-                </Button>
-                <Button 
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = pdfUrl;
-                    link.download = `rental_contract_${id}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  variant="outline"
-                  className="flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Download Contract
-                </Button>
+          ) : contractData ? (
+            <div className="max-w-3xl mx-auto">
+              {/* Company header */}
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl font-bold mb-2">Auto Lease LAM</h2>
+                <p className="text-gray-600">Kerkweg 47a</p>
+                <p className="text-gray-600">3214 VC Zuidland</p>
+                <p className="text-gray-600">Tel. 0181-451040</p>
+                <p className="text-gray-600">Fax 0181-453386</p>
+                <p className="text-gray-600">info@autobedrijflam.nl</p>
+                
+                <div className="mt-4 text-sm text-gray-500">
+                  <p>- ABN AMRO 428621783</p>
+                  <p>- RABOBANK 375915605</p>
+                  <p>- Ook mogelijk met Creditcard, VISA of MASTERCARD te betalen</p>
+                </div>
+              </div>
+              
+              <div className="text-center mb-8">
+                <h2 className="text-xl font-bold uppercase border-2 border-gray-300 py-2 px-4 inline-block">
+                  Rental Contract
+                </h2>
+              </div>
+              
+              <div className="mb-8 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Contract Number:</p>
+                  <p className="text-lg">{contractData.contractNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Date:</p>
+                  <p className="text-lg">{contractData.contractDate}</p>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Vehicle information */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">VEHICLE INFORMATION</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">License Plate:</p>
+                    <p>{contractData.licensePlate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Brand:</p>
+                    <p>{contractData.brand}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Model:</p>
+                    <p>{contractData.model}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Chassis Number:</p>
+                    <p>{contractData.chassisNumber}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Customer information */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">CUSTOMER INFORMATION</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Name:</p>
+                    <p>{contractData.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Phone:</p>
+                    <p>{contractData.customerPhone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Address:</p>
+                    <p>{contractData.customerAddress}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">City/Postal Code:</p>
+                    <p>{contractData.customerCity} {contractData.customerPostalCode}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Driver License:</p>
+                    <p>{contractData.driverLicense}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Rental period */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">RENTAL PERIOD</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Start Date:</p>
+                    <p>{contractData.startDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">End Date:</p>
+                    <p>{contractData.endDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Duration:</p>
+                    <p>{contractData.duration}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Pricing */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">RENTAL PRICE</h3>
+                <div className="bg-gray-50 p-4 rounded">
+                  <p className="text-xl font-semibold">Total Price: {contractData.totalPrice}</p>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Terms and conditions */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">TERMS AND CONDITIONS</h3>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700">
+                  <li>The vehicle must be returned in the same condition as at the start of the rental period.</li>
+                  <li>The renter is responsible for any damage to the vehicle during the rental period.</li>
+                  <li>The vehicle must not be used for illegal purposes.</li>
+                  <li>The vehicle must not be driven outside of the Netherlands without prior permission.</li>
+                  <li>The vehicle must be returned with the same amount of fuel as at the start of the rental period.</li>
+                </ol>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              {/* Signatures */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">SIGNATURES</h3>
+                <div className="grid grid-cols-2 gap-8 mt-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-6">Auto Lease LAM:</p>
+                    <div className="border-b border-gray-300 h-8"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-6">Customer:</p>
+                    <div className="border-b border-gray-300 h-8"></div>
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <p className="text-sm font-medium text-gray-500">Date:</p>
+                  <p>{contractData.contractDate}</p>
+                </div>
               </div>
             </div>
           ) : (
@@ -149,6 +293,33 @@ export default function ContractViewer() {
             </div>
           )}
         </CardContent>
+        {contractData && pdfUrl && (
+          <CardFooter className="flex justify-center gap-4 pt-4">
+            <Button 
+              onClick={() => window.open(pdfUrl, '_blank')}
+              variant="outline"
+              className="flex items-center"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              View PDF Version
+            </Button>
+            <Button 
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `rental_contract_${id}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              variant="outline"
+              className="flex items-center"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

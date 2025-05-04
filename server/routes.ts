@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
-import { generateRentalContract } from "./utils/pdf-generator";
+import { generateRentalContract, prepareContractData } from "./utils/pdf-generator";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
@@ -1907,6 +1907,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating contract:", error);
       res.status(500).json({ 
         message: "Failed to generate contract", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Get contract data as JSON (for display in browser)
+  app.get("/api/contracts/data/:reservationId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      // Load the related vehicle and customer details
+      if (reservation.vehicleId) {
+        reservation.vehicle = await storage.getVehicle(reservation.vehicleId);
+      }
+      
+      if (reservation.customerId) {
+        reservation.customer = await storage.getCustomer(reservation.customerId);
+      }
+
+      // Use the same data preparation as the PDF generator
+      const contractData = prepareContractData(reservation);
+      
+      // Return the contract data as JSON
+      res.json(contractData);
+    } catch (error) {
+      console.error("Error generating contract data:", error);
+      res.status(500).json({ 
+        message: "Failed to generate contract data", 
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }

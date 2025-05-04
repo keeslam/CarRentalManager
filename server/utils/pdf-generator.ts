@@ -82,7 +82,7 @@ Date: ${contractData.contractDate}
 /**
  * Prepare contract data from reservation
  */
-function prepareContractData(reservation: Reservation) {
+export function prepareContractData(reservation: Reservation) {
   const vehicle = reservation.vehicle || {
     licensePlate: "Unknown",
     brand: "Unknown",
