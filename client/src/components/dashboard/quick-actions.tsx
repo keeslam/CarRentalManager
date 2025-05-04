@@ -608,11 +608,30 @@ export function QuickActions() {
       />
       
       {/* Document Upload Component - Only render if a vehicle is selected */}
-      {selectedUploadVehicle && (
-        <InlineDocumentUpload
-          vehicleId={selectedUploadVehicle.id}
-          onSuccess={handleDocumentUploadSuccess}
-        />
+      {selectedUploadVehicle && documentUploadDialogOpen && (
+        <Dialog open={documentUploadDialogOpen} onOpenChange={(open) => {
+          setDocumentUploadDialogOpen(open);
+          if (!open) {
+            setSelectedUploadVehicle(null);
+          }
+        }}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Upload Document</DialogTitle>
+              <DialogDescription>
+                Upload document for {selectedUploadVehicle.brand} {selectedUploadVehicle.model} ({displayLicensePlate(selectedUploadVehicle.licensePlate)})
+              </DialogDescription>
+            </DialogHeader>
+            <InlineDocumentUpload
+              vehicleId={selectedUploadVehicle.id}
+              onSuccess={handleDocumentUploadSuccess}
+            >
+              <div className="w-full h-full">
+                {/* This is just a placeholder - the actual upload form is provided by InlineDocumentUpload */}
+              </div>
+            </InlineDocumentUpload>
+          </DialogContent>
+        </Dialog>
       )}
       
       <Card className="mb-6">
@@ -706,16 +725,18 @@ export function QuickActions() {
                         </DialogClose>
                       </div>
                       
-                      <Button 
-                        type="button"
-                        disabled={!selectedUploadVehicle}
-                        onClick={() => {
-                          // This will close the dialog and show the InlineDocumentUpload component
-                          setDocumentUploadDialogOpen(true);
-                        }}
-                      >
-                        Continue to Upload
-                      </Button>
+                      <DialogClose asChild>
+                        <Button 
+                          type="button"
+                          disabled={!selectedUploadVehicle}
+                          onClick={() => {
+                            // This will close the first dialog and show the InlineDocumentUpload component
+                            setTimeout(() => setDocumentUploadDialogOpen(true), 100);
+                          }}
+                        >
+                          Continue to Upload
+                        </Button>
+                      </DialogClose>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
