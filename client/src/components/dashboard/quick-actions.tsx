@@ -717,7 +717,7 @@ export function QuickActions() {
                       {action.label}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Upload Document</DialogTitle>
                       <DialogDescription>
@@ -890,7 +890,7 @@ export function QuickActions() {
                       {action.label}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Upload Damage Report</DialogTitle>
                       <DialogDescription>
@@ -1074,7 +1074,7 @@ export function QuickActions() {
                       {action.label}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Change Vehicle Registration</DialogTitle>
                       <DialogDescription>
