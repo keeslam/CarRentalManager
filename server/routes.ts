@@ -1925,14 +1925,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else {
           // Try to get the default template first
+          console.log("Attempting to get default template");
           const defaultTemplate = await storage.getDefaultPdfTemplate();
           
           if (defaultTemplate) {
-            console.log(`Using default template: ${defaultTemplate.name}`);
+            console.log(`Using default template: ${defaultTemplate.name} with ID: ${defaultTemplate.id}`);
+            console.log(`Template has ${defaultTemplate.fields ? (typeof defaultTemplate.fields === 'string' ? JSON.parse(defaultTemplate.fields).length : defaultTemplate.fields.length) : 0} fields`);
+            
             const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
             pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
           } else {
-            console.log("No default template found, using standard template");
+            // No default template found
+            console.log("No default template found in database, using standard template");
+            
+            // Check all templates for debugging
+            const allTemplates = await storage.getAllPdfTemplates();
+            console.log(`Found ${allTemplates.length} total templates:`);
+            for (const template of allTemplates) {
+              console.log(`  - Template ID ${template.id}: "${template.name}" (isDefault: ${template.isDefault})`);
+            }
+            
             pdfBuffer = await generateRentalContract(reservation);
           }
         }

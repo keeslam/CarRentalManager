@@ -110,6 +110,8 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
               // Handle nested properties like "customer.name" or "vehicle.brand"
               const [objectName, propertyName] = source.split('.');
               
+              console.log(`Processing field with source "${source}" - object: ${objectName}, property: ${propertyName}`);
+              
               if (objectName === 'customer') {
                 if (propertyName === 'name') value = contractData.customerName;
                 else if (propertyName === 'address') value = contractData.customerAddress;
@@ -127,6 +129,18 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
                 else if (propertyName === 'endDate') value = contractData.endDate;
                 else if (propertyName === 'duration') value = contractData.duration;
                 else if (propertyName === 'totalPrice') value = contractData.totalPrice;
+              }
+              
+              // If value is still empty, check direct properties as a fallback
+              if (!value) {
+                console.log(`  Field value not found in nested objects, trying direct properties...`);
+                if (contractData[source] !== undefined) {
+                  value = contractData[source];
+                  console.log(`  Found direct property ${source} = ${value}`);
+                } else if (contractData[propertyName] !== undefined) {
+                  value = contractData[propertyName];
+                  console.log(`  Found direct property ${propertyName} = ${value}`);
+                }
               }
             } else {
               // Handle direct properties (backward compatibility)
@@ -169,17 +183,46 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           else if (field.textAlign === 'right') textAlignment = TextAlignment.Right;
           
           // Draw the text field with proper alignment
-          // Convert string coordinates to numbers and handle defaults properly
-          const x = typeof field.x === 'string' ? parseFloat(field.x) : (field.x || 0);
-          const y = typeof field.y === 'string' ? parseFloat(field.y) : (field.y || 0);
-          const fontSize = typeof field.fontSize === 'string' ? parseFloat(field.fontSize) : (field.fontSize || 12);
+          // Ensure we're using exact coordinates as provided in the template editor
+          // This is crucial as coordinates might be stored in different formats
           
-          console.log(`Position data - x: ${field.x} (${typeof field.x}), y: ${field.y} (${typeof field.y}), parsed to: ${x}, ${y}`);
+          // Parse numerical values strictly to ensure we get the exact positions
+          let x = 0;
+          let y = 0;
+          let fontSize = 12;
           
-          // Use the values as they are positioned in the template editor
+          // Handle string or number coordinates
+          if (typeof field.x === 'string') {
+            x = parseFloat(field.x);
+          } else if (typeof field.x === 'number') {
+            x = field.x;
+          }
+          
+          if (typeof field.y === 'string') {
+            y = parseFloat(field.y);
+          } else if (typeof field.y === 'number') {
+            y = field.y;
+          }
+          
+          if (typeof field.fontSize === 'string') {
+            fontSize = parseFloat(field.fontSize);
+          } else if (typeof field.fontSize === 'number') {
+            fontSize = field.fontSize;
+          }
+          
+          // If we somehow get NaN values, use safe defaults
+          if (isNaN(x)) x = 0;
+          if (isNaN(y)) y = 0;
+          if (isNaN(fontSize) || fontSize <= 0) fontSize = 12;
+          
+          console.log(`Field: ${field.name || field.source} - Original positions: X=${field.x} (${typeof field.x}), Y=${field.y} (${typeof field.y})`);
+          console.log(`Parsed to X=${x}, Y=${y}, fontSize=${fontSize}`);
+          
+          // Use exact coordinates from the template editor 
+          // The key is to use the coordinates exactly as provided without any automatic adjustments
           const options: any = {
             x: x,
-            y: 842 - y, // Flip Y-coordinate (PDF origin is bottom-left, editor is top-left)
+            y: 842 - y, // Convert from top-left (0,0) to PDF coordinates (bottom-left origin)
             size: fontSize,
             font: field.isBold ? helveticaBold : helveticaFont,
             color: previewMode ? rgb(0, 0.4, 0.8) : textColor // Use blue color for preview mode to make fields stand out
