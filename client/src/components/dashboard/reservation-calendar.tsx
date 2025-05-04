@@ -311,7 +311,7 @@ export function ReservationCalendar() {
                                       }`}
                                       variant="outline"
                                     >
-                                      {res.status || 'Unknown'}
+                                      {formatReservationStatus(res.status)}
                                     </Badge>
                                   </div>
                                   

@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
-import { formatDate, formatCurrency, formatPhoneNumber } from "@/lib/format-utils";
+import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { Customer, Reservation } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -69,7 +69,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
       toast({
         title: "Reservation deleted",
         description: "The reservation has been successfully deleted.",
-        variant: "success"
+        variant: "default"
       });
     },
     onError: (error: Error) => {
@@ -517,14 +517,14 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
 function StatusBadge({ status }: { status: string }) {
   switch (status.toLowerCase()) {
     case "confirmed":
-      return <Badge className="bg-success-50 text-success-600 hover:bg-success-100">{status}</Badge>;
+      return <Badge className="bg-success-50 text-success-600 hover:bg-success-100">{formatReservationStatus(status)}</Badge>;
     case "pending":
-      return <Badge className="bg-warning-50 text-warning-600 hover:bg-warning-100">{status}</Badge>;
+      return <Badge className="bg-warning-50 text-warning-600 hover:bg-warning-100">{formatReservationStatus(status)}</Badge>;
     case "cancelled":
-      return <Badge className="bg-danger-50 text-danger-600 hover:bg-danger-100">{status}</Badge>;
+      return <Badge className="bg-danger-50 text-danger-600 hover:bg-danger-100">{formatReservationStatus(status)}</Badge>;
     case "completed":
-      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-200">{status}</Badge>;
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">{formatReservationStatus(status)}</Badge>;
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return <Badge variant="outline">{formatReservationStatus(status)}</Badge>;
   }
 }
