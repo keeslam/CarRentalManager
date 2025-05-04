@@ -351,8 +351,13 @@ export default function ReservationCalendarPage() {
                     const isToday = isSameDay(day, new Date());
                     
                     // Only get reservations starting or ending on this day
+                    // Filter reservations based on selected vehicles
                     const dayReservations = reservations?.filter(res => 
-                      isSameDay(day, parseISO(res.startDate)) || isSameDay(day, parseISO(res.endDate))
+                      // First filter by date (pickup or return day)
+                      (isSameDay(day, parseISO(res.startDate)) || isSameDay(day, parseISO(res.endDate))) &&
+                      // Then check if the vehicle is in the filtered vehicles list
+                      (vehicleFilters.search === "" && vehicleFilters.type === "all" && vehicleFilters.availability === "all" || 
+                       filteredVehicles.some(v => v.id === res.vehicleId))
                     ) || [];
                     
                     return (
