@@ -125,32 +125,32 @@ export function VehicleSelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[320px] md:w-[750px] max-h-[500px] overflow-auto p-0"
+          className="w-[320px] md:w-[750px] max-h-[265px] overflow-auto p-0"
           align="start"
           side="bottom"
           sideOffset={4}
           avoidCollisions={false}
           sticky="always"
         >
-          <div className="p-4">
-            <div className="flex items-center px-1 mb-4">
+          <div className="p-3">
+            <div className="flex items-center px-1 mb-3">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <Input
                 placeholder="Search by license plate, brand, or model..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8"
+                className="h-7"
               />
             </div>
             
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full mb-4">
-                <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+              <TabsList className="w-full mb-2 h-8">
+                <TabsTrigger value="all" className="flex-1 text-xs h-7">All</TabsTrigger>
                 {recentVehicleIds.length > 0 && (
-                  <TabsTrigger value="recent" className="flex-1">Recent</TabsTrigger>
+                  <TabsTrigger value="recent" className="flex-1 text-xs h-7">Recent</TabsTrigger>
                 )}
                 {vehicleTypes.map(type => (
-                  <TabsTrigger key={type} value={type} className="flex-1">{type}</TabsTrigger>
+                  <TabsTrigger key={type} value={type} className="flex-1 text-xs h-7">{type}</TabsTrigger>
                 ))}
               </TabsList>
               
@@ -189,7 +189,7 @@ export function VehicleSelector({
           <div 
             key={vehicle.id}
             className={cn(
-              "p-3 rounded-md border cursor-pointer hover:bg-muted transition-colors",
+              "p-2 rounded-md border cursor-pointer hover:bg-muted transition-colors",
               value === vehicle.id.toString() ? "bg-primary/10 border-primary" : "border-border"
             )}
             onClick={() => {
@@ -199,36 +199,36 @@ export function VehicleSelector({
             }}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CarFront className="h-5 w-5 shrink-0 opacity-70" />
-                <div className="font-medium">
+              <div className="flex items-center gap-1.5">
+                <CarFront className="h-4 w-4 shrink-0 opacity-70" />
+                <div className="font-medium text-sm">
                   {vehicle.brand} {vehicle.model}
                 </div>
               </div>
               {value === vehicle.id.toString() && (
-                <Check className="h-4 w-4 text-primary" />
+                <Check className="h-3.5 w-3.5 text-primary" />
               )}
             </div>
-            <div className="mt-1 flex items-center justify-between">
-              <Badge variant="outline" className="mr-1">
+            <div className="mt-0.5 flex items-center justify-between">
+              <Badge variant="outline" className="mr-1 text-xs py-0 h-5">
                 {formatLicensePlate(vehicle.licensePlate)}
               </Badge>
               <Badge 
                 variant="secondary" 
-                className="text-xs"
+                className="text-xs py-0 h-5"
               >
                 {vehicle.vehicleType || "Unknown"}
               </Badge>
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">
+            <div className="mt-1 text-xs text-muted-foreground">
               {isTrueValue(vehicle.registeredTo)
-                ? <Badge variant="outline" className="bg-blue-50 text-blue-700 py-0.5 px-1.5">Opnaam</Badge>
+                ? <Badge variant="outline" className="bg-blue-50 text-blue-700 py-0 px-1 text-[10px] h-4">Opnaam</Badge>
                 : isTrueValue(vehicle.company)
-                  ? <Badge variant="outline" className="bg-green-50 text-green-700 py-0.5 px-1.5">BV</Badge>
+                  ? <Badge variant="outline" className="bg-green-50 text-green-700 py-0 px-1 text-[10px] h-4">BV</Badge>
                   : null
               }
               {vehicle.gps && (
-                <Badge variant="outline" className="ml-1 py-0.5 px-1.5">GPS</Badge>
+                <Badge variant="outline" className="ml-1 py-0 px-1 text-[10px] h-4">GPS</Badge>
               )}
             </div>
           </div>
