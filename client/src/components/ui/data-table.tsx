@@ -47,34 +47,28 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = useState("");
   
   // Custom filter function to handle license plates with and without dashes
-  const defaultGlobalFilterFn = (row: any, id: string, filterValue: string) => {
-    const value = row.getValue(id) as any;
-    
-    // Skip filtering for empty values or column ids not in searchColumns
-    if (!value || (searchColumns && !searchColumns.includes(id))) return false;
-    
-    // If value is an object (like vehicle), try to access its properties based on column id
-    if (typeof value === 'object' && value !== null) {
-      if (id === 'vehicle' && value.licensePlate) {
-        // Special handling for license plates: normalize by removing dashes
-        const searchNoFormat = filterValue.toLowerCase().replace(/-/g, '');
-        const licenseNoFormat = value.licensePlate.toLowerCase().replace(/-/g, '');
-        
-        // Check if license plate matches search (with or without dashes)
-        return licenseNoFormat.includes(searchNoFormat) || 
-               value.licensePlate.toLowerCase().includes(filterValue.toLowerCase());
-      }
+  const defaultGlobalFilterFn = (row: any, columnId: string, filterValue: string) => {
+    // Handle vehicle column and its license plate specially
+    if (columnId === 'vehicle') {
+      const vehicle = row.getValue(columnId);
+      if (!vehicle || typeof vehicle !== 'object' || !vehicle.licensePlate) return false;
       
-      // For other object types, stringify and search
-      return JSON.stringify(value)
-        .toLowerCase()
-        .includes(filterValue.toLowerCase());
+      // Search for license plate with and without dashes
+      const searchNoFormat = filterValue.toLowerCase().replace(/-/g, '');
+      const licenseNoFormat = vehicle.licensePlate.toLowerCase().replace(/-/g, '');
+      
+      return licenseNoFormat.includes(searchNoFormat) || 
+             vehicle.licensePlate.toLowerCase().includes(filterValue.toLowerCase());
     }
     
-    // For strings, perform case-insensitive search
-    return String(value)
-      .toLowerCase()
-      .includes(filterValue.toLowerCase());
+    // For other columns use standard case-insensitive search
+    const value = row.getValue(columnId);
+    
+    // Skip undefined or null values
+    if (value === undefined || value === null) return false;
+    
+    // Convert to string and do case-insensitive contains check
+    return String(value).toLowerCase().includes(filterValue.toLowerCase());
   };
   
   const table = useReactTable({
