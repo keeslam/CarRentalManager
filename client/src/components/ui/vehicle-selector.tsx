@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, Search, CarFront } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isTrueValue } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -63,14 +63,20 @@ export function VehicleSelector({
     if (!vehicles) return [];
     if (!searchQuery) return vehicles;
     
-    const query = searchQuery.toLowerCase();
-    return vehicles.filter(
-      (vehicle) =>
-        vehicle.brand?.toLowerCase().includes(query) ||
+    const query = searchQuery.toLowerCase().trim();
+    const queryWithoutDashes = query.replace(/-/g, '');
+    
+    return vehicles.filter((vehicle) => {
+      // For license plate, handle searching with or without dashes
+      const licensePlate = vehicle.licensePlate?.toLowerCase() || '';
+      const licensePlateWithoutDashes = licensePlate.replace(/-/g, '');
+      
+      return vehicle.brand?.toLowerCase().includes(query) ||
         vehicle.model?.toLowerCase().includes(query) ||
-        vehicle.licensePlate?.toLowerCase().includes(query) ||
-        vehicle.vehicleType?.toLowerCase().includes(query)
-    );
+        licensePlate.includes(query) ||
+        licensePlateWithoutDashes.includes(queryWithoutDashes) ||
+        vehicle.vehicleType?.toLowerCase().includes(query);
+    });
   }, [vehicles, searchQuery]);
 
   // Filter vehicles based on active tab
@@ -215,9 +221,9 @@ export function VehicleSelector({
               </Badge>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              {vehicle.registeredTo === "true" 
+              {isTrueValue(vehicle.registeredTo)
                 ? <Badge variant="outline" className="bg-blue-50 text-blue-700 py-0.5 px-1.5">Opnaam</Badge>
-                : vehicle.company === "true" 
+                : isTrueValue(vehicle.company)
                   ? <Badge variant="outline" className="bg-green-50 text-green-700 py-0.5 px-1.5">BV</Badge>
                   : null
               }
