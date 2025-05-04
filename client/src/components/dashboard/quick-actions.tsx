@@ -31,6 +31,7 @@ import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { VehicleReservationsStatusDialog } from "@/components/reservations/vehicle-reservations-status-dialog";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 
 interface ActionIconProps {
   name: string;
@@ -759,90 +760,14 @@ export function QuickActions() {
                         
                         {vehicles && vehicles.length > 0 ? (
                           <>
-                            <div className="relative">
-                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                placeholder="Search by license plate, brand or model"
-                                value={damageFormSearchQuery}
-                                onChange={(e) => setDamageFormSearchQuery(e.target.value.toLowerCase())}
-                                className="mb-2 pl-8"
-                              />
-                              {damageFormSearchQuery && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="absolute right-0 top-0 h-full px-3" 
-                                  onClick={() => setDamageFormSearchQuery("")}
-                                >
-                                  ✕
-                                </Button>
-                              )}
-                            </div>
-                            
-                            <div className="border rounded-md h-[140px] overflow-y-auto p-1 mb-2">
-                              {(() => {
-                                // Filter vehicles based on search query with improved license plate handling
-                                const filteredVehicles = damageFormSearchQuery 
-                                  ? vehicles.filter(v => {
-                                      // Format license plates with and without dashes for flexible searching
-                                      const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
-                                      const formattedQuery = damageFormSearchQuery.replace(/-/g, '').toLowerCase();
-                                      
-                                      return formattedLicensePlate.includes(formattedQuery) || 
-                                        (v.brand?.toLowerCase() || '').includes(damageFormSearchQuery) || 
-                                        (v.model?.toLowerCase() || '').includes(damageFormSearchQuery);
-                                    })
-                                  : vehicles;
-                                
-                                // Group vehicles by type
-                                const vehicleGroups: Record<string, Vehicle[]> = {};
-                                
-                                filteredVehicles.forEach(vehicle => {
-                                  const vehicleType = vehicle.vehicleType || 'Other';
-                                  if (!vehicleGroups[vehicleType]) vehicleGroups[vehicleType] = [];
-                                  vehicleGroups[vehicleType].push(vehicle);
-                                });
-                                
-                                return filteredVehicles.length === 0 ? (
-                                  <div className="p-2 text-center text-sm text-muted-foreground">
-                                    No vehicles match your search
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {Object.entries(vehicleGroups).map(([vehicleType, vehicles]) => (
-                                      <div key={vehicleType} className="space-y-1">
-                                        <div className="sticky top-0 z-10 bg-background px-2 py-1 text-xs font-semibold border-b">
-                                          {vehicleType}
-                                        </div>
-                                        <div>
-                                          {vehicles.map(vehicle => (
-                                            <div 
-                                              key={vehicle.id}
-                                              className={`px-2 py-1 rounded cursor-pointer flex items-center justify-between text-xs ${
-                                                selectedDamageVehicle?.id === vehicle.id 
-                                                  ? 'bg-primary-50 text-primary-700 font-medium' 
-                                                  : 'hover:bg-accent'
-                                              }`}
-                                              onClick={() => setSelectedDamageVehicle(vehicle)}
-                                            >
-                                              <div className="flex items-center gap-1">
-                                                <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
-                                                <span className="text-muted-foreground">
-                                                  {vehicle.brand} {vehicle.model}
-                                                </span>
-                                              </div>
-                                              {selectedDamageVehicle?.id === vehicle.id && (
-                                                <Check className="h-3 w-3 text-primary-600" />
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                );
-                              })()}
-                            </div>
+                            <VehicleSelector 
+                              vehicles={vehicles}
+                              value={selectedDamageVehicle ? selectedDamageVehicle.id.toString() : ""}
+                              onChange={(value) => {
+                                const vehicle = vehicles.find(v => v.id.toString() === value);
+                                setSelectedDamageVehicle(vehicle || null);
+                              }}
+                            />
                             
                             {selectedDamageVehicle && (
                               <div className="mt-2 p-3 bg-muted/30 border rounded-md">
