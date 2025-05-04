@@ -2094,9 +2094,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate PDF with the template
       const pdfBuffer = await generateRentalContractFromTemplate(dummyReservation, template);
       
-      // Set headers for PDF download
+      // Set headers for PDF display in browser (not forcing download)
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=template_preview_${id}.pdf`);
+      res.setHeader('Content-Disposition', `inline; filename=template_preview_${id}.pdf`);
       res.setHeader('Content-Length', pdfBuffer.length);
       
       // Send the PDF buffer

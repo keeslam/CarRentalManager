@@ -96,10 +96,12 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           // Get the field value from the contract data based on the source
           let value = '';
           
-          // Use field label as placeholder in preview mode
-          if (previewMode && field.label) {
-            value = field.label;
+          // Use field name or source as placeholder in preview mode
+          if (previewMode) {
+            // For preview mode, use the field name to clearly identify the field position
+            value = field.name || field.source || 'Field';
           } else {
+            // For normal contract generation, use actual data
             if (field.source === 'customerName') value = contractData.customerName;
             else if (field.source === 'customerAddress') value = contractData.customerAddress;
             else if (field.source === 'customerCity') value = contractData.customerCity;
@@ -116,7 +118,13 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
             else if (field.source === 'endDate') value = contractData.endDate;
             else if (field.source === 'duration') value = contractData.duration;
             else if (field.source === 'totalPrice') value = contractData.totalPrice;
-            else if (field.label) value = field.label; // Use label as fallback
+            else if (field.name) value = field.name; // Use name as fallback
+            else value = field.source || 'Field'; // Second fallback
+          }
+          
+          // Log in preview mode to help with debugging
+          if (previewMode) {
+            console.log(`Rendering preview field: ${value} at position (${field.x}, ${field.y})`);
           }
           
           // Ensure we have a value to display
@@ -135,8 +143,32 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
             y: 842 - (Number(field.y) || 0), // Flip Y-coordinate (PDF origin is bottom-left)
             size: Number(field.fontSize) || 12,
             font: field.isBold ? helveticaBold : helveticaFont,
-            color: textColor
+            color: previewMode ? rgb(0, 0.4, 0.8) : textColor // Use blue color for preview mode to make fields stand out
           };
+          
+          // For preview mode, add a visual indicator of field boundaries
+          if (previewMode) {
+            // Draw a light rectangle around the field to make it more visible
+            try {
+              // Calculate text width (approximate)
+              const textWidth = helveticaFont.widthOfTextAtSize(value, Number(field.fontSize) || 12);
+              const textHeight = (Number(field.fontSize) || 12) * 1.2;
+              
+              // Draw rectangle with slight padding
+              page.drawRectangle({
+                x: options.x - 2,
+                y: options.y - 2,
+                width: textWidth + 4,
+                height: textHeight,
+                borderColor: rgb(0.7, 0.7, 0.9),
+                borderWidth: 0.5,
+                color: rgb(0.95, 0.95, 1),
+                opacity: 0.3
+              });
+            } catch (error) {
+              console.error('Error drawing field highlight:', error);
+            }
+          }
           
           // Add alignment property as part of PDF.js options
           if (textAlignment === TextAlignment.Center) {
