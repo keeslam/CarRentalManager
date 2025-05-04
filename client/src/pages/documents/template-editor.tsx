@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
-import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal, ZoomIn, ZoomOut, MaximizeIcon, Grid, AlignCenterHorizontal, AlignCenter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 // Import contract background image
 import contractBackground from "../../assets/contract-background.jpg";
@@ -52,6 +52,8 @@ const PDFTemplateEditor = () => {
   const [previewReservationId, setPreviewReservationId] = useState<string>('');
   const [reservations, setReservations] = useState<any[]>([]);
   const [draggedField, setDraggedField] = useState<TemplateField | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [showGrid, setShowGrid] = useState<boolean>(false);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -346,6 +348,89 @@ const PDFTemplateEditor = () => {
       reservationId: previewReservationId, 
       templateId: currentTemplate.id 
     });
+  };
+  
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+  };
+  
+  const handleToggleGrid = () => {
+    setShowGrid(prev => !prev);
+  };
+  
+  const handleAutoAlign = () => {
+    if (!currentTemplate || !selectedField) return;
+    
+    // Find fields that are horizontally or vertically aligned 
+    // (within a small threshold) with the selected field
+    const threshold = 10; // pixels
+    const fields = currentTemplate.fields;
+    
+    // Find fields that are horizontally aligned (similar Y position)
+    const horizontallyAlignedFields = fields.filter(f => 
+      f.id !== selectedField.id && 
+      Math.abs(f.y - selectedField.y) < threshold
+    );
+    
+    // Find fields that are vertically aligned (similar X position)
+    const verticallyAlignedFields = fields.filter(f => 
+      f.id !== selectedField.id && 
+      Math.abs(f.x - selectedField.x) < threshold
+    );
+    
+    if (horizontallyAlignedFields.length > 0) {
+      // Align the selected field with the average Y position of horizontally aligned fields
+      const avgY = horizontallyAlignedFields.reduce((sum, f) => sum + f.y, 0) / horizontallyAlignedFields.length;
+      
+      const updatedFields = currentTemplate.fields.map(f => 
+        f.id === selectedField.id ? { ...f, y: avgY } : f
+      );
+      
+      setCurrentTemplate({
+        ...currentTemplate,
+        fields: updatedFields
+      });
+      
+      setSelectedField({ ...selectedField, y: avgY });
+      
+      toast({
+        title: "Auto-Aligned",
+        description: "Field aligned horizontally with similar fields",
+      });
+    } else if (verticallyAlignedFields.length > 0) {
+      // Align the selected field with the average X position of vertically aligned fields
+      const avgX = verticallyAlignedFields.reduce((sum, f) => sum + f.x, 0) / verticallyAlignedFields.length;
+      
+      const updatedFields = currentTemplate.fields.map(f => 
+        f.id === selectedField.id ? { ...f, x: avgX } : f
+      );
+      
+      setCurrentTemplate({
+        ...currentTemplate,
+        fields: updatedFields
+      });
+      
+      setSelectedField({ ...selectedField, x: avgX });
+      
+      toast({
+        title: "Auto-Aligned",
+        description: "Field aligned vertically with similar fields",
+      });
+    } else {
+      toast({
+        title: "Auto-Align",
+        description: "No fields found for auto-alignment",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isTemplateLoading) {
