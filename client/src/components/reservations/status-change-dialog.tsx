@@ -118,23 +118,35 @@ export function StatusChangeDialog({
         }
         
         // Then update the vehicle mileage based on status
-        const vehicleData: any = { id: vehicle.id };
+        const vehicleData: any = {};
+        
+        // We need to have at least one mileage field to update
+        let hasMileageUpdate = false;
         
         if (data.status === "confirmed" && data.startMileage) {
           vehicleData.currentMileage = data.startMileage;
+          hasMileageUpdate = true;
         }
         
         if (data.status === "completed" && data.departureMileage) {
           vehicleData.departureMileage = data.departureMileage;
+          hasMileageUpdate = true;
         }
         
-        const vehicleResponse = await apiRequest(
-          "PATCH",
-          `/api/vehicles/${vehicle.id}/mileage`,
-          vehicleData
-        );
+        // Only make the request if there's at least one mileage field to update
+        let vehicleResponse;
+        if (hasMileageUpdate) {
+          // Don't forget to add the vehicle ID to the data
+          vehicleData.id = vehicle.id;
+          vehicleResponse = await apiRequest(
+            "PATCH",
+            `/api/vehicles/${vehicle.id}/mileage`,
+            vehicleData
+          );
+        }
         
-        if (!vehicleResponse.ok) {
+        // Only check vehicle response if we actually made the request
+        if (hasMileageUpdate && vehicleResponse && !vehicleResponse.ok) {
           try {
             const errorData = await vehicleResponse.json();
             throw new Error(errorData.message || "Failed to update vehicle mileage");
