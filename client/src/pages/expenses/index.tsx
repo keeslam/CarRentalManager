@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,20 @@ export default function ExpensesIndex() {
   // Define query key for easier reference and consistent usage
   const expensesQueryKey = ["/api/expenses"];
   
+  // State to track if component has mounted for auto-refresh
+  const [hasMounted, setHasMounted] = useState(false);
+  
+  // Force refresh on component mount to ensure we have latest data
+  useEffect(() => {
+    if (!hasMounted) {
+      console.log("Forcing a refresh of the expenses list on initial mount");
+      // Force a refetch of expenses when component first mounts
+      queryClient.invalidateQueries({ queryKey: expensesQueryKey });
+      queryClient.refetchQueries({ queryKey: expensesQueryKey });
+      setHasMounted(true);
+    }
+  }, [hasMounted, queryClient, expensesQueryKey]);
+  
   const { 
     data: expenses, 
     isLoading, 
@@ -28,12 +42,16 @@ export default function ExpensesIndex() {
   } = useQuery<Expense[]>({
     queryKey: expensesQueryKey,
     retry: 1,
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 0, // Consider data always stale to force refetch
   });
   
   // Get unique categories from expenses
-  const categories = expenses 
-    ? ["all", ...new Set(expenses.map(expense => expense.category))]
-    : ["all"];
+  const allCategories = expenses
+    ? [...new Set(expenses.map(expense => expense.category || "Unknown"))]
+    : [];
+  const categories = ["all", ...allCategories];
   
   // Filter expenses based on search query and category filter
   const filteredExpenses = expenses?.filter(expense => {
