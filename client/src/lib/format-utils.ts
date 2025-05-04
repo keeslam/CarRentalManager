@@ -101,3 +101,18 @@ export function formatFileSize(bytes: number): string {
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
+
+/**
+ * Format reservation status based on user preference
+ */
+export function formatReservationStatus(status: string | null | undefined): string {
+  if (!status) return '';
+  
+  switch (status.toLowerCase()) {
+    case 'pending': return 'Booked';
+    case 'confirmed': return 'Vehicle picked up';
+    case 'completed': return 'Vehicle returned';
+    case 'cancelled': return 'Cancelled';
+    default: return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+}

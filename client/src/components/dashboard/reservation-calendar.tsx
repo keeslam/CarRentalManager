@@ -28,6 +28,7 @@ import {
 } from "date-fns";
 import { Vehicle, Reservation, Customer } from "@shared/schema";
 import { displayLicensePlate, formatCurrency } from "@/lib/utils";
+import { formatReservationStatus } from "@/lib/format-utils";
 import { PlusCircle, Edit, Eye, Calendar, User, Car, CreditCard, Clock, MapPin } from "lucide-react";
 import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
 
