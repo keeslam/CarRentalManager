@@ -224,17 +224,19 @@ const PDFTemplateEditor = () => {
       return;
     }
 
-    // Default position in the middle of the container, accounting for zoom level
+    // Default position in the middle of the container
     // Use standard A4 dimensions (595 x 842) as reference
     const x = 595 / 2; // Center X position (half of A4 width)
     const y = 842 / 2; // Center Y position (half of A4 height)
+
+    console.log(`Creating new field at position (${x}, ${y})`);
 
     const newField: TemplateField = {
       id: `field-${Date.now()}`,
       name: newFieldName,
       x,
       y,
-      fontSize: 10,
+      fontSize: 12,
       isBold: false,
       source: newFieldSource
     };
@@ -798,7 +800,7 @@ const PDFTemplateEditor = () => {
                             <div
                               key={field.id}
                               className={`absolute cursor-pointer p-1 rounded ${
-                                selectedField?.id === field.id ? 'border-2 border-blue-500 bg-white bg-opacity-30' : 'bg-white bg-opacity-10'
+                                selectedField?.id === field.id ? 'border-2 border-blue-500 bg-white bg-opacity-80' : ''
                               } ${isMoving ? 'cursor-move' : ''}`}
                               style={{
                                 left: `${field.x * zoomLevel}px`,
@@ -806,9 +808,12 @@ const PDFTemplateEditor = () => {
                                 fontSize: `${field.fontSize * zoomLevel}px`,
                                 fontWeight: field.isBold ? 'bold' : 'normal',
                                 transform: 'translate(-50%, -50%)',
-                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                backgroundColor: selectedField?.id === field.id ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                                color: '#000000',
                                 padding: '4px 8px',
-                                borderRadius: '4px'
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(0,0,0,0.1)'
                               }}
                               onClick={() => handleFieldClick(field)}
                               onMouseDown={(e) => handleMouseDown(e, field)}
