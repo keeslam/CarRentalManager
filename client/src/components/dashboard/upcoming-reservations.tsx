@@ -90,7 +90,7 @@ export function UpcomingReservations() {
                   </td>
                 </tr>
               ) : (
-                reservations.slice(0, 10).map(reservation => (
+                reservations?.slice(0, 10).map(reservation => (
                   <tr key={reservation.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
