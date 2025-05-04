@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,18 @@ import { displayLicensePlate } from "@/lib/utils";
 export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const queryClient = useQueryClient();
   
-  const { data: expenses, isLoading, error } = useQuery<Expense[]>({
-    queryKey: ["/api/expenses"],
+  // Define query key for easier reference and consistent usage
+  const expensesQueryKey = ["/api/expenses"];
+  
+  const { 
+    data: expenses, 
+    isLoading, 
+    error,
+    refetch: refetchExpenses
+  } = useQuery<Expense[]>({
+    queryKey: expensesQueryKey,
     retry: 1,
   });
   
