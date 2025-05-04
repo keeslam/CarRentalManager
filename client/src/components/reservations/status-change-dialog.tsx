@@ -87,8 +87,14 @@ export function StatusChangeDialog({
   
   // Update form when status changes
   useEffect(() => {
-    setCurrentStatus(form.watch("status"));
-  }, [form.watch("status")]);
+    const subscription = form.watch((value) => {
+      if (value.status) {
+        setCurrentStatus(value.status);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
   
   // Status change mutation
   const statusChangeMutation = useMutation({
