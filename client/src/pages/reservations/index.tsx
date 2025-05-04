@@ -252,7 +252,7 @@ export default function ReservationsIndex() {
           groupKey = reservation.vehicle?.vehicleType || "Unknown Type";
           break;
         case "status":
-          groupKey = reservation.status;
+          groupKey = formatReservationStatus(reservation.status);
           break;
         case "month":
           groupKey = format(parseISO(reservation.startDate), "MMMM yyyy");
@@ -385,7 +385,7 @@ export default function ReservationsIndex() {
             badgeClass = "bg-red-100 text-red-800 border-red-200";
             break;
           case "completed":
-            badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
+            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
             break;
           default:
             badgeClass = "bg-gray-100 text-gray-800";
@@ -393,7 +393,7 @@ export default function ReservationsIndex() {
         
         return (
           <div className="flex items-center space-x-2">
-            <Badge className={badgeClass}>{status}</Badge>
+            <Badge className={badgeClass}>{formatReservationStatus(status)}</Badge>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -513,10 +513,10 @@ export default function ReservationsIndex() {
   // Status tabs config
   const statusTabs = [
     { id: "all", label: "All", count: getStatusCounts.all },
-    { id: "confirmed", label: "Confirmed", count: getStatusCounts.confirmed },
-    { id: "pending", label: "Pending", count: getStatusCounts.pending },
+    { id: "confirmed", label: "Vehicle picked up", count: getStatusCounts.confirmed },
+    { id: "pending", label: "Booked", count: getStatusCounts.pending },
     { id: "cancelled", label: "Cancelled", count: getStatusCounts.cancelled },
-    { id: "completed", label: "Completed", count: getStatusCounts.completed },
+    { id: "completed", label: "Vehicle returned", count: getStatusCounts.completed },
   ];
   
   // Date range tabs
