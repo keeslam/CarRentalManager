@@ -61,6 +61,10 @@ const formSchema = insertReservationSchema.extend({
   endDate: z.string().min(1, "End date is required"),
   totalPrice: z.number().optional(),
   damageCheckFile: z.instanceof(File).optional(),
+  departureMileage: z.union([
+    z.number().min(1, "Please enter a valid mileage"),
+    z.string().transform(val => parseInt(val) || undefined),
+  ]).optional(),
 });
 
 interface ReservationFormProps {
@@ -207,6 +211,14 @@ export function ReservationForm({
   
   // Check for reservation conflicts
   const [hasOverlap, setHasOverlap] = useState(false);
+  
+  // Watch for status changes
+  useEffect(() => {
+    // Update currentStatus when status changes in the form
+    if (statusWatch) {
+      setCurrentStatus(statusWatch);
+    }
+  }, [statusWatch]);
   
   useEffect(() => {
     if (vehicleIdWatch && startDateWatch && endDateWatch && !editMode) {
@@ -427,8 +439,28 @@ export function ReservationForm({
     },
   });
   
+  // Update vehicle mileage mutation when status is completed
+  const updateVehicleMutation = useMutation({
+    mutationFn: async (vehicleData: { id: number, departureMileage: number }) => {
+      return await apiRequest(`/api/vehicles/${vehicleData.id}`, "PATCH", { 
+        departureMileage: vehicleData.departureMileage 
+      });
+    },
+    onSuccess: () => {
+      // Invalidate vehicle queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update vehicle mileage: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Handle reservation form submission
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     // Check for overlapping reservations
     if (hasOverlap) {
       toast({
@@ -439,7 +471,22 @@ export function ReservationForm({
       return;
     }
     
-    createReservationMutation.mutate(data);
+    // If status is completed and we have departure mileage, update the vehicle
+    if (data.status === "completed" && data.departureMileage && vehicleIdWatch) {
+      // First create/update the reservation
+      const reservationResult = await createReservationMutation.mutateAsync(data);
+      
+      // Then update the vehicle mileage
+      await updateVehicleMutation.mutateAsync({
+        id: Number(vehicleIdWatch),
+        departureMileage: Number(data.departureMileage)
+      });
+      
+      return reservationResult;
+    } else {
+      // Normal reservation creation/update
+      createReservationMutation.mutate(data);
+    }
   };
   
   return (
@@ -700,6 +747,32 @@ export function ReservationForm({
                     </FormItem>
                   )}
                 />
+                
+                {/* Departure Mileage field when status is completed */}
+                {currentStatus === "completed" && (
+                  <div className="col-span-1">
+                    <div className="flex flex-col space-y-1.5">
+                      <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Departure Mileage
+                      </label>
+                      <input
+                        id="departureMileage"
+                        type="number"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Enter the final mileage"
+                        value={departureMileage || ""}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || undefined;
+                          setDepartureMileage(value);
+                          form.setValue("departureMileage", value as any);
+                        }}
+                      />
+                      <p className="text-[0.8rem] text-muted-foreground">
+                        Enter the vehicle's odometer reading at the end of the reservation
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Price */}
                 <FormField
