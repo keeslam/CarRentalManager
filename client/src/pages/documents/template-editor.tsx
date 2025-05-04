@@ -363,15 +363,48 @@ const PDFTemplateEditor = () => {
   };
   
   const handleWheel = (e: React.WheelEvent) => {
-    // Always enable zooming with the mouse wheel for better usability
-    e.preventDefault();
-    
-    const zoomSpeed = 0.05; // adjust this value to change zoom sensitivity
-    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    const newZoom = Math.min(Math.max(zoomLevel + delta, 0.5), 2);
-    
-    // Update the zoom level
-    setZoomLevel(newZoom);
+    // Only zoom if Ctrl key is pressed to not interfere with normal scrolling
+    if (e.ctrlKey && pdfContainerRef.current) {
+      e.preventDefault();
+      
+      const containerRect = pdfContainerRef.current.getBoundingClientRect();
+      
+      // Get mouse position relative to the container
+      const mouseX = e.clientX - containerRect.left;
+      const mouseY = e.clientY - containerRect.top;
+      
+      // Calculate relative position (0 to 1)
+      const relativeX = mouseX / containerRect.width;
+      const relativeY = mouseY / containerRect.height;
+      
+      const zoomSpeed = 0.05; // adjust this value to change zoom sensitivity
+      const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+      const newZoom = Math.min(Math.max(zoomLevel + delta, 0.5), 2);
+      
+      // Update the zoom level with focus point at mouse position
+      setZoomLevel(newZoom);
+      
+      // Get the element that contains the PDF container
+      const parentContainer = pdfContainerRef.current.parentElement;
+      if (parentContainer) {
+        // After the zoom level changes, adjust the scroll position to keep the mouse point stationary
+        setTimeout(() => {
+          const newContainerRect = pdfContainerRef.current?.getBoundingClientRect();
+          if (newContainerRect) {
+            const newWidth = newContainerRect.width;
+            const newHeight = newContainerRect.height;
+            
+            // Calculate the new position where the mouse should be
+            const newMouseX = relativeX * newWidth;
+            const newMouseY = relativeY * newHeight;
+            
+            // Adjust scroll to keep the mouse point at the same relative position
+            parentContainer.scrollLeft += (newMouseX - mouseX);
+            parentContainer.scrollTop += (newMouseY - mouseY);
+          }
+        }, 0);
+      }
+    }
   };
   
   const handleToggleGrid = () => {
@@ -730,6 +763,8 @@ const PDFTemplateEditor = () => {
                       <div className="relative flex items-center justify-center overflow-auto" 
                         style={{
                           height: '842px',
+                          maxHeight: '842px', 
+                          overflow: 'auto'
                         }}
                         onWheel={handleWheel}>
                         <div 
@@ -743,8 +778,6 @@ const PDFTemplateEditor = () => {
                             backgroundSize: '100% 100%',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
-                            transform: `scale(${zoomLevel})`,
-                            transformOrigin: 'center center',
                           }}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
