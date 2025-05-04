@@ -73,19 +73,14 @@ export default function ContractViewer() {
           <Button 
             onClick={() => setLocation('/reservations')}
             variant="outline"
+            className="flex items-center"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="m12 19-7-7 7-7"/>
+              <path d="M19 12H5"/>
+            </svg>
             Back to Reservations
           </Button>
-          {pdfUrl && (
-            <Button 
-              onClick={() => {
-                // Open PDF in a new tab for printing
-                window.open(pdfUrl, '_blank');
-              }}
-            >
-              Print Contract
-            </Button>
-          )}
         </div>
       </div>
 
@@ -103,12 +98,41 @@ export default function ContractViewer() {
               <span className="ml-2">Loading contract...</span>
             </div>
           ) : pdfUrl ? (
-            <div className="w-full aspect-[1/1.414] bg-gray-100 overflow-hidden rounded-md">
-              <iframe 
-                src={pdfUrl} 
-                className="w-full h-full"
-                title="Rental Contract"
-              />
+            <div className="w-full flex flex-col items-center justify-center py-10">
+              <p className="mb-6 text-center text-gray-600">
+                Contract successfully loaded but cannot be displayed inline due to browser security restrictions.
+              </p>
+              <div className="flex space-x-4">
+                <Button 
+                  onClick={() => window.open(pdfUrl, '_blank')}
+                  className="flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  View Contract
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = pdfUrl;
+                    link.download = `rental_contract_${id}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  variant="outline"
+                  className="flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Download Contract
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="py-20 text-center">
