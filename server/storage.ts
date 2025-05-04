@@ -4,7 +4,8 @@ import {
   customers, type Customer, type InsertCustomer,
   reservations, type Reservation, type InsertReservation,
   expenses, type Expense, type InsertExpense,
-  documents, type Document, type InsertDocument
+  documents, type Document, type InsertDocument,
+  pdfTemplates, type PdfTemplate, type InsertPdfTemplate
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -62,6 +63,14 @@ export interface IStorage {
   updateDocument(id: number, documentData: Partial<InsertDocument>): Promise<Document | undefined>;
   getDocumentsByVehicle(vehicleId: number): Promise<Document[]>;
   deleteDocument(id: number): Promise<boolean>;
+  
+  // PDF Template methods
+  getAllPdfTemplates(): Promise<PdfTemplate[]>;
+  getPdfTemplate(id: number): Promise<PdfTemplate | undefined>;
+  getDefaultPdfTemplate(): Promise<PdfTemplate | undefined>;
+  createPdfTemplate(template: InsertPdfTemplate): Promise<PdfTemplate>;
+  updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined>;
+  deletePdfTemplate(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -71,6 +80,7 @@ export class MemStorage implements IStorage {
   private reservations: Map<number, Reservation>;
   private expenses: Map<number, Expense>;
   private documents: Map<number, Document>;
+  private pdfTemplates: Map<number, PdfTemplate>;
   
   private userId: number;
   private vehicleId: number;
@@ -78,6 +88,7 @@ export class MemStorage implements IStorage {
   private reservationId: number;
   private expenseId: number;
   private documentId: number;
+  private pdfTemplateId: number;
 
   constructor() {
     this.users = new Map();
@@ -86,6 +97,7 @@ export class MemStorage implements IStorage {
     this.reservations = new Map();
     this.expenses = new Map();
     this.documents = new Map();
+    this.pdfTemplates = new Map();
     
     this.userId = 1;
     this.vehicleId = 1;
@@ -93,6 +105,7 @@ export class MemStorage implements IStorage {
     this.reservationId = 1;
     this.expenseId = 1;
     this.documentId = 1;
+    this.pdfTemplateId = 1;
     
     // Initialize with sample data for demo
     this.initializeSampleData();
@@ -736,6 +749,95 @@ export class MemStorage implements IStorage {
 
   async deleteDocument(id: number): Promise<boolean> {
     return this.documents.delete(id);
+  }
+  
+  // PDF Template methods
+  async getAllPdfTemplates(): Promise<PdfTemplate[]> {
+    return Array.from(this.pdfTemplates.values());
+  }
+  
+  async getPdfTemplate(id: number): Promise<PdfTemplate | undefined> {
+    return this.pdfTemplates.get(id);
+  }
+  
+  async getDefaultPdfTemplate(): Promise<PdfTemplate | undefined> {
+    return Array.from(this.pdfTemplates.values()).find(
+      template => template.isDefault
+    );
+  }
+  
+  async createPdfTemplate(templateData: InsertPdfTemplate): Promise<PdfTemplate> {
+    const id = this.pdfTemplateId++;
+    const now = new Date();
+    
+    // If this template is set as default, update all others to not be default
+    if (templateData.isDefault) {
+      for (const template of this.pdfTemplates.values()) {
+        this.pdfTemplates.set(template.id, {
+          ...template,
+          isDefault: false,
+          updatedAt: now
+        });
+      }
+    }
+    
+    const template: PdfTemplate = {
+      ...templateData,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.pdfTemplates.set(id, template);
+    return template;
+  }
+  
+  async updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined> {
+    const existingTemplate = this.pdfTemplates.get(id);
+    if (!existingTemplate) {
+      return undefined;
+    }
+    
+    const now = new Date();
+    
+    // If this template is being set as default, update all others to not be default
+    if (templateData.isDefault) {
+      for (const template of this.pdfTemplates.values()) {
+        if (template.id !== id) {
+          this.pdfTemplates.set(template.id, {
+            ...template,
+            isDefault: false,
+            updatedAt: now
+          });
+        }
+      }
+    }
+    
+    const updatedTemplate: PdfTemplate = {
+      ...existingTemplate,
+      ...templateData,
+      updatedAt: now
+    };
+    
+    this.pdfTemplates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+  
+  async deletePdfTemplate(id: number): Promise<boolean> {
+    const wasDefault = this.pdfTemplates.get(id)?.isDefault;
+    const deleted = this.pdfTemplates.delete(id);
+    
+    // If the deleted template was the default, set a new default if there are any left
+    if (wasDefault && deleted && this.pdfTemplates.size > 0) {
+      const firstTemplate = Array.from(this.pdfTemplates.values())[0];
+      this.pdfTemplates.set(firstTemplate.id, {
+        ...firstTemplate,
+        isDefault: true,
+        updatedAt: new Date()
+      });
+    }
+    
+    return deleted;
   }
 }
 
