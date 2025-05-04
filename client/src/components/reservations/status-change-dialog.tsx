@@ -148,12 +148,14 @@ export function StatusChangeDialog({
         let hasMileageUpdate = false;
         
         if (data.status === "confirmed" && data.startMileage) {
-          vehicleData.currentMileage = data.startMileage;
+          // Use departureMileage for the start mileage since schema doesn't have currentMileage
+          vehicleData.departureMileage = data.startMileage;
           hasMileageUpdate = true;
         }
         
         if (data.status === "completed" && data.departureMileage) {
-          vehicleData.departureMileage = data.departureMileage;
+          // Use returnMileage for the completed status (which is stored in departureMileage field)
+          vehicleData.returnMileage = data.departureMileage;
           hasMileageUpdate = true;
         }
         

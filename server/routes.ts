@@ -636,10 +636,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the request contains valid mileage fields
       const updateData: Record<string, any> = {};
       
+      // If currentMileage is provided, store it in the departureMileage field
+      // since there's no currentMileage field in the schema
       if (req.body.currentMileage !== undefined) {
         const mileage = parseInt(req.body.currentMileage);
         if (!isNaN(mileage)) {
-          updateData.currentMileage = mileage;
+          updateData.departureMileage = mileage;
         }
       }
       
@@ -647,6 +649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const mileage = parseInt(req.body.departureMileage);
         if (!isNaN(mileage)) {
           updateData.departureMileage = mileage;
+        }
+      }
+      
+      // Add support for returnMileage used when completing a reservation
+      if (req.body.returnMileage !== undefined) {
+        const mileage = parseInt(req.body.returnMileage);
+        if (!isNaN(mileage)) {
+          updateData.returnMileage = mileage;
         }
       }
       
