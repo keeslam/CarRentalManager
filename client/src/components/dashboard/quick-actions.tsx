@@ -264,12 +264,7 @@ const quickActions: QuickAction[] = [
     icon: "receipt",
     primary: false,
   },
-  {
-    label: "Change Reservation Status",
-    icon: "calendar-clock",
-    dialog: "reservation-status",
-    primary: false,
-  },
+
   {
     label: "Change Status by Vehicle",
     icon: "car",
@@ -302,9 +297,7 @@ export function QuickActions() {
   const [damageFormSearchQuery, setDamageFormSearchQuery] = useState<string>("");
   const [isDamageUploading, setIsDamageUploading] = useState(false);
   
-  // State for the reservation status dialogs
-  const [selectedReservation, setSelectedReservation] = useState<number | null>(null);
-  const [reservationStatusDialogOpen, setReservationStatusDialogOpen] = useState(false);
+  // State for the vehicle reservation dialog
   const [vehicleReservationDialogOpen, setVehicleReservationDialogOpen] = useState(false);
   
   const { toast } = useToast();
@@ -577,8 +570,6 @@ export function QuickActions() {
   const handleReservationStatusUpdated = () => {
     // Refetch upcoming reservations to update the list
     queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
-    // Reset the selected reservation
-    setSelectedReservation(null);
     // Show a success toast
     toast({
       title: "Success",
@@ -588,17 +579,6 @@ export function QuickActions() {
   
   return (
     <>
-      {/* Display StatusChangeDialog when a reservation is selected */}
-      {selectedReservation && (
-        <StatusChangeDialog
-          reservationId={selectedReservation}
-          open={true}
-          onOpenChange={() => setSelectedReservation(null)}
-          onStatusChanged={handleReservationStatusUpdated}
-          initialStatus=""
-        />
-      )}
-      
       {/* Vehicle-based Reservation Status Dialog */}
       <VehicleReservationsStatusDialog
         open={vehicleReservationDialogOpen}
@@ -629,105 +609,7 @@ export function QuickActions() {
               );
             }
             
-            // For reservation status change dialog
-            if (action.dialog === "reservation-status") {
-              return (
-                <Dialog
-                  key={action.label}
-                  open={reservationStatusDialogOpen}
-                  onOpenChange={setReservationStatusDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
-                      size="sm"
-                    >
-                      <ActionIcon name={action.icon || "calendar-clock"} className="mr-1 h-4 w-4" />
-                      {action.label}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Change Reservation Status</DialogTitle>
-                      <DialogDescription>
-                        Select a reservation to change its status.
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="grid gap-4 py-4">
-                      {isLoadingReservations ? (
-                        <div className="flex items-center justify-center py-4">
-                          <RotateCw className="h-5 w-5 animate-spin text-primary-600" />
-                          <span className="ml-2">Loading reservations...</span>
-                        </div>
-                      ) : !upcomingReservations || upcomingReservations.length === 0 ? (
-                        <div className="py-4 text-center text-gray-500">
-                          <p>No upcoming reservations found.</p>
-                        </div>
-                      ) : (
-                        <div className="max-h-96 overflow-y-auto">
-                          <table className="w-full text-sm">
-                            <thead className="sticky top-0 bg-white">
-                              <tr className="border-b">
-                                <th className="px-2 py-2 text-left">ID</th>
-                                <th className="px-2 py-2 text-left">Vehicle</th>
-                                <th className="px-2 py-2 text-left">Customer</th>
-                                <th className="px-2 py-2 text-left">Status</th>
-                                <th className="px-2 py-2 text-center">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {upcomingReservations.map((reservation) => {
-                                return (
-                                  <tr 
-                                    key={reservation.id} 
-                                    className="border-b hover:bg-gray-50"
-                                  >
-                                    <td className="px-2 py-2">#{reservation.id}</td>
-                                    <td className="px-2 py-2">
-                                      {displayLicensePlate(reservation.vehicleLicensePlate || reservation.vehicle?.licensePlate)}
-                                    </td>
-                                    <td className="px-2 py-2">
-                                      {reservation.customerName || reservation.customer?.name}
-                                    </td>
-                                    <td className="px-2 py-2">
-                                      <span className={`
-                                        inline-block rounded-full px-2 py-1 text-xs
-                                        ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
-                                        ${reservation.status === 'ongoing' ? 'bg-amber-100 text-amber-800' : ''}
-                                        ${reservation.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                                        ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                        ${reservation.status === 'pending' ? 'bg-gray-100 text-gray-800' : ''}
-                                      `}>
-                                        {reservation.status?.charAt(0).toUpperCase() + reservation.status?.slice(1)}
-                                      </span>
-                                    </td>
-                                    <td className="px-2 py-2 text-center">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedReservation(reservation.id);
-                                          setReservationStatusDialogOpen(false);
-                                        }}
-                                      >
-                                        <CalendarClock className="mr-1 h-3 w-3" />
-                                        Change
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              );
-            }
+            // We've removed the reservation status change dialog
             
             // For damage form upload action, render a Dialog
             if (action.dialog === "damage-form") {
