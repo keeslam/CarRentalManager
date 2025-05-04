@@ -76,6 +76,37 @@ export default function ReservationsIndex() {
     }
   });
   
+  // Quick status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number, status: string }) => {
+      const response = await apiRequest('PATCH', `/api/reservations/${id}`, { status });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update reservation status');
+      }
+      return await response.json();
+    },
+    onSuccess: async () => {
+      // Wait for the invalidation to complete
+      await queryClient.invalidateQueries({ queryKey: reservationsQueryKey });
+      
+      // Explicitly force a refetch to ensure the UI updates
+      await refetchReservations();
+      
+      toast({
+        title: "Status updated",
+        description: "The reservation status has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update reservation status",
+        variant: "destructive"
+      });
+    }
+  });
+  
   // Define query key for easier reference
   const reservationsQueryKey = ["/api/reservations"];
   
@@ -308,6 +339,7 @@ export default function ReservationsIndex() {
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
+        const reservationId = row.original.id;
         let badgeClass = "";
         
         switch (status.toLowerCase()) {
@@ -327,7 +359,42 @@ export default function ReservationsIndex() {
             badgeClass = "bg-gray-100 text-gray-800";
         }
         
-        return <Badge className={badgeClass}>{status}</Badge>;
+        return (
+          <div className="flex items-center space-x-2">
+            <Badge className={badgeClass}>{status}</Badge>
+            <div className="relative">
+              <Select
+                value={status}
+                onValueChange={(newStatus) => {
+                  updateStatusMutation.mutate({ id: reservationId, status: newStatus });
+                }}
+              >
+                <SelectTrigger className="h-7 w-7 p-0 ml-1">
+                  <SelectValue placeholder="" />
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="14" 
+                    height="14" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
       },
     },
     {
