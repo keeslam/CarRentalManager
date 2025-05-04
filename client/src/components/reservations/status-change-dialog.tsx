@@ -300,6 +300,27 @@ export function StatusChangeDialog({
       return; // Don't submit
     }
     
+    // Require return mileage when status is "completed"
+    if (data.status === "completed" && !data.departureMileage) {
+      form.setError("departureMileage", { 
+        type: "manual", 
+        message: "Return mileage is required when completing a reservation" 
+      });
+      return; // Don't submit
+    }
+    
+    // If status is "completed" and there's a start mileage, ensure return mileage is >= start mileage
+    if (data.status === "completed" && 
+        data.startMileage !== undefined && 
+        data.departureMileage !== undefined && 
+        data.departureMileage < data.startMileage) {
+      form.setError("departureMileage", { 
+        type: "manual", 
+        message: "Return mileage must be greater than or equal to start mileage" 
+      });
+      return; // Don't submit
+    }
+    
     // Passed validation, submit the data
     statusChangeMutation.mutate(data);
   }
