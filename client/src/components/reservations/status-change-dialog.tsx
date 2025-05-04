@@ -124,6 +124,19 @@ export function StatusChangeDialog({
     },
   });
   
+  // Reset form when a new reservation is selected (when reservationId changes)
+  useEffect(() => {
+    // Reset the form with new default values
+    form.reset({
+      status: initialStatus,
+      startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
+      departureMileage: undefined,
+    });
+    
+    // Reset the current status
+    setCurrentStatus(initialStatus);
+  }, [reservationId, initialStatus, vehicle, form]);
+  
   // Update form when status changes
   useEffect(() => {
     const subscription = form.watch((value) => {
