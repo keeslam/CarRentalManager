@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -99,6 +99,13 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
     },
   });
 
+  // Update document type when preselectedType changes
+  useEffect(() => {
+    if (preselectedType) {
+      form.setValue("documentType", preselectedType);
+    }
+  }, [preselectedType, form]);
+
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -155,7 +162,7 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
       setPreviewUrl(null);
       form.reset({
         vehicleId: vehicleId,
-        documentType: "",
+        documentType: preselectedType || "",
         notes: "",
       });
       
@@ -177,8 +184,23 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
     uploadDocumentMutation.mutate(data);
   };
 
+  // Handle dialog open/close
+  const handleDialogChange = (open: boolean) => {
+    setIsOpen(open);
+    // If the dialog is closing, reset form but keep the preselected document type
+    if (!open) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      form.reset({
+        vehicleId: vehicleId,
+        documentType: preselectedType || "",
+        notes: "",
+      });
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
         {children ? (
           <div className="cursor-pointer" onClick={() => setIsOpen(true)}>

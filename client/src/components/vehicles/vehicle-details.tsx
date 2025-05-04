@@ -814,14 +814,14 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
-                      preselectedType="Damage Form"
+                      preselectedType="Damage Report"
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-red-500">
                           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
-                        <span className="block text-sm font-medium">Damage Form</span>
+                        <span className="block text-sm font-medium">Damage Report</span>
                       </div>
                     </InlineDocumentUpload>
                   </div>
@@ -829,7 +829,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
-                      preselectedType="Vehicle Picture"
+                      preselectedType="Vehicle Photos"
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-green-500">
@@ -837,7 +837,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                           <circle cx="9" cy="9" r="2" />
                           <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                         </svg>
-                        <span className="block text-sm font-medium">Vehicle Picture</span>
+                        <span className="block text-sm font-medium">Vehicle Photos</span>
                       </div>
                     </InlineDocumentUpload>
                   </div>
