@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Link, useLocation } from "wouter";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
+import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
@@ -446,16 +447,16 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To</h4>
                     <div className="flex items-center gap-2">
-                      <Switch checked={vehicle.registeredTo === true || vehicle.registeredTo === "true"} disabled />
+                      <Switch checked={isTrueValue(vehicle.registeredTo)} disabled />
                       <span className="text-sm text-gray-500">
-                        {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? "Opnaam" : 
-                         (vehicle.company === true || vehicle.company === "true" ? "BV" : "Not specified")}
+                        {isTrueValue(vehicle.registeredTo) ? "Opnaam" : 
+                         (isTrueValue(vehicle.company) ? "BV" : "Not specified")}
                       </span>
                     </div>
-                    {(vehicle.registeredTo === true || vehicle.registeredTo === "true") && vehicle.registeredToDate && (
+                    {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
                       <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.registeredToDate)}</p>
                     )}
-                    {(vehicle.company === true || vehicle.company === "true") && vehicle.companyDate && (
+                    {isTrueValue(vehicle.company) && vehicle.companyDate && (
                       <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.companyDate)}</p>
                     )}
                   </div>

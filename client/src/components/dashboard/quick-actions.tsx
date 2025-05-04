@@ -998,9 +998,9 @@ export function QuickActions() {
                                             {vehicle.brand} {vehicle.model}
                                           </span>
                                           {(() => {
-                                            // Handle both boolean and string values for registeredTo and company
-                                            const isRegisteredTo = vehicle.registeredTo === true || vehicle.registeredTo === "true";
-                                            const isCompany = vehicle.company === true || vehicle.company === "true";
+                                            // Use the utility function for consistent boolean/string checks
+                                            const isRegisteredTo = isTrueValue(vehicle.registeredTo);
+                                            const isCompany = isTrueValue(vehicle.company);
                                             
                                             if (isRegisteredTo) {
                                               return (

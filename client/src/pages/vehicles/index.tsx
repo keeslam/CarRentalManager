@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
+import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
 import { Search } from "lucide-react";
 import { 
@@ -284,13 +285,9 @@ export default function VehiclesIndex() {
       header: "Registration",
       cell: ({ row }) => {
         const vehicle = row.original;
-        // Convert string values to booleans for proper comparison
-        const isRegisteredToPerson = vehicle.registeredTo === true || 
-                                    vehicle.registeredTo === "true" || 
-                                    String(vehicle.registeredTo).toLowerCase() === "true";
-        const isRegisteredToCompany = vehicle.company === true || 
-                                     vehicle.company === "true" || 
-                                     String(vehicle.company).toLowerCase() === "true";
+        // Use utility function for consistent boolean/string checks
+        const isRegisteredToPerson = isTrueValue(vehicle.registeredTo);
+        const isRegisteredToCompany = isTrueValue(vehicle.company);
         
         return (
           <div className="flex flex-col">
