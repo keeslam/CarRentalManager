@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Vehicle } from "@shared/schema";
 import { Check, RotateCw, Search } from "lucide-react";
 import { displayLicensePlate } from "@/lib/utils";
@@ -375,6 +375,9 @@ export function QuickActions() {
     }
   };
   
+  // Reference for dialog closing
+  const damageDialogCloseRef = React.useRef(null);
+  
   // Handler for uploading damage form and photos
   const handleDamageFormUpload = async () => {
     if (!selectedDamageVehicle) {
@@ -455,6 +458,10 @@ export function QuickActions() {
           
           if (!response.ok) {
             console.error("Failed to update vehicle damage check status:", response.status);
+          } else {
+            // Invalidate cache for this vehicle and for the documents
+            queryClient.invalidateQueries({ queryKey: ["/api/vehicles", selectedDamageVehicle.id] });
+            queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedDamageVehicle.id] });
           }
         } catch (error) {
           console.error("Error updating vehicle damage check status:", error);
@@ -472,6 +479,12 @@ export function QuickActions() {
         }
       }
       
+      // Invalidate queries to refresh UI
+      if (uploadCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedDamageVehicle.id] });
+      }
+      
       // Show success message
       toast({
         title: uploadCount > 0 ? "Upload Successful" : "Upload Failed",
@@ -486,6 +499,11 @@ export function QuickActions() {
       setDamageFormFile(null);
       setDamagePhotos([]);
       setDamageFormSearchQuery("");
+      
+      // Auto-close dialog if successful
+      if (uploadCount > 0 && damageDialogCloseRef.current) {
+        (damageDialogCloseRef.current as HTMLButtonElement).click();
+      }
       
     } catch (error) {
       toast({
@@ -741,7 +759,11 @@ export function QuickActions() {
                     
                     <DialogFooter>
                       <DialogClose asChild>
-                        <Button variant="outline" type="button">
+                        <Button 
+                          ref={damageDialogCloseRef}
+                          variant="outline" 
+                          type="button"
+                        >
                           Cancel
                         </Button>
                       </DialogClose>
