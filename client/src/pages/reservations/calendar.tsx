@@ -147,7 +147,8 @@ export default function ReservationCalendarPage() {
     );
   };
   
-  // Helper function to check if a date is within a range
+  // This function is no longer used since we only display pickup and return days
+  // Keeping it for reference in case we need to revert
   const isDateInRange = (date: Date, start: Date, end: Date) => {
     const dayStart = startOfDay(date);
     const dayEnd = endOfDay(date);
@@ -349,9 +350,9 @@ export default function ReservationCalendarPage() {
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
                     
-                    // Count reservations for this day
+                    // Only get reservations starting or ending on this day
                     const dayReservations = reservations?.filter(res => 
-                      isDateInRange(day, parseISO(res.startDate), parseISO(res.endDate))
+                      isSameDay(day, parseISO(res.startDate)) || isSameDay(day, parseISO(res.endDate))
                     ) || [];
                     
                     return (
