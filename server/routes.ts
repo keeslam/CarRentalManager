@@ -1963,29 +1963,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
           const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
           
+          console.log(`Saving contract for vehicle with license plate: ${reservation.vehicle.licensePlate}`);
+          console.log(`Sanitized plate: ${sanitizedPlate}`);
+          console.log(`Contracts base directory: ${contractsBaseDir}`);
+          console.log(`Vehicle contracts directory: ${vehicleContractsDir}`);
+          
           // Create directories if they don't exist
           if (!fs.existsSync(contractsBaseDir)) {
+            console.log(`Creating base contracts directory: ${contractsBaseDir}`);
             fs.mkdirSync(contractsBaseDir, { recursive: true });
           }
           
           if (!fs.existsSync(vehicleContractsDir)) {
+            console.log(`Creating vehicle contracts directory: ${vehicleContractsDir}`);
             fs.mkdirSync(vehicleContractsDir, { recursive: true });
           }
           
           // Format date for filename
-          const currentDate = format(new Date(), 'yyyyMMdd');
+          const today = new Date();
+          const currentDate = today.getFullYear().toString() + 
+                             (today.getMonth() + 1).toString().padStart(2, '0') + 
+                             today.getDate().toString().padStart(2, '0');
+          
           const contractNumber = `C-${reservationId}-${currentDate}`;
           
           // Create a unique filename based on license plate and date
           const filename = `${sanitizedPlate}_contract_${currentDate}.pdf`;
           const filePath = path.join(vehicleContractsDir, filename);
           
+          console.log(`Saving contract to file: ${filePath}`);
+          
           // Save the file
           fs.writeFileSync(filePath, pdfBuffer);
-          console.log(`Contract saved to: ${filePath}`);
+          console.log(`Contract successfully saved to: ${filePath}`);
+        } else {
+          console.log('Cannot save contract: Vehicle or license plate is missing');
         }
       } catch (error) {
         console.error('Error saving contract PDF copy:', error);
+        console.error(error); // Print full error
         // Continue even if saving a copy fails
       }
       
