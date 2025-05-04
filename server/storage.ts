@@ -276,6 +276,59 @@ export class MemStorage implements IStorage {
       contentType: "application/pdf",
       notes: "Vehicle insurance policy"
     });
+    
+    // Sample PDF template
+    this.createPdfTemplate({
+      name: "Default Contract Template",
+      isDefault: true,
+      fields: JSON.stringify([
+        {
+          id: "1",
+          name: "Customer Name",
+          x: 100,
+          y: 150,
+          fontSize: 12,
+          isBold: true,
+          source: "customer.name"
+        },
+        {
+          id: "2",
+          name: "Vehicle",
+          x: 100,
+          y: 180,
+          fontSize: 12,
+          isBold: true,
+          source: "vehicle.brand"
+        },
+        {
+          id: "3",
+          name: "License Plate",
+          x: 100,
+          y: 210,
+          fontSize: 12,
+          isBold: false,
+          source: "vehicle.licensePlate"
+        },
+        {
+          id: "4",
+          name: "Start Date",
+          x: 350,
+          y: 150,
+          fontSize: 12,
+          isBold: false,
+          source: "startDate"
+        },
+        {
+          id: "5",
+          name: "End Date",
+          x: 350,
+          y: 180,
+          fontSize: 12,
+          isBold: false,
+          source: "endDate"
+        }
+      ])
+    });
   }
 
   // User methods

@@ -13,6 +13,7 @@ import {
   insertExpenseSchema, 
   insertDocumentSchema,
   insertUserSchema,
+  insertPdfTemplateSchema,
   UserRole,
   UserPermission
 } from "@shared/schema";
@@ -1943,6 +1944,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating contract data:", error);
       res.status(500).json({ 
         message: "Failed to generate contract data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // ==================== PDF TEMPLATES ====================
+  // Get all PDF templates
+  app.get("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getAllPdfTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching PDF templates:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch PDF templates", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Get the default PDF template
+  app.get("/api/pdf-templates/default", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const defaultTemplate = await storage.getDefaultPdfTemplate();
+      if (!defaultTemplate) {
+        return res.status(404).json({ message: "No default template found" });
+      }
+
+      res.json(defaultTemplate);
+    } catch (error) {
+      console.error("Error fetching default PDF template:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch default template", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Get a specific PDF template
+  app.get("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching PDF template:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch PDF template", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Create a new PDF template
+  app.post("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Add user tracking information
+      const user = req.user;
+      
+      const templateData = insertPdfTemplateSchema.parse({
+        ...req.body,
+        createdBy: user ? user.username : null
+      });
+      
+      const template = await storage.createPdfTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating PDF template:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid template data", error: error.errors });
+      } else {
+        res.status(400).json({ 
+          message: "Failed to create PDF template", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
+    }
+  });
+
+  // Update a PDF template
+  app.patch("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      // Get existing template
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Add user tracking information
+      const user = req.user;
+      
+      const templateData = {
+        ...req.body,
+        updatedBy: user ? user.username : null
+      };
+      
+      const updatedTemplate = await storage.updatePdfTemplate(id, templateData);
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Failed to update template" });
+      }
+      
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error updating PDF template:", error);
+      res.status(400).json({ 
+        message: "Failed to update PDF template", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Delete a PDF template
+  app.delete("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      // Get template to check if it exists
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const deleted = await storage.deletePdfTemplate(id);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete template" });
+      }
+
+      res.status(200).json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting PDF template:", error);
+      res.status(500).json({ 
+        message: "Failed to delete template", 
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
