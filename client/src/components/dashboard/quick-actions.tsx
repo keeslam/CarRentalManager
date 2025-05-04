@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
 import { Vehicle } from "@shared/schema";
 import { Check, RotateCw, Search } from "lucide-react";
-import { displayLicensePlate } from "@/lib/utils";
+import { displayLicensePlate, isTrueValue } from "@/lib/utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 
 interface ActionIconProps {
@@ -843,15 +843,23 @@ export function QuickActions() {
                           <>
                             <div className="mb-2">
                               <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                   placeholder="Search by license plate, brand or model"
                                   value={searchQuery}
                                   onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-                                  className="mb-2"
+                                  className="mb-2 pl-8"
                                 />
-                                <div className="absolute right-2 top-2 opacity-50">
-                                  <Search className="h-4 w-4" />
-                                </div>
+                                {searchQuery && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="absolute right-0 top-0 h-full px-3" 
+                                    onClick={() => setSearchQuery("")}
+                                  >
+                                    ✕
+                                  </Button>
+                                )}
                               </div>
                               
                               <div className="border rounded-md h-[150px] overflow-y-auto p-1 mb-2">
@@ -878,8 +886,12 @@ export function QuickActions() {
                                   
                                   filteredVehicles.forEach(vehicle => {
                                     let statusGroup = 'Other';
-                                    if (vehicle.registeredTo === true || vehicle.registeredTo === "true") statusGroup = 'Opnaam (Person)';
-                                    else if (vehicle.company === true || vehicle.company === "true") statusGroup = 'BV (Company)';
+                                    // Use the utility function for consistent boolean/string checks
+                                    const isRegisteredTo = isTrueValue(vehicle.registeredTo);
+                                    const isCompany = isTrueValue(vehicle.company);
+                                    
+                                    if (isRegisteredTo) statusGroup = 'Opnaam (Person)';
+                                    else if (isCompany) statusGroup = 'BV (Company)';
                                     
                                     const brand = vehicle.brand || 'Other';
                                     if (!vehicleGroups[statusGroup][brand]) vehicleGroups[statusGroup][brand] = [];
@@ -928,15 +940,26 @@ export function QuickActions() {
                                                         <span className="flex items-center gap-1 flex-wrap">
                                                           <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span> 
                                                           <span className="text-muted-foreground">{vehicle.model}</span>
-                                                          {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
-                                                            <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-                                                              Opnaam
-                                                            </span>
-                                                          ) : vehicle.company === true || vehicle.company === "true" ? (
-                                                            <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
-                                                              BV
-                                                            </span>
-                                                          ) : null}
+                                                          {(() => {
+                                                            // Use the utility function for consistent boolean/string checks
+                                                            const isRegisteredTo = isTrueValue(vehicle.registeredTo);
+                                                            const isCompany = isTrueValue(vehicle.company);
+                                                            
+                                                            if (isRegisteredTo) {
+                                                              return (
+                                                                <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                                  Opnaam
+                                                                </span>
+                                                              );
+                                                            } else if (isCompany) {
+                                                              return (
+                                                                <span className="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                                  BV
+                                                                </span>
+                                                              );
+                                                            }
+                                                            return null;
+                                                          })()}
                                                         </span>
                                                       </label>
                                                     ))}
@@ -974,15 +997,26 @@ export function QuickActions() {
                                           <span className="text-sm text-muted-foreground">
                                             {vehicle.brand} {vehicle.model}
                                           </span>
-                                          {vehicle.registeredTo === true || vehicle.registeredTo === "true" ? (
-                                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-                                              Opnaam
-                                            </span>
-                                          ) : vehicle.company === true || vehicle.company === "true" ? (
-                                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
-                                              BV
-                                            </span>
-                                          ) : null}
+                                          {(() => {
+                                            // Handle both boolean and string values for registeredTo and company
+                                            const isRegisteredTo = vehicle.registeredTo === true || vehicle.registeredTo === "true";
+                                            const isCompany = vehicle.company === true || vehicle.company === "true";
+                                            
+                                            if (isRegisteredTo) {
+                                              return (
+                                                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                  Opnaam
+                                                </span>
+                                              );
+                                            } else if (isCompany) {
+                                              return (
+                                                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border-green-200">
+                                                  BV
+                                                </span>
+                                              );
+                                            }
+                                            return null;
+                                          })()}
                                         </div>
                                         <Button 
                                           variant="ghost" 

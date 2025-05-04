@@ -53,3 +53,11 @@ export function displayLicensePlate(licensePlate: string): string {
   if (!licensePlate) return '';
   return licensePlate.replace(/[-\s]/g, '').toUpperCase();
 }
+
+/**
+ * Checks if a value is truthy (boolean true or string "true")
+ * Handles database fields that may be stored as strings but used as booleans in UI
+ */
+export function isTrueValue(value: string | boolean | null | undefined): boolean {
+  return value === true || value === "true";
+}
