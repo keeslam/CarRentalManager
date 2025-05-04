@@ -358,9 +358,9 @@ export function StatusChangeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Change Reservation Status</DialogTitle>
+          <DialogTitle>Update Reservation Status</DialogTitle>
           <DialogDescription>
-            Update the status and related information for this reservation.
+            Track the current state of this reservation in the rental process.
           </DialogDescription>
         </DialogHeader>
         
@@ -445,7 +445,10 @@ export function StatusChangeDialog({
                   <div className="flex items-center gap-2 mb-2">
                     <span>Current status:</span>
                     <Badge className={getStatusBadgeClass(initialStatus)}>
-                      {initialStatus}
+                      {initialStatus === 'pending' ? 'Booked' : 
+                        initialStatus === 'confirmed' ? 'Vehicle picked up' : 
+                        initialStatus === 'completed' ? 'Vehicle returned' : 
+                        initialStatus}
                     </Badge>
                   </div>
                   <Select
@@ -461,14 +464,14 @@ export function StatusChangeDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pending">Pending (Booked)</SelectItem>
-                      <SelectItem value="confirmed">Confirmed (Vehicle picked up)</SelectItem>
+                      <SelectItem value="pending">Booked</SelectItem>
+                      <SelectItem value="confirmed">Vehicle picked up</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="completed">Completed (Vehicle returned)</SelectItem>
+                      <SelectItem value="completed">Vehicle returned</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Status clarification: 'Confirmed' means the vehicle has been picked up, and 'Completed' means the vehicle has been returned.
+                    Select the appropriate status based on where the vehicle is in the rental process.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -485,14 +488,14 @@ export function StatusChangeDialog({
                   
                   return (
                     <FormItem>
-                      <FormLabel>Start Mileage</FormLabel>
+                      <FormLabel>Mileage when picked up</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             type="number"
                             placeholder={vehicle.returnMileage !== undefined && vehicle.returnMileage !== null
                               ? `Minimum ${vehicle.returnMileage}` 
-                              : (vehicle.currentMileage && vehicle.currentMileage !== null ? vehicle.currentMileage.toString() : "Enter starting mileage")}
+                              : (vehicle.currentMileage && vehicle.currentMileage !== null ? vehicle.currentMileage.toString() : "Enter pickup mileage")}
                             {...field}
                             value={field.value || (vehicle.returnMileage !== null ? vehicle.returnMileage : "")}
                           />
@@ -501,7 +504,7 @@ export function StatusChangeDialog({
                       <FormDescription>
                         {vehicle.returnMileage !== undefined && vehicle.returnMileage !== null
                           ? `Must be at least ${vehicle.returnMileage} km (previous return mileage)`
-                          : "Enter the vehicle's odometer reading at the start of the reservation"}
+                          : "Enter the vehicle's odometer reading when it was picked up"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -517,17 +520,17 @@ export function StatusChangeDialog({
                 name="departureMileage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mileage When Returned</FormLabel>
+                    <FormLabel>Mileage when returned</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="Enter final mileage"
+                        placeholder="Enter return mileage"
                         {...field}
                         value={field.value || ""}
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter the vehicle's odometer reading at the end of the reservation
+                      Enter the vehicle's odometer reading when it was returned
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
