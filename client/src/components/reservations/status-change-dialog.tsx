@@ -63,7 +63,8 @@ const statusChangeSchema = baseStatusChangeSchema
       message: "Return mileage must be greater than or equal to the start mileage",
       path: ["departureMileage"], // This will show the error under the departureMileage field
     }
-  );
+  )
+  /* We'll add vehicle-specific validation at runtime */
 
 type StatusChangeFormType = z.infer<typeof statusChangeSchema>;
 
@@ -286,6 +287,20 @@ export function StatusChangeDialog({
   });
   
   function onSubmit(data: StatusChangeFormType) {
+    // Custom validation - check for start mileage >= return mileage when confirming
+    if (data.status === "confirmed" && 
+        data.startMileage !== undefined && 
+        vehicle?.returnMileage !== undefined && 
+        vehicle.returnMileage !== null && 
+        data.startMileage < vehicle.returnMileage) {
+      form.setError("startMileage", { 
+        type: "manual", 
+        message: `Start mileage must be at least ${vehicle.returnMileage} km (previous return mileage)` 
+      });
+      return; // Don't submit
+    }
+    
+    // Passed validation, submit the data
     statusChangeMutation.mutate(data);
   }
   
@@ -429,11 +444,7 @@ export function StatusChangeDialog({
                 control={form.control}
                 name="startMileage"
                 render={({ field }) => {
-                  // Determine if the field should be readonly - true if there's a return mileage and the current value is less than it
-                  const isReadOnly = vehicle.returnMileage !== undefined && 
-                                     vehicle.returnMileage !== null &&
-                                     (field.value === undefined || 
-                                      field.value < vehicle.returnMileage);
+                  // We no longer make the field readonly, just use form validation instead
                   
                   return (
                     <FormItem>
@@ -447,14 +458,7 @@ export function StatusChangeDialog({
                               : (vehicle.currentMileage && vehicle.currentMileage !== null ? vehicle.currentMileage.toString() : "Enter starting mileage")}
                             {...field}
                             value={field.value || (vehicle.returnMileage !== null ? vehicle.returnMileage : "")}
-                            readOnly={isReadOnly}
-                            className={isReadOnly ? "bg-muted cursor-not-allowed" : ""}
                           />
-                          {isReadOnly && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
-                              Locked
-                            </div>
-                          )}
                         </div>
                       </FormControl>
                       <FormDescription>
