@@ -611,9 +611,9 @@ export function QuickActions() {
     try {
       const formData = new FormData();
       formData.append("vehicleId", selectedUploadVehicle.id.toString());
-      formData.append("documentType", documentFile.name.split('.')[0]);  // Use filename as document type
+      formData.append("documentType", documentCategory);  // Use selected category as document type
       formData.append("file", documentFile);
-      formData.append("category", documentCategory);
+      formData.append("category", documentCategory.toLowerCase().replace(/\s+/g, '_'));
       
       if (documentNotes) {
         formData.append("notes", documentNotes);
@@ -645,7 +645,7 @@ export function QuickActions() {
       // Reset form
       setSelectedUploadVehicle(null);
       setDocumentFile(null);
-      setDocumentCategory("general");
+      setDocumentCategory("APK Inspection");
       setDocumentNotes("");
       
       // Close dialog using the ref
