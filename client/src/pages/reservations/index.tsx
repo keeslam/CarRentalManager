@@ -32,7 +32,7 @@ import {
 import { Reservation, Vehicle } from "@shared/schema";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { getDuration } from "@/lib/date-utils";
-import { format, differenceInDays, addDays, parseISO, startOfToday, endOfToday, isBefore, isAfter } from "date-fns";
+import { format, differenceInDays, addDays, parseISO, startOfToday, endOfToday, isBefore, isAfter, isSameDay, endOfDay } from "date-fns";
 
 export default function ReservationsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -166,32 +166,61 @@ export default function ReservationsIndex() {
         
         switch (dateRangeFilter) {
           case "today":
+            // Today filter - reservation overlaps with today 
+            // This means either:
+            // 1. It starts today
+            // 2. It ends today
+            // 3. It spans today (started before and ends after)
+            const todayStart = startOfToday();
+            const todayEnd = endOfToday();
+            
             matchesDateRange = (
-              isAfter(startDate, startOfToday()) && isBefore(startDate, endOfToday())
+              // Starts today
+              (isAfter(startDate, todayStart) || isSameDay(startDate, todayStart)) && 
+              (isBefore(startDate, todayEnd) || isSameDay(startDate, todayEnd))
             ) || (
-              isAfter(endDate, startOfToday()) && isBefore(endDate, endOfToday())
+              // Ends today
+              (isAfter(endDate, todayStart) || isSameDay(endDate, todayStart)) && 
+              (isBefore(endDate, todayEnd) || isSameDay(endDate, todayEnd))
             ) || (
-              isBefore(startDate, startOfToday()) && isAfter(endDate, endOfToday())
+              // Spans over today
+              isBefore(startDate, todayStart) && isAfter(endDate, todayEnd)
             );
             break;
           case "week":
-            const weekFromNow = addDays(today, 7);
+            // This week filter - reservation is within the next 7 days
+            const weekStart = startOfToday();
+            const weekEnd = endOfDay(addDays(today, 7));
+            
             matchesDateRange = (
-              isBefore(startDate, weekFromNow) && 
-              isAfter(startDate, startOfToday())
+              // Starts during the week
+              ((isAfter(startDate, weekStart) || isSameDay(startDate, weekStart)) && 
+               (isBefore(startDate, weekEnd) || isSameDay(startDate, weekEnd)))
             ) || (
-              isAfter(startDate, startOfToday()) && 
-              isBefore(endDate, weekFromNow)
+              // Ends during the week
+              ((isAfter(endDate, weekStart) || isSameDay(endDate, weekStart)) && 
+               (isBefore(endDate, weekEnd) || isSameDay(endDate, weekEnd)))
+            ) || (
+              // Spans the entire week
+              isBefore(startDate, weekStart) && isAfter(endDate, weekEnd)
             );
             break;
           case "month":
-            const monthFromNow = addDays(today, 30);
+            // This month filter - reservation is within the next 30 days
+            const monthStart = startOfToday();
+            const monthEnd = endOfDay(addDays(today, 30));
+            
             matchesDateRange = (
-              isBefore(startDate, monthFromNow) && 
-              isAfter(startDate, startOfToday())
+              // Starts during the month
+              ((isAfter(startDate, monthStart) || isSameDay(startDate, monthStart)) && 
+               (isBefore(startDate, monthEnd) || isSameDay(startDate, monthEnd)))
             ) || (
-              isAfter(startDate, startOfToday()) && 
-              isBefore(endDate, monthFromNow)
+              // Ends during the month
+              ((isAfter(endDate, monthStart) || isSameDay(endDate, monthStart)) && 
+               (isBefore(endDate, monthEnd) || isSameDay(endDate, monthEnd)))
+            ) || (
+              // Spans the entire month
+              isBefore(startDate, monthStart) && isAfter(endDate, monthEnd)
             );
             break;
           case "past":
