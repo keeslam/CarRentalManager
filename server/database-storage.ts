@@ -4,7 +4,8 @@ import {
   customers, type Customer, type InsertCustomer,
   reservations, type Reservation, type InsertReservation,
   expenses, type Expense, type InsertExpense,
-  documents, type Document, type InsertDocument
+  documents, type Document, type InsertDocument,
+  pdfTemplates, type PdfTemplate, type InsertPdfTemplate
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -651,6 +652,58 @@ export class DatabaseStorage implements IStorage {
     const [deleted] = await db
       .delete(documents)
       .where(eq(documents.id, id))
+      .returning();
+    
+    return !!deleted;
+  }
+  
+  // PDF Template methods
+  async getAllPdfTemplates(): Promise<PdfTemplate[]> {
+    return await db.select().from(pdfTemplates);
+  }
+  
+  async getPdfTemplate(id: number): Promise<PdfTemplate | undefined> {
+    const [template] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.id, id));
+    return template || undefined;
+  }
+  
+  async getDefaultPdfTemplate(): Promise<PdfTemplate | undefined> {
+    const [template] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.isDefault, true));
+    return template || undefined;
+  }
+  
+  async createPdfTemplate(templateData: InsertPdfTemplate): Promise<PdfTemplate> {
+    // If setting as default, update all other templates to not be default
+    if (templateData.isDefault) {
+      await db.update(pdfTemplates).set({ isDefault: false });
+    }
+    
+    const [template] = await db.insert(pdfTemplates).values(templateData).returning();
+    return template;
+  }
+  
+  async updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined> {
+    // If setting as default, update all other templates to not be default
+    if (templateData.isDefault) {
+      await db.update(pdfTemplates).set({ isDefault: false });
+    }
+    
+    const [updatedTemplate] = await db
+      .update(pdfTemplates)
+      .set({
+        ...templateData,
+        updatedAt: new Date()
+      })
+      .where(eq(pdfTemplates.id, id))
+      .returning();
+    
+    return updatedTemplate || undefined;
+  }
+  
+  async deletePdfTemplate(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(pdfTemplates)
+      .where(eq(pdfTemplates.id, id))
       .returning();
     
     return !!deleted;

@@ -272,3 +272,19 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+// PDF Templates table
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  fields: jsonb("fields").default([])
+});
+
+export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates)
+  .omit({ id: true });
+
+export type PdfTemplate = typeof pdfTemplates.$inferSelect;
+export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
