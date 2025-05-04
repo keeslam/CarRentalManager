@@ -263,8 +263,13 @@ export default function VehiclesIndex() {
       header: "Registration",
       cell: ({ row }) => {
         const vehicle = row.original;
-        const isRegisteredToPerson = vehicle.registeredTo === true || vehicle.registeredTo === "true";
-        const isRegisteredToCompany = vehicle.company === true || vehicle.company === "true";
+        // Convert string values to booleans for proper comparison
+        const isRegisteredToPerson = vehicle.registeredTo === true || 
+                                    vehicle.registeredTo === "true" || 
+                                    String(vehicle.registeredTo).toLowerCase() === "true";
+        const isRegisteredToCompany = vehicle.company === true || 
+                                     vehicle.company === "true" || 
+                                     String(vehicle.company).toLowerCase() === "true";
         
         return (
           <div className="flex flex-col">
@@ -414,6 +419,7 @@ export default function VehiclesIndex() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"
+              autoFocus
             />
             <div className="flex items-center">
               <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
@@ -446,8 +452,7 @@ export default function VehiclesIndex() {
               <DataTable
                 columns={columns}
                 data={(filteredVehicles || []).slice(0, visibleVehicleCount)}
-                searchColumn="licensePlate"
-                searchPlaceholder="Filter by license plate..."
+                // Remove the DataTable's built-in search since we're using our own search input
               />
               
               {/* Load more button */}
