@@ -96,6 +96,10 @@ export function ReservationForm({
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || "pending");
+  const [departureMileage, setDepartureMileage] = useState<number | undefined>(
+    initialData?.vehicle?.departureMileage || undefined
+  );
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -179,6 +183,7 @@ export function ReservationForm({
   const endDateWatch = form.watch("endDate");
   const vehicleIdWatch = form.watch("vehicleId");
   const customerIdWatch = form.watch("customerId");
+  const statusWatch = form.watch("status");
   
   // Find the selected vehicle and customer
   const selectedVehicle = useMemo(() => {
