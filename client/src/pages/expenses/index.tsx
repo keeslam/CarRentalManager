@@ -14,6 +14,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Expense } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
@@ -321,7 +330,9 @@ export default function ExpensesIndex() {
                                         description.includes(filterValue);
                                       
                                       // Show/hide based on match
-                                      row.style.display = matches || filterValue === '' ? '' : 'none';
+                                      if (row instanceof HTMLElement) {
+                                        row.style.display = matches || filterValue === '' ? '' : 'none';
+                                      }
                                     });
                                   }}
                                 />
