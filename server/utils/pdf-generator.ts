@@ -172,12 +172,17 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
               // If value is still empty, check direct properties as a fallback
               if (!value) {
                 console.log(`  Field value not found in nested objects, trying direct properties...`);
-                if (contractData[source] !== undefined) {
-                  value = contractData[source];
-                  console.log(`  Found direct property ${source} = ${value}`);
-                } else if (contractData[propertyName] !== undefined) {
-                  value = contractData[propertyName];
-                  console.log(`  Found direct property ${propertyName} = ${value}`);
+                try {
+                  // Safely check if the property exists in contractData
+                  if (source in contractData) {
+                    value = String(contractData[source as keyof typeof contractData]);
+                    console.log(`  Found direct property ${source} = ${value}`);
+                  } else if (propertyName in contractData) {
+                    value = String(contractData[propertyName as keyof typeof contractData]);
+                    console.log(`  Found direct property ${propertyName} = ${value}`);
+                  }
+                } catch (error) {
+                  console.error(`Error accessing property ${source}:`, error);
                 }
               }
             } else {

@@ -670,6 +670,7 @@ export class DatabaseStorage implements IStorage {
   async getDefaultPdfTemplate(): Promise<PdfTemplate | undefined> {
     try {
       // Use SQL query directly to handle potential column name mismatch
+      console.log('Searching for default template...');
       const result = await db.execute(
         sql`SELECT * FROM pdf_templates WHERE is_default = true LIMIT 1`
       );
@@ -678,19 +679,52 @@ export class DatabaseStorage implements IStorage {
         const template = result[0];
         console.log('Found default template:', template.id, template.name);
         
+        // Fix the isDefault property by adding it if missing
+        if (template.isDefault === undefined && template.is_default !== undefined) {
+          console.log('Fixing template isDefault property');
+          template.isDefault = template.is_default;
+        }
+        
         // Process fields if it's a string
         if (template.fields && typeof template.fields === 'string') {
           try {
             // Try to parse JSON string
-            template.fields = JSON.parse(template.fields);
+            const parsedFields = JSON.parse(template.fields);
+            console.log(`Successfully parsed ${parsedFields.length} fields`);
+            template.fields = parsedFields;
           } catch (error) {
             console.error('Error parsing template fields:', error);
           }
         }
         
         return template;
+      } else {
+        // If no default template found via 'is_default', try a fallback
+        console.log('No templates with is_default=true found, checking all templates...');
+        const allTemplates = await db.select().from(pdfTemplates);
+        
+        if (allTemplates.length > 0) {
+          // Try first to find one with isDefault = true, then fallback to first template
+          const defaultTemplate = allTemplates.find(t => t.isDefault === true) || allTemplates[0];
+          
+          console.log(`Using fallback template: ${defaultTemplate.name} with ID: ${defaultTemplate.id}`);
+          
+          // Process fields if it's a string
+          if (defaultTemplate.fields && typeof defaultTemplate.fields === 'string') {
+            try {
+              const parsedFields = JSON.parse(defaultTemplate.fields);
+              console.log(`Successfully parsed ${parsedFields.length} fields`);
+              defaultTemplate.fields = parsedFields;
+            } catch (error) {
+              console.error('Error parsing template fields:', error);
+            }
+          }
+          
+          return defaultTemplate;
+        }
       }
       
+      console.log('No templates found at all');
       return undefined;
     } catch (error) {
       console.error('Error getting default template:', error);

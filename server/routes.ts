@@ -1916,6 +1916,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const template = await storage.getPdfTemplate(templateId);
           
           if (template) {
+            // Make sure the template fields are properly formatted
+            let fieldsLength = 0;
+            if (template.fields) {
+              if (typeof template.fields === 'string') {
+                try {
+                  const parsedFields = JSON.parse(template.fields);
+                  fieldsLength = parsedFields.length;
+                  // Ensure template has fields property as parsed JSON
+                  template.fields = parsedFields;
+                } catch (e) {
+                  console.error('Error parsing template fields:', e);
+                }
+              } else {
+                fieldsLength = template.fields.length;
+              }
+            }
+            
+            console.log(`Template has ${fieldsLength} fields`);
+            
             // Use the imported function from pdf-generator.ts
             const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
             pdfBuffer = await generateRentalContractFromTemplate(reservation, template);
@@ -1931,7 +1950,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (defaultTemplate) {
             console.log(`Using default template: ${defaultTemplate.name} with ID: ${defaultTemplate.id}`);
-            console.log(`Template has ${defaultTemplate.fields ? (typeof defaultTemplate.fields === 'string' ? JSON.parse(defaultTemplate.fields).length : defaultTemplate.fields.length) : 0} fields`);
+            
+            // Make sure the template fields are properly formatted
+            let fieldsLength = 0;
+            if (defaultTemplate.fields) {
+              if (typeof defaultTemplate.fields === 'string') {
+                try {
+                  const parsedFields = JSON.parse(defaultTemplate.fields);
+                  fieldsLength = parsedFields.length;
+                  // Ensure template has fields property as parsed JSON
+                  defaultTemplate.fields = parsedFields;
+                } catch (e) {
+                  console.error('Error parsing template fields:', e);
+                }
+              } else {
+                fieldsLength = defaultTemplate.fields.length;
+              }
+            }
+            
+            console.log(`Template has ${fieldsLength} fields`);
             
             const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
             pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
@@ -2159,6 +2196,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: 'system',
         updatedBy: null,
       };
+      
+      // Make sure the template fields are properly formatted
+      let fieldsLength = 0;
+      if (template.fields) {
+        if (typeof template.fields === 'string') {
+          try {
+            const parsedFields = JSON.parse(template.fields);
+            fieldsLength = parsedFields.length;
+            // Ensure template has fields property as parsed JSON
+            template.fields = parsedFields;
+          } catch (e) {
+            console.error('Error parsing template fields:', e);
+          }
+        } else {
+          fieldsLength = template.fields.length;
+        }
+      }
+      
+      console.log(`Preview template has ${fieldsLength} fields`);
       
       // Import necessary functions
       const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
