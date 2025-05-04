@@ -363,8 +363,8 @@ const PDFTemplateEditor = () => {
   };
   
   const handleWheel = (e: React.WheelEvent) => {
-    // Only zoom if Ctrl key is pressed to not interfere with normal scrolling
-    if (e.ctrlKey && pdfContainerRef.current) {
+    // Only zoom if Shift key is pressed to not interfere with normal scrolling or browser zooming
+    if (e.shiftKey && pdfContainerRef.current) {
       e.preventDefault();
       
       const containerRect = pdfContainerRef.current.getBoundingClientRect();
