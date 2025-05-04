@@ -11,6 +11,7 @@ import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
+import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -260,6 +261,9 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
               New Reservation
             </Button>
           </Link>
+          
+          {/* Quick Status Change Button for Active Reservation */}
+          <QuickStatusChangeButton vehicleId={vehicleId} />
         </div>
       </div>
       
