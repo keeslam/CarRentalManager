@@ -291,13 +291,91 @@ export default function ExpensesIndex() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="pt-2 pb-4">
-                              <DataTable
-                                columns={columns}
-                                data={categoryExpenses}
-                                searchColumns={["description", "vehicle"]}
-                                searchPlaceholder="Filter by vehicle or description..."
-                                pagination={false}
-                              />
+                              {/* Custom implementation with license plate filter support */}
+                              <div className="space-y-4">
+                                <Input 
+                                  placeholder="Filter by license plate or description..." 
+                                  className="max-w-sm"
+                                  onChange={(e) => {
+                                    // Store the filter value locally
+                                    const filterValue = e.target.value.toLowerCase();
+                                    
+                                    // Get all tables in this accordion content
+                                    const tableRows = document.querySelectorAll(`[data-category="${category}"] tbody tr`);
+                                    
+                                    tableRows.forEach((row) => {
+                                      const licensePlateEl = row.querySelector('[data-license-plate]');
+                                      const descriptionEl = row.querySelector('[data-description]');
+                                      
+                                      const licensePlate = licensePlateEl?.getAttribute('data-license-plate')?.toLowerCase() || '';
+                                      const description = descriptionEl?.textContent?.toLowerCase() || '';
+                                      
+                                      // Normalize license plates for searching (remove dashes)
+                                      const normalizedLicensePlate = licensePlate.replace(/-/g, '');
+                                      const normalizedFilter = filterValue.replace(/-/g, '');
+                                      
+                                      // Check if either field matches
+                                      const matches = 
+                                        licensePlate.includes(filterValue) || 
+                                        normalizedLicensePlate.includes(normalizedFilter) ||
+                                        description.includes(filterValue);
+                                      
+                                      // Show/hide based on match
+                                      row.style.display = matches || filterValue === '' ? '' : 'none';
+                                    });
+                                  }}
+                                />
+                                
+                                <div className="rounded-md border" data-category={category}>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Vehicle</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead></TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {categoryExpenses.length === 0 ? (
+                                        <TableRow>
+                                          <TableCell colSpan={5} className="h-24 text-center">
+                                            No expenses found.
+                                          </TableCell>
+                                        </TableRow>
+                                      ) : (
+                                        categoryExpenses.map((expense) => (
+                                          <TableRow key={expense.id}>
+                                            <TableCell>{formatDate(expense.date || '')}</TableCell>
+                                            <TableCell>
+                                              {expense.vehicle ? (
+                                                <div data-license-plate={expense.vehicle.licensePlate}>
+                                                  <div className="font-medium">{displayLicensePlate(expense.vehicle.licensePlate)}</div>
+                                                  <div className="text-sm text-gray-500">{expense.vehicle.brand} {expense.vehicle.model}</div>
+                                                </div>
+                                              ) : "—"}
+                                            </TableCell>
+                                            <TableCell data-description>
+                                              {expense.description || "—"}
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium">{formatCurrency(Number(expense.amount) || 0)}</span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              <Link href={`/expenses/${expense.id}`}>
+                                                <Button variant="ghost" size="sm">
+                                                  View
+                                                </Button>
+                                              </Link>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
                               <div className="mt-2 flex justify-end">
                                 <Link href={`/expenses/add?category=${encodeURIComponent(category)}`}>
                                   <Button size="sm" variant="outline" className="gap-1">
