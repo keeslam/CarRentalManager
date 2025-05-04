@@ -158,27 +158,9 @@ export function StatusChangeDialog({
           }
         }
         
-        // For successful responses that might return HTML instead of JSON
-        try {
-          const text = await reservationResponse.text();
-          
-          // Check if the response is HTML (starts with <!DOCTYPE or <html)
-          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            console.log('Received HTML response but expected JSON, returning empty object');
-            return {}; // Return empty object instead of failing
-          }
-          
-          // Otherwise try to parse as JSON
-          try {
-            return JSON.parse(text);
-          } catch (e) {
-            console.error('Failed to parse response as JSON:', text);
-            return {}; // Return empty object on parse error
-          }
-        } catch (e) {
-          console.error('Error reading response:', e);
-          return {}; // Return empty object on any error
-        }
+        // Don't try to parse the response - it's already been consumed in error handling
+        // Just return an empty object to indicate success
+        return {};
       } else {
         // Simple status update without mileage
         const response = await apiRequest(
@@ -199,38 +181,41 @@ export function StatusChangeDialog({
           }
         }
         
-        // For successful responses that might return HTML instead of JSON
-        try {
-          const text = await response.text();
-          
-          // Check if the response is HTML (starts with <!DOCTYPE or <html)
-          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            console.log('Received HTML response but expected JSON, returning empty object');
-            return {}; // Return empty object instead of failing
-          }
-          
-          // Otherwise try to parse as JSON
-          try {
-            return JSON.parse(text);
-          } catch (e) {
-            console.error('Failed to parse response as JSON:', text);
-            return {}; // Return empty object on parse error
-          }
-        } catch (e) {
-          console.error('Error reading response:', e);
-          return {}; // Return empty object on any error
-        }
+        // Don't try to parse the response - it's already been consumed in error handling
+        // Just return an empty object to indicate success
+        return {};
       }
     },
     onSuccess: async () => {
-      // Invalidate queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}`] });
+      // Force refresh with immediate refetch after invalidation
+      // First, invalidate all relevant queries
+      await queryClient.invalidateQueries({ 
+        queryKey: ["/api/reservations"],
+        refetchType: 'all'
+      });
+      
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/reservations/${reservationId}`],
+        refetchType: 'all'
+      });
       
       if (vehicle?.id) {
-        await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
-        await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/vehicles/${vehicle.id}`],
+          refetchType: 'all'
+        });
+        
+        await queryClient.invalidateQueries({ 
+          queryKey: ["/api/vehicles"],
+          refetchType: 'all'
+        });
       }
+      
+      // Force an immediate refetch of the data
+      await queryClient.refetchQueries({ 
+        queryKey: ["/api/reservations"],
+        type: 'all' 
+      });
       
       toast({
         title: "Status Updated",
