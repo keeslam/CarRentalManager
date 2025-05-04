@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
-import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal, ZoomIn, ZoomOut, MaximizeIcon, Grid, AlignCenterHorizontal, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal, ZoomIn, ZoomOut, MaximizeIcon, Grid, AlignCenterHorizontal, AlignCenter, AlignLeft, AlignRight, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
 // Import contract background image
 import contractBackground from "../../assets/contract-background.jpg";
@@ -681,7 +682,15 @@ const PDFTemplateEditor = () => {
   return (
     <div className="container">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Contract Template Editor</h1>
+        <div className="flex items-center">
+          <Link href="/documents">
+            <Button variant="outline" className="mr-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Documents
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">Contract Template Editor</h1>
+        </div>
         <div className="flex space-x-2">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
