@@ -33,14 +33,14 @@ export function WarrantyExpirationWidget() {
   // Add daysUntilExpiration to each vehicle
   const vehiclesWithDays = vehicles?.map(vehicle => ({
     ...vehicle,
-    daysUntilExpiration: getDaysUntil(vehicle.warrantyDate || '')
+    daysUntilExpiration: getDaysUntil(vehicle.warrantyEndDate || '')
   })).sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
   
   return (
     <Card className="overflow-hidden h-full">
-      <CardHeader className="bg-primary-700 text-white py-3 px-4 flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium">Warranty Expiring Soon</CardTitle>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert text-white">
+      <CardHeader className="bg-primary-700 py-3 px-4 flex-row justify-between items-center space-y-0">
+        <CardTitle className="text-base font-medium text-gray-900">Warranty Expiring Soon</CardTitle>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert text-gray-900">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
           <path d="M12 8v4" />
           <path d="M12 16h.01" />
@@ -72,7 +72,7 @@ export function WarrantyExpirationWidget() {
                 <div className="ml-3 flex-grow">
                   <div className="text-sm font-medium text-gray-900">{displayLicensePlate(vehicle.licensePlate)}</div>
                   <div className="flex items-center">
-                    <div className="text-xs text-gray-500">{formatDate(vehicle.warrantyDate || '')}</div>
+                    <div className="text-xs text-gray-500">{formatDate(vehicle.warrantyEndDate || '')}</div>
                     <div className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${getUrgencyClass(vehicle.daysUntilExpiration)}`}>
                       {vehicle.daysUntilExpiration} days
                     </div>
