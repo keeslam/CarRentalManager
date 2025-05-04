@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Reservation, Vehicle } from "@shared/schema";
-import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
+import { formatDate, formatCurrency, formatLicensePlate, formatReservationStatus } from "@/lib/format-utils";
 import { getDuration } from "@/lib/date-utils";
 import { format, differenceInDays, addDays, parseISO, startOfToday, endOfToday, isBefore, isAfter, isSameDay, endOfDay } from "date-fns";
 
