@@ -254,9 +254,13 @@ const PDFTemplateEditor = () => {
     
     const containerRect = pdfContainerRef.current.getBoundingClientRect();
     
-    // Calculate new position relative to the container
-    const x = Math.max(0, Math.min(e.clientX - containerRect.left, containerRect.width));
-    const y = Math.max(0, Math.min(e.clientY - containerRect.top, containerRect.height));
+    // Calculate new position relative to the container, accounting for the zoom level
+    const rawX = e.clientX - containerRect.left;
+    const rawY = e.clientY - containerRect.top;
+    
+    // Divide by zoom level to get actual position in the document
+    const x = Math.max(0, Math.min(rawX / zoomLevel, 595));
+    const y = Math.max(0, Math.min(rawY / zoomLevel, 842));
 
     // Update the field position
     const updatedFields = currentTemplate.fields.map(f => 
