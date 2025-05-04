@@ -650,12 +650,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Add tracking info
-      const user = req.user;
-      updateData.updatedBy = user?.username || null;
-      
       // Only update if we have valid data
-      if (Object.keys(updateData).length > 1) { // > 1 because we always have updatedBy
+      if (Object.keys(updateData).length > 0) { // Check if we have any data to update
         const updatedVehicle = await storage.updateVehicle(id, updateData);
         return res.json(updatedVehicle);
       } else {
@@ -690,23 +686,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // Add user tracking information
-      const user = req.user;
+      // Create update data without updatedBy field
       let updateData;
 
       if (status === 'opnaam') {
         updateData = {
           registeredTo: "true", // Use string "true" to match database schema
           company: "false",     // Use string "false" to match database schema
-          registeredToDate: currentDate,
-          updatedBy: user ? user.username : null
+          registeredToDate: currentDate
         };
       } else {
         updateData = {
           registeredTo: "false", // Use string "false" to match database schema
           company: "true",       // Use string "true" to match database schema
-          companyDate: currentDate,
-          updatedBy: user ? user.username : null
+          companyDate: currentDate
         };
       }
 
