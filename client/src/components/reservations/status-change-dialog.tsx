@@ -63,6 +63,7 @@ interface StatusChangeDialogProps {
   };
   customer?: {
     id: number;
+    name?: string;             // Full name field
     firstName?: string;
     lastName?: string;
     companyName?: string;
@@ -324,11 +325,12 @@ export function StatusChangeDialog({
               <div className="space-y-2">
                 <h3 className="font-medium text-sm">Customer Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-sm">
-                  {(customer.firstName || customer.lastName) && (
+                  {/* Display customer full name from name field or firstName/lastName if available */}
+                  {(customer.name || customer.firstName || customer.lastName) && (
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">Name:</span>
                       <span className="font-medium">
-                        {[customer.firstName, customer.lastName].filter(Boolean).join(' ')}
+                        {customer.name || [customer.firstName, customer.lastName].filter(Boolean).join(' ')}
                       </span>
                     </div>
                   )}
