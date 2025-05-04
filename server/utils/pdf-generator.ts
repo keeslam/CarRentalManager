@@ -19,9 +19,46 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     // Extract data for the contract
     const contractData = prepareContractData(reservation);
     
-    // Create a new PDF document with A4 size (595 x 842 points)
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595, 842]);
+    // Check if a template background exists
+    let pdfDoc;
+    let page;
+    
+    // Always try to use the template background
+    try {
+      // Default template path or use the provided background path from template
+      const templatePath = path.join(
+        process.cwd(), 
+        'uploads/templates/rental_contract_template.pdf'
+      );
+      
+      console.log('Loading template from path:', templatePath);
+      
+      // Check if the file exists
+      if (fs.existsSync(templatePath)) {
+        const templateBytes = fs.readFileSync(templatePath);
+        
+        // Load the PDF document
+        pdfDoc = await PDFDocument.load(templateBytes);
+        
+        // Get the first page or add one if the PDF is empty
+        if (pdfDoc.getPageCount() > 0) {
+          page = pdfDoc.getPage(0);
+          console.log('Successfully loaded template background');
+        } else {
+          console.log('Template PDF exists but has no pages, creating new page');
+          page = pdfDoc.addPage([595, 842]); // A4 size
+        }
+      } else {
+        console.log('Template file not found, creating new document');
+        pdfDoc = await PDFDocument.create();
+        page = pdfDoc.addPage([595, 842]); // A4 size
+      }
+    } catch (error) {
+      console.error('Error loading template background:', error);
+      // Fall back to creating a new document
+      pdfDoc = await PDFDocument.create();
+      page = pdfDoc.addPage([595, 842]); // A4 size
+    }
     
     // Get fonts
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
