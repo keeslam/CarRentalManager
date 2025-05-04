@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ColumnDef } from "@tanstack/react-table";
 import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Badge } from "@/components/ui/badge";
+import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,8 @@ export default function ReservationsIndex() {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
   const [vehicleGrouping, setVehicleGrouping] = useState("none");
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const { toast } = useToast();
   
   // Get current date
@@ -339,7 +342,7 @@ export default function ReservationsIndex() {
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
-        const reservationId = row.original.id;
+        const reservation = row.original;
         let badgeClass = "";
         
         switch (status.toLowerCase()) {
@@ -362,37 +365,31 @@ export default function ReservationsIndex() {
         return (
           <div className="flex items-center space-x-2">
             <Badge className={badgeClass}>{status}</Badge>
-            <div className="relative">
-              <Select
-                value={status}
-                onValueChange={(newStatus) => {
-                  updateStatusMutation.mutate({ id: reservationId, status: newStatus });
-                }}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="p-0 h-7 w-7"
+              onClick={() => {
+                setSelectedReservation(reservation);
+                setStatusDialogOpen(true);
+              }}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="14" 
+                height="14" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="text-gray-500"
               >
-                <SelectTrigger className="h-7 w-7 p-0 ml-1">
-                  <SelectValue placeholder="" />
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="14" 
-                    height="14" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </Button>
           </div>
         );
       },
@@ -655,6 +652,20 @@ export default function ReservationsIndex() {
           )}
         </CardContent>
       </Card>
+
+      {/* Status Change Dialog */}
+      {selectedReservation && (
+        <StatusChangeDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          reservationId={selectedReservation.id}
+          initialStatus={selectedReservation.status}
+          vehicle={selectedReservation.vehicle}
+          onStatusChanged={() => {
+            refetchReservations();
+          }}
+        />
+      )}
     </div>
   );
 }
