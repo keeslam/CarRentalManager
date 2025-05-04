@@ -123,7 +123,7 @@ export function StatusChangeDialog({
         
         const vehicleResponse = await apiRequest(
           "PATCH",
-          `/api/vehicles/${vehicle.id}`,
+          `/api/vehicles/${vehicle.id}/mileage`,
           vehicleData
         );
         

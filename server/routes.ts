@@ -581,8 +581,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Sanitized vehicle update data:", JSON.stringify(sanitizedData));
 
-      // Parse the sanitized data
-      const vehicleData = insertVehicleSchema.parse(sanitizedData);
+      // Get the existing vehicle first to merge with updates
+      const existingVehicle = await storage.getVehicle(id);
+      if (!existingVehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // For partial updates, we need to merge with existing data
+      const mergedData = {
+        ...existingVehicle,
+        ...sanitizedData
+      };
+
+      // Parse the sanitized merged data
+      const vehicleData = insertVehicleSchema.parse(mergedData);
       
       // Add user tracking information for updates
       const user = req.user;
@@ -602,6 +614,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating vehicle:", error);
       res.status(400).json({ 
         message: "Invalid vehicle data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Update vehicle mileage only (special endpoint for partial updates)
+  app.patch("/api/vehicles/:id/mileage", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+      
+      // Get existing vehicle
+      const vehicle = await storage.getVehicle(id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      // Check if the request contains valid mileage fields
+      const updateData: Record<string, any> = {};
+      
+      if (req.body.currentMileage !== undefined) {
+        const mileage = parseInt(req.body.currentMileage);
+        if (!isNaN(mileage)) {
+          updateData.currentMileage = mileage;
+        }
+      }
+      
+      if (req.body.departureMileage !== undefined) {
+        const mileage = parseInt(req.body.departureMileage);
+        if (!isNaN(mileage)) {
+          updateData.departureMileage = mileage;
+        }
+      }
+      
+      // Add tracking info
+      const user = req.user;
+      updateData.updatedBy = user?.username || null;
+      
+      // Only update if we have valid data
+      if (Object.keys(updateData).length > 1) { // > 1 because we always have updatedBy
+        const updatedVehicle = await storage.updateVehicle(id, updateData);
+        return res.json(updatedVehicle);
+      } else {
+        return res.status(400).json({ message: "No valid mileage data provided" });
+      }
+    } catch (error) {
+      console.error("Error updating vehicle mileage:", error);
+      return res.status(500).json({ 
+        message: "Failed to update vehicle mileage", 
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
