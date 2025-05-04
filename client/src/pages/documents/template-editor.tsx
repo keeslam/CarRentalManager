@@ -217,10 +217,10 @@ const PDFTemplateEditor = () => {
       return;
     }
 
-    // Default position in the middle of the container
-    const containerRect = pdfContainerRef.current?.getBoundingClientRect();
-    const x = containerRect ? containerRect.width / 2 : 300;
-    const y = containerRect ? containerRect.height / 2 : 400;
+    // Default position in the middle of the container, accounting for zoom level
+    // Use standard A4 dimensions (595 x 842) as reference
+    const x = 595 / 2; // Center X position (half of A4 width)
+    const y = 842 / 2; // Center Y position (half of A4 height)
 
     const newField: TemplateField = {
       id: `field-${Date.now()}`,
