@@ -4,7 +4,6 @@ import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
@@ -271,11 +270,7 @@ export default function ReservationCalendarPage() {
             <CardDescription>View and manage vehicle reservations</CardDescription>
           </div>
           <div className="flex-shrink-0">
-            <TabsFilter
-              tabs={viewOptions}
-              activeTab={view}
-              onChange={(value) => setView(value as CalendarView)}
-            />
+            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -334,287 +329,80 @@ export default function ReservationCalendarPage() {
           </div>
           
           {/* Month View */}
-          {view === "month" && calendarGrid && (
-            <div className="mb-6">
-              {/* Calendar Header - Days of Week */}
-              <div className="grid grid-cols-7 mb-2">
-                {daysOfWeek.map((day) => (
-                  <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Calendar Grid */}
-              <div className="border rounded-lg overflow-hidden">
-                {calendarGrid.map((week, weekIndex) => (
-                  <div key={weekIndex} className="grid grid-cols-7 divide-x border-b last:border-b-0">
-                    {week.map((day, dayIndex) => {
-                      const isCurrentMonth = isSameMonth(day, currentDate);
-                      const isToday = isSameDay(day, new Date());
-                      
-                      // Count reservations for this day
-                      const dayReservations = reservations?.filter(res => 
-                        isDateInRange(day, parseISO(res.startDate), parseISO(res.endDate))
-                      ) || [];
-                      
-                      return (
-                        <div
-                          key={dayIndex}
-                          className={`min-h-[100px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''}`}
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <span className={`text-sm font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''}`}>
-                              {format(day, "d")}
-                            </span>
-                            {dayReservations.length > 0 && (
-                              <Badge variant="outline" className="text-xs">
-                                {dayReservations.length}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {/* Show up to 3 reservations in month view */}
-                          <div className="space-y-1">
-                            {dayReservations.slice(0, 3).map(res => (
-                              <Link key={res.id} href={`/reservations/${res.id}`}>
-                                <div 
-                                  className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isSameDay(day, parseISO(res.startDate)), isSameDay(day, parseISO(res.endDate)))}`}
-                                  title={`${displayLicensePlate(res.vehicle?.licensePlate)} - ${res.customer?.name || 'Reserved'}`}
-                                >
-                                  {displayLicensePlate(res.vehicle?.licensePlate)} 
-                                </div>
-                              </Link>
-                            ))}
-                            
-                            {dayReservations.length > 3 && (
-                              <div className="text-xs text-gray-500">
-                                +{dayReservations.length - 3} more
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+          <div className="mb-6">
+            {/* Calendar Header - Days of Week */}
+            <div className="grid grid-cols-7 mb-2">
+              {daysOfWeek.map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                  {day}
+                </div>
+              ))}
             </div>
-          )}
-          
-          {/* Week/Day View */}
-          {(view === "week" || view === "day") && (
-            <>
-              {/* Day Headers */}
-              <div className="grid grid-cols-7 mb-2">
-                {dateRanges.days.map((day, index) => (
-                  <div 
-                    key={index} 
-                    className={`text-center py-2 ${isSameDay(day, new Date()) ? 'bg-blue-50 rounded font-medium' : ''}`}
-                  >
-                    <div className="text-sm font-medium">
-                      {daysOfWeek[index % 7]}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {format(day, "MMM d")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Loading State */}
-              {(isLoadingVehicles || isLoadingReservations) ? (
-                <div className="flex justify-center items-center h-64">
-                  <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-              ) : filteredVehicles.length === 0 ? (
-                <div className="flex flex-col items-center justify-center border rounded-lg p-8 text-center">
-                  <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-x text-gray-500">
-                      <path d="M21 14V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
-                      <line x1="16" x2="16" y1="2" y2="6" />
-                      <line x1="8" x2="8" y1="2" y2="6" />
-                      <line x1="3" x2="21" y1="10" y2="10" />
-                      <path d="m17 17 4 4" />
-                      <path d="m21 17-4 4" />
-                    </svg>
-                  </div>
-                  <h3 className="font-medium text-lg mb-2">No Vehicles Found</h3>
-                  <p className="text-gray-500 max-w-md mb-4">
-                    There are no vehicles matching your current filters. Try adjusting your search criteria or add new vehicles to the system.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setVehicleFilters({ search: "", type: "all", availability: "all" })}
-                    >
-                      Clear Filters
-                    </Button>
-                    <Link href="/vehicles/add">
-                      <Button size="sm">Add Vehicle</Button>
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[calc(100vh-350px)] overflow-y-auto">
-                  {filteredVehicles.map(vehicle => (
-                    <div key={vehicle.id} className="border rounded-md overflow-hidden">
-                      <div className="bg-gray-50 px-3 py-2 flex justify-between items-center">
-                        <div className="flex items-center">
-                          <Link href={`/vehicles/${vehicle.id}`}>
-                            <div className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">
-                              {displayLicensePlate(vehicle.licensePlate)}
-                            </div>
-                          </Link>
-                          <div className="ml-2 text-xs text-gray-500">
-                            {vehicle.brand} {vehicle.model}
-                            {vehicle.vehicleType && (
-                              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-200 text-gray-800">
-                                {vehicle.vehicleType}
-                              </span>
-                            )}
-                          </div>
+            
+            {/* Calendar Grid */}
+            <div className="border rounded-lg overflow-hidden">
+              {calendarGrid.map((week, weekIndex) => (
+                <div key={weekIndex} className="grid grid-cols-7 divide-x border-b last:border-b-0">
+                  {week.map((day, dayIndex) => {
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    // Count reservations for this day
+                    const dayReservations = reservations?.filter(res => 
+                      isDateInRange(day, parseISO(res.startDate), parseISO(res.endDate))
+                    ) || [];
+                    
+                    return (
+                      <div
+                        key={dayIndex}
+                        className={`min-h-[100px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className={`text-sm font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''}`}>
+                            {format(day, "d")}
+                          </span>
+                          {dayReservations.length > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              {dayReservations.length}
+                            </Badge>
+                          )}
                         </div>
-                        <Link href={`/reservations/add?vehicleId=${vehicle.id}`}>
-                          <Button size="sm" variant="ghost">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-1">
-                              <line x1="12" x2="12" y1="5" y2="19" />
-                              <line x1="5" x2="19" y1="12" y2="12" />
-                            </svg>
-                            Reserve
-                          </Button>
-                        </Link>
-                      </div>
-                      <div className="grid grid-cols-7">
-                        {/* Each day cell */}
-                        {view === "day" ? (
-                          // Single day view - more detailed
-                          <div className="col-span-7 p-3">
-                            {(() => {
-                              const dayReservations = getReservationsForDay(vehicle.id, dateRanges.days[0]);
-                              
-                              if (dayReservations.length === 0) {
-                                return (
-                                  <div className="text-center py-2 text-gray-500 text-sm">
-                                    No reservations
-                                  </div>
-                                );
-                              }
-                              
-                              return (
-                                <div className="space-y-2">
-                                  {dayReservations.map(reservation => (
-                                    <Link key={reservation.id} href={`/reservations/${reservation.id}`}>
-                                      <div 
-                                        className={`p-2 rounded-md cursor-pointer hover:shadow-sm transition-shadow ${
-                                          getReservationStyle(
-                                            reservation.status, 
-                                            isSameDay(dateRanges.days[0], parseISO(reservation.startDate)),
-                                            isSameDay(dateRanges.days[0], parseISO(reservation.endDate))
-                                          )
-                                        }`}
-                                      >
-                                        <div className="flex justify-between items-center mb-1">
-                                          <span className="font-medium">
-                                            {reservation.customer?.name || "Reserved"}
-                                          </span>
-                                          <Badge variant="outline">{reservation.status}</Badge>
-                                        </div>
-                                        <div className="text-xs">
-                                          {format(parseISO(reservation.startDate), "MMM d")} to {format(parseISO(reservation.endDate), "MMM d")}
-                                          {reservation.totalPrice && (
-                                            <span className="ml-2 font-medium">
-                                              €{parseFloat(reservation.totalPrice).toFixed(2)}
-                                            </span>
-                                          )}
-                                        </div>
-                                        {reservation.notes && (
-                                          <div className="text-xs mt-1 text-gray-600">
-                                            {reservation.notes.length > 100 
-                                              ? `${reservation.notes.substring(0, 100)}...` 
-                                              : reservation.notes
-                                            }
-                                          </div>
-                                        )}
-                                      </div>
-                                    </Link>
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          // Week view
-                          dateRanges.days.map((day, dayIndex) => {
-                            const dayReservations = getReservationsForDay(vehicle.id, day);
-                            const isToday = isSameDay(day, new Date());
-                            
-                            return (
+                        
+                        {/* Show up to 3 reservations in month view */}
+                        <div className="space-y-1">
+                          {dayReservations.slice(0, 3).map(res => (
+                            <Link key={res.id} href={`/reservations/${res.id}`}>
                               <div 
-                                key={dayIndex} 
-                                className={`relative border border-gray-100 min-h-[60px] p-1 ${
-                                  isToday ? 'bg-blue-50' : ''
-                                }`}
+                                className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isSameDay(day, parseISO(res.startDate)), isSameDay(day, parseISO(res.endDate)))}`}
+                                title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'}`}
                               >
-                                {/* Day indicator */}
-                                <div className="text-xs text-gray-500 mb-1">
-                                  {format(day, "d")}
-                                </div>
-                                
-                                {/* Reservation items */}
-                                <div className="space-y-1 mt-1">
-                                  {dayReservations.map(reservation => {
-                                    const isStartDay = isSameDay(day, parseISO(reservation.startDate));
-                                    const isEndDay = isSameDay(day, parseISO(reservation.endDate));
-                                    
-                                    return (
-                                      <Link key={reservation.id} href={`/reservations/${reservation.id}`}>
-                                        <div 
-                                          className={`text-xs p-1 truncate cursor-pointer ${
-                                            getReservationStyle(reservation.status, isStartDay, isEndDay)
-                                          }`}
-                                          title={`${reservation.customer?.name || 'Reserved'} - ${format(parseISO(reservation.startDate), "MMM d")} to ${format(parseISO(reservation.endDate), "MMM d")}`}
-                                        >
-                                          {reservation.customer?.name || "Reserved"}
-                                        </div>
-                                      </Link>
-                                    );
-                                  })}
-                                  
-                                  {/* Quick add button */}
-                                  {dayReservations.length === 0 && (
-                                    <Link href={`/reservations/add?vehicleId=${vehicle.id}&startDate=${format(day, "yyyy-MM-dd")}`}>
-                                      <div className="text-xs text-blue-600 hover:bg-blue-50 p-1 rounded cursor-pointer text-center">
-                                        + Add
-                                      </div>
-                                    </Link>
-                                  )}
-                                </div>
+                                {displayLicensePlate(res.vehicle?.licensePlate || '')} 
                               </div>
-                            );
-                          })
-                        )}
+                            </Link>
+                          ))}
+                          
+                          {dayReservations.length > 3 && (
+                            <div className="text-xs text-gray-500">
+                              +{dayReservations.length - 3} more
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {/* Load more button */}
-                  {filteredVehicles.length < (vehicles?.length || 0) && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4" 
-                      onClick={loadMoreVehicles}
-                    >
-                      Load More Vehicles
-                    </Button>
-                  )}
+                    );
+                  })}
                 </div>
-              )}
-            </>
+              ))}
+            </div>
+          </div>
+          
+          {/* Loading State */}
+          {(isLoadingVehicles || isLoadingReservations) && (
+            <div className="flex justify-center items-center h-64">
+              <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
           )}
         </CardContent>
       </Card>
