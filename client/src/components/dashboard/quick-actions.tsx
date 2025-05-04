@@ -30,6 +30,7 @@ import { displayLicensePlate, isTrueValue } from "@/lib/utils";
 import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
+import { VehicleReservationsStatusDialog } from "@/components/reservations/vehicle-reservations-status-dialog";
 
 interface ActionIconProps {
   name: string;
@@ -269,6 +270,12 @@ const quickActions: QuickAction[] = [
     primary: false,
   },
   {
+    label: "Change Status by Vehicle",
+    icon: "car",
+    dialog: "vehicle-reservation-status",
+    primary: false,
+  },
+  {
     label: "Change Registration",
     icon: "refresh-cw",
     dialog: "registration",
@@ -294,9 +301,10 @@ export function QuickActions() {
   const [damageFormSearchQuery, setDamageFormSearchQuery] = useState<string>("");
   const [isDamageUploading, setIsDamageUploading] = useState(false);
   
-  // State for the reservation status dialog
+  // State for the reservation status dialogs
   const [selectedReservation, setSelectedReservation] = useState<number | null>(null);
   const [reservationStatusDialogOpen, setReservationStatusDialogOpen] = useState(false);
+  const [vehicleReservationDialogOpen, setVehicleReservationDialogOpen] = useState(false);
   
   const { toast } = useToast();
   
@@ -589,6 +597,13 @@ export function QuickActions() {
           initialStatus=""
         />
       )}
+      
+      {/* Vehicle-based Reservation Status Dialog */}
+      <VehicleReservationsStatusDialog
+        open={vehicleReservationDialogOpen}
+        onOpenChange={setVehicleReservationDialogOpen}
+        onStatusChanged={handleReservationStatusUpdated}
+      />
       
       <Card className="mb-6">
         <CardHeader className="pb-2">
