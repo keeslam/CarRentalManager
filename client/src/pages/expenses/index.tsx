@@ -8,9 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Expense } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
+import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
 
 export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -194,12 +201,69 @@ export default function ExpensesIndex() {
                 </svg>
               </div>
             ) : (
-              <DataTable
-                columns={columns}
-                data={filteredExpenses || []}
-                searchColumn="description"
-                searchPlaceholder="Filter by description..."
-              />
+              <>
+                {!filteredExpenses?.length ? (
+                  <div className="text-center p-10 border rounded-md bg-gray-50">
+                    <p className="text-gray-500">No expenses found matching your search criteria.</p>
+                  </div>
+                ) : (
+                  <Accordion type="multiple" defaultValue={allCategories} className="w-full">
+                    {allCategories.map(category => {
+                      // Filter expenses for this category
+                      const categoryExpenses = filteredExpenses.filter(
+                        expense => expense.category === category
+                      );
+                      
+                      // Skip if no expenses in this category after filtering
+                      if (categoryExpenses.length === 0) return null;
+                      
+                      // Calculate total for this category
+                      const categoryTotal = categoryExpenses.reduce(
+                        (sum, expense) => sum + Number(expense.amount || 0), 0
+                      );
+                      
+                      return (
+                        <AccordionItem key={category} value={category}>
+                          <AccordionTrigger className="hover:bg-gray-50 px-4 py-3 rounded-md">
+                            <div className="flex justify-between items-center w-full">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-sm font-medium">
+                                  {category}
+                                </Badge>
+                                <span className="text-gray-500 text-sm">
+                                  ({categoryExpenses.length} {categoryExpenses.length === 1 ? 'expense' : 'expenses'})
+                                </span>
+                              </div>
+                              <div className="font-semibold text-right">
+                                {formatCurrency(categoryTotal)}
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="pt-2 pb-4">
+                              <DataTable
+                                columns={columns}
+                                data={categoryExpenses}
+                                searchColumn="description"
+                                searchPlaceholder="Filter by description..."
+                                pagination={false}
+                              />
+                              <div className="mt-2 flex justify-end">
+                                <Link href={`/expenses/add?category=${encodeURIComponent(category)}`}>
+                                  <Button size="sm" variant="outline" className="gap-1">
+                                    <PlusCircle size={16} />
+                                    Add {category} Expense
+                                  </Button>
+                                </Link>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
