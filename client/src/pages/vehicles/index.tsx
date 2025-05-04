@@ -11,6 +11,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { getDaysUntil } from "@/lib/date-utils";
+import { Search } from "lucide-react";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -26,6 +27,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("default");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
@@ -33,6 +35,15 @@ export default function VehiclesIndex() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
+  
+  // Debounce search query to prevent excessive filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   const { data: vehicles, isLoading, refetch } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
@@ -110,14 +121,24 @@ export default function VehiclesIndex() {
     setVisibleVehicleCount(prevCount => prevCount + 5);
   };
   
-  // Filter and sort vehicles based on search query and sort option
+  // Custom filtering logic that works regardless of length
   const filteredVehicles = vehicles?.filter(vehicle => {
-    const searchLower = searchQuery.toLowerCase();
+    // If search query is empty, return all vehicles
+    if (!debouncedSearchQuery || debouncedSearchQuery.trim() === '') return true;
+    
+    // Convert search query to lowercase for case-insensitive matching
+    const searchLower = debouncedSearchQuery.toLowerCase().trim();
+    
+    // Convert license plate to a format without dashes for comparison
+    const formattedLicensePlate = vehicle.licensePlate?.replace(/-/g, '')?.toLowerCase() || '';
+    const formattedSearchQuery = searchLower.replace(/-/g, '');
+    
+    // Check if any of these fields contain the search string
     return (
-      vehicle.licensePlate.toLowerCase().includes(searchLower) ||
-      vehicle.brand.toLowerCase().includes(searchLower) ||
-      vehicle.model.toLowerCase().includes(searchLower) ||
-      (vehicle.vehicleType && vehicle.vehicleType.toLowerCase().includes(searchLower))
+      formattedLicensePlate.includes(formattedSearchQuery) ||
+      (vehicle.brand?.toLowerCase().includes(searchLower) || false) ||
+      (vehicle.model?.toLowerCase().includes(searchLower) || false) ||
+      (vehicle.vehicleType?.toLowerCase().includes(searchLower) || false)
     );
   }).sort((a, b) => {
     // Apply sorting based on selected option
@@ -414,13 +435,26 @@ export default function VehiclesIndex() {
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex gap-4 items-center">
-            <Input
-              placeholder="Search by license plate, brand, or model..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-              autoFocus
-            />
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by license plate, brand, or model..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 w-full"
+                autoFocus
+              />
+              {searchQuery && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="absolute right-0 top-0 h-full px-3" 
+                  onClick={() => setSearchQuery("")}
+                >
+                  ✕
+                </Button>
+              )}
+            </div>
             <div className="flex items-center">
               <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
               <Select value={sortBy} onValueChange={setSortBy}>
