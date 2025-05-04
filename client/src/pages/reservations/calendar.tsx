@@ -73,8 +73,10 @@ export default function ReservationCalendarPage() {
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: [
       "/api/reservations/range", 
-      format(dateRanges.start, "yyyy-MM-dd"), 
-      format(dateRanges.end, "yyyy-MM-dd")
+      {
+        startDate: format(dateRanges.start, "yyyy-MM-dd"),
+        endDate: format(dateRanges.end, "yyyy-MM-dd")
+      }
     ],
   });
   
@@ -370,16 +372,27 @@ export default function ReservationCalendarPage() {
                         
                         {/* Show up to 3 reservations in month view */}
                         <div className="space-y-1">
-                          {dayReservations.slice(0, 3).map(res => (
-                            <Link key={res.id} href={`/reservations/${res.id}`}>
-                              <div 
-                                className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isSameDay(day, parseISO(res.startDate)), isSameDay(day, parseISO(res.endDate)))}`}
-                                title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'}`}
-                              >
-                                {displayLicensePlate(res.vehicle?.licensePlate || '')} 
-                              </div>
-                            </Link>
-                          ))}
+                          {dayReservations.slice(0, 3).map(res => {
+                            const isPickupDay = isSameDay(day, parseISO(res.startDate));
+                            const isReturnDay = isSameDay(day, parseISO(res.endDate));
+                            
+                            return (
+                              <Link key={res.id} href={`/reservations/${res.id}`}>
+                                <div 
+                                  className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                                  title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'} (${isPickupDay ? 'Pickup' : isReturnDay ? 'Return' : 'Reserved'})`}
+                                >
+                                  {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                  {isPickupDay && 
+                                    <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                  }
+                                  {isReturnDay && 
+                                    <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                  }
+                                </div>
+                              </Link>
+                            );
+                          })}
                           
                           {dayReservations.length > 3 && (
                             <div className="text-xs text-gray-500">
