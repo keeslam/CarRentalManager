@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation } from "@shared/schema";
+import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
 
 // Function to calculate duration between two dates in days
 function getDuration(startDate: string, endDate: string): string {
@@ -112,6 +113,15 @@ export function UpcomingReservations() {
                       {getStatusBadge(reservation.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {/* Status change button */}
+                      <ReservationQuickStatusButton 
+                        reservation={reservation} 
+                        size="icon"
+                        variant="ghost"
+                        className="mr-2 h-8 w-8"
+                      />
+                      
+                      {/* Edit button */}
                       <Link href={`/reservations/${reservation.id}/edit`}>
                         <Button variant="ghost" size="icon" className="text-primary-600 hover:text-primary-800 mr-2 h-8 w-8">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil">
@@ -119,6 +129,8 @@ export function UpcomingReservations() {
                           </svg>
                         </Button>
                       </Link>
+                      
+                      {/* Contract button */}
                       <Link href={`/documents/contract/${reservation.id}`}>
                         <Button variant="ghost" size="icon" className="text-primary-600 hover:text-primary-800 h-8 w-8">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text">
