@@ -612,6 +612,22 @@ export function QuickActions() {
         <CardContent>
           <div className="flex flex-wrap gap-2">
           {quickActions.map((action) => {
+            // For vehicle-based reservation status dialog
+            if (action.dialog === "vehicle-reservation-status") {
+              return (
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                  size="sm"
+                  onClick={() => setVehicleReservationDialogOpen(true)}
+                >
+                  <ActionIcon name={action.icon || "car"} className="mr-1 h-4 w-4" />
+                  {action.label}
+                </Button>
+              );
+            }
+            
             // For reservation status change dialog
             if (action.dialog === "reservation-status") {
               return (
