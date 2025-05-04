@@ -66,6 +66,8 @@ interface StatusChangeDialogProps {
     firstName?: string;
     lastName?: string;
     companyName?: string;
+    phone?: string;
+    email?: string;
   };
   onStatusChanged?: () => void;
 }
@@ -319,9 +321,9 @@ export function StatusChangeDialog({
             )}
             
             {customer && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <h3 className="font-medium text-sm">Customer Information</h3>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-sm">
                   {(customer.firstName || customer.lastName) && (
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">Name:</span>
@@ -334,6 +336,18 @@ export function StatusChangeDialog({
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">Company:</span>
                       <span className="font-medium">{customer.companyName}</span>
+                    </div>
+                  )}
+                  {customer.phone && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Phone:</span>
+                      <span className="font-medium">{customer.phone}</span>
+                    </div>
+                  )}
+                  {customer.email && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Email:</span>
+                      <span className="font-medium">{customer.email}</span>
                     </div>
                   )}
                 </div>
