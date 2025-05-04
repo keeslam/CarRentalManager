@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ import {
 import { Vehicle, Reservation, Customer } from "@shared/schema";
 import { displayLicensePlate, formatCurrency } from "@/lib/utils";
 import { PlusCircle, Edit, Eye, Calendar, User, Car, CreditCard, Clock, MapPin } from "lucide-react";
+import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
 
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -36,6 +37,7 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export function ReservationCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [_, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   // Calculate date ranges for month view
   const dateRanges = useMemo(() => {
@@ -400,6 +402,19 @@ export function ReservationCalendar() {
                                       <Edit className="mr-1 h-3 w-3" />
                                       Edit
                                     </Button>
+                                    <ReservationQuickStatusButton 
+                                      reservation={res}
+                                      size="sm"
+                                      variant="outline"
+                                      withText={true}
+                                      className="h-8 text-xs"
+                                      onStatusChanged={() => {
+                                        // Force refresh of reservations data
+                                        queryClient.invalidateQueries({ 
+                                          queryKey: ["/api/reservations/range", startDate, endDate]
+                                        });
+                                      }}
+                                    />
                                   </div>
                                 </div>
                               </HoverCardContent>
