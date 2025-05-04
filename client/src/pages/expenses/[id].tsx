@@ -67,25 +67,41 @@ export default function ExpenseDetailsPage() {
     retry: 1,
   });
   
+  // Define query keys for consistent usage and proper cache invalidation
+  const mainExpensesQueryKey = ["/api/expenses"];
+  const vehicleExpensesQueryKey = expense?.vehicleId ? [`/api/expenses/vehicle/${expense.vehicleId}`] : [];
+  const currentExpenseQueryKey = [`/api/expenses/${expenseId}`];
+  
   // Delete expense mutation
   const deleteExpenseMutation = useMutation({
     mutationFn: async () => {
       if (!expenseId) throw new Error("No expense ID provided");
-      return await apiRequest("DELETE", `/api/expenses/${expenseId}`);
+      const response = await apiRequest("DELETE", `/api/expenses/${expenseId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete expense");
+      }
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Expense deleted",
         description: "The expense has been successfully deleted.",
       });
       
-      // Invalidate and refetch expenses list
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      // Invalidate and refetch all relevant queries
+      await queryClient.invalidateQueries({ queryKey: mainExpensesQueryKey });
       
       // Invalidate vehicle expenses if applicable
       if (expense?.vehicleId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${expense.vehicleId}`] });
+        await queryClient.invalidateQueries({ queryKey: vehicleExpensesQueryKey });
       }
+      
+      // Invalidate the current expense data
+      await queryClient.invalidateQueries({ queryKey: currentExpenseQueryKey });
+      
+      // Force refetch the main expenses list to ensure UI updates
+      await queryClient.refetchQueries({ queryKey: mainExpensesQueryKey });
       
       // Navigate back to expenses list
       navigate("/expenses");

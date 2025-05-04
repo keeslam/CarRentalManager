@@ -75,11 +75,15 @@ export default function VehicleExpensesPage() {
         description: "The expense has been successfully deleted."
       });
       
-      // Invalidate queries and explicitly force a refetch
+      // Invalidate all relevant queries
       await queryClient.invalidateQueries({ queryKey: expenseListQueryKey });
       await queryClient.invalidateQueries({ queryKey: vehicleExpensesQueryKey });
       
-      // Explicitly force a refetch to update the UI
+      // Force a refetch of both expense lists to ensure UI updates properly
+      await queryClient.refetchQueries({ queryKey: expenseListQueryKey });
+      await queryClient.refetchQueries({ queryKey: vehicleExpensesQueryKey });
+      
+      // Additional explicit refetch of this specific vehicle's expenses 
       await refetchExpenses();
     },
     onError: (error: Error) => {
