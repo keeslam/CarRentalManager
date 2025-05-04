@@ -118,7 +118,7 @@ export function StatusChangeDialog({
     resolver: zodResolver(statusChangeSchema),
     defaultValues: {
       status: initialStatus,
-      startMileage: vehicle?.returnMileage || undefined,
+      startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
       departureMileage: undefined,
     },
   });
@@ -331,13 +331,13 @@ export function StatusChangeDialog({
                     <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
                   </div>
                   {/* Show Vehicle Mileage Information */}
-                  {vehicle.currentMileage !== undefined && (
+                  {vehicle.currentMileage !== undefined && vehicle.currentMileage !== null && (
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">Current:</span>
                       <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
                     </div>
                   )}
-                  {vehicle.returnMileage !== undefined && (
+                  {vehicle.returnMileage !== undefined && vehicle.returnMileage !== null && (
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">Return:</span>
                       <span className="font-medium">{vehicle.returnMileage.toLocaleString()} km</span>
@@ -431,6 +431,7 @@ export function StatusChangeDialog({
                 render={({ field }) => {
                   // Determine if the field should be readonly - true if there's a return mileage and the current value is less than it
                   const isReadOnly = vehicle.returnMileage !== undefined && 
+                                     vehicle.returnMileage !== null &&
                                      (field.value === undefined || 
                                       field.value < vehicle.returnMileage);
                   
@@ -441,11 +442,11 @@ export function StatusChangeDialog({
                         <div className="relative">
                           <Input
                             type="number"
-                            placeholder={vehicle.returnMileage !== undefined 
+                            placeholder={vehicle.returnMileage !== undefined && vehicle.returnMileage !== null
                               ? `Minimum ${vehicle.returnMileage}` 
-                              : (vehicle.currentMileage ? vehicle.currentMileage.toString() : "Enter starting mileage")}
+                              : (vehicle.currentMileage && vehicle.currentMileage !== null ? vehicle.currentMileage.toString() : "Enter starting mileage")}
                             {...field}
-                            value={field.value || (vehicle.returnMileage || "")}
+                            value={field.value || (vehicle.returnMileage !== null ? vehicle.returnMileage : "")}
                             readOnly={isReadOnly}
                             className={isReadOnly ? "bg-muted cursor-not-allowed" : ""}
                           />
@@ -457,7 +458,7 @@ export function StatusChangeDialog({
                         </div>
                       </FormControl>
                       <FormDescription>
-                        {vehicle.returnMileage !== undefined 
+                        {vehicle.returnMileage !== undefined && vehicle.returnMileage !== null
                           ? `Must be at least ${vehicle.returnMileage} km (previous return mileage)`
                           : "Enter the vehicle's odometer reading at the start of the reservation"}
                       </FormDescription>
