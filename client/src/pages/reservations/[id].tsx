@@ -44,14 +44,21 @@ export default function ReservationDetails() {
       }
       return true;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] })
+      ]);
+      
       toast({
         title: "Reservation deleted",
         description: "The reservation has been successfully deleted",
       });
-      navigate('/reservations');
+      
+      // Wait a brief moment before navigating to ensure state is updated
+      setTimeout(() => {
+        navigate('/reservations');
+      }, 300);
     },
     onError: (error: Error) => {
       toast({
@@ -181,6 +188,7 @@ export default function ReservationDetails() {
                   onClick={(e) => {
                     e.preventDefault();
                     deleteReservationMutation.mutate();
+                    setIsDeleteDialogOpen(false);  // Close the dialog immediately
                   }}
                 >
                   {deleteReservationMutation.isPending ? (
