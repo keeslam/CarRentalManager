@@ -772,12 +772,15 @@ const PDFTemplateEditor = () => {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="relative flex items-center justify-center overflow-auto" 
+                    <CardContent className="p-0">
+                      <div 
+                        className="relative overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200" 
                         style={{
                           height: '842px',
-                          maxHeight: '842px', 
-                          overflow: 'auto'
+                          maxHeight: '842px',
+                          overflowX: 'auto',
+                          overflowY: 'auto',
+                          padding: '1rem'
                         }}
                         onWheel={handleWheel}>
                         <div 
@@ -788,9 +791,10 @@ const PDFTemplateEditor = () => {
                             height: `${842 * zoomLevel}px`,
                             margin: '0 auto',
                             backgroundImage: `url(${contractBackground})`,
-                            backgroundSize: '100% 100%',
+                            backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
+                            minWidth: '100%'
                           }}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
@@ -1013,14 +1017,21 @@ const PDFTemplateEditor = () => {
                           Generate Preview
                         </Button>
                         {previewPdfUrl && (
-                          <div className="mt-4">
+                          <div className="mt-4 space-y-2">
+                            <div className="overflow-auto max-h-[500px] border border-gray-200 rounded-md">
+                              <iframe 
+                                src={previewPdfUrl} 
+                                className="w-full h-[500px]"
+                                title="PDF Preview"
+                              />
+                            </div>
                             <a 
                               href={previewPdfUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-primary underline"
+                              className="text-primary underline block"
                             >
-                              Open PDF Preview
+                              Open PDF Preview in New Tab
                             </a>
                           </div>
                         )}
