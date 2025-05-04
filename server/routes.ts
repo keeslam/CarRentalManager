@@ -2040,6 +2040,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Generate preview PDF for template editor
+  app.get("/api/pdf-templates/:id/preview", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+      
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Create a dummy reservation for preview purposes
+      const dummyReservation: Reservation = {
+        id: 0, // Use 0 to indicate preview mode
+        vehicleId: 0,
+        customerId: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days later
+        totalPrice: 750,
+        status: 'Booked',
+        notes: 'Preview reservation',
+        vehicle: {
+          id: 0,
+          brand: 'Preview Brand',
+          model: 'Preview Model',
+          licensePlate: 'XX-YY-99',
+          chassisNumber: 'PREVIEW123456789',
+          currentMileage: 10000,
+        },
+        customer: {
+          id: 0,
+          name: 'Preview Customer',
+          address: 'Preview Street 123',
+          city: 'Preview City',
+          postalCode: '1234 AB',
+          phone: '0612345678',
+          email: 'preview@example.com',
+          driverLicenseNumber: 'PREV123456789',
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'system',
+        updatedBy: null,
+      };
+      
+      // Import necessary functions
+      const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+      
+      // Generate PDF with the template
+      const pdfBuffer = await generateRentalContractFromTemplate(dummyReservation, template);
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=template_preview_${id}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating template preview:", error);
+      res.status(500).json({ 
+        message: "Failed to generate template preview", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   // Create a new PDF template
   app.post("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {

@@ -23,9 +23,15 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     let pdfDoc;
     let page;
     
+    // Sample values for preview if needed
+    const previewMode = reservation.id === 0;
+    if (previewMode) {
+      console.log('Preview mode enabled - using sample data for fields');
+    }
+    
     // Always try to use the template background
     try {
-      // Default template path or use the provided background path from template
+      // Default template path for the contract background
       const templatePath = path.join(
         process.cwd(), 
         'uploads/templates/rental_contract_template.pdf'
@@ -69,57 +75,86 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     
     // If template is provided, process template fields
     if (template && template.fields) {
+      console.log('Processing template fields');
+      
       // Parse fields if they're stored as a string
-      const fields = typeof template.fields === 'string' 
-        ? JSON.parse(template.fields) 
-        : template.fields;
+      let fields;
+      try {
+        fields = typeof template.fields === 'string' 
+          ? JSON.parse(template.fields) 
+          : template.fields;
+          
+        console.log(`Found ${fields.length} fields to render`);
+      } catch (error) {
+        console.error('Error parsing template fields:', error);
+        fields = [];
+      }
       
       // Draw each field
       for (const field of fields) {
-        // Get the field value from the contract data based on the source
-        let value = '';
-        if (field.source === 'customerName') value = contractData.customerName;
-        else if (field.source === 'customerAddress') value = contractData.customerAddress;
-        else if (field.source === 'customerCity') value = contractData.customerCity;
-        else if (field.source === 'customerPostalCode') value = contractData.customerPostalCode;
-        else if (field.source === 'customerPhone') value = contractData.customerPhone;
-        else if (field.source === 'driverLicense') value = contractData.driverLicense;
-        else if (field.source === 'contractNumber') value = contractData.contractNumber;
-        else if (field.source === 'contractDate') value = contractData.contractDate;
-        else if (field.source === 'licensePlate') value = contractData.licensePlate;
-        else if (field.source === 'brand') value = contractData.brand;
-        else if (field.source === 'model') value = contractData.model;
-        else if (field.source === 'chassisNumber') value = contractData.chassisNumber;
-        else if (field.source === 'startDate') value = contractData.startDate;
-        else if (field.source === 'endDate') value = contractData.endDate;
-        else if (field.source === 'duration') value = contractData.duration;
-        else if (field.source === 'totalPrice') value = contractData.totalPrice;
-        
-        // Determine text alignment
-        let textAlignment: TextAlignment = TextAlignment.Left;
-        if (field.textAlign === 'center') textAlignment = TextAlignment.Center;
-        else if (field.textAlign === 'right') textAlignment = TextAlignment.Right;
-        
-        // Draw the text field with proper alignment
-        const options: any = {
-          x: field.x,
-          y: 842 - field.y, // Flip Y-coordinate (PDF origin is bottom-left)
-          size: field.fontSize || 12,
-          font: field.isBold ? helveticaBold : helveticaFont,
-          color: textColor
-        };
-        
-        // Add alignment property as part of PDF.js options
-        if (textAlignment === TextAlignment.Center) {
-          // @ts-ignore: TextAlignment is not properly typed in pdf-lib
-          options.textAlign = TextAlignment.Center;
-        } else if (textAlignment === TextAlignment.Right) {
-          // @ts-ignore: TextAlignment is not properly typed in pdf-lib
-          options.textAlign = TextAlignment.Right;
+        try {
+          // Get the field value from the contract data based on the source
+          let value = '';
+          
+          // Use field label as placeholder in preview mode
+          if (previewMode && field.label) {
+            value = field.label;
+          } else {
+            if (field.source === 'customerName') value = contractData.customerName;
+            else if (field.source === 'customerAddress') value = contractData.customerAddress;
+            else if (field.source === 'customerCity') value = contractData.customerCity;
+            else if (field.source === 'customerPostalCode') value = contractData.customerPostalCode;
+            else if (field.source === 'customerPhone') value = contractData.customerPhone;
+            else if (field.source === 'driverLicense') value = contractData.driverLicense;
+            else if (field.source === 'contractNumber') value = contractData.contractNumber;
+            else if (field.source === 'contractDate') value = contractData.contractDate;
+            else if (field.source === 'licensePlate') value = contractData.licensePlate;
+            else if (field.source === 'brand') value = contractData.brand;
+            else if (field.source === 'model') value = contractData.model;
+            else if (field.source === 'chassisNumber') value = contractData.chassisNumber;
+            else if (field.source === 'startDate') value = contractData.startDate;
+            else if (field.source === 'endDate') value = contractData.endDate;
+            else if (field.source === 'duration') value = contractData.duration;
+            else if (field.source === 'totalPrice') value = contractData.totalPrice;
+            else if (field.label) value = field.label; // Use label as fallback
+          }
+          
+          // Ensure we have a value to display
+          if (!value) {
+            value = field.label || field.source || '(empty)';
+          }
+          
+          // Determine text alignment
+          let textAlignment: TextAlignment = TextAlignment.Left;
+          if (field.textAlign === 'center') textAlignment = TextAlignment.Center;
+          else if (field.textAlign === 'right') textAlignment = TextAlignment.Right;
+          
+          // Draw the text field with proper alignment
+          const options: any = {
+            x: Number(field.x) || 0,
+            y: 842 - (Number(field.y) || 0), // Flip Y-coordinate (PDF origin is bottom-left)
+            size: Number(field.fontSize) || 12,
+            font: field.isBold ? helveticaBold : helveticaFont,
+            color: textColor
+          };
+          
+          // Add alignment property as part of PDF.js options
+          if (textAlignment === TextAlignment.Center) {
+            // @ts-ignore: TextAlignment is not properly typed in pdf-lib
+            options.textAlign = TextAlignment.Center;
+          } else if (textAlignment === TextAlignment.Right) {
+            // @ts-ignore: TextAlignment is not properly typed in pdf-lib
+            options.textAlign = TextAlignment.Right;
+          }
+          
+          console.log(`Drawing field: ${field.label || field.source} at position (${options.x}, ${options.y}) with value: ${value}`);
+          page.drawText(value, options);
+        } catch (error) {
+          console.error(`Error drawing field ${field.label || field.source}:`, error);
         }
-        
-        page.drawText(value, options);
       }
+    } else {
+      console.log('No template fields found');
     }
     
     // Save the PDF
