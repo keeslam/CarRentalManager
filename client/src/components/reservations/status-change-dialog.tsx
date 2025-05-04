@@ -101,7 +101,7 @@ export function StatusChangeDialog({
         // First update the reservation status
         const reservationResponse = await apiRequest(
           "PATCH", 
-          `/api/reservations/${reservationId}`,
+          `/api/reservations/${reservationId}/status`,
           { status: data.status }
         );
         
@@ -137,7 +137,7 @@ export function StatusChangeDialog({
         // Simple status update without mileage
         const response = await apiRequest(
           "PATCH", 
-          `/api/reservations/${reservationId}`,
+          `/api/reservations/${reservationId}/status`,
           { status: data.status }
         );
         

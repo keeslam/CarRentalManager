@@ -1007,6 +1007,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update reservation status only (special endpoint for status changes)
+  app.patch("/api/reservations/:id/status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+      
+      // Validate that status is a string and is one of the expected values
+      const { status } = req.body;
+      if (!status || typeof status !== 'string' || 
+          !['pending', 'confirmed', 'cancelled', 'completed'].includes(status.toLowerCase())) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      // Add user tracking information for updates
+      const user = req.user;
+      const dataWithTracking = {
+        status,
+        updatedBy: user ? user.username : null
+      };
+      
+      const reservation = await storage.updateReservation(id, dataWithTracking);
+      
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      return res.status(200).json(reservation);
+    } catch (error) {
+      console.error('Error updating reservation status:', error);
+      res.status(500).json({ 
+        message: "Failed to update reservation status", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Update reservation with damage check upload
   app.patch("/api/reservations/:id", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
