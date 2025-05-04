@@ -362,6 +362,18 @@ const PDFTemplateEditor = () => {
     setZoomLevel(1);
   };
   
+  const handleWheel = (e: React.WheelEvent) => {
+    // Always enable zooming with the mouse wheel for better usability
+    e.preventDefault();
+    
+    const zoomSpeed = 0.05; // adjust this value to change zoom sensitivity
+    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+    const newZoom = Math.min(Math.max(zoomLevel + delta, 0.5), 2);
+    
+    // Update the zoom level
+    setZoomLevel(newZoom);
+  };
+  
   const handleToggleGrid = () => {
     setShowGrid(prev => !prev);
   };
@@ -718,7 +730,8 @@ const PDFTemplateEditor = () => {
                       <div className="relative flex items-center justify-center overflow-auto" 
                         style={{
                           height: '842px',
-                        }}>
+                        }}
+                        onWheel={handleWheel}>
                         <div 
                           ref={pdfContainerRef}
                           className={`relative bg-white border border-gray-300 shadow-sm ${showGrid ? 'bg-grid' : ''}`}
