@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   format,
   addMonths,
@@ -17,16 +18,19 @@ import {
   isSameDay,
   parseISO,
   differenceInDays,
-  getDay
+  getDay,
+  formatISO
 } from "date-fns";
 import { Vehicle, Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
+import { PlusCircle, Edit, Eye } from "lucide-react";
 
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function ReservationCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [_, navigate] = useLocation();
 
   // Calculate date ranges for month view
   const dateRanges = useMemo(() => {
@@ -133,26 +137,42 @@ export function ReservationCalendar() {
     <Card className="mt-6 overflow-hidden">
       <CardHeader className="px-4 py-3 border-b flex-row justify-between items-center space-y-0">
         <CardTitle className="text-base font-medium text-gray-800">Reservation Calendar</CardTitle>
-        <Link href="/reservations/calendar">
-          <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
-            Full Calendar
+        <div className="flex space-x-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => navigate('/reservations/add')}
+          >
+            <PlusCircle className="mr-1 h-3 w-3" />
+            New Reservation
           </Button>
-        </Link>
+          <Link href="/reservations/calendar">
+            <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
+              Full Calendar
+            </Button>
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="p-4">
         {/* Month Navigation */}
         <div className="flex justify-between items-center mb-4">
-          <Button variant="ghost" size="icon" onClick={navigatePrevious}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left">
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
-          </Button>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={navigatePrevious}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={goToToday} className="text-xs mx-1">
+              Today
+            </Button>
+            <Button variant="ghost" size="icon" onClick={navigateNext}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </Button>
+          </div>
           <h4 className="text-base font-medium">{dateRanges.rangeText}</h4>
-          <Button variant="ghost" size="icon" onClick={navigateNext}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right">
-              <path d="m9 18 6-6-6-6"/>
-            </svg>
-          </Button>
         </div>
         
         {/* Calendar Header */}
@@ -188,7 +208,7 @@ export function ReservationCalendar() {
                   return (
                     <div
                       key={dayIndex}
-                      className={`min-h-[85px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''}`}
+                      className={`min-h-[85px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group`}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className={`text-xs font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
@@ -201,6 +221,25 @@ export function ReservationCalendar() {
                         )}
                       </div>
                       
+                      {/* Add reservation button - visible on hover */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={() => navigate(`/reservations/add?date=${format(day, 'yyyy-MM-dd')}`)}
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <PlusCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Add reservation</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
                       {/* Show up to 3 reservations */}
                       <div className="space-y-1">
                         {dayReservations && dayReservations.slice(0, 3).map(res => {
@@ -210,22 +249,43 @@ export function ReservationCalendar() {
                           return (
                             <div 
                               key={res.id}
-                              className={`px-1 py-0.5 text-xs truncate ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                              className={`px-1 py-0.5 text-xs truncate ${getReservationStyle(res.status, isPickupDay, isReturnDay)} group/res relative cursor-pointer hover:brightness-95`}
                               title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'}`}
+                              onClick={() => navigate(`/reservations/${res.id}`)}
                             >
-                              {displayLicensePlate(res.vehicle?.licensePlate || '')}
-                              {isPickupDay && 
-                                <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
-                              }
-                              {isReturnDay && 
-                                <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
-                              }
+                              <div className="flex justify-between items-center">
+                                <div className="truncate">
+                                  {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                  {isPickupDay && 
+                                    <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                  }
+                                  {isReturnDay && 
+                                    <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                  }
+                                </div>
+                                
+                                {/* Edit button - only visible on hover */}
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent triggering the parent onClick
+                                    navigate(`/reservations/edit/${res.id}`);
+                                  }}
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-3 w-3 opacity-0 group-hover/res:opacity-100 transition-opacity p-0"
+                                >
+                                  <Edit className="h-2 w-2" />
+                                </Button>
+                              </div>
                             </div>
                           );
                         })}
                         
                         {dayReservations && dayReservations.length > 3 && (
-                          <div className="text-xs text-gray-500">
+                          <div 
+                            className="text-xs text-gray-500 cursor-pointer hover:underline"
+                            onClick={() => navigate(`/reservations/calendar?date=${format(day, 'yyyy-MM-dd')}`)}
+                          >
                             +{dayReservations.length - 3} more
                           </div>
                         )}
