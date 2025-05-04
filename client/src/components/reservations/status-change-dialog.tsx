@@ -146,7 +146,27 @@ export function StatusChangeDialog({
           }
         }
         
-        return await reservationResponse.json();
+        // For successful responses that might return HTML instead of JSON
+        try {
+          const text = await reservationResponse.text();
+          
+          // Check if the response is HTML (starts with <!DOCTYPE or <html)
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            console.log('Received HTML response but expected JSON, returning empty object');
+            return {}; // Return empty object instead of failing
+          }
+          
+          // Otherwise try to parse as JSON
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('Failed to parse response as JSON:', text);
+            return {}; // Return empty object on parse error
+          }
+        } catch (e) {
+          console.error('Error reading response:', e);
+          return {}; // Return empty object on any error
+        }
       } else {
         // Simple status update without mileage
         const response = await apiRequest(
@@ -167,7 +187,27 @@ export function StatusChangeDialog({
           }
         }
         
-        return await response.json();
+        // For successful responses that might return HTML instead of JSON
+        try {
+          const text = await response.text();
+          
+          // Check if the response is HTML (starts with <!DOCTYPE or <html)
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            console.log('Received HTML response but expected JSON, returning empty object');
+            return {}; // Return empty object instead of failing
+          }
+          
+          // Otherwise try to parse as JSON
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('Failed to parse response as JSON:', text);
+            return {}; // Return empty object on parse error
+          }
+        } catch (e) {
+          console.error('Error reading response:', e);
+          return {}; // Return empty object on any error
+        }
       }
     },
     onSuccess: async () => {
