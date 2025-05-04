@@ -461,12 +461,15 @@ export function StatusChangeDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="pending">Pending (Booked)</SelectItem>
+                      <SelectItem value="confirmed">Confirmed (Vehicle picked up)</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="completed">Completed (Vehicle returned)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Status clarification: 'Confirmed' means the vehicle has been picked up, and 'Completed' means the vehicle has been returned.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
