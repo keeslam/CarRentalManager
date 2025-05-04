@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 // Calendar view options
-type CalendarView = "day" | "week" | "month";
+type CalendarView = "month";
 
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -31,7 +31,7 @@ type VehicleFilters = {
 };
 
 export default function ReservationCalendarPage() {
-  const [view, setView] = useState<CalendarView>("week");
+  const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [vehicleFilters, setVehicleFilters] = useState<VehicleFilters>({
     search: "",
@@ -40,63 +40,30 @@ export default function ReservationCalendarPage() {
   });
   const [displayLimit, setDisplayLimit] = useState(20);
   
-  // Calculate date ranges based on the selected view
+  // Calculate date ranges for month view
   const dateRanges = useMemo(() => {
-    let start: Date, end: Date, days: Date[], rangeText: string;
+    // Month view calculations
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
     
-    switch (view) {
-      case "day":
-        start = startOfDay(currentDate);
-        end = endOfDay(currentDate);
-        days = [currentDate];
-        rangeText = format(currentDate, "MMMM d, yyyy");
-        break;
-        
-      case "week":
-        // Calculate start and end of the current week (Monday to Sunday)
-        start = new Date(currentDate);
-        start.setDate(currentDate.getDate() - ((currentDate.getDay() || 7) - 1));
-        start = startOfDay(start);
-        
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end = endOfDay(end);
-        
-        // Generate days for the current week
-        days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-        rangeText = `${format(start, "MMMM d")} - ${format(end, "d, yyyy")}`;
-        break;
-        
-      case "month":
-        start = startOfMonth(currentDate);
-        end = endOfMonth(currentDate);
-        
-        // Get the first Monday before or on the first day of the month
-        const firstDay = new Date(start);
-        const firstDayOfWeek = getDay(firstDay) || 7; // Convert Sunday (0) to 7
-        firstDay.setDate(firstDay.getDate() - ((firstDayOfWeek - 1) || 0));
-        
-        // Get the last Sunday after or on the last day of the month
-        const lastDay = new Date(end);
-        const lastDayOfWeek = getDay(lastDay) || 7; // Convert Sunday (0) to 7
-        lastDay.setDate(lastDay.getDate() + (7 - lastDayOfWeek));
-        
-        // Generate all days in the calendar grid
-        const dayCount = differenceInDays(lastDay, firstDay) + 1;
-        days = Array.from({ length: dayCount }, (_, i) => addDays(firstDay, i));
-        
-        rangeText = format(currentDate, "MMMM yyyy");
-        break;
-        
-      default:
-        start = startOfDay(currentDate);
-        end = endOfDay(currentDate);
-        days = [currentDate];
-        rangeText = format(currentDate, "MMMM d, yyyy");
-    }
+    // Get the first Monday before or on the first day of the month
+    const firstDay = new Date(start);
+    const firstDayOfWeek = getDay(firstDay) || 7; // Convert Sunday (0) to 7
+    firstDay.setDate(firstDay.getDate() - ((firstDayOfWeek - 1) || 0));
+    
+    // Get the last Sunday after or on the last day of the month
+    const lastDay = new Date(end);
+    const lastDayOfWeek = getDay(lastDay) || 7; // Convert Sunday (0) to 7
+    lastDay.setDate(lastDay.getDate() + (7 - lastDayOfWeek));
+    
+    // Generate all days in the calendar grid
+    const dayCount = differenceInDays(lastDay, firstDay) + 1;
+    const days = Array.from({ length: dayCount }, (_, i) => addDays(firstDay, i));
+    
+    const rangeText = format(currentDate, "MMMM yyyy");
     
     return { start, end, days, rangeText };
-  }, [currentDate, view]);
+  }, [currentDate]);
   
   // Fetch vehicles
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
@@ -155,25 +122,13 @@ export default function ReservationCalendarPage() {
     .slice(0, displayLimit);
   }, [vehicles, vehicleFilters, reservations, displayLimit]);
   
-  // Functions to navigate between dates
+  // Functions to navigate between months
   const navigatePrevious = () => {
-    if (view === "day") {
-      setCurrentDate(prevDate => subDays(prevDate, 1));
-    } else if (view === "week") {
-      setCurrentDate(prevDate => subDays(prevDate, 7));
-    } else if (view === "month") {
-      setCurrentDate(prevDate => addMonths(prevDate, -1));
-    }
+    setCurrentDate(prevDate => addMonths(prevDate, -1));
   };
   
   const navigateNext = () => {
-    if (view === "day") {
-      setCurrentDate(prevDate => addDays(prevDate, 1));
-    } else if (view === "week") {
-      setCurrentDate(prevDate => addDays(prevDate, 7));
-    } else if (view === "month") {
-      setCurrentDate(prevDate => addMonths(prevDate, 1));
-    }
+    setCurrentDate(prevDate => addMonths(prevDate, 1));
   };
   
   // Reset to today
@@ -268,8 +223,6 @@ export default function ReservationCalendarPage() {
   
   // Generate calendar grid for month view
   const calendarGrid = useMemo(() => {
-    if (view !== "month") return null;
-    
     const weeks = [];
     const days = dateRanges.days;
     
@@ -279,14 +232,7 @@ export default function ReservationCalendarPage() {
     }
     
     return weeks;
-  }, [view, dateRanges.days]);
-  
-  // View options for the tabs
-  const viewOptions = [
-    { id: "day", label: "Day" },
-    { id: "week", label: "Week" },
-    { id: "month", label: "Month" }
-  ];
+  }, [dateRanges.days]);
   
   return (
     <div className="space-y-6">
