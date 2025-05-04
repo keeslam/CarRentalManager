@@ -778,6 +778,8 @@ const PDFTemplateEditor = () => {
                             backgroundSize: '100% 100%',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
+                            transform: `scale(${zoomLevel})`,
+                            transformOrigin: 'top left',
                           }}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
