@@ -34,7 +34,7 @@ function getStatusBadge(status: string) {
 
 export function UpcomingReservations() {
   const { data: reservations, isLoading } = useQuery<Reservation[]>({
-    queryKey: ["/api/reservations/upcoming"],
+    queryKey: ["/api/reservations/upcoming?limit=10"],
   });
   
   return (
@@ -48,9 +48,9 @@ export function UpcomingReservations() {
         </Link>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="max-h-[265px] overflow-y-auto">
           <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vehicle
@@ -88,12 +88,12 @@ export function UpcomingReservations() {
                   </td>
                 </tr>
               ) : (
-                reservations?.map(reservation => (
+                reservations.slice(0, 10).map(reservation => (
                   <tr key={reservation.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatLicensePlate(reservation.vehicle?.licensePlate)}
+                          {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
                         </div>
                         <div className="ml-2 text-xs text-gray-500">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
                       </div>
