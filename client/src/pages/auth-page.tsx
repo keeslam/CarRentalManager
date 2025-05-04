@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { 
   Card, 
   CardContent, 

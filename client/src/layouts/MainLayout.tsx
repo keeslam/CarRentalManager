@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { ScrollToTop } from "@/components/scroll-to-top";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -24,6 +25,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ScrollToTop component to handle scrolling on route changes */}
+      <ScrollToTop />
+      
       {/* Sidebar */}
       <aside 
         className={`fixed inset-y-0 left-0 w-64 bg-white shadow-md z-30 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
