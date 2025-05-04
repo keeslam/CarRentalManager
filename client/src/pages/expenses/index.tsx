@@ -65,9 +65,19 @@ export default function ExpensesIndex() {
   });
   
   // Get unique categories from expenses
-  const allCategories = expenses
-    ? Array.from(new Set(expenses.map(expense => expense.category || "Unknown")))
-    : [];
+  const categoriesWithAmounts = expenses
+    ? expenses.reduce((acc, expense) => {
+        const category = expense.category || "Unknown";
+        acc[category] = (acc[category] || 0) + Number(expense.amount || 0);
+        return acc;
+      }, {} as Record<string, number>)
+    : {};
+  
+  // Sort categories by amount (descending) to match the sidebar order
+  const allCategories = Object.entries(categoriesWithAmounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category]) => category);
+    
   const categories = ["all", ...allCategories];
   
   // Function to get category icon
