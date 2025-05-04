@@ -101,25 +101,56 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
             // For preview mode, use the field name to clearly identify the field position
             value = field.name || field.source || 'Field';
           } else {
-            // For normal contract generation, use actual data
-            if (field.source === 'customerName') value = contractData.customerName;
-            else if (field.source === 'customerAddress') value = contractData.customerAddress;
-            else if (field.source === 'customerCity') value = contractData.customerCity;
-            else if (field.source === 'customerPostalCode') value = contractData.customerPostalCode;
-            else if (field.source === 'customerPhone') value = contractData.customerPhone;
-            else if (field.source === 'driverLicense') value = contractData.driverLicense;
-            else if (field.source === 'contractNumber') value = contractData.contractNumber;
-            else if (field.source === 'contractDate') value = contractData.contractDate;
-            else if (field.source === 'licensePlate') value = contractData.licensePlate;
-            else if (field.source === 'brand') value = contractData.brand;
-            else if (field.source === 'model') value = contractData.model;
-            else if (field.source === 'chassisNumber') value = contractData.chassisNumber;
-            else if (field.source === 'startDate') value = contractData.startDate;
-            else if (field.source === 'endDate') value = contractData.endDate;
-            else if (field.source === 'duration') value = contractData.duration;
-            else if (field.source === 'totalPrice') value = contractData.totalPrice;
-            else if (field.name) value = field.name; // Use name as fallback
-            else value = field.source || 'Field'; // Second fallback
+            // Parse complex property paths like "customer.name" or "vehicle.brand"
+            const source = field.source || '';
+            
+            console.log(`Processing field ${field.name} with source ${source}`);
+            
+            if (source.includes('.')) {
+              // Handle nested properties like "customer.name" or "vehicle.brand"
+              const [objectName, propertyName] = source.split('.');
+              
+              if (objectName === 'customer') {
+                if (propertyName === 'name') value = contractData.customerName;
+                else if (propertyName === 'address') value = contractData.customerAddress;
+                else if (propertyName === 'city') value = contractData.customerCity;
+                else if (propertyName === 'postalCode') value = contractData.customerPostalCode;
+                else if (propertyName === 'phone') value = contractData.customerPhone;
+                else if (propertyName === 'driverLicenseNumber') value = contractData.driverLicense;
+              } else if (objectName === 'vehicle') {
+                if (propertyName === 'licensePlate') value = contractData.licensePlate;
+                else if (propertyName === 'brand') value = contractData.brand;
+                else if (propertyName === 'model') value = contractData.model;
+                else if (propertyName === 'chassisNumber') value = contractData.chassisNumber;
+              } else if (objectName === 'reservation') {
+                if (propertyName === 'startDate') value = contractData.startDate;
+                else if (propertyName === 'endDate') value = contractData.endDate;
+                else if (propertyName === 'duration') value = contractData.duration;
+                else if (propertyName === 'totalPrice') value = contractData.totalPrice;
+              }
+            } else {
+              // Handle direct properties (backward compatibility)
+              if (source === 'customerName') value = contractData.customerName;
+              else if (source === 'customerAddress') value = contractData.customerAddress;
+              else if (source === 'customerCity') value = contractData.customerCity;
+              else if (source === 'customerPostalCode') value = contractData.customerPostalCode;
+              else if (source === 'customerPhone') value = contractData.customerPhone;
+              else if (source === 'driverLicense') value = contractData.driverLicense;
+              else if (source === 'contractNumber') value = contractData.contractNumber;
+              else if (source === 'contractDate') value = contractData.contractDate;
+              else if (source === 'licensePlate') value = contractData.licensePlate;
+              else if (source === 'brand') value = contractData.brand;
+              else if (source === 'model') value = contractData.model;
+              else if (source === 'chassisNumber') value = contractData.chassisNumber;
+              else if (source === 'startDate') value = contractData.startDate;
+              else if (source === 'endDate') value = contractData.endDate;
+              else if (source === 'duration') value = contractData.duration;
+              else if (source === 'totalPrice') value = contractData.totalPrice;
+              // Direct access to contract data properties
+              else if (contractData[source] !== undefined) value = contractData[source];
+              else if (field.name) value = field.name; // Use name as fallback
+              else value = source || 'Field'; // Second fallback
+            }
           }
           
           // Log in preview mode to help with debugging
@@ -138,10 +169,18 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           else if (field.textAlign === 'right') textAlignment = TextAlignment.Right;
           
           // Draw the text field with proper alignment
+          // Convert string coordinates to numbers and handle defaults properly
+          const x = typeof field.x === 'string' ? parseFloat(field.x) : (field.x || 0);
+          const y = typeof field.y === 'string' ? parseFloat(field.y) : (field.y || 0);
+          const fontSize = typeof field.fontSize === 'string' ? parseFloat(field.fontSize) : (field.fontSize || 12);
+          
+          console.log(`Position data - x: ${field.x} (${typeof field.x}), y: ${field.y} (${typeof field.y}), parsed to: ${x}, ${y}`);
+          
+          // Use the values as they are positioned in the template editor
           const options: any = {
-            x: Number(field.x) || 0,
-            y: 842 - (Number(field.y) || 0), // Flip Y-coordinate (PDF origin is bottom-left)
-            size: Number(field.fontSize) || 12,
+            x: x,
+            y: 842 - y, // Flip Y-coordinate (PDF origin is bottom-left, editor is top-left)
+            size: fontSize,
             font: field.isBold ? helveticaBold : helveticaFont,
             color: previewMode ? rgb(0, 0.4, 0.8) : textColor // Use blue color for preview mode to make fields stand out
           };
@@ -151,8 +190,8 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
             // Draw a light rectangle around the field to make it more visible
             try {
               // Calculate text width (approximate)
-              const textWidth = helveticaFont.widthOfTextAtSize(value, Number(field.fontSize) || 12);
-              const textHeight = (Number(field.fontSize) || 12) * 1.2;
+              const textWidth = helveticaFont.widthOfTextAtSize(value, fontSize);
+              const textHeight = fontSize * 1.2;
               
               // Draw rectangle with slight padding
               page.drawRectangle({
