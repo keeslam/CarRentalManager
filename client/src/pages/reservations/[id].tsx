@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useParams, useLocation } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,58 @@ import { Separator } from "@/components/ui/separator";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
+import { Calendar, List, ArrowLeft, Trash2 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ReservationDetails() {
   const { id } = useParams();
   const [_, navigate] = useLocation();
+  const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Fetch reservation details
   const { data: reservation, isLoading, error } = useQuery<Reservation>({
     queryKey: [`/api/reservations/${id}`],
+  });
+  
+  // Delete reservation mutation
+  const deleteReservationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', `/api/reservations/${id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete reservation');
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+      toast({
+        title: "Reservation deleted",
+        description: "The reservation has been successfully deleted",
+      });
+      navigate('/reservations');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   });
 
   // Fetch vehicle and customer details if reservation is loaded
@@ -80,6 +124,26 @@ export default function ReservationDetails() {
 
   return (
     <div className="space-y-6">
+      {/* Navigation bar with back buttons */}
+      <div className="flex gap-2 mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={() => navigate('/reservations')}
+        >
+          <ArrowLeft size={16} /> Back to List View
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={() => navigate('/reservations/calendar')}
+        >
+          <Calendar size={16} /> Back to Calendar
+        </Button>
+      </div>
+
       {/* Header with actions */}
       <div className="flex justify-between items-center">
         <div>
@@ -97,6 +161,41 @@ export default function ReservationDetails() {
               View Contract
             </Button>
           </Link>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this reservation?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the reservation
+                  and remove its data from our servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    deleteReservationMutation.mutate();
+                  }}
+                >
+                  {deleteReservationMutation.isPending ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
