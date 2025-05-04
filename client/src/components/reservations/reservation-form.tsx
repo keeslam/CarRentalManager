@@ -771,10 +771,10 @@ export function ReservationForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
+                          <SelectItem value="pending">Booked</SelectItem>
+                          <SelectItem value="confirmed">Vehicle picked up</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="completed">Vehicle returned</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -790,7 +790,7 @@ export function ReservationForm({
                   <div className="col-span-1">
                     <div className="flex flex-col space-y-1.5">
                       <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Start Mileage
+                        Mileage When Picked Up
                       </label>
                       <input
                         id="startMileage"
@@ -805,7 +805,7 @@ export function ReservationForm({
                         }}
                       />
                       <p className="text-[0.8rem] text-muted-foreground">
-                        Enter the vehicle's odometer reading at the start of the reservation
+                        Enter the vehicle's odometer reading when it was picked up
                       </p>
                     </div>
                   </div>
@@ -831,7 +831,7 @@ export function ReservationForm({
                         }}
                       />
                       <p className="text-[0.8rem] text-muted-foreground">
-                        Enter the vehicle's odometer reading at the end of the reservation
+                        Enter the vehicle's odometer reading when it was returned
                       </p>
                     </div>
                   </div>
