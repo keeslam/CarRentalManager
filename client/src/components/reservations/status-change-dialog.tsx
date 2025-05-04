@@ -48,20 +48,22 @@ const baseStatusChangeSchema = z.object({
   ]).optional(),
 });
 
-// Then refine it with a custom validator for comparing mileage values
-const statusChangeSchema = baseStatusChangeSchema.refine(
-  (data) => {
-    // Only validate when we have both values and status is "completed"
-    if (data.status === "completed" && data.startMileage && data.departureMileage) {
-      return data.departureMileage >= data.startMileage;
+// Create schema with custom validators
+const statusChangeSchema = baseStatusChangeSchema
+  // First validation: return mileage >= start mileage
+  .refine(
+    (data) => {
+      // Only validate when we have both values and status is "completed"
+      if (data.status === "completed" && data.startMileage && data.departureMileage) {
+        return data.departureMileage >= data.startMileage;
+      }
+      return true; // Skip validation if not relevant
+    },
+    {
+      message: "Return mileage must be greater than or equal to the start mileage",
+      path: ["departureMileage"], // This will show the error under the departureMileage field
     }
-    return true; // Skip validation if not relevant
-  },
-  {
-    message: "Return mileage must be greater than or equal to the start mileage",
-    path: ["departureMileage"], // This will show the error under the departureMileage field
-  }
-);
+  );
 
 type StatusChangeFormType = z.infer<typeof statusChangeSchema>;
 
@@ -76,6 +78,8 @@ interface StatusChangeDialogProps {
     model: string;
     licensePlate?: string;
     currentMileage?: number;
+    departureMileage?: number;
+    returnMileage?: number;
   };
   customer?: {
     id: number;
@@ -109,12 +113,12 @@ export function StatusChangeDialog({
   const queryClient = useQueryClient();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   
-  // Form setup
+  // Form setup with vehicle return mileage as default for start mileage if available
   const form = useForm<StatusChangeFormType>({
     resolver: zodResolver(statusChangeSchema),
     defaultValues: {
       status: initialStatus,
-      startMileage: undefined,
+      startMileage: vehicle?.returnMileage || undefined,
       departureMileage: undefined,
     },
   });
@@ -326,10 +330,17 @@ export function StatusChangeDialog({
                     <span className="text-muted-foreground mr-1">Vehicle:</span>
                     <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
                   </div>
+                  {/* Show Vehicle Mileage Information */}
                   {vehicle.currentMileage !== undefined && (
                     <div className="flex items-center">
-                      <span className="text-muted-foreground mr-1">Current Mileage:</span>
+                      <span className="text-muted-foreground mr-1">Current:</span>
                       <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                    </div>
+                  )}
+                  {vehicle.returnMileage !== undefined && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Return:</span>
+                      <span className="font-medium">{vehicle.returnMileage.toLocaleString()} km</span>
                     </div>
                   )}
                 </div>
@@ -417,23 +428,43 @@ export function StatusChangeDialog({
               <FormField
                 control={form.control}
                 name="startMileage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Mileage</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder={vehicle.currentMileage ? vehicle.currentMileage.toString() : "Enter starting mileage"}
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enter the vehicle's odometer reading at the start of the reservation
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Determine if the field should be readonly - true if there's a return mileage and the current value is less than it
+                  const isReadOnly = vehicle.returnMileage !== undefined && 
+                                     (field.value === undefined || 
+                                      field.value < vehicle.returnMileage);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Start Mileage</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            placeholder={vehicle.returnMileage !== undefined 
+                              ? `Minimum ${vehicle.returnMileage}` 
+                              : (vehicle.currentMileage ? vehicle.currentMileage.toString() : "Enter starting mileage")}
+                            {...field}
+                            value={field.value || (vehicle.returnMileage || "")}
+                            readOnly={isReadOnly}
+                            className={isReadOnly ? "bg-muted cursor-not-allowed" : ""}
+                          />
+                          {isReadOnly && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                              Locked
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        {vehicle.returnMileage !== undefined 
+                          ? `Must be at least ${vehicle.returnMileage} km (previous return mileage)`
+                          : "Enter the vehicle's odometer reading at the start of the reservation"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             )}
             
