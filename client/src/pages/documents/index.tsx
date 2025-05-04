@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document, Vehicle } from "@shared/schema";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
+import PDFTemplateEditor from "./template-editor";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,6 +93,8 @@ export default function DocumentsIndex() {
       : `Vehicle #${vehicleId}`;
   };
   
+  const [activeTab, setActiveTab] = useState("library");
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -107,115 +111,128 @@ export default function DocumentsIndex() {
         </Link>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Document Library</CardTitle>
-          <CardDescription>
-            Manage all documents related to your vehicles.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <Input
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
-            
-            <div className="flex gap-4">
-              <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Vehicles</SelectItem>
-                  {vehicles?.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                      {vehicle.licensePlate}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {documentTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type === "all" ? "All Document Types" : type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {isLoadingDocuments ? (
-            <div className="flex justify-center items-center h-64">
-              <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          ) : filteredDocuments?.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No documents found matching your filters.
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {Object.entries(documentsByVehicle).map(([vehicleId, docs]) => (
-                <div key={vehicleId} className="space-y-4">
-                  <h3 className="text-lg font-medium border-b pb-2">
-                    {getVehicleName(parseInt(vehicleId))}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {docs.map((doc) => (
-                      <Card key={doc.id} className="overflow-hidden">
-                        <div className="bg-gray-100 p-8 flex items-center justify-center">
-                          {getDocumentIcon(doc.contentType)}
-                        </div>
-                        <CardContent className="p-4">
-                          <h4 className="font-medium mb-1 truncate" title={doc.fileName}>
-                            {doc.fileName}
-                          </h4>
-                          <div className="flex items-center text-sm text-gray-500 mb-2">
-                            <Badge variant="outline" className="mr-2">{doc.documentType}</Badge>
-                            <span>{formatDate(doc.uploadDate?.toString() || "")}</span>
-                          </div>
-                          {doc.notes && (
-                            <p className="text-sm text-gray-600 my-2 truncate" title={doc.notes}>
-                              {doc.notes}
-                            </p>
-                          )}
-                          <div className="text-xs text-gray-500 mb-2">
-                            {formatFileSize(doc.fileSize)}
-                          </div>
-                          <div className="flex justify-between mt-2">
-                            <a 
-                              href={`/api/documents/download/${doc.id}`} 
-                              className="text-primary-600 hover:text-primary-800 text-sm"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Download
-                            </a>
-                            <button className="text-red-600 hover:text-red-800 text-sm">
-                              Delete
-                            </button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="library">Document Library</TabsTrigger>
+          <TabsTrigger value="template-editor">Contract Template Editor</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="library">
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Library</CardTitle>
+              <CardDescription>
+                Manage all documents related to your vehicles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <Input
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+                
+                <div className="flex gap-4">
+                  <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Vehicles</SelectItem>
+                      {vehicles?.map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                          {vehicle.licensePlate}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type === "all" ? "All Document Types" : type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+              
+              {isLoadingDocuments ? (
+                <div className="flex justify-center items-center h-64">
+                  <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : filteredDocuments?.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No documents found matching your filters.
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {Object.entries(documentsByVehicle).map(([vehicleId, docs]) => (
+                    <div key={vehicleId} className="space-y-4">
+                      <h3 className="text-lg font-medium border-b pb-2">
+                        {getVehicleName(parseInt(vehicleId))}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {docs.map((doc) => (
+                          <Card key={doc.id} className="overflow-hidden">
+                            <div className="bg-gray-100 p-8 flex items-center justify-center">
+                              {getDocumentIcon(doc.contentType)}
+                            </div>
+                            <CardContent className="p-4">
+                              <h4 className="font-medium mb-1 truncate" title={doc.fileName}>
+                                {doc.fileName}
+                              </h4>
+                              <div className="flex items-center text-sm text-gray-500 mb-2">
+                                <Badge variant="outline" className="mr-2">{doc.documentType}</Badge>
+                                <span>{formatDate(doc.uploadDate?.toString() || "")}</span>
+                              </div>
+                              {doc.notes && (
+                                <p className="text-sm text-gray-600 my-2 truncate" title={doc.notes}>
+                                  {doc.notes}
+                                </p>
+                              )}
+                              <div className="text-xs text-gray-500 mb-2">
+                                {formatFileSize(doc.fileSize)}
+                              </div>
+                              <div className="flex justify-between mt-2">
+                                <a 
+                                  href={`/api/documents/download/${doc.id}`} 
+                                  className="text-primary-600 hover:text-primary-800 text-sm"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Download
+                                </a>
+                                <button className="text-red-600 hover:text-red-800 text-sm">
+                                  Delete
+                                </button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="template-editor">
+          <PDFTemplateEditor />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
