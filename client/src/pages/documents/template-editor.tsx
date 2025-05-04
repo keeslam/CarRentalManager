@@ -55,12 +55,12 @@ const PDFTemplateEditor = () => {
 
   const { data: templateData, isLoading: isTemplateLoading } = useQuery({
     queryKey: ['/api/pdf-templates'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const { data: reservationsData, isLoading: isReservationsLoading } = useQuery({
     queryKey: ['/api/reservations'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const saveTemplateMutation = useMutation({
