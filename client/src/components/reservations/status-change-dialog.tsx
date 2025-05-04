@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatReservationStatus } from "@/lib/format-utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -445,10 +446,7 @@ export function StatusChangeDialog({
                   <div className="flex items-center gap-2 mb-2">
                     <span>Current status:</span>
                     <Badge className={getStatusBadgeClass(initialStatus)}>
-                      {initialStatus === 'pending' ? 'Booked' : 
-                        initialStatus === 'confirmed' ? 'Vehicle picked up' : 
-                        initialStatus === 'completed' ? 'Vehicle returned' : 
-                        initialStatus}
+                      {formatReservationStatus(initialStatus)}
                     </Badge>
                   </div>
                   <Select
