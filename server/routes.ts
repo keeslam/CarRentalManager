@@ -1903,30 +1903,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reservation.customer = await storage.getCustomer(reservation.customerId);
       }
 
-      // Check if a specific template was requested
+      // For now, use the standard template while we debug the custom template implementation
       let pdfBuffer: Buffer;
-      const templateId = req.query.templateId ? parseInt(req.query.templateId as string) : undefined;
       
-      if (templateId) {
-        // Get the requested template
-        const template = await storage.getPdfTemplate(templateId);
-        if (!template) {
-          return res.status(404).json({ message: "Template not found" });
-        }
+      try {
+        // First, try the custom template implementation
+        const templateId = req.query.templateId ? parseInt(req.query.templateId as string) : undefined;
         
-        // Generate PDF using the template
-        pdfBuffer = await generateRentalContractFromTemplate(reservation, template);
-      } else {
-        // Try to get the default template
-        const defaultTemplate = await storage.getDefaultPdfTemplate();
-        
-        if (defaultTemplate) {
-          // Generate PDF using the default template
-          pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
+        if (templateId) {
+          console.log(`Generating contract with template ID: ${templateId}`);
+          const template = await storage.getPdfTemplate(templateId);
+          
+          if (template) {
+            // Use the imported function from pdf-generator.ts
+            const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+            pdfBuffer = await generateRentalContractFromTemplate(reservation, template);
+            console.log("Successfully generated PDF with custom template");
+          } else {
+            console.log("Template not found, falling back to standard template");
+            pdfBuffer = await generateRentalContract(reservation);
+          }
         } else {
-          // Fall back to the old fixed template format
+          console.log("No template ID provided, using standard template");
           pdfBuffer = await generateRentalContract(reservation);
         }
+      } catch (error) {
+        console.error("Error using custom template:", error);
+        // Fall back to the old fixed template format
+        pdfBuffer = await generateRentalContract(reservation);
       }
       
       // Set headers for PDF download

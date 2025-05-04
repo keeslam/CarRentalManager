@@ -72,9 +72,13 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           color: textColor
         };
         
-        // Add alignment property only if it's not left (default)
-        if (textAlignment !== TextAlignment.Left) {
-          options.textAlign = textAlignment;
+        // Add alignment property as part of PDF.js options
+        if (textAlignment === TextAlignment.Center) {
+          // @ts-ignore: TextAlignment is not properly typed in pdf-lib
+          options.textAlign = TextAlignment.Center;
+        } else if (textAlignment === TextAlignment.Right) {
+          // @ts-ignore: TextAlignment is not properly typed in pdf-lib
+          options.textAlign = TextAlignment.Right;
         }
         
         page.drawText(value, options);
