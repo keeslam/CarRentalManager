@@ -207,8 +207,15 @@ const PDFTemplateEditor = () => {
   };
 
   const handleAddField = () => {
-    if (!currentTemplate) return;
+    console.log("Adding field", { currentTemplate, newFieldName, newFieldSource });
+    
+    if (!currentTemplate) {
+      console.error("No current template");
+      return;
+    }
+    
     if (!newFieldName || !newFieldSource) {
+      console.error("Missing field name or source", { newFieldName, newFieldSource });
       toast({
         title: "Error",
         description: "Please enter field name and source",
@@ -254,11 +261,11 @@ const PDFTemplateEditor = () => {
     
     const containerRect = pdfContainerRef.current.getBoundingClientRect();
     
-    // Calculate new position relative to the container, accounting for the zoom level
+    // Get mouse position relative to the container
     const rawX = e.clientX - containerRect.left;
     const rawY = e.clientY - containerRect.top;
     
-    // Divide by zoom level to get actual position in the document
+    // Convert to PDF coordinates (divide by zoom level)
     const x = Math.max(0, Math.min(rawX / zoomLevel, 595));
     const y = Math.max(0, Math.min(rawY / zoomLevel, 842));
 
@@ -782,8 +789,6 @@ const PDFTemplateEditor = () => {
                             backgroundSize: '100% 100%',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
-                            transform: `scale(${zoomLevel})`,
-                            transformOrigin: 'top left',
                           }}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
@@ -792,13 +797,13 @@ const PDFTemplateEditor = () => {
                           {currentTemplate.fields.map(field => (
                             <div
                               key={field.id}
-                              className={`absolute cursor-pointer p-1 ${
-                                selectedField?.id === field.id ? 'border-2 border-blue-500' : ''
+                              className={`absolute cursor-pointer p-1 rounded ${
+                                selectedField?.id === field.id ? 'border-2 border-blue-500 bg-white bg-opacity-30' : 'bg-white bg-opacity-10'
                               } ${isMoving ? 'cursor-move' : ''}`}
                               style={{
-                                left: `${field.x}px`,
-                                top: `${field.y}px`,
-                                fontSize: `${field.fontSize}px`,
+                                left: `${field.x * zoomLevel}px`,
+                                top: `${field.y * zoomLevel}px`,
+                                fontSize: `${field.fontSize * zoomLevel}px`,
                                 fontWeight: field.isBold ? 'bold' : 'normal',
                                 transform: 'translate(-50%, -50%)',
                                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
