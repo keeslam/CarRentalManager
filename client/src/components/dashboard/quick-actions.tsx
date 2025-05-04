@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
 import { Reservation, Vehicle } from "@shared/schema";
 import { Check, RotateCw, Search, CalendarClock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { displayLicensePlate, isTrueValue } from "@/lib/utils";
 import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
@@ -302,8 +303,11 @@ export function QuickActions() {
   const [vehicleReservationDialogOpen, setVehicleReservationDialogOpen] = useState(false);
   
   // State for the document upload dialog
-  const [documentUploadDialogOpen, setDocumentUploadDialogOpen] = useState(false);
   const [selectedUploadVehicle, setSelectedUploadVehicle] = useState<Vehicle | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentCategory, setDocumentCategory] = useState<string>("general");
+  const [documentNotes, setDocumentNotes] = useState<string>("");
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false);
   
   const { toast } = useToast();
   
@@ -582,21 +586,87 @@ export function QuickActions() {
     });
   };
   
-  // Handler for document upload success
-  const handleDocumentUploadSuccess = () => {
-    // Refresh related data
-    queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+  // Handler for document upload
+  const handleDocumentUpload = async () => {
+    if (!selectedUploadVehicle) {
+      toast({
+        title: "Error",
+        description: "Please select a vehicle",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Reset selected vehicle
-    setSelectedUploadVehicle(null);
+    if (!documentFile) {
+      toast({
+        title: "Error",
+        description: "Please select a file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Show success message
-    toast({
-      title: "Success",
-      description: "Document uploaded successfully",
-    });
+    setIsDocumentUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append("vehicleId", selectedUploadVehicle.id.toString());
+      formData.append("documentType", documentFile.name.split('.')[0]);  // Use filename as document type
+      formData.append("file", documentFile);
+      formData.append("category", documentCategory);
+      
+      if (documentNotes) {
+        formData.append("notes", documentNotes);
+      }
+      
+      const response = await fetch("/api/documents", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to upload document: ${response.status}`);
+      }
+      
+      // Document uploaded successfully
+      const document = await response.json();
+      
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedUploadVehicle.id] });
+      
+      // Show success message
+      toast({
+        title: "Upload Successful",
+        description: `Successfully uploaded document for ${selectedUploadVehicle.licensePlate}`,
+      });
+      
+      // Reset form
+      setSelectedUploadVehicle(null);
+      setDocumentFile(null);
+      setDocumentCategory("general");
+      setDocumentNotes("");
+      
+      // Close dialog using the ref
+      const dialogCloseButton = document.querySelector('[data-document-dialog-close]') as HTMLElement;
+      if (dialogCloseButton) {
+        dialogCloseButton.click();
+      }
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDocumentUploading(false);
+    }
   };
+  
+  // Reference for document dialog closing
+  const documentDialogCloseRef = React.useRef(null);
 
   return (
     <>
@@ -607,32 +677,7 @@ export function QuickActions() {
         onStatusChanged={handleReservationStatusUpdated}
       />
       
-      {/* Document Upload Component - Only render if a vehicle is selected */}
-      {selectedUploadVehicle && documentUploadDialogOpen && (
-        <Dialog open={documentUploadDialogOpen} onOpenChange={(open) => {
-          setDocumentUploadDialogOpen(open);
-          if (!open) {
-            setSelectedUploadVehicle(null);
-          }
-        }}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Upload Document</DialogTitle>
-              <DialogDescription>
-                Upload document for {selectedUploadVehicle.brand} {selectedUploadVehicle.model} ({displayLicensePlate(selectedUploadVehicle.licensePlate)})
-              </DialogDescription>
-            </DialogHeader>
-            <InlineDocumentUpload
-              vehicleId={selectedUploadVehicle.id}
-              onSuccess={handleDocumentUploadSuccess}
-            >
-              <div className="w-full h-full">
-                {/* This is just a placeholder - the actual upload form is provided by InlineDocumentUpload */}
-              </div>
-            </InlineDocumentUpload>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* No need for a separate document upload dialog now */}
       
       <Card className="mb-6">
         <CardHeader className="pb-2">
@@ -725,18 +770,107 @@ export function QuickActions() {
                         </DialogClose>
                       </div>
                       
-                      <DialogClose asChild>
+                      {/* Document Upload Form */}
+                      {selectedUploadVehicle && (
+                        <div className="space-y-4">
+                          <div>
+                            <label htmlFor="documentFile" className="text-sm font-medium">
+                              Document (PDF/Image)
+                            </label>
+                            <div className="mt-1 flex items-center">
+                              <input
+                                id="documentFile"
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setDocumentFile(e.target.files[0]);
+                                  }
+                                }}
+                                className="w-full text-sm text-slate-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-primary-50 file:text-primary-700
+                                  hover:file:bg-primary-100
+                                  cursor-pointer"
+                              />
+                            </div>
+                            {documentFile && (
+                              <div className="mt-2 flex items-center space-x-2 text-sm">
+                                <Check className="h-4 w-4 text-green-500" />
+                                <span>{documentFile.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setDocumentFile(null)}
+                                  className="text-red-500 hover:text-red-700 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <label htmlFor="documentCategory" className="text-sm font-medium">
+                              Document Category
+                            </label>
+                            <Select value={documentCategory} onValueChange={setDocumentCategory}>
+                              <SelectTrigger id="documentCategory" className="w-full">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="registration">Registration</SelectItem>
+                                <SelectItem value="insurance">Insurance</SelectItem>
+                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                                <SelectItem value="inspection">Inspection</SelectItem>
+                                <SelectItem value="apk">APK</SelectItem>
+                                <SelectItem value="warranty">Warranty</SelectItem>
+                                <SelectItem value="damage_checks">Damage Checks</SelectItem>
+                                <SelectItem value="invoice">Invoice</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <label htmlFor="documentNotes" className="text-sm font-medium">
+                              Notes (Optional)
+                            </label>
+                            <Textarea 
+                              id="documentNotes" 
+                              value={documentNotes}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDocumentNotes(e.target.value)}
+                              placeholder="Add any notes about this document"
+                              rows={2}
+                              className="resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <DialogClose asChild data-document-dialog-close>
                         <Button 
-                          type="button"
-                          disabled={!selectedUploadVehicle}
-                          onClick={() => {
-                            // This will close the first dialog and show the InlineDocumentUpload component
-                            setTimeout(() => setDocumentUploadDialogOpen(true), 100);
-                          }}
+                          type="button" 
+                          variant="outline" 
+                          className="hidden"
+                          ref={documentDialogCloseRef}
                         >
-                          Continue to Upload
+                          Hidden Close
                         </Button>
                       </DialogClose>
+                      
+                      <Button 
+                        type="button"
+                        disabled={!selectedUploadVehicle || !documentFile || isDocumentUploading}
+                        onClick={handleDocumentUpload}
+                      >
+                        {isDocumentUploading && (
+                          <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Upload Document
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
