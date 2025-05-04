@@ -530,13 +530,18 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       </InlineDocumentUpload>
                     </div>
                     <div>
-                      {documentsByCategory["Damage Report"]?.length > 0 ? (
+                      {(documentsByCategory["Damage Report"]?.length > 0 || documentsByCategory["Damage Form"]?.length > 0) ? (
                         <div className="flex items-center gap-2">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
                           </svg>
-                          <span>{formatDate(new Date(documentsByCategory["Damage Report"][0].uploadDate).toISOString().split('T')[0])}</span>
+                          <span>
+                            {formatDate(new Date(
+                              (documentsByCategory["Damage Report"]?.[0]?.uploadDate || 
+                               documentsByCategory["Damage Form"]?.[0]?.uploadDate)
+                            ).toISOString().split('T')[0])}
+                          </span>
                         </div>
                       ) : (
                         <p className="text-base">{vehicle.damageCheckDate ? formatDate(vehicle.damageCheckDate) : "N/A"}</p>
@@ -816,7 +821,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
-                        <span className="block text-sm font-medium">Damage Report</span>
+                        <span className="block text-sm font-medium">Damage Form</span>
                       </div>
                     </InlineDocumentUpload>
                   </div>

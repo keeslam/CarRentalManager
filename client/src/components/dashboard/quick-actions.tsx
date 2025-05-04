@@ -437,19 +437,29 @@ export function QuickActions() {
       
       // Upload damage form if provided
       if (damageFormFile) {
-        const document = await uploadDocument(damageFormFile, "Damage Form", "Damage form uploaded from dashboard");
+        const document = await uploadDocument(damageFormFile, "Damage Report", "Damage report uploaded from dashboard");
         uploadCount++;
         
         // Update vehicle's damage check status
         try {
+          // First get the current vehicle data
+          const vehicleResponse = await fetch(`/api/vehicles/${selectedDamageVehicle.id}`);
+          if (!vehicleResponse.ok) {
+            throw new Error(`Failed to get vehicle data: ${vehicleResponse.status}`);
+          }
+          
+          const vehicleData = await vehicleResponse.json();
           const currentDate = new Date().toISOString().split('T')[0];
+          
+          // Then send the update with all required fields
           const response = await fetch(`/api/vehicles/${selectedDamageVehicle.id}`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              damageCheck: "true", // Send as string not boolean
+              ...vehicleData, // Include all existing data
+              damageCheck: "true", // Then override with our updates
               damageCheckDate: currentDate,
               damageCheckAttachment: document.id.toString(),
               damageCheckAttachmentDate: currentDate
@@ -540,9 +550,9 @@ export function QuickActions() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Upload Damage Form</DialogTitle>
+                      <DialogTitle>Upload Damage Report</DialogTitle>
                       <DialogDescription>
-                        Select a vehicle and upload damage form and/or photos.
+                        Select a vehicle and upload damage report and/or photos.
                       </DialogDescription>
                     </DialogHeader>
                     
@@ -650,7 +660,7 @@ export function QuickActions() {
                       <div className="space-y-4">
                         <div>
                           <label htmlFor="damageForm" className="text-sm font-medium">
-                            Damage Form (PDF/Image)
+                            Damage Report (PDF/Image)
                           </label>
                           <div className="mt-1 flex items-center">
                             <input
