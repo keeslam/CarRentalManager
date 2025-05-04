@@ -1,26 +1,176 @@
 /**
- * This is a simulated PDF generation utility
- * In a real application, this would use PDFKit or a similar library to generate actual PDFs
+ * PDF generation utility to create rental contracts
+ * Using the ELENA AVL ALL contract template
  */
 
 import { Reservation } from "@shared/schema";
 import { format } from "date-fns";
+import * as fs from 'fs';
+import * as path from 'path';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 /**
  * Generates a rental contract PDF based on the Auto Lease LAM template
- * This function simulates PDF generation - in a real app, it would use PDFKit
+ * Uses the uploaded template PDF and fills in the data
  */
 export async function generateRentalContract(reservation: Reservation): Promise<Buffer> {
-  // Simulate PDF generation delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // In a real implementation, this would create a proper PDF with PDFKit
-  // For this simulation, we'll return a placeholder buffer with contract data
-  
-  // Extract data for the contract
-  const contractData = prepareContractData(reservation);
-  
-  // Simulate the contract template based on the PDF sample from the client
+  try {
+    // Extract data for the contract
+    const contractData = prepareContractData(reservation);
+    
+    // Load the template PDF
+    const templatePath = path.join(process.cwd(), 'uploads/templates/rental_contract_template.pdf');
+    const templateBytes = fs.readFileSync(templatePath);
+    
+    // Load the PDF document
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    
+    // Get the first page
+    const page = pdfDoc.getPage(0);
+    
+    // Get fonts
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Set drawing parameters
+    const fontSize = 10;
+    const textColor = rgb(0, 0, 0);
+    
+    // Contract number and date
+    page.drawText(`Contract: ${contractData.contractNumber}`, {
+      x: 400,
+      y: 690,
+      size: 10,
+      font: helveticaBold,
+      color: textColor,
+    });
+    
+    page.drawText(`Datum: ${contractData.contractDate}`, {
+      x: 400,
+      y: 675,
+      size: 10,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Vehicle information
+    page.drawText(contractData.licensePlate, {
+      x: 180,
+      y: 585,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(`${contractData.brand} ${contractData.model}`, {
+      x: 180,
+      y: 570,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(contractData.chassisNumber, {
+      x: 180,
+      y: 555,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Customer information
+    page.drawText(contractData.customerName, {
+      x: 180,
+      y: 500,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(contractData.customerAddress, {
+      x: 180,
+      y: 485,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(`${contractData.customerCity} ${contractData.customerPostalCode}`, {
+      x: 180,
+      y: 470,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(contractData.customerPhone, {
+      x: 180,
+      y: 455,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(contractData.driverLicense, {
+      x: 180,
+      y: 440,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Rental period
+    page.drawText(contractData.startDate, {
+      x: 180,
+      y: 385,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    page.drawText(contractData.endDate, {
+      x: 180,
+      y: 370,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Price
+    page.drawText(contractData.totalPrice, {
+      x: 180,
+      y: 330,
+      size: fontSize,
+      font: helveticaBold,
+      color: textColor,
+    });
+    
+    // Today's date at the bottom for signature
+    page.drawText(contractData.contractDate, {
+      x: 180,
+      y: 120,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Save the PDF
+    const pdfBytes = await pdfDoc.save();
+    
+    // Return the PDF as a buffer
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    console.error('Error generating PDF contract:', error);
+    // If there's an error, return a simple text-based contract as a fallback
+    const contractData = prepareContractData(reservation);
+    return generateFallbackContract(contractData);
+  }
+}
+
+/**
+ * Generate a fallback text-based contract if PDF generation fails
+ */
+function generateFallbackContract(contractData: any): Buffer {
   const contractTemplate = `
 Auto Lease LAM
 Kerkweg 47a
@@ -75,7 +225,6 @@ Customer: _________________________
 Date: ${contractData.contractDate}
 `;
 
-  // For simulation, return a buffer with the contract text
   return Buffer.from(contractTemplate);
 }
 
