@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ReservationForm } from "@/components/reservations/reservation-form-fixed";
+import { ReservationForm } from "@/components/reservations/reservation-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Vehicle } from "@shared/schema";
