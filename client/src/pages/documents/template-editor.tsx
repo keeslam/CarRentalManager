@@ -601,111 +601,165 @@ const PDFTemplateEditor = () => {
                             Drag fields to position them on the template
                           </CardDescription>
                         </div>
-                        <Dialog open={isAddFieldDialogOpen} onOpenChange={setIsAddFieldDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline">
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Field
+                        <div className="flex gap-2">
+                          <div className="flex gap-1 rounded-md border border-input p-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleZoomOut}
+                              title="Zoom Out"
+                            >
+                              <ZoomOut className="h-4 w-4" />
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Add New Field</DialogTitle>
-                              <DialogDescription>
-                                Specify the field details to add to the template.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-4">
-                              <div>
-                                <Label htmlFor="field-name">Field Name</Label>
-                                <Input
-                                  id="field-name"
-                                  value={newFieldName}
-                                  onChange={(e) => setNewFieldName(e.target.value)}
-                                  placeholder="e.g., Customer Name"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor="field-source">Data Source</Label>
-                                <Select
-                                  value={newFieldSource}
-                                  onValueChange={setNewFieldSource}
-                                >
-                                  <SelectTrigger id="field-source">
-                                    <SelectValue placeholder="Select data source" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="contractNumber">Contract Number</SelectItem>
-                                    <SelectItem value="contractDate">Contract Date</SelectItem>
-                                    <SelectItem value="licensePlate">License Plate</SelectItem>
-                                    <SelectItem value="brand">Vehicle Brand</SelectItem>
-                                    <SelectItem value="model">Vehicle Model</SelectItem>
-                                    <SelectItem value="chassisNumber">Chassis Number</SelectItem>
-                                    <SelectItem value="customerName">Customer Name</SelectItem>
-                                    <SelectItem value="customerAddress">Customer Address</SelectItem>
-                                    <SelectItem value="customerCity">Customer City</SelectItem>
-                                    <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
-                                    <SelectItem value="customerPhone">Customer Phone</SelectItem>
-                                    <SelectItem value="driverLicense">Driver License</SelectItem>
-                                    <SelectItem value="startDate">Start Date</SelectItem>
-                                    <SelectItem value="endDate">End Date</SelectItem>
-                                    <SelectItem value="duration">Duration</SelectItem>
-                                    <SelectItem value="totalPrice">Total Price</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setIsAddFieldDialogOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button onClick={handleAddField}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleResetZoom}
+                              title="Reset Zoom"
+                            >
+                              <span className="text-xs font-mono">{Math.round(zoomLevel * 100)}%</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={handleZoomIn}
+                              title="Zoom In"
+                            >
+                              <ZoomIn className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={handleToggleGrid}
+                            className={showGrid ? "bg-slate-100" : ""}
+                            title="Toggle Grid"
+                          >
+                            <Grid className="h-4 w-4" />
+                          </Button>
+                          {selectedField && (
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={handleAutoAlign}
+                              title="Auto-align with nearby fields"
+                            >
+                              <AlignCenter className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Dialog open={isAddFieldDialogOpen} onOpenChange={setIsAddFieldDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">
+                                <Plus className="mr-2 h-4 w-4" />
                                 Add Field
                               </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add New Field</DialogTitle>
+                                <DialogDescription>
+                                  Specify the field details to add to the template.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="py-4 space-y-4">
+                                <div>
+                                  <Label htmlFor="field-name">Field Name</Label>
+                                  <Input
+                                    id="field-name"
+                                    value={newFieldName}
+                                    onChange={(e) => setNewFieldName(e.target.value)}
+                                    placeholder="e.g., Customer Name"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="field-source">Data Source</Label>
+                                  <Select
+                                    value={newFieldSource}
+                                    onValueChange={setNewFieldSource}
+                                  >
+                                    <SelectTrigger id="field-source">
+                                      <SelectValue placeholder="Select data source" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="contractNumber">Contract Number</SelectItem>
+                                      <SelectItem value="contractDate">Contract Date</SelectItem>
+                                      <SelectItem value="licensePlate">License Plate</SelectItem>
+                                      <SelectItem value="brand">Vehicle Brand</SelectItem>
+                                      <SelectItem value="model">Vehicle Model</SelectItem>
+                                      <SelectItem value="chassisNumber">Chassis Number</SelectItem>
+                                      <SelectItem value="customerName">Customer Name</SelectItem>
+                                      <SelectItem value="customerAddress">Customer Address</SelectItem>
+                                      <SelectItem value="customerCity">Customer City</SelectItem>
+                                      <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
+                                      <SelectItem value="customerPhone">Customer Phone</SelectItem>
+                                      <SelectItem value="driverLicense">Driver License</SelectItem>
+                                      <SelectItem value="startDate">Start Date</SelectItem>
+                                      <SelectItem value="endDate">End Date</SelectItem>
+                                      <SelectItem value="duration">Duration</SelectItem>
+                                      <SelectItem value="totalPrice">Total Price</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsAddFieldDialogOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleAddField}>
+                                  Add Field
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div 
-                        ref={pdfContainerRef}
-                        className="relative w-full h-[842px] bg-white border border-gray-300 shadow-sm overflow-hidden"
-                        style={{ 
-                          width: '595px', 
+                      <div className="relative flex items-center justify-center overflow-auto" 
+                        style={{
                           height: '842px',
-                          margin: '0 auto',
-                          backgroundImage: `url(${contractBackground})`,
-                          backgroundSize: '100% 100%',
-                          backgroundPosition: 'center',
-                          backgroundRepeat: 'no-repeat'
-                        }}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                      >
-                        {currentTemplate.fields.map(field => (
-                          <div
-                            key={field.id}
-                            className={`absolute cursor-pointer p-1 ${
-                              selectedField?.id === field.id ? 'border-2 border-blue-500' : ''
-                            } ${isMoving ? 'cursor-move' : ''}`}
-                            style={{
-                              left: `${field.x}px`,
-                              top: `${field.y}px`,
-                              fontSize: `${field.fontSize}px`,
-                              fontWeight: field.isBold ? 'bold' : 'normal',
-                              transform: 'translate(-50%, -50%)',
-                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                              padding: '4px 8px',
-                              borderRadius: '4px'
-                            }}
-                            onClick={() => handleFieldClick(field)}
-                            onMouseDown={(e) => handleMouseDown(e, field)}
-                          >
-                            {field.name}
-                          </div>
-                        ))}
+                        }}>
+                        <div 
+                          ref={pdfContainerRef}
+                          className={`relative bg-white border border-gray-300 shadow-sm ${showGrid ? 'bg-grid' : ''}`}
+                          style={{ 
+                            width: `${595 * zoomLevel}px`, 
+                            height: `${842 * zoomLevel}px`,
+                            margin: '0 auto',
+                            backgroundImage: `url(${contractBackground})`,
+                            backgroundSize: '100% 100%',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            transform: `scale(${zoomLevel})`,
+                            transformOrigin: 'center center',
+                          }}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                        >
+                          {currentTemplate.fields.map(field => (
+                            <div
+                              key={field.id}
+                              className={`absolute cursor-pointer p-1 ${
+                                selectedField?.id === field.id ? 'border-2 border-blue-500' : ''
+                              } ${isMoving ? 'cursor-move' : ''}`}
+                              style={{
+                                left: `${field.x}px`,
+                                top: `${field.y}px`,
+                                fontSize: `${field.fontSize}px`,
+                                fontWeight: field.isBold ? 'bold' : 'normal',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '4px 8px',
+                                borderRadius: '4px'
+                              }}
+                              onClick={() => handleFieldClick(field)}
+                              onMouseDown={(e) => handleMouseDown(e, field)}
+                            >
+                              {field.name}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -900,12 +954,11 @@ const PDFTemplateEditor = () => {
                           <div className="mt-4">
                             <a 
                               href={previewPdfUrl} 
-                              target="_blank"
+                              target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex items-center text-blue-600 hover:underline"
+                              className="text-primary underline"
                             >
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Preview PDF
+                              Open PDF Preview
                             </a>
                           </div>
                         )}
