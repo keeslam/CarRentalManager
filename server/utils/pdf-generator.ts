@@ -77,16 +77,54 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     if (template && template.fields) {
       console.log('Processing template fields');
       
-      // Parse fields if they're stored as a string
-      let fields;
+      // Parse fields - they could be in various formats from the database
+      let fields = [];
       try {
-        fields = typeof template.fields === 'string' 
-          ? JSON.parse(template.fields) 
-          : template.fields;
+        console.log(`Template fields type: ${typeof template.fields}`);
+        console.log(`Template fields raw value:`, template.fields);
+        
+        if (template.fields === null || template.fields === undefined) {
+          console.log(`Template fields is null or undefined`);
+          fields = [];
+        } else if (typeof template.fields === 'string') {
+          // Handle various string formats that could come from the database
+          let fieldsString = template.fields;
           
-        console.log(`Found ${fields.length} fields to render`);
+          // Detect if it's a double-stringified JSON (common database storage issue)
+          if (fieldsString.startsWith('"[') && fieldsString.endsWith(']"')) {
+            // Remove outer quotes and unescape inner quotes
+            fieldsString = fieldsString.substring(1, fieldsString.length - 1).replace(/\\"/g, '"');
+          }
+          
+          // Now parse the JSON string
+          try {
+            fields = JSON.parse(fieldsString);
+            console.log(`Successfully parsed fields string, found ${fields.length} fields`);
+          } catch (parseError) {
+            console.error('Error parsing fields string:', parseError);
+            console.log('Fields string was:', fieldsString);
+            fields = [];
+          }
+        } else if (Array.isArray(template.fields)) {
+          // Already an array
+          fields = template.fields;
+          console.log(`Fields is already an array with ${fields.length} items`);
+        } else if (typeof template.fields === 'object') {
+          // Try to convert object to array
+          console.log(`Fields is an object, trying to convert`);
+          if (Object.keys(template.fields).length > 0) {
+            // Try to extract as array
+            const fieldsArray = Object.values(template.fields);
+            if (Array.isArray(fieldsArray)) {
+              fields = fieldsArray;
+              console.log(`Converted fields object to array with ${fields.length} items`);
+            }
+          }
+        }
+        
+        console.log(`Found ${fields.length} fields to render:`, fields);
       } catch (error) {
-        console.error('Error parsing template fields:', error);
+        console.error('Error processing template fields:', error);
         fields = [];
       }
       

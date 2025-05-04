@@ -668,36 +668,152 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getDefaultPdfTemplate(): Promise<PdfTemplate | undefined> {
-    const [template] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.isDefault, true));
-    return template || undefined;
+    try {
+      // Use SQL query directly to handle potential column name mismatch
+      const result = await db.execute(
+        sql`SELECT * FROM pdf_templates WHERE is_default = true LIMIT 1`
+      );
+      
+      if (result.length > 0) {
+        const template = result[0];
+        console.log('Found default template:', template.id, template.name);
+        
+        // Process fields if it's a string
+        if (template.fields && typeof template.fields === 'string') {
+          try {
+            // Try to parse JSON string
+            template.fields = JSON.parse(template.fields);
+          } catch (error) {
+            console.error('Error parsing template fields:', error);
+          }
+        }
+        
+        return template;
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error('Error getting default template:', error);
+      return undefined;
+    }
   }
   
   async createPdfTemplate(templateData: InsertPdfTemplate): Promise<PdfTemplate> {
-    // If setting as default, update all other templates to not be default
-    if (templateData.isDefault) {
-      await db.update(pdfTemplates).set({ isDefault: false });
+    try {
+      // If setting as default, update all other templates to not be default
+      if (templateData.isDefault) {
+        // Use SQL directly to avoid column name mismatches
+        await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
+        
+        // Make sure fields is properly serialized if it's an object
+        if (templateData.fields && typeof templateData.fields === 'object' && !Array.isArray(templateData.fields)) {
+          templateData.fields = [];
+        }
+      }
+      
+      // Handle column name mismatch
+      const valuesToInsert: any = { 
+        name: templateData.name,
+        fields: templateData.fields 
+      };
+      
+      // Handle isDefault -> is_default mapping
+      if (templateData.isDefault !== undefined) {
+        valuesToInsert.is_default = templateData.isDefault;
+      }
+      
+      // Use SQL to avoid column name issues
+      const result = await db.execute(
+        sql`INSERT INTO pdf_templates (name, fields, is_default) 
+            VALUES (${valuesToInsert.name}, ${JSON.stringify(valuesToInsert.fields)}, ${valuesToInsert.is_default || false})
+            RETURNING *`
+      );
+      
+      if (result.length > 0) {
+        return result[0] as PdfTemplate;
+      }
+      
+      throw new Error('Failed to create PDF template');
+    } catch (error) {
+      console.error('Error creating PDF template:', error);
+      throw error;
     }
-    
-    const [template] = await db.insert(pdfTemplates).values(templateData).returning();
-    return template;
   }
   
   async updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined> {
-    // If setting as default, update all other templates to not be default
-    if (templateData.isDefault) {
-      await db.update(pdfTemplates).set({ isDefault: false });
+    try {
+      // If setting as default, update all other templates to not be default
+      if (templateData.isDefault) {
+        // Use SQL directly to avoid column name mismatches
+        await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
+      }
+      
+      // Prepare set values
+      const setClause: string[] = [];
+      const values: any[] = [];
+      
+      if (templateData.name !== undefined) {
+        setClause.push('name = $1');
+        values.push(templateData.name);
+      }
+      
+      if (templateData.fields !== undefined) {
+        const fieldIdx = values.length + 1;
+        setClause.push(`fields = $${fieldIdx}`);
+        
+        // If fields is an object, convert to JSON string for storage
+        if (typeof templateData.fields === 'object') {
+          values.push(JSON.stringify(templateData.fields));
+        } else {
+          values.push(templateData.fields);
+        }
+      }
+      
+      if (templateData.isDefault !== undefined) {
+        const defaultIdx = values.length + 1;
+        setClause.push(`is_default = $${defaultIdx}`);
+        values.push(templateData.isDefault);
+      }
+      
+      // Always update the timestamp
+      const updatedAtIdx = values.length + 1;
+      setClause.push(`updated_at = $${updatedAtIdx}`);
+      values.push(new Date());
+      
+      // ID parameter
+      const idIdx = values.length + 1;
+      values.push(id);
+      
+      if (setClause.length === 0) {
+        console.log('No fields to update');
+        const [currentTemplate] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.id, id));
+        return currentTemplate || undefined;
+      }
+      
+      // Create and execute SQL
+      const queryString = `
+        UPDATE pdf_templates 
+        SET ${setClause.join(', ')}
+        WHERE id = $${idIdx}
+        RETURNING *
+      `;
+      
+      console.log('Executing query:', queryString);
+      console.log('With values:', values);
+      
+      const result = await db.execute(sql.raw(queryString, ...values));
+      
+      if (result.length > 0) {
+        console.log('Template updated successfully:', result[0]);
+        return result[0] as PdfTemplate;
+      }
+      
+      console.log('Template not found for update');
+      return undefined;
+    } catch (error) {
+      console.error('Error updating PDF template:', error);
+      return undefined;
     }
-    
-    const [updatedTemplate] = await db
-      .update(pdfTemplates)
-      .set({
-        ...templateData,
-        updatedAt: new Date()
-      })
-      .where(eq(pdfTemplates.id, id))
-      .returning();
-    
-    return updatedTemplate || undefined;
   }
   
   async deletePdfTemplate(id: number): Promise<boolean> {
