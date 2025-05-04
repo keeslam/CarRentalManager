@@ -364,15 +364,122 @@ const PDFTemplateEditor = () => {
   };
   
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+    if (!pdfContainerRef.current) return;
+    
+    const parentContainer = pdfContainerRef.current.parentElement;
+    if (!parentContainer) return;
+    
+    // Save the center point of the visible area
+    const containerRect = parentContainer.getBoundingClientRect();
+    const scrollLeft = parentContainer.scrollLeft;
+    const scrollTop = parentContainer.scrollTop;
+    
+    // Center point in the visible area
+    const centerX = (containerRect.width / 2) + scrollLeft;
+    const centerY = (containerRect.height / 2) + scrollTop;
+    
+    // Calculate relative position within the PDF
+    const pdfRect = pdfContainerRef.current.getBoundingClientRect();
+    const relativeX = centerX / pdfRect.width;
+    const relativeY = centerY / pdfRect.height;
+    
+    // Update zoom
+    const newZoom = Math.min(zoomLevel + 0.1, 2);
+    setZoomLevel(newZoom);
+    
+    // Adjust scroll position after zoom
+    setTimeout(() => {
+      if (!pdfContainerRef.current || !parentContainer) return;
+      
+      const newPdfRect = pdfContainerRef.current.getBoundingClientRect();
+      const newCenterX = relativeX * newPdfRect.width;
+      const newCenterY = relativeY * newPdfRect.height;
+      
+      // Center the view on the same relative position
+      parentContainer.scrollLeft = newCenterX - (containerRect.width / 2);
+      parentContainer.scrollTop = newCenterY - (containerRect.height / 2);
+    }, 0);
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+    if (!pdfContainerRef.current) return;
+    
+    const parentContainer = pdfContainerRef.current.parentElement;
+    if (!parentContainer) return;
+    
+    // Save the center point of the visible area
+    const containerRect = parentContainer.getBoundingClientRect();
+    const scrollLeft = parentContainer.scrollLeft;
+    const scrollTop = parentContainer.scrollTop;
+    
+    // Center point in the visible area
+    const centerX = (containerRect.width / 2) + scrollLeft;
+    const centerY = (containerRect.height / 2) + scrollTop;
+    
+    // Calculate relative position within the PDF
+    const pdfRect = pdfContainerRef.current.getBoundingClientRect();
+    const relativeX = centerX / pdfRect.width;
+    const relativeY = centerY / pdfRect.height;
+    
+    // Update zoom
+    const newZoom = Math.max(zoomLevel - 0.1, 0.5);
+    setZoomLevel(newZoom);
+    
+    // Adjust scroll position after zoom
+    setTimeout(() => {
+      if (!pdfContainerRef.current || !parentContainer) return;
+      
+      const newPdfRect = pdfContainerRef.current.getBoundingClientRect();
+      const newCenterX = relativeX * newPdfRect.width;
+      const newCenterY = relativeY * newPdfRect.height;
+      
+      // Center the view on the same relative position
+      parentContainer.scrollLeft = newCenterX - (containerRect.width / 2);
+      parentContainer.scrollTop = newCenterY - (containerRect.height / 2);
+    }, 0);
   };
 
   const handleResetZoom = () => {
+    // Store the current center position relative to the document
+    if (!pdfContainerRef.current) {
+      setZoomLevel(1);
+      return;
+    }
+    
+    const parentContainer = pdfContainerRef.current.parentElement;
+    if (!parentContainer) {
+      setZoomLevel(1);
+      return;
+    }
+    
+    // Calculate the center of the current view
+    const containerRect = parentContainer.getBoundingClientRect();
+    const scrollLeft = parentContainer.scrollLeft;
+    const scrollTop = parentContainer.scrollTop;
+    
+    const centerX = (containerRect.width / 2) + scrollLeft;
+    const centerY = (containerRect.height / 2) + scrollTop;
+    
+    // Calculate relative position (0 to 1)
+    const pdfRect = pdfContainerRef.current.getBoundingClientRect();
+    const relativeX = centerX / pdfRect.width;
+    const relativeY = centerY / pdfRect.height;
+    
+    // Reset zoom
     setZoomLevel(1);
+    
+    // Adjust scroll position after zoom reset
+    setTimeout(() => {
+      if (!pdfContainerRef.current || !parentContainer) return;
+      
+      const newPdfRect = pdfContainerRef.current.getBoundingClientRect();
+      const newCenterX = relativeX * newPdfRect.width;
+      const newCenterY = relativeY * newPdfRect.height;
+      
+      // Center the view on the same relative position
+      parentContainer.scrollLeft = newCenterX - (containerRect.width / 2);
+      parentContainer.scrollTop = newCenterY - (containerRect.height / 2);
+    }, 0);
   };
   
   const handleWheel = (e: React.WheelEvent) => {
