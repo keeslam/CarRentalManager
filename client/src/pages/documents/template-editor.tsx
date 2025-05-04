@@ -54,7 +54,7 @@ const PDFTemplateEditor = () => {
   const { toast } = useToast();
 
   const { data: templateData, isLoading: isTemplateLoading } = useQuery({
-    queryKey: ['/api/templates'],
+    queryKey: ['/api/pdf-templates'],
     queryFn: getQueryFn(),
   });
 
@@ -66,12 +66,21 @@ const PDFTemplateEditor = () => {
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Template) => {
       const method = template.id ? 'PATCH' : 'POST';
-      const url = template.id ? `/api/templates/${template.id}` : '/api/templates';
-      const res = await apiRequest(method, url, template);
+      const url = template.id ? `/api/pdf-templates/${template.id}` : '/api/pdf-templates';
+      
+      // Convert fields to string if it's not already
+      const dataToSend = {
+        ...template,
+        fields: typeof template.fields === 'string' 
+          ? template.fields 
+          : JSON.stringify(template.fields)
+      };
+      
+      const res = await apiRequest(method, url, dataToSend);
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       toast({
         title: "Success",
         description: "Template saved successfully",
@@ -88,11 +97,11 @@ const PDFTemplateEditor = () => {
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: number) => {
-      const res = await apiRequest('DELETE', `/api/templates/${templateId}`);
+      const res = await apiRequest('DELETE', `/api/pdf-templates/${templateId}`);
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       toast({
         title: "Success",
         description: "Template deleted successfully",
@@ -118,7 +127,7 @@ const PDFTemplateEditor = () => {
 
   const generatePreviewMutation = useMutation({
     mutationFn: async ({ reservationId, templateId }: { reservationId: string, templateId: number }) => {
-      const res = await apiRequest('GET', `/api/contracts/preview/${reservationId}?templateId=${templateId}`);
+      const res = await apiRequest('GET', `/api/contracts/generate/${reservationId}?templateId=${templateId}`);
       return await res.blob();
     },
     onSuccess: (data) => {
@@ -137,9 +146,25 @@ const PDFTemplateEditor = () => {
 
   useEffect(() => {
     if (templateData) {
-      setTemplates(templateData);
-      if (templateData.length > 0 && !currentTemplate) {
-        const defaultTemplate = templateData.find((t: Template) => t.isDefault) || templateData[0];
+      // Process templates - parse fields if they're stored as a string
+      const processedTemplates = templateData.map((template: any) => {
+        if (template.fields && typeof template.fields === 'string') {
+          try {
+            return {
+              ...template,
+              fields: JSON.parse(template.fields)
+            };
+          } catch (e) {
+            console.error('Error parsing template fields:', e);
+            return template;
+          }
+        }
+        return template;
+      });
+      
+      setTemplates(processedTemplates);
+      if (processedTemplates.length > 0 && !currentTemplate) {
+        const defaultTemplate = processedTemplates.find((t: Template) => t.isDefault) || processedTemplates[0];
         setCurrentTemplate(defaultTemplate);
       }
     }
