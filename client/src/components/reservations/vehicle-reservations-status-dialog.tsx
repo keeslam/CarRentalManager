@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarClock, RotateCw } from "lucide-react";
+import { CalendarClock, RotateCw, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface VehicleReservationsStatusDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function VehicleReservationsStatusDialog({
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"upcoming" | "all" | "past">("upcoming");
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -139,22 +141,52 @@ export function VehicleReservationsStatusDialog({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
-            {/* Vehicle Selector */}
+          <div className="grid grid-cols-1 gap-4 py-4">
+            {/* Vehicle Selector - placed at the top with more visible styling */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Vehicle</label>
+              <h3 className="text-sm font-medium">Select Vehicle</h3>
               {isLoadingVehicles ? (
                 <div className="flex items-center justify-center p-4">
                   <RotateCw className="h-5 w-5 animate-spin text-primary-600 mr-2" />
                   <span>Loading vehicles...</span>
                 </div>
               ) : (
-                <VehicleSelector
-                  vehicles={vehicles || []}
-                  value={selectedVehicleId}
-                  onChange={setSelectedVehicleId}
-                  placeholder="Select a vehicle to view its reservations"
-                />
+                <div className="border rounded-md p-3 bg-slate-50 space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by license plate, brand, or model"
+                      value={vehicleSearchQuery}
+                      onChange={(e) => setVehicleSearchQuery(e.target.value.toLowerCase())}
+                      className="pl-8 bg-white"
+                    />
+                    {vehicleSearchQuery && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="absolute right-0 top-0 h-full px-3" 
+                        onClick={() => setVehicleSearchQuery("")}
+                      >
+                        ✕
+                      </Button>
+                    )}
+                  </div>
+                  <VehicleSelector
+                    vehicles={vehicles?.filter(v => {
+                      if (!vehicleSearchQuery) return true;
+                      
+                      const formattedLicensePlate = (v.licensePlate || '').replace(/-/g, '').toLowerCase();
+                      const formattedQuery = vehicleSearchQuery.replace(/-/g, '').toLowerCase();
+                      
+                      return formattedLicensePlate.includes(formattedQuery) || 
+                        (v.brand?.toLowerCase() || '').includes(vehicleSearchQuery) || 
+                        (v.model?.toLowerCase() || '').includes(vehicleSearchQuery);
+                    }) || []}
+                    value={selectedVehicleId}
+                    onChange={setSelectedVehicleId}
+                    placeholder="Select a vehicle to view its reservations"
+                  />
+                </div>
               )}
             </div>
             
@@ -192,58 +224,61 @@ export function VehicleReservationsStatusDialog({
                   </div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          <th className="px-4 py-3 text-left font-medium">ID</th>
-                          <th className="px-4 py-3 text-left font-medium">Customer</th>
-                          <th className="px-4 py-3 text-left font-medium">Period</th>
-                          <th className="px-4 py-3 text-left font-medium">Status</th>
-                          <th className="px-4 py-3 text-center font-medium">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredReservations.map((reservation) => (
-                          <tr key={reservation.id} className="border-t hover:bg-muted/20">
-                            <td className="px-4 py-3">#{reservation.id}</td>
-                            <td className="px-4 py-3">
-                              {reservation.customer?.name || 'Unknown'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {reservation.startDate && reservation.endDate ? (
-                                <>
-                                  {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
-                                </>
-                              ) : (
-                                <span className="text-muted-foreground">No dates specified</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`
-                                inline-block rounded-full px-2 py-1 text-xs
-                                ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
-                                ${reservation.status === 'ongoing' ? 'bg-amber-100 text-amber-800' : ''}
-                                ${reservation.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                                ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                ${reservation.status === 'pending' ? 'bg-gray-100 text-gray-800' : ''}
-                              `}>
-                                {reservation.status?.charAt(0).toUpperCase() + reservation.status?.slice(1) || 'Unknown'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedReservationId(reservation.id)}
-                              >
-                                <CalendarClock className="mr-1 h-3 w-3" />
-                                Change Status
-                              </Button>
-                            </td>
+                    <div className="max-h-[400px] overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 z-10">
+                          <tr className="bg-slate-100 border-b">
+                            <th className="px-4 py-3 text-left font-medium">ID</th>
+                            <th className="px-4 py-3 text-left font-medium">Customer</th>
+                            <th className="px-4 py-3 text-left font-medium">Period</th>
+                            <th className="px-4 py-3 text-left font-medium">Status</th>
+                            <th className="px-4 py-3 text-center font-medium">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {filteredReservations.map((reservation) => (
+                            <tr key={reservation.id} className="border-t hover:bg-muted/20">
+                              <td className="px-4 py-3">#{reservation.id}</td>
+                              <td className="px-4 py-3 font-medium">
+                                {reservation.customer?.name || 'Unknown'}
+                              </td>
+                              <td className="px-4 py-3">
+                                {reservation.startDate && reservation.endDate ? (
+                                  <>
+                                    {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">No dates specified</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`
+                                  inline-block rounded-full px-2 py-1 text-xs
+                                  ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
+                                  ${reservation.status === 'ongoing' ? 'bg-amber-100 text-amber-800' : ''}
+                                  ${reservation.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                                  ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                                  ${reservation.status === 'pending' ? 'bg-gray-100 text-gray-800' : ''}
+                                `}>
+                                  {reservation.status?.charAt(0).toUpperCase() + reservation.status?.slice(1) || 'Unknown'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedReservationId(reservation.id)}
+                                  className="bg-primary-50 hover:bg-primary-100 text-primary-600"
+                                >
+                                  <CalendarClock className="mr-1 h-3 w-3" />
+                                  Change Status
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
