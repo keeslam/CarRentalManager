@@ -455,7 +455,7 @@ export function QuickActions() {
       let errorCount = 0;
       
       // Helper function to upload a document
-      const uploadDocument = async (file: File, documentType: string, notes?: string) => {
+      const uploadDamageDocument = async (file: File, documentType: string, notes?: string) => {
         const formData = new FormData();
         formData.append("vehicleId", selectedDamageVehicle.id.toString());
         formData.append("documentType", documentType);
@@ -486,7 +486,7 @@ export function QuickActions() {
       
       // Upload damage form if provided
       if (damageFormFile) {
-        const document = await uploadDocument(damageFormFile, "Damage Report", "Damage report uploaded from dashboard");
+        const document = await uploadDamageDocument(damageFormFile, "Damage Report", "Damage report uploaded from dashboard");
         uploadCount++;
         
         // Update vehicle's damage check status
@@ -530,7 +530,7 @@ export function QuickActions() {
       // Upload damage photos if provided
       for (const photo of damagePhotos) {
         try {
-          await uploadDocument(photo, "Damage Photo", "Damage photo uploaded from dashboard");
+          await uploadDamageDocument(photo, "Damage Photo", "Damage photo uploaded from dashboard");
           uploadCount++;
         } catch (error) {
           console.error("Error uploading damage photo:", error);
@@ -649,9 +649,8 @@ export function QuickActions() {
       setDocumentNotes("");
       
       // Close dialog using the ref
-      const dialogCloseButton = document.querySelector('[data-document-dialog-close]') as HTMLElement;
-      if (dialogCloseButton) {
-        dialogCloseButton.click();
+      if (documentDialogCloseRef.current) {
+        (documentDialogCloseRef.current as HTMLButtonElement).click();
       }
       
     } catch (error) {
@@ -761,94 +760,92 @@ export function QuickActions() {
                       </div>
                     </div>
                     
-                    <DialogFooter className="flex-col sm:flex-row sm:justify-between">
-                      <div className="mb-4 sm:mb-0">
-                        <DialogClose asChild>
-                          <Button variant="outline" type="button">
-                            Cancel
-                          </Button>
-                        </DialogClose>
-                      </div>
-                      
-                      {/* Document Upload Form */}
-                      {selectedUploadVehicle && (
-                        <div className="space-y-4">
-                          <div>
-                            <label htmlFor="documentFile" className="text-sm font-medium">
-                              Document (PDF/Image)
-                            </label>
-                            <div className="mt-1 flex items-center">
-                              <input
-                                id="documentFile"
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={(e) => {
-                                  if (e.target.files && e.target.files[0]) {
-                                    setDocumentFile(e.target.files[0]);
-                                  }
-                                }}
-                                className="w-full text-sm text-slate-500
-                                  file:mr-4 file:py-2 file:px-4
-                                  file:rounded-md file:border-0
-                                  file:text-sm file:font-semibold
-                                  file:bg-primary-50 file:text-primary-700
-                                  hover:file:bg-primary-100
-                                  cursor-pointer"
-                              />
-                            </div>
-                            {documentFile && (
-                              <div className="mt-2 flex items-center space-x-2 text-sm">
-                                <Check className="h-4 w-4 text-green-500" />
-                                <span>{documentFile.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setDocumentFile(null)}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div>
-                            <label htmlFor="documentCategory" className="text-sm font-medium">
-                              Document Category
-                            </label>
-                            <Select value={documentCategory} onValueChange={setDocumentCategory}>
-                              <SelectTrigger id="documentCategory" className="w-full">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="general">General</SelectItem>
-                                <SelectItem value="registration">Registration</SelectItem>
-                                <SelectItem value="insurance">Insurance</SelectItem>
-                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                                <SelectItem value="inspection">Inspection</SelectItem>
-                                <SelectItem value="apk">APK</SelectItem>
-                                <SelectItem value="warranty">Warranty</SelectItem>
-                                <SelectItem value="damage_checks">Damage Checks</SelectItem>
-                                <SelectItem value="invoice">Invoice</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div>
-                            <label htmlFor="documentNotes" className="text-sm font-medium">
-                              Notes (Optional)
-                            </label>
-                            <Textarea 
-                              id="documentNotes" 
-                              value={documentNotes}
-                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDocumentNotes(e.target.value)}
-                              placeholder="Add any notes about this document"
-                              rows={2}
-                              className="resize-none"
+                    {/* Document Upload Form */}
+                    {selectedUploadVehicle && (
+                      <div className="space-y-4 mt-4">
+                        <div>
+                          <label htmlFor="documentFile" className="text-sm font-medium">
+                            Document (PDF/Image)
+                          </label>
+                          <div className="mt-1 flex items-center">
+                            <input
+                              id="documentFile"
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setDocumentFile(e.target.files[0]);
+                                }
+                              }}
+                              className="w-full text-sm text-slate-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-md file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-primary-50 file:text-primary-700
+                                hover:file:bg-primary-100
+                                cursor-pointer"
                             />
                           </div>
+                          {documentFile && (
+                            <div className="mt-2 flex items-center space-x-2 text-sm">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span>{documentFile.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setDocumentFile(null)}
+                                className="text-red-500 hover:text-red-700 text-xs"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
+                        
+                        <div>
+                          <label htmlFor="documentCategory" className="text-sm font-medium">
+                            Document Category
+                          </label>
+                          <Select value={documentCategory} onValueChange={setDocumentCategory}>
+                            <SelectTrigger id="documentCategory" className="w-full">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="general">General</SelectItem>
+                              <SelectItem value="registration">Registration</SelectItem>
+                              <SelectItem value="insurance">Insurance</SelectItem>
+                              <SelectItem value="maintenance">Maintenance</SelectItem>
+                              <SelectItem value="inspection">Inspection</SelectItem>
+                              <SelectItem value="apk">APK</SelectItem>
+                              <SelectItem value="warranty">Warranty</SelectItem>
+                              <SelectItem value="damage_checks">Damage Checks</SelectItem>
+                              <SelectItem value="invoice">Invoice</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="documentNotes" className="text-sm font-medium">
+                            Notes (Optional)
+                          </label>
+                          <Textarea 
+                            id="documentNotes" 
+                            value={documentNotes}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDocumentNotes(e.target.value)}
+                            placeholder="Add any notes about this document"
+                            rows={2}
+                            className="resize-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <DialogFooter className="flex justify-between mt-6">
+                      <DialogClose asChild>
+                        <Button variant="outline" type="button">
+                          Cancel
+                        </Button>
+                      </DialogClose>
                       
                       <DialogClose asChild data-document-dialog-close>
                         <Button 
