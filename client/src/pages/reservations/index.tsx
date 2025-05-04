@@ -661,8 +661,20 @@ export default function ReservationsIndex() {
           reservationId={selectedReservation.id}
           initialStatus={selectedReservation.status}
           vehicle={selectedReservation.vehicle}
-          onStatusChanged={() => {
-            refetchReservations();
+          onStatusChanged={async () => {
+            // Force an immediate and complete refetch of all reservation data
+            await refetchReservations();
+            
+            // Also reset any selections or filters that might be affecting the view
+            if (selectedReservation) {
+              // Find the updated reservation to see if status changed
+              const updatedReservations = await queryClient.fetchQuery({ 
+                queryKey: ["/api/reservations"] 
+              });
+              
+              // Immediately update the UI with the new data
+              queryClient.setQueryData(["/api/reservations"], updatedReservations);
+            }
           }}
         />
       )}
