@@ -58,10 +58,27 @@ interface StatusChangeDialogProps {
     id: number;
     brand: string;
     model: string;
+    licensePlate?: string;
     currentMileage?: number;
+  };
+  customer?: {
+    id: number;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
   };
   onStatusChanged?: () => void;
 }
+
+// Function to properly format license plate for display
+const formatDisplayLicensePlate = (licensePlate?: string) => {
+  if (!licensePlate) return '';
+  // Add dashes for display if they don't exist (XX-XX-XX pattern)
+  if (licensePlate.length === 6 && !licensePlate.includes('-')) {
+    return `${licensePlate.slice(0, 2)}-${licensePlate.slice(2, 4)}-${licensePlate.slice(4, 6)}`;
+  }
+  return licensePlate;
+};
 
 export function StatusChangeDialog({
   open,
@@ -70,6 +87,7 @@ export function StatusChangeDialog({
   initialStatus,
   vehicle,
   onStatusChanged,
+  customer, // We'll add this to the props
 }: StatusChangeDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -267,13 +285,62 @@ export function StatusChangeDialog({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Change Reservation Status</DialogTitle>
           <DialogDescription>
             Update the status and related information for this reservation.
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Vehicle and Customer Information */}
+        {(vehicle || customer) && (
+          <div className="bg-muted/50 rounded-md p-3 mb-4 space-y-2">
+            {vehicle && (
+              <div className="space-y-1">
+                <h3 className="font-medium text-sm">Vehicle Information</h3>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground mr-1">License:</span>
+                    <span className="font-medium">{formatDisplayLicensePlate(vehicle.licensePlate)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground mr-1">Vehicle:</span>
+                    <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
+                  </div>
+                  {vehicle.currentMileage !== undefined && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Current Mileage:</span>
+                      <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {customer && (
+              <div className="space-y-1">
+                <h3 className="font-medium text-sm">Customer Information</h3>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  {(customer.firstName || customer.lastName) && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Name:</span>
+                      <span className="font-medium">
+                        {[customer.firstName, customer.lastName].filter(Boolean).join(' ')}
+                      </span>
+                    </div>
+                  )}
+                  {customer.companyName && (
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Company:</span>
+                      <span className="font-medium">{customer.companyName}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

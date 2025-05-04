@@ -661,6 +661,7 @@ export default function ReservationsIndex() {
           reservationId={selectedReservation.id}
           initialStatus={selectedReservation.status}
           vehicle={selectedReservation.vehicle}
+          customer={selectedReservation.customer}
           onStatusChanged={async () => {
             // Force an immediate and complete refetch of all reservation data
             await refetchReservations();
