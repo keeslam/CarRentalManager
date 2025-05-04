@@ -106,8 +106,15 @@ export function StatusChangeDialog({
         );
         
         if (!reservationResponse.ok) {
-          const errorData = await reservationResponse.json();
-          throw new Error(errorData.message || "Failed to update reservation status");
+          try {
+            const errorData = await reservationResponse.json();
+            throw new Error(errorData.message || "Failed to update reservation status");
+          } catch (e) {
+            // Handle non-JSON responses
+            const text = await reservationResponse.text();
+            console.error("Non-JSON error response:", text);
+            throw new Error("Failed to update reservation status. Server returned an invalid response.");
+          }
         }
         
         // Then update the vehicle mileage based on status
@@ -128,8 +135,15 @@ export function StatusChangeDialog({
         );
         
         if (!vehicleResponse.ok) {
-          const errorData = await vehicleResponse.json();
-          throw new Error(errorData.message || "Failed to update vehicle mileage");
+          try {
+            const errorData = await vehicleResponse.json();
+            throw new Error(errorData.message || "Failed to update vehicle mileage");
+          } catch (e) {
+            // Handle non-JSON responses
+            const text = await vehicleResponse.text();
+            console.error("Non-JSON error response:", text);
+            throw new Error("Failed to update vehicle mileage. Server returned an invalid response.");
+          }
         }
         
         return await reservationResponse.json();
@@ -142,8 +156,15 @@ export function StatusChangeDialog({
         );
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to update reservation status");
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update reservation status");
+          } catch (e) {
+            // Handle non-JSON responses
+            const text = await response.text();
+            console.error("Non-JSON error response:", text);
+            throw new Error("Failed to update reservation status. Server returned an invalid response.");
+          }
         }
         
         return await response.json();
