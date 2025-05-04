@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
@@ -265,6 +265,9 @@ export function QuickActions() {
   const [isDamageUploading, setIsDamageUploading] = useState(false);
   const { toast } = useToast();
   
+  // Get queryClient for cache invalidation
+  const queryClient = useQueryClient();
+  
   // Fetch all vehicles for the selection list
   const { data: vehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
@@ -406,6 +409,13 @@ export function QuickActions() {
         formData.append("documentType", documentType);
         formData.append("file", file);
         
+        // Set the appropriate category based on document type
+        if (documentType === "Damage Form") {
+          formData.append("category", "damage_checks");
+        } else if (documentType === "Damage Photo") {
+          formData.append("category", "damage_photos");
+        }
+        
         if (notes) {
           formData.append("notes", notes);
         }
@@ -424,8 +434,31 @@ export function QuickActions() {
       
       // Upload damage form if provided
       if (damageFormFile) {
-        await uploadDocument(damageFormFile, "Damage Form", "Damage form uploaded from dashboard");
+        const document = await uploadDocument(damageFormFile, "Damage Form", "Damage form uploaded from dashboard");
         uploadCount++;
+        
+        // Update vehicle's damage check status
+        try {
+          const currentDate = new Date().toISOString().split('T')[0];
+          const response = await fetch(`/api/vehicles/${selectedDamageVehicle.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              damageCheck: true,
+              damageCheckDate: currentDate,
+              damageCheckAttachment: document.id.toString(),
+              damageCheckAttachmentDate: currentDate
+            })
+          });
+          
+          if (!response.ok) {
+            console.error("Failed to update vehicle damage check status:", response.status);
+          }
+        } catch (error) {
+          console.error("Error updating vehicle damage check status:", error);
+        }
       }
       
       // Upload damage photos if provided
