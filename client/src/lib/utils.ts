@@ -61,3 +61,18 @@ export function displayLicensePlate(licensePlate: string): string {
 export function isTrueValue(value: string | boolean | null | undefined): boolean {
   return value === true || value === "true";
 }
+
+/**
+ * Formats a number as a currency value in Euro format
+ */
+export function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '€0,00';
+  
+  // Use Intl.NumberFormat to format as Euro with 2 decimal places
+  return new Intl.NumberFormat('nl-NL', { 
+    style: 'currency', 
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}

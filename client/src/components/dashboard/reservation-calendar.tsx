@@ -6,6 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
   format,
   addMonths,
   subMonths,
@@ -21,9 +26,9 @@ import {
   getDay,
   formatISO
 } from "date-fns";
-import { Vehicle, Reservation } from "@shared/schema";
-import { displayLicensePlate } from "@/lib/utils";
-import { PlusCircle, Edit, Eye } from "lucide-react";
+import { Vehicle, Reservation, Customer } from "@shared/schema";
+import { displayLicensePlate, formatCurrency } from "@/lib/utils";
+import { PlusCircle, Edit, Eye, Calendar, User, Car, CreditCard, Clock, MapPin } from "lucide-react";
 
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -245,39 +250,160 @@ export function ReservationCalendar() {
                         {dayReservations && dayReservations.slice(0, 3).map(res => {
                           const isPickupDay = isSameDay(day, parseISO(res.startDate));
                           const isReturnDay = isSameDay(day, parseISO(res.endDate));
+                          const rentalDuration = differenceInDays(
+                            parseISO(res.endDate),
+                            parseISO(res.startDate)
+                          ) + 1;
                           
                           return (
-                            <div 
-                              key={res.id}
-                              className={`px-1 py-0.5 text-xs truncate ${getReservationStyle(res.status, isPickupDay, isReturnDay)} group/res relative cursor-pointer hover:brightness-95`}
-                              title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'}`}
-                              onClick={() => navigate(`/reservations/${res.id}`)}
-                            >
-                              <div className="flex justify-between items-center">
-                                <div className="truncate">
-                                  {displayLicensePlate(res.vehicle?.licensePlate || '')}
-                                  {isPickupDay && 
-                                    <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
-                                  }
-                                  {isReturnDay && 
-                                    <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
-                                  }
-                                </div>
-                                
-                                {/* Edit button - only visible on hover */}
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevent triggering the parent onClick
-                                    navigate(`/reservations/edit/${res.id}`);
-                                  }}
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-3 w-3 opacity-0 group-hover/res:opacity-100 transition-opacity p-0"
+                            <HoverCard key={res.id} openDelay={300} closeDelay={200}>
+                              <HoverCardTrigger asChild>
+                                <div 
+                                  className={`px-1 py-0.5 text-xs truncate ${getReservationStyle(res.status, isPickupDay, isReturnDay)} group/res relative cursor-pointer hover:brightness-95`}
+                                  onClick={() => navigate(`/reservations/${res.id}`)}
                                 >
-                                  <Edit className="h-2 w-2" />
-                                </Button>
-                              </div>
-                            </div>
+                                  <div className="flex justify-between items-center">
+                                    <div className="truncate">
+                                      {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                      {isPickupDay && 
+                                        <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                      }
+                                      {isReturnDay && 
+                                        <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                      }
+                                    </div>
+                                    
+                                    {/* Edit button - only visible on hover */}
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Prevent triggering the parent onClick
+                                        navigate(`/reservations/edit/${res.id}`);
+                                      }}
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-3 w-3 opacity-0 group-hover/res:opacity-100 transition-opacity p-0"
+                                    >
+                                      <Edit className="h-2 w-2" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </HoverCardTrigger>
+                              <HoverCardContent 
+                                className="w-80 p-0 shadow-lg" 
+                                side="right"
+                                align="start"
+                              >
+                                {/* Reservation Preview Card */}
+                                <div className="space-y-2">
+                                  {/* Header with status badge */}
+                                  <div className="flex items-center justify-between border-b p-3">
+                                    <h4 className="font-medium">Reservation Details</h4>
+                                    <Badge 
+                                      className={`capitalize ${
+                                        res.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
+                                        res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' :
+                                        res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
+                                        res.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-500 hover:bg-gray-100' :
+                                        'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                                      }`}
+                                      variant="outline"
+                                    >
+                                      {res.status || 'Unknown'}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {/* Vehicle details */}
+                                  <div className="px-3 py-1 flex items-start space-x-2">
+                                    <Car className="h-4 w-4 text-gray-500 mt-0.5" />
+                                    <div>
+                                      <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
+                                      <div className="text-xs text-gray-600">{displayLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Customer details */}
+                                  <div className="px-3 py-1 flex items-start space-x-2">
+                                    <User className="h-4 w-4 text-gray-500 mt-0.5" />
+                                    <div>
+                                      <div className="font-medium text-sm">{res.customer?.name}</div>
+                                      <div className="text-xs text-gray-600">{res.customer?.email || 'No email provided'}</div>
+                                      {res.customer?.phone && <div className="text-xs text-gray-600">{res.customer?.phone}</div>}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Dates */}
+                                  <div className="px-3 py-1 flex items-start space-x-2">
+                                    <Calendar className="h-4 w-4 text-gray-500 mt-0.5" />
+                                    <div>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                          <span className="text-gray-500">Start:</span> {format(parseISO(res.startDate), 'MMM d, yyyy')}
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-500">End:</span> {format(parseISO(res.endDate), 'MMM d, yyyy')}
+                                        </div>
+                                        <div className="col-span-2">
+                                          <span className="text-gray-500">Duration:</span> {rentalDuration} {rentalDuration === 1 ? 'day' : 'days'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Price and mileage */}
+                                  <div className="px-3 py-1 flex items-start space-x-2">
+                                    <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      {res.price ? (
+                                        <div>
+                                          <span className="text-gray-500">Price:</span> {formatCurrency(res.price)}
+                                        </div>
+                                      ) : null}
+                                      {res.startMileage ? (
+                                        <div>
+                                          <span className="text-gray-500">Start Mileage:</span> {res.startMileage} km
+                                        </div>
+                                      ) : null}
+                                      {res.returnMileage ? (
+                                        <div>
+                                          <span className="text-gray-500">Return Mileage:</span> {res.returnMileage} km
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Notes if available */}
+                                  {res.notes && (
+                                    <div className="px-3 py-1 flex items-start space-x-2">
+                                      <div className="bg-gray-50 p-2 rounded text-xs text-gray-700 w-full">
+                                        {res.notes}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Action buttons */}
+                                  <div className="border-t p-3 flex justify-end space-x-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-8 text-xs"
+                                      onClick={() => navigate(`/reservations/${res.id}`)}
+                                    >
+                                      <Eye className="mr-1 h-3 w-3" />
+                                      View
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-8 text-xs"
+                                      onClick={() => navigate(`/reservations/edit/${res.id}`)}
+                                    >
+                                      <Edit className="mr-1 h-3 w-3" />
+                                      Edit
+                                    </Button>
+                                  </div>
+                                </div>
+                              </HoverCardContent>
+                            </HoverCard>
                           );
                         })}
                         
