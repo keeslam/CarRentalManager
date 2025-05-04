@@ -302,12 +302,12 @@ export function ReservationCalendar() {
                                   <div className="flex items-center justify-between border-b p-3">
                                     <h4 className="font-medium">Reservation Details</h4>
                                     <Badge 
-                                      className={`capitalize ${
-                                        res.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
-                                        res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' :
-                                        res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
-                                        res.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-500 hover:bg-gray-100' :
-                                        'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                                      className={`${
+                                        res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
+                                        res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
+                                        res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
+                                        res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
+                                        'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
                                       }`}
                                       variant="outline"
                                     >

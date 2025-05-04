@@ -100,7 +100,7 @@ export function VehicleReservationsStatusDialog({
     // Show success toast
     toast({
       title: "Status Updated",
-      description: "Reservation status has been updated successfully.",
+      description: `Reservation status has been updated successfully.`,
     });
     
     // Call the callback if provided
@@ -253,11 +253,11 @@ export function VehicleReservationsStatusDialog({
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`
-                                  inline-block rounded-full px-2 py-1 text-xs
-                                  ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : ''}
-                                  ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
-                                  ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                                  ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800' : ''}
+                                  inline-block rounded-full px-2 py-1 text-xs border
+                                  ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                  ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                  ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' : ''}
+                                  ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' : ''}
                                 `}>
                                   {formatReservationStatus(reservation.status || '')}
                                 </span>
