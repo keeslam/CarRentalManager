@@ -73,14 +73,11 @@ interface StatusChangeDialogProps {
   onStatusChanged?: () => void;
 }
 
-// Function to properly format license plate for display
+// Function to format license plate for display - removes dashes
 const formatDisplayLicensePlate = (licensePlate?: string) => {
   if (!licensePlate) return '';
-  // Add dashes for display if they don't exist (XX-XX-XX pattern)
-  if (licensePlate.length === 6 && !licensePlate.includes('-')) {
-    return `${licensePlate.slice(0, 2)}-${licensePlate.slice(2, 4)}-${licensePlate.slice(4, 6)}`;
-  }
-  return licensePlate;
+  // Remove dashes if they exist
+  return licensePlate.replace(/-/g, '');
 };
 
 export function StatusChangeDialog({
