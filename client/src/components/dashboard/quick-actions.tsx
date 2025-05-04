@@ -412,11 +412,11 @@ export function QuickActions() {
         formData.append("documentType", documentType);
         formData.append("file", file);
         
-        // Set the appropriate category based on document type
-        if (documentType === "Damage Form") {
+        // Set the appropriate category based on document type - always use damage_checks for consistency
+        if (documentType === "Damage Form" || documentType === "Damage Report") {
           formData.append("category", "damage_checks");
         } else if (documentType === "Damage Photo") {
-          formData.append("category", "damage_photos");
+          formData.append("category", "damage_checks");
         }
         
         if (notes) {
@@ -449,7 +449,7 @@ export function QuickActions() {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              damageCheck: true,
+              damageCheck: "true", // Send as string not boolean
               damageCheckDate: currentDate,
               damageCheckAttachment: document.id.toString(),
               damageCheckAttachmentDate: currentDate

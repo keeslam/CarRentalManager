@@ -809,7 +809,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
-                      preselectedType="Damage Report"
+                      preselectedType="Damage Form"
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-red-500">
