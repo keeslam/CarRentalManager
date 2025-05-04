@@ -17,7 +17,17 @@ import {
 import { Expense } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
-import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  PlusCircle, 
+  Wrench, 
+  Disc, 
+  SquareAsterisk,
+  ShieldAlert,
+  Hammer,
+  FileQuestion
+} from "lucide-react";
 
 export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,6 +70,24 @@ export default function ExpensesIndex() {
     : [];
   const categories = ["all", ...allCategories];
   
+  // Function to get category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'maintenance':
+        return <Wrench className="h-5 w-5 text-blue-500" />;
+      case 'tires':
+        return <Disc className="h-5 w-5 text-green-500" />;
+      case 'front window':
+        return <SquareAsterisk className="h-5 w-5 text-purple-500" />;
+      case 'damage':
+        return <ShieldAlert className="h-5 w-5 text-red-500" />;
+      case 'repair':
+        return <Hammer className="h-5 w-5 text-orange-500" />;
+      default:
+        return <FileQuestion className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
   // Filter expenses based on search query and category filter
   const filteredExpenses = expenses?.filter(expense => {
     if (!expense) return false;
@@ -67,10 +95,19 @@ export default function ExpensesIndex() {
     const searchLower = searchQuery.toLowerCase();
     const licensePlate = expense.vehicle?.licensePlate || '';
     const description = expense.description || '';
+    const category = expense.category || '';
+    
+    // Remove any dashes from license plate for search
+    const normalizedLicensePlate = licensePlate.replace(/-/g, '').toLowerCase();
+    const searchWithoutDashes = searchLower.replace(/-/g, '');
     
     const matchesSearch = 
+      // Search with original format
       licensePlate.toLowerCase().includes(searchLower) ||
-      description.toLowerCase().includes(searchLower);
+      // Search with normalized format (no dashes)
+      normalizedLicensePlate.includes(searchWithoutDashes) ||
+      description.toLowerCase().includes(searchLower) ||
+      category.toLowerCase().includes(searchLower);
     
     const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
     
@@ -173,7 +210,7 @@ export default function ExpensesIndex() {
           <CardContent>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <Input
-                placeholder="Search by vehicle or description..."
+                placeholder="Search by license plate, category or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-sm"
@@ -227,9 +264,12 @@ export default function ExpensesIndex() {
                           <AccordionTrigger className="hover:bg-gray-50 px-4 py-3 rounded-md">
                             <div className="flex justify-between items-center w-full">
                               <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="text-sm font-medium">
-                                  {category}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  {getCategoryIcon(category)}
+                                  <Badge variant="outline" className="text-sm font-medium">
+                                    {category}
+                                  </Badge>
+                                </div>
                                 <span className="text-gray-500 text-sm">
                                   ({categoryExpenses.length} {categoryExpenses.length === 1 ? 'expense' : 'expenses'})
                                 </span>
@@ -293,7 +333,10 @@ export default function ExpensesIndex() {
                     .sort((a, b) => b[1] - a[1])
                     .map(([category, amount]) => (
                       <div key={category} className="flex justify-between items-center">
-                        <span>{category}</span>
+                        <div className="flex items-center gap-2">
+                          {getCategoryIcon(category)}
+                          <span>{category}</span>
+                        </div>
                         <span className="font-medium">{formatCurrency(amount)}</span>
                       </div>
                     ))}
