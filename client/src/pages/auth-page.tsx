@@ -82,6 +82,7 @@ export default function AuthPage() {
   
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <ScrollToTop />
       <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8 bg-white rounded-xl shadow-lg overflow-hidden mx-auto my-auto">
         {/* Form Side */}
         <div className="p-5 flex flex-col justify-center h-full">
