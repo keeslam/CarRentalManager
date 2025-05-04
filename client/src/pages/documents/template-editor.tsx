@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
-import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal, ZoomIn, ZoomOut, MaximizeIcon, Grid, AlignCenterHorizontal, AlignCenter } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal, ZoomIn, ZoomOut, MaximizeIcon, Grid, AlignCenterHorizontal, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 // Import contract background image
 import contractBackground from "../../assets/contract-background.jpg";
@@ -940,7 +940,15 @@ const PDFTemplateEditor = () => {
                                 padding: '4px 8px',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                                 borderRadius: '4px',
-                                border: '1px solid rgba(0,0,0,0.1)'
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                textAlign: field.textAlign,
+                                minWidth: '100px', // Ensure enough width to display alignment
+                                display: 'flex',
+                                justifyContent: field.textAlign === 'left' 
+                                  ? 'flex-start' 
+                                  : field.textAlign === 'right' 
+                                    ? 'flex-end' 
+                                    : 'center'
                               }}
                               onClick={() => handleFieldClick(field)}
                               onMouseDown={(e) => handleMouseDown(e, field)}
