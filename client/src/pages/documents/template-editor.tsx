@@ -591,7 +591,7 @@ const PDFTemplateEditor = () => {
                           height: '842px',
                           margin: '0 auto',
                           backgroundImage: `url(${contractBackground})`,
-                          backgroundSize: 'cover',
+                          backgroundSize: '100% 100%',
                           backgroundPosition: 'center',
                           backgroundRepeat: 'no-repeat'
                         }}
@@ -611,7 +611,9 @@ const PDFTemplateEditor = () => {
                               fontSize: `${field.fontSize}px`,
                               fontWeight: field.isBold ? 'bold' : 'normal',
                               transform: 'translate(-50%, -50%)',
-                              backgroundColor: 'rgba(255, 255, 255, 0.6)'
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              padding: '4px 8px',
+                              borderRadius: '4px'
                             }}
                             onClick={() => handleFieldClick(field)}
                             onMouseDown={(e) => handleMouseDown(e, field)}
