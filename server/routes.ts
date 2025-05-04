@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { format } from "date-fns";
 import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
 import { generateRentalContract, generateRentalContractFromTemplate, prepareContractData } from "./utils/pdf-generator";
@@ -1952,6 +1953,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error using custom template:", error);
         // Fall back to the old fixed template format
         pdfBuffer = await generateRentalContract(reservation);
+      }
+      
+      // Save a copy of the contract PDF to the contracts folder
+      try {
+        // Get vehicle license plate for folder structure
+        if (reservation.vehicle && reservation.vehicle.licensePlate) {
+          const sanitizedPlate = reservation.vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+          const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
+          const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
+          
+          // Create directories if they don't exist
+          if (!fs.existsSync(contractsBaseDir)) {
+            fs.mkdirSync(contractsBaseDir, { recursive: true });
+          }
+          
+          if (!fs.existsSync(vehicleContractsDir)) {
+            fs.mkdirSync(vehicleContractsDir, { recursive: true });
+          }
+          
+          // Format date for filename
+          const currentDate = format(new Date(), 'yyyyMMdd');
+          const contractNumber = `C-${reservationId}-${currentDate}`;
+          
+          // Create a unique filename based on license plate and date
+          const filename = `${sanitizedPlate}_contract_${currentDate}.pdf`;
+          const filePath = path.join(vehicleContractsDir, filename);
+          
+          // Save the file
+          fs.writeFileSync(filePath, pdfBuffer);
+          console.log(`Contract saved to: ${filePath}`);
+        }
+      } catch (error) {
+        console.error('Error saving contract PDF copy:', error);
+        // Continue even if saving a copy fails
       }
       
       // Set headers for PDF download
