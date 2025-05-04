@@ -10,8 +10,8 @@ import * as path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 /**
- * Generates a rental contract PDF based on the Auto Lease LAM template
- * Uses the uploaded template PDF and fills in the data
+ * Generates a rental contract PDF based on the ELENA AVL ALL contract template
+ * Uses the uploaded template PDF and fills in the data according to the form layout
  */
 export async function generateRentalContract(reservation: Reservation): Promise<Buffer> {
   try {
@@ -33,122 +33,141 @@ export async function generateRentalContract(reservation: Reservation): Promise<
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
     // Set drawing parameters
-    const fontSize = 10;
+    const fontSize = 9;
     const textColor = rgb(0, 0, 0);
     
-    // Contract number and date
-    page.drawText(`Contract: ${contractData.contractNumber}`, {
-      x: 400,
-      y: 690,
-      size: 10,
-      font: helveticaBold,
-      color: textColor,
-    });
+    // Based on the ELENA AVL ALL contract template structure
     
-    page.drawText(`Datum: ${contractData.contractDate}`, {
-      x: 400,
-      y: 675,
-      size: 10,
+    // First section - Gegevens voertuig (Vehicle details)
+    
+    // Merk (Brand)
+    page.drawText(contractData.brand, {
+      x: 55,
+      y: 150,
+      size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
-    // Vehicle information
+    // Type (Model)
+    page.drawText(contractData.model, {
+      x: 55,
+      y: 165,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Kenteken (License plate)
     page.drawText(contractData.licensePlate, {
-      x: 180,
-      y: 585,
+      x: 55,
+      y: 179,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
-    page.drawText(`${contractData.brand} ${contractData.model}`, {
-      x: 180,
-      y: 570,
-      size: fontSize,
-      font: helveticaFont,
-      color: textColor,
-    });
+    // Customer section - Huurder (Renter)
     
-    page.drawText(contractData.chassisNumber, {
-      x: 180,
-      y: 555,
-      size: fontSize,
-      font: helveticaFont,
-      color: textColor,
-    });
-    
-    // Customer information
+    // Naam (Name)
     page.drawText(contractData.customerName, {
-      x: 180,
-      y: 500,
+      x: 55,
+      y: 254,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
+    // Adres (Address)
     page.drawText(contractData.customerAddress, {
-      x: 180,
-      y: 485,
+      x: 55,
+      y: 268,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
-    page.drawText(`${contractData.customerCity} ${contractData.customerPostalCode}`, {
-      x: 180,
-      y: 470,
+    // Postcode (Postal code)
+    page.drawText(contractData.customerPostalCode, {
+      x: 55,
+      y: 282,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
+    // Plaats (City)
+    page.drawText(contractData.customerCity, {
+      x: 55,
+      y: 296,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Land (Country)
+    page.drawText("Nederland", {
+      x: 95,
+      y: 313,
+      size: fontSize,
+      font: helveticaFont,
+      color: textColor,
+    });
+    
+    // Telefoon (Phone)
     page.drawText(contractData.customerPhone, {
-      x: 180,
-      y: 455,
+      x: 58,
+      y: 328,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
+    // Driver's license
     page.drawText(contractData.driverLicense, {
-      x: 180,
-      y: 440,
+      x: 100,
+      y: 358,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
-    // Rental period
+    // Right column - Voorwaarden (Terms)
+    
+    // Huurtijd van-tot (Rental period from-to) - van datum
     page.drawText(contractData.startDate, {
-      x: 180,
-      y: 385,
+      x: 405,
+      y: 149,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
+    // tot datum (to date)
     page.drawText(contractData.endDate, {
-      x: 180,
-      y: 370,
+      x: 545,
+      y: 149,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
     });
     
-    // Price
-    page.drawText(contractData.totalPrice, {
-      x: 180,
-      y: 330,
-      size: fontSize,
-      font: helveticaBold,
-      color: textColor,
-    });
+    // Price section
+    if (reservation.totalPrice) {
+      // Total price
+      page.drawText(contractData.totalPrice, {
+        x: 508,
+        y: 236,
+        size: fontSize,
+        font: helveticaBold,
+        color: textColor,
+      });
+    }
     
-    // Today's date at the bottom for signature
+    // Date at the bottom - Today's date for signature
     page.drawText(contractData.contractDate, {
-      x: 180,
-      y: 120,
+      x: 138,
+      y: 637,
       size: fontSize,
       font: helveticaFont,
       color: textColor,
@@ -254,6 +273,11 @@ export function prepareContractData(reservation: Reservation) {
   const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
+  // Parse totalPrice as a number if it's a string
+  const totalPrice = typeof reservation.totalPrice === 'string' 
+    ? parseFloat(reservation.totalPrice) 
+    : reservation.totalPrice;
+  
   return {
     contractNumber: `C-${reservation.id}-${format(new Date(), 'yyyyMMdd')}`,
     contractDate: format(new Date(), 'MMMM d, yyyy'),
@@ -270,15 +294,26 @@ export function prepareContractData(reservation: Reservation) {
     startDate: format(startDate, 'MMMM d, yyyy'),
     endDate: format(endDate, 'MMMM d, yyyy'),
     duration: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,
-    totalPrice: formatCurrency(reservation.totalPrice),
+    totalPrice: formatCurrency(totalPrice),
   };
 }
 
 /**
- * Format a number as currency (Euro)
+ * Format a value as currency (Euro)
+ * Handles number, string, null, or undefined
  */
-function formatCurrency(amount: number | null | undefined): string {
+function formatCurrency(amount: any): string {
   if (amount === null || amount === undefined) {
+    return '€0.00';
+  }
+  
+  // Convert to number if it's a string
+  const numericAmount = typeof amount === 'string' 
+    ? parseFloat(amount.replace(/[^\d.-]/g, '')) 
+    : amount;
+  
+  // If it's NaN after conversion, return zero
+  if (isNaN(numericAmount)) {
     return '€0.00';
   }
   
@@ -287,5 +322,5 @@ function formatCurrency(amount: number | null | undefined): string {
     currency: 'EUR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(amount);
+  }).format(numericAmount);
 }
