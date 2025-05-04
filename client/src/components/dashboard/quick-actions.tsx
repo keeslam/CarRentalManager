@@ -32,6 +32,7 @@ import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searcha
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { VehicleReservationsStatusDialog } from "@/components/reservations/vehicle-reservations-status-dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
+import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 
 interface ActionIconProps {
   name: string;
@@ -254,8 +255,8 @@ const quickActions: QuickAction[] = [
   },
   {
     label: "Upload Document",
-    href: "/documents/upload",
     icon: "upload",
+    dialog: "document-upload",
     primary: false,
   },
   {
@@ -299,6 +300,10 @@ export function QuickActions() {
   
   // State for the vehicle reservation dialog
   const [vehicleReservationDialogOpen, setVehicleReservationDialogOpen] = useState(false);
+  
+  // State for the document upload dialog
+  const [documentUploadDialogOpen, setDocumentUploadDialogOpen] = useState(false);
+  const [selectedUploadVehicle, setSelectedUploadVehicle] = useState<Vehicle | null>(null);
   
   const { toast } = useToast();
   
@@ -577,6 +582,22 @@ export function QuickActions() {
     });
   };
   
+  // Handler for document upload success
+  const handleDocumentUploadSuccess = () => {
+    // Refresh related data
+    queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+    
+    // Reset selected vehicle
+    setSelectedUploadVehicle(null);
+    
+    // Show success message
+    toast({
+      title: "Success",
+      description: "Document uploaded successfully",
+    });
+  };
+
   return (
     <>
       {/* Vehicle-based Reservation Status Dialog */}
@@ -585,6 +606,14 @@ export function QuickActions() {
         onOpenChange={setVehicleReservationDialogOpen}
         onStatusChanged={handleReservationStatusUpdated}
       />
+      
+      {/* Document Upload Component - Only render if a vehicle is selected */}
+      {selectedUploadVehicle && (
+        <InlineDocumentUpload
+          vehicleId={selectedUploadVehicle.id}
+          onSuccess={handleDocumentUploadSuccess}
+        />
+      )}
       
       <Card className="mb-6">
         <CardHeader className="pb-2">
@@ -610,6 +639,88 @@ export function QuickActions() {
             }
             
             // We've removed the reservation status change dialog
+            
+            // For document upload dialog
+            if (action.dialog === "document-upload") {
+              return (
+                <Dialog key={action.label}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Upload Document</DialogTitle>
+                      <DialogDescription>
+                        Select a vehicle to upload documents for.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                      {/* Vehicle Selector */}
+                      <div className="grid gap-2">
+                        <label className="text-sm font-medium">
+                          Select Vehicle
+                        </label>
+                        
+                        {vehicles && vehicles.length > 0 ? (
+                          <VehicleSelector 
+                            vehicles={vehicles}
+                            value={selectedUploadVehicle ? selectedUploadVehicle.id.toString() : ""}
+                            onChange={(value) => {
+                              const vehicle = vehicles.find(v => v.id.toString() === value);
+                              setSelectedUploadVehicle(vehicle || null);
+                            }}
+                          />
+                        ) : (
+                          <div className="flex justify-center items-center h-full">
+                            <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        
+                        {selectedUploadVehicle && (
+                          <div className="mt-2 p-3 bg-muted/30 border rounded-md">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium">{displayLicensePlate(selectedUploadVehicle.licensePlate)}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {selectedUploadVehicle.brand} {selectedUploadVehicle.model}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <DialogFooter className="flex-col sm:flex-row sm:justify-between">
+                      <div className="mb-4 sm:mb-0">
+                        <DialogClose asChild>
+                          <Button variant="outline" type="button">
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                      </div>
+                      
+                      <Button 
+                        type="button"
+                        disabled={!selectedUploadVehicle}
+                        onClick={() => {
+                          // This will close the dialog and show the InlineDocumentUpload component
+                          setDocumentUploadDialogOpen(true);
+                        }}
+                      >
+                        Continue to Upload
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
             
             // For damage form upload action, render a Dialog
             if (action.dialog === "damage-form") {
