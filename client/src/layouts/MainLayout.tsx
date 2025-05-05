@@ -249,7 +249,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                                 <Car className="h-4 w-4 text-primary-500 mr-2" />
                                 <div>
                                   <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-                                  <div className="text-xs text-gray-500">{formatLicensePlate(vehicle.licensePlate)}</div>
+                                  <div className="text-xs text-gray-500">{sanitizeLicensePlate(vehicle.licensePlate)}</div>
                                 </div>
                               </button>
                             </li>
@@ -302,7 +302,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                                 <div>
                                   <div className="font-medium">
                                     {reservation.vehicle?.brand} {reservation.vehicle?.model} 
-                                    {reservation.vehicle?.licensePlate && ` (${formatLicensePlate(reservation.vehicle.licensePlate)})`}
+                                    {reservation.vehicle?.licensePlate && ` (${sanitizeLicensePlate(reservation.vehicle.licensePlate)})`}
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     {reservation.customer?.name || "Unknown Customer"} • {reservation.startDate} to {reservation.endDate}
