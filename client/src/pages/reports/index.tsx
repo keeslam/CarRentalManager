@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ExpenseChart, type ExpenseChartData } from "@/components/reports/expense-chart";
 import { UtilizationChart, type UtilizationChartData } from "@/components/reports/utilization-chart";
@@ -41,6 +43,19 @@ export default function ReportsPage() {
   
   // Expense category filter
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  
+  // Pagination
+  const pageSize = 10;
+  
+  // APK table state
+  const [apkSearchQuery, setApkSearchQuery] = useState<string>("");
+  const [apkFilterStatus, setApkFilterStatus] = useState<string>("all");
+  const [apkCurrentPage, setApkCurrentPage] = useState(1);
+  
+  // Warranty table state
+  const [warrantySearchQuery, setWarrantySearchQuery] = useState<string>("");
+  const [warrantyFilterStatus, setWarrantyFilterStatus] = useState<string>("all");
+  const [warrantyCurrentPage, setWarrantyCurrentPage] = useState(1);
   
   // Function to reset all filters to default values
   const resetFilters = () => {
@@ -325,6 +340,60 @@ export default function ReportsPage() {
   
   // Vehicles with APK expiring within 30 days (for alerts)
   const apkExpiringVehicles = [...vehiclesWithApkExpiringSoon, ...vehiclesWithExpiredApk];
+  
+  // Filter APK list based on search query and filter status
+  const filteredApkStatusList = apkStatusList.filter(vehicle => {
+    const matchesSearch = !apkSearchQuery || 
+      vehicle.licensePlate.toLowerCase().includes(apkSearchQuery.toLowerCase()) ||
+      vehicle.brand.toLowerCase().includes(apkSearchQuery.toLowerCase()) ||
+      vehicle.model.toLowerCase().includes(apkSearchQuery.toLowerCase());
+      
+    const matchesStatus = apkFilterStatus === 'all' || vehicle.apkStatus === apkFilterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
+  
+  // Process warranty data for vehicles
+  const vehiclesWithWarranty = vehicles.filter(v => v.warrantyEndDate);
+  
+  // Create warranty status list
+  const warrantyStatusList = vehiclesWithWarranty.map(vehicle => {
+    const warrantyDate = vehicle.warrantyEndDate ? new Date(vehicle.warrantyEndDate) : null;
+    const daysRemaining = warrantyDate ? differenceInDays(warrantyDate, today) : null;
+    
+    let warrantyStatus = 'unknown';
+    if (daysRemaining !== null) {
+      if (daysRemaining < 0) {
+        warrantyStatus = 'expired';
+      } else if (daysRemaining <= 90) {
+        warrantyStatus = 'expiring_soon';
+      } else {
+        warrantyStatus = 'valid';
+      }
+    }
+    
+    return {
+      ...vehicle,
+      warrantyStatus,
+      daysRemaining
+    };
+  }).sort((a, b) => {
+    if (a.daysRemaining === null) return 1;
+    if (b.daysRemaining === null) return -1;
+    return a.daysRemaining - b.daysRemaining;
+  });
+  
+  // Filter warranty list based on search query and filter status
+  const filteredWarrantyList = warrantyStatusList.filter(vehicle => {
+    const matchesSearch = !warrantySearchQuery || 
+      vehicle.licensePlate.toLowerCase().includes(warrantySearchQuery.toLowerCase()) ||
+      vehicle.brand.toLowerCase().includes(warrantySearchQuery.toLowerCase()) ||
+      vehicle.model.toLowerCase().includes(warrantySearchQuery.toLowerCase());
+      
+    const matchesStatus = warrantyFilterStatus === 'all' || vehicle.warrantyStatus === warrantyFilterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
   
   // Calculate customer reservation stats with expense impact analysis
   const customerReservationStats = customers.map(customer => {
@@ -1589,6 +1658,28 @@ export default function ReportsPage() {
                 </div>
                 
                 {/* APK Expiry Table */}
+                <div className="flex justify-between mb-2">
+                  <Input 
+                    placeholder="Search by license plate, brand, or model..." 
+                    className="max-w-sm"
+                    value={apkSearchQuery || ''}
+                    onChange={(e) => setApkSearchQuery(e.target.value)}
+                  />
+                  <Select
+                    value={apkFilterStatus}
+                    onValueChange={setApkFilterStatus}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
+                      <SelectItem value="valid">Valid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1600,8 +1691,8 @@ export default function ReportsPage() {
                   </TableHeader>
                   <TableBody>
                     {apkStatusList.length > 0 ? (
-                      apkStatusList
-                        .slice(0, 10)
+                      filteredApkStatusList
+                        .slice((apkCurrentPage - 1) * pageSize, apkCurrentPage * pageSize)
                         .map(vehicle => {
                           const daysUntilExpiry = vehicle.daysUntilExpiry;
                           let statusClass = '';
@@ -1723,6 +1814,28 @@ export default function ReportsPage() {
                 </div>
                 
                 {/* Warranty Expiry Table */}
+                <div className="flex justify-between mb-2">
+                  <Input 
+                    placeholder="Search by license plate, brand, or model..." 
+                    className="max-w-sm"
+                    value={warrantySearchQuery || ''}
+                    onChange={(e) => setWarrantySearchQuery(e.target.value)}
+                  />
+                  <Select
+                    value={warrantyFilterStatus}
+                    onValueChange={setWarrantyFilterStatus}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
+                      <SelectItem value="valid">Valid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1734,14 +1847,8 @@ export default function ReportsPage() {
                   </TableHeader>
                   <TableBody>
                     {vehicles.filter(v => v.warrantyEndDate).length > 0 ? (
-                      vehicles
-                        .filter(v => v.warrantyEndDate)
-                        .sort((a, b) => {
-                          if (!a.warrantyEndDate) return 1;
-                          if (!b.warrantyEndDate) return -1;
-                          return new Date(a.warrantyEndDate).getTime() - new Date(b.warrantyEndDate).getTime();
-                        })
-                        .slice(0, 10)
+                      filteredWarrantyList
+                        .slice((warrantyCurrentPage - 1) * pageSize, warrantyCurrentPage * pageSize)
                         .map(vehicle => {
                           const warrantyDate = vehicle.warrantyEndDate ? new Date(vehicle.warrantyEndDate) : null;
                           const daysRemaining = warrantyDate ? differenceInDays(warrantyDate, today) : null;
