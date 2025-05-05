@@ -75,8 +75,8 @@ export default function ContractViewer() {
           setPdfUrl(url);
           
           // Invalidate the documents cache to refresh document lists across the app
-          if (contractData.vehicleId) {
-            queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${contractData.vehicleId}`] });
+          if (data.vehicleId) {
+            queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${data.vehicleId}`] });
           }
           queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
         }

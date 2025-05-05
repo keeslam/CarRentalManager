@@ -613,6 +613,7 @@ export function prepareContractData(reservation: Reservation) {
     endDate: format(endDate, 'MMMM d, yyyy'),
     duration: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,
     totalPrice: formatCurrency(totalPrice),
+    vehicleId: reservation.vehicleId || 0,  // Add vehicleId for document cache invalidation
   };
 }
 
