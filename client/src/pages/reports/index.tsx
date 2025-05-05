@@ -1698,10 +1698,14 @@ export default function ReportsPage() {
             <CardContent>
               <div className="space-y-4">
                 {/* APK Status Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="flex flex-col p-4 rounded-md bg-slate-50">
                     <span className="text-muted-foreground text-sm">Vehicles with valid APK</span>
                     <span className="text-2xl font-bold">{vehiclesWithValidApk.length}</span>
+                  </div>
+                  <div className="flex flex-col p-4 rounded-md bg-yellow-50">
+                    <span className="text-muted-foreground text-sm">APK expiring in 2-3 months</span>
+                    <span className="text-2xl font-bold">{vehiclesWithApkExpiring2to3Months.length}</span>
                   </div>
                   <div className="flex flex-col p-4 rounded-md bg-amber-50">
                     <span className="text-muted-foreground text-sm">APK expiring in 30 days</span>
@@ -1761,8 +1765,11 @@ export default function ReportsPage() {
                           } else if (daysUntilExpiry < 0) {
                             statusClass = 'bg-red-100 text-red-800';
                             statusText = 'Expired';
-                          } else if (daysUntilExpiry < 30) {
+                          } else if (daysUntilExpiry <= 30) {
                             statusClass = 'bg-amber-100 text-amber-800';
+                            statusText = `Expires in ${daysUntilExpiry} days`;
+                          } else if (daysUntilExpiry <= 90) {
+                            statusClass = 'bg-yellow-100 text-yellow-800';
                             statusText = `Expires in ${daysUntilExpiry} days`;
                           } else {
                             statusClass = 'bg-green-100 text-green-800';
@@ -1773,7 +1780,8 @@ export default function ReportsPage() {
                             <TableRow key={vehicle.id} className={
                               daysUntilExpiry === null ? 'bg-slate-50' : 
                               daysUntilExpiry < 0 ? 'bg-red-50' : 
-                              daysUntilExpiry < 30 ? 'bg-amber-50' : ''
+                              daysUntilExpiry <= 30 ? 'bg-amber-50' : 
+                              daysUntilExpiry <= 90 ? 'bg-yellow-50' : ''
                             }>
                               <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
                               <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
