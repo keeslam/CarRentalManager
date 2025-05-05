@@ -1,118 +1,128 @@
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 /**
- * Format a date string to a readable format
+ * Format a date string into a readable format: 'MMM dd, yyyy'
  */
-export function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '';
-  
+export function formatDate(dateString: string): string {
   try {
-    const date = parseISO(dateStr);
-    if (!isValid(date)) return '';
-    
-    return format(date, 'MMM d, yyyy');
-  } catch (err) {
-    return '';
+    return format(parseISO(dateString), 'MMM dd, yyyy');
+  } catch (e) {
+    return dateString;
   }
 }
 
 /**
- * Format a number as currency (Euro)
+ * Format a number as currency (EUR)
  */
-export function formatCurrency(amount: number | string | null | undefined): string {
-  if (amount === null || amount === undefined) return '';
-  
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  if (isNaN(numAmount)) return '';
-  
+export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('nl-NL', {
     style: 'currency',
     currency: 'EUR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(numAmount);
+  }).format(amount);
 }
 
 /**
- * Format a license plate without hyphens (as requested by user)
+ * Format a license plate consistently throughout the application
+ * Removes dashes and spaces, then formats as XX-LL-00 or similar
+ * If the license plate is in a non-standard format, returns it as-is
  */
-export function formatLicensePlate(licensePlate: string | null | undefined): string {
-  if (!licensePlate) return '';
+export function formatLicensePlate(licensePlate: string): string {
+  // Remove any existing dashes or spaces
+  const sanitized = licensePlate.replace(/[-\s]/g, '');
   
-  // Remove all hyphens and return uppercase
-  return licensePlate.replace(/-/g, '').toUpperCase();
-}
-
-/**
- * Get the raw license plate without formatting
- */
-export function getRawLicensePlate(licensePlate: string | null | undefined): string {
-  if (!licensePlate) return '';
-  return licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-}
-
-/**
- * Format a phone number to standard Dutch format
- */
-export function formatPhoneNumber(phoneNumber: string | null | undefined): string {
-  if (!phoneNumber) return '';
+  // Standard Dutch license plate formats
+  const formats = [
+    { pattern: /^([A-Z]{2})(\d{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-00-00
+    { pattern: /^(\d{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // 00-XX-00
+    { pattern: /^([A-Z]{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-XX-00
+    { pattern: /^([A-Z]{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // XX-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-XX-XX
+    { pattern: /^([A-Z])(\d{3})([A-Z]{2})$/, format: '$1-$2-$3' }, // X-000-XX
+    { pattern: /^([A-Z]{2})(\d{3})([A-Z])$/, format: '$1-$2-$3' }, // XX-000-X
+    { pattern: /^(\d{1})([A-Z]{3})(\d{2})$/, format: '$1-$2-$3' }, // 0-XXX-00
+    { pattern: /^(\d{2})([A-Z]{3})(\d{1})$/, format: '$1-$2-$3' }, // 00-XXX-0
+    // Add more formats as needed
+  ];
   
-  // Remove all non-numeric characters
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // Check if it's a mobile number
-  if (cleaned.startsWith('06') && cleaned.length === 10) {
-    return `+31 ${cleaned.slice(1, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
+  // Try to match and format the license plate
+  for (const { pattern, format } of formats) {
+    if (pattern.test(sanitized)) {
+      return sanitized.replace(pattern, format);
+    }
   }
   
-  // Other Dutch numbers
-  if (cleaned.startsWith('0') && cleaned.length === 10) {
-    return `+31 ${cleaned.slice(1, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 10)}`;
-  }
-  
-  // Already in international format
-  if (cleaned.startsWith('31') && cleaned.length === 11) {
-    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 11)}`;
-  }
-  
-  // Return as is if format is not recognized
-  return phoneNumber;
+  // If no standard format matches, return as-is but uppercase
+  return sanitized.toUpperCase();
 }
 
 /**
- * Get color class based on urgency (days until expiration)
+ * Format a reservation status to a human-readable string
  */
-export function getUrgencyColorClass(days: number): string {
-  if (days <= 14) return "bg-danger-50 text-danger-500"; // Within 2 weeks
-  if (days <= 30) return "bg-warning-50 text-warning-500"; // Within 1 month
-  return "bg-primary-100 text-primary-600"; // More than 1 month
+export function formatReservationStatus(status: string): string {
+  switch (status) {
+    case 'booked':
+      return 'Booked';
+    case 'vehicle_picked_up':
+      return 'Vehicle picked up';
+    case 'vehicle_returned':
+      return 'Vehicle returned';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
 }
 
 /**
- * Format file size to human readable format
+ * Format a file size in bytes to a human-readable format
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
- * Format reservation status based on user preference
+ * Format a phone number to a standard format
+ * For Dutch phone numbers, formats as: +31 6 12345678
  */
-export function formatReservationStatus(status: string | null | undefined): string {
-  if (!status) return '';
+export function formatPhoneNumber(phoneNumber: string | null | undefined): string {
+  if (!phoneNumber) return '';
   
-  switch (status.toLowerCase()) {
-    case 'pending': return 'Booked';
-    case 'confirmed': return 'Vehicle picked up';
-    case 'completed': return 'Vehicle returned';
-    case 'cancelled': return 'Cancelled';
-    default: return status.charAt(0).toUpperCase() + status.slice(1);
+  // Remove all non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Check if it's a Dutch mobile number
+  if (cleaned.startsWith('31') && cleaned.length === 11) {
+    // Format as: +31 6 12345678
+    return `+${cleaned.substring(0, 2)} ${cleaned.substring(2, 3)} ${cleaned.substring(3)}`;
   }
+  
+  // For Dutch landlines and other formats
+  if (cleaned.startsWith('31') && cleaned.length >= 10) {
+    // Format as: +31 10 1234567
+    return `+${cleaned.substring(0, 2)} ${cleaned.substring(2, 4)} ${cleaned.substring(4)}`;
+  }
+  
+  // For Dutch numbers without country code
+  if (cleaned.startsWith('0') && cleaned.length === 10) {
+    // Format as: 06-12345678
+    return `${cleaned.substring(0, 2)}-${cleaned.substring(2)}`;
+  }
+  
+  // For other formats or international numbers, just add basic formatting
+  if (cleaned.length > 6) {
+    // Insert a space every 3 digits for readability
+    return cleaned.replace(/(\d{3})(?=\d)/g, '$1 ');
+  }
+  
+  // Return the cleaned number as is if no pattern matches
+  return cleaned;
 }

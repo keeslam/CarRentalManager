@@ -12,6 +12,7 @@ import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-uti
 import { isTrueValue } from "@/lib/utils";
 import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Calendar, Download, FileText, TrendingUp, Car, Settings, User, DollarSign } from "lucide-react";
+import { DateRange } from "react-day-picker";
 
 /**
  * Reports Page - Generate and display reports for the car rental business
@@ -54,6 +55,9 @@ export default function ReportsPage() {
 
   // Filter expenses by date range and selected category
   const filteredExpenses = expenses?.filter(expense => {
+    // Skip date filter if dates are undefined
+    if (!dateRange.from || !dateRange.to) return false;
+    
     const expenseDate = new Date(expense.date);
     const withinDateRange = isWithinInterval(expenseDate, {
       start: dateRange.from,
@@ -68,6 +72,9 @@ export default function ReportsPage() {
   
   // Filter reservations by date range and vehicle
   const filteredReservations = reservations?.filter(reservation => {
+    // Skip date filter if dates are undefined
+    if (!dateRange.from || !dateRange.to) return false;
+    
     const startDate = new Date(reservation.startDate);
     const endDate = new Date(reservation.endDate);
     
@@ -225,7 +232,7 @@ export default function ReportsPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  For period {format(dateRange.from, 'PP')} - {format(dateRange.to, 'PP')}
+                  For period {dateRange.from && dateRange.to ? `${format(dateRange.from, 'PP')} - ${format(dateRange.to, 'PP')}` : 'No date range selected'}
                 </p>
               </CardContent>
             </Card>
@@ -379,10 +386,18 @@ export default function ReportsPage() {
                   const vehicleProfit = vehicleRevenue - vehicleExpenseTotal;
                   
                   // Calculate occupancy rate (days rented / total days in period)
-                  const totalDaysInPeriod = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
+                  const totalDaysInPeriod = dateRange.from && dateRange.to 
+                    ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) 
+                    : 30; // Default to 30 days if no date range
+                    
                   const daysRented = vehicleReservations.reduce((days, reservation) => {
+                    if (!dateRange.from || !dateRange.to) return days;
+                    
                     const reservationStart = new Date(reservation.startDate) < dateRange.from ? dateRange.from : new Date(reservation.startDate);
                     const reservationEnd = new Date(reservation.endDate) > dateRange.to ? dateRange.to : new Date(reservation.endDate);
+                    
+                    if (!reservationStart || !reservationEnd) return days;
+                    
                     const reservationDays = Math.ceil((reservationEnd.getTime() - reservationStart.getTime()) / (1000 * 60 * 60 * 24));
                     return days + reservationDays;
                   }, 0);
@@ -596,7 +611,7 @@ export default function ReportsPage() {
                   <div className="border rounded-lg p-4 text-center">
                     <p className="text-muted-foreground text-sm">Avg. Daily Revenue</p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(totalRevenue / Math.max(1, Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))))}
+                      {formatCurrency(totalRevenue / Math.max(1, dateRange.from && dateRange.to ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) : 30))}
                     </p>
                   </div>
                   
