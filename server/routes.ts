@@ -734,7 +734,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      const updatedVehicle = await storage.updateVehicle(id, updateData);
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...updateData,
+        updatedBy: user ? user.username : null
+      };
+      
+      const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
       res.json(updatedVehicle);
     } catch (error) {
       res.status(400).json({ message: "Error toggling registration status", error });
