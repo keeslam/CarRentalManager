@@ -63,9 +63,18 @@ const euroZones = ["Euro 3", "Euro 4", "Euro 5", "Euro 6", "Euro 6d"];
 interface VehicleFormProps {
   editMode?: boolean;
   initialData?: any;
+  redirectToList?: boolean;
+  onSuccess?: (vehicle: any) => void;
+  customCancelButton?: React.ReactNode;
 }
 
-export function VehicleForm({ editMode = false, initialData }: VehicleFormProps) {
+export function VehicleForm({ 
+  editMode = false, 
+  initialData,
+  redirectToList = true,
+  onSuccess,
+  customCancelButton
+}: VehicleFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
