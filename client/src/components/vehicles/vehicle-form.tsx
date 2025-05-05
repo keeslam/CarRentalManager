@@ -242,6 +242,11 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     // Process the form data before submission
     const formattedData: any = { ...data };
     
+    // Remove registeredToBy and companyBy from the form data
+    // as these should be handled by the server's toggle-registration endpoint
+    delete formattedData.registeredToBy;
+    delete formattedData.companyBy;
+    
     console.log("Original form data:", data);
     
     // Handle empty string values for numeric fields
