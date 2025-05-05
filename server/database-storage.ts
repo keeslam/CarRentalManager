@@ -118,13 +118,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateVehicle(id: number, vehicleData: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
-    const [updatedVehicle] = await db
-      .update(vehicles)
-      .set(vehicleData)
-      .where(eq(vehicles.id, id))
-      .returning();
-    
-    return updatedVehicle || undefined;
+    console.log(`Database updateVehicle called for ID ${id} with data:`, JSON.stringify(vehicleData, null, 2));
+    try {
+      // Explicitly debug the updatedBy value
+      if ('updatedBy' in vehicleData) {
+        console.log(`updatedBy value before database call: "${vehicleData.updatedBy}"`);
+      } else {
+        console.log("No updatedBy field in update data");
+      }
+      
+      const [updatedVehicle] = await db
+        .update(vehicles)
+        .set(vehicleData)
+        .where(eq(vehicles.id, id))
+        .returning();
+      
+      console.log("Database returned vehicle:", JSON.stringify(updatedVehicle, null, 2));
+      return updatedVehicle || undefined;
+    } catch (error) {
+      console.error("Error in database updateVehicle:", error);
+      throw error;
+    }
   }
   
   async deleteVehicle(id: number): Promise<boolean> {
