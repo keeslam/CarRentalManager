@@ -68,7 +68,7 @@ function AppRoutes() {
         <ProtectedRoute path="/reports" component={ReportsPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
-        <ProtectedRoute path="/search-results" component={SearchResults} />
+        <ProtectedRoute path="/search-results:rest*" component={SearchResults} />
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
         <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
