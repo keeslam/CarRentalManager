@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { Loader2, FileText, Download, ArrowLeft } from 'lucide-react';
+import { Loader2, FileText, Download, ArrowLeft, RefreshCw } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { queryClient } from '@/lib/queryClient';
 
 // Type for contract data returned from API
 interface ContractData {
@@ -31,6 +32,7 @@ interface ContractData {
   endDate: string;
   duration: string;
   totalPrice: string;
+  vehicleId: number;  // Added to support document cache invalidation
 }
 
 export default function ContractViewer() {
@@ -71,6 +73,12 @@ export default function ContractViewer() {
           const blob = await pdfResponse.blob();
           const url = URL.createObjectURL(blob);
           setPdfUrl(url);
+          
+          // Invalidate the documents cache to refresh document lists across the app
+          if (contractData.vehicleId) {
+            queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${contractData.vehicleId}`] });
+          }
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
         }
       } catch (error) {
         console.error('Error fetching contract:', error);
