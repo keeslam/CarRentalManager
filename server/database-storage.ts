@@ -183,11 +183,11 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Current vehicle state before status update:", JSON.stringify(currentVehicle, null, 2));
       
-      let updateObject: Record<string, any> = {
-        updatedBy: userData.username
-      };
+      // Important: Do NOT update the general updatedBy field to ensure we don't overwrite
+      // the last person who edited the vehicle information
+      let updateObject: Record<string, any> = {};
       
-      // Only update the specific field based on the status
+      // Only update the specific fields based on the status
       if (status === 'opnaam') {
         updateObject.registeredTo = "true";
         updateObject.registeredToDate = userData.date;
