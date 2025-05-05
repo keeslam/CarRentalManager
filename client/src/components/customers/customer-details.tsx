@@ -332,27 +332,8 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               {/* Additional Information */}
               <div>
                 <h3 className="text-lg font-medium mb-3">Additional Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status</h4>
-                    <p className="text-base">{customer.status || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status Date</h4>
-                    <p className="text-base">{customer.statusDate ? formatDate(customer.statusDate) : "Not provided"}</p>
-                  </div>
-                  
-                  {customer.statusBy && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Status Changed By</h4>
-                      <p className="text-base">{customer.statusBy}</p>
-                    </div>
-                  )}
-                </div>
-                
                 {customer.notes && (
-                  <div className="mt-4">
+                  <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Notes</h4>
                     <p className="text-base">{customer.notes}</p>
                   </div>
@@ -362,34 +343,52 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               {/* Tracking Information */}
               <div className="mt-6 border-t pt-6">
                 <h3 className="text-lg font-medium mb-3">Tracking Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {customer.createdBy && (
+                
+                {/* Status tracking section */}
+                <div className="border-b pb-4 mb-4">
+                  <h4 className="text-md font-medium mb-2">Status Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Status</h4>
+                      <p className="text-base">{customer.status || "Not provided"}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Status Date</h4>
+                      <p className="text-base">{customer.statusDate ? formatDate(customer.statusDate) : "Not provided"}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Status Changed By</h4>
+                      <p className="text-base">{customer.statusBy || "Not recorded"}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Record tracking section */}
+                <div>
+                  <h4 className="text-md font-medium mb-2">Record Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Created By</h4>
-                      <p className="text-base">{customer.createdBy}</p>
+                      <p className="text-base">{customer.createdBy || "Not recorded"}</p>
                     </div>
-                  )}
-                  
-                  {customer.createdAt && (
+                    
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Created At</h4>
-                      <p className="text-base">{new Date(customer.createdAt).toLocaleString()}</p>
+                      <p className="text-base">{customer.createdAt ? new Date(customer.createdAt).toLocaleString() : "Not recorded"}</p>
                     </div>
-                  )}
-                  
-                  {customer.updatedBy && (
+                    
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated By</h4>
-                      <p className="text-base">{customer.updatedBy}</p>
+                      <p className="text-base">{customer.updatedBy || "Not recorded"}</p>
                     </div>
-                  )}
-                  
-                  {customer.updatedAt && (
+                    
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated At</h4>
-                      <p className="text-base">{new Date(customer.updatedAt).toLocaleString()}</p>
+                      <p className="text-base">{customer.updatedAt ? new Date(customer.updatedAt).toLocaleString() : "Not recorded"}</p>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </CardContent>
