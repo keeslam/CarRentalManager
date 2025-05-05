@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { queryClient } from '@/lib/queryClient';
+import { queryClient, invalidateRelatedQueries } from '@/lib/queryClient';
 
 // Type for contract data returned from API
 interface ContractData {
@@ -74,11 +74,11 @@ export default function ContractViewer() {
           const url = URL.createObjectURL(blob);
           setPdfUrl(url);
           
-          // Invalidate the documents cache to refresh document lists across the app
+          // Use the invalidateRelatedQueries utility to refresh all related document lists
           if (data.vehicleId) {
-            queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${data.vehicleId}`] });
+            invalidateRelatedQueries('documents');
+            invalidateRelatedQueries('vehicles', data.vehicleId);
           }
-          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
         }
       } catch (error) {
         console.error('Error fetching contract:', error);

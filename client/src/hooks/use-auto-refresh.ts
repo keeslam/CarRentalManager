@@ -1,65 +1,64 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { DEFAULT_REFRESH_INTERVAL } from '@/lib/queryClient';
-
-type QueryKey = string | readonly unknown[];
 
 /**
- * Hook to enable or disable auto-refresh for specific queries
- * 
- * @param queryKeys Array of query keys to manage auto-refresh for
- * @param enabled Whether auto-refresh should be enabled or disabled
- * @param interval Optional custom refresh interval in milliseconds (defaults to 5 seconds)
+ * Hook that provides a utility to refresh entity data on demand
+ * @returns Functions to refresh specific entity types
  */
-export function useAutoRefresh(
-  queryKeys: QueryKey[], 
-  enabled: boolean = true, 
-  interval: number = DEFAULT_REFRESH_INTERVAL
-) {
+export function useDataRefresh() {
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    // For each query key, update the refetch interval
-    queryKeys.forEach(queryKey => {
-      if (enabled) {
-        // Enable auto-refresh for this query
-        queryClient.setQueryDefaults(queryKey, {
-          refetchInterval: interval,
-          staleTime: 0,
-          refetchOnWindowFocus: true,
-        });
-      } else {
-        // Disable auto-refresh for this query
-        queryClient.setQueryDefaults(queryKey, {
-          refetchInterval: false,
-          staleTime: Infinity,
-          refetchOnWindowFocus: false,
-        });
-      }
-    });
+  /**
+   * Refresh all data for a specific entity type
+   * @param entityType The type of entity to refresh (vehicles, customers, reservations, etc.)
+   */
+  const refreshEntityData = useCallback((entityType: string) => {
+    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}`] });
+  }, [queryClient]);
 
-    // Initial refetch when enabled
-    if (enabled) {
-      queryKeys.forEach(queryKey => {
-        queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
-      });
-    }
+  /**
+   * Refresh data for a specific entity by ID
+   * @param entityType The type of entity to refresh
+   * @param id The ID of the entity
+   */
+  const refreshEntityById = useCallback((entityType: string, id: number) => {
+    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}/${id}`] });
+  }, [queryClient]);
 
-    // Cleanup when unmounting or when parameters change
-    return () => {
-      // Revert to default settings when the component unmounts
-      queryKeys.forEach(queryKey => {
-        queryClient.setQueryDefaults(queryKey, {});
-      });
-    };
-  }, [queryClient, enabled, interval, ...queryKeys]);
+  /**
+   * Refresh all data related to a vehicle
+   * @param vehicleId The ID of the vehicle
+   */
+  const refreshVehicleData = useCallback((vehicleId: number) => {
+    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${vehicleId}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
+  }, [queryClient]);
 
-  // Expose a function to manually trigger a refresh
-  const refreshNow = () => {
-    queryKeys.forEach(queryKey => {
-      queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
-    });
+  /**
+   * Refresh dashboard data (available vehicles, expiring warranties/APKs, upcoming reservations)
+   */
+  const refreshDashboard = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
+  }, [queryClient]);
+
+  /**
+   * Refresh calendar data
+   */
+  const refreshCalendar = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+  }, [queryClient]);
+
+  return {
+    refreshEntityData,
+    refreshEntityById,
+    refreshVehicleData,
+    refreshDashboard,
+    refreshCalendar
   };
-
-  return { refreshNow };
 }

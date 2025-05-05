@@ -59,16 +59,13 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-// Default refresh interval in milliseconds (5 seconds)
-export const DEFAULT_REFRESH_INTERVAL = 5000;
-
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: DEFAULT_REFRESH_INTERVAL, // Enable auto-refresh every 5 seconds
-      refetchOnWindowFocus: true, // Also refetch when window gets focus
-      staleTime: 0, // Data becomes stale immediately, enabling refetching
+      refetchInterval: false, // Don't auto-refresh on a timer
+      refetchOnWindowFocus: true, // Refetch when window gets focus
+      staleTime: Infinity, // Keep data fresh until explicitly invalidated
       retry: false,
     },
     mutations: {
@@ -76,3 +73,73 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Helper function to invalidate related queries after a mutation
+ * Call this after any data modification to ensure all related views are updated
+ */
+export function invalidateRelatedQueries(entityType: string, id?: number) {
+  // Always invalidate the list query
+  queryClient.invalidateQueries({ queryKey: [`/api/${entityType}`] });
+  
+  // If we have an ID, invalidate the specific entity query
+  if (id !== undefined) {
+    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}/${id}`] });
+  }
+  
+  // Invalidate related entities based on type
+  switch (entityType) {
+    case 'vehicles':
+      // When a vehicle changes, invalidate related data
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${id}`] });
+      }
+      break;
+    case 'reservations':
+      // When a reservation changes, invalidate calendar & upcoming
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+      if (id) {
+        const reservation = queryClient.getQueryData<any>([`/api/reservations/${id}`]);
+        if (reservation?.vehicleId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/reservations/vehicle/${reservation.vehicleId}`] 
+          });
+        }
+        if (reservation?.customerId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/reservations/customer/${reservation.customerId}`] 
+          });
+        }
+      }
+      break;
+    case 'documents':
+      // When a document changes, invalidate vehicle documents
+      if (id) {
+        const document = queryClient.getQueryData<any>([`/api/documents/${id}`]);
+        if (document?.vehicleId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/documents/vehicle/${document.vehicleId}`] 
+          });
+        }
+      }
+      break;
+    case 'expenses':
+      // When an expense changes, invalidate recent expenses
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
+      if (id) {
+        const expense = queryClient.getQueryData<any>([`/api/expenses/${id}`]);
+        if (expense?.vehicleId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/expenses/vehicle/${expense.vehicleId}`] 
+          });
+        }
+      }
+      break;
+  }
+}
