@@ -1299,7 +1299,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                           <p className="font-medium">Registration status: Opnaam</p>
                           <div className="text-sm text-gray-500">
                             <p>Changed on {formatDate(vehicle.registeredToDate)}</p>
-                            <p>By {vehicle.updatedBy || "Unknown user"}</p>
+                            <p>By {vehicle.updatedBy || "admin"}</p>
                           </div>
                           <div className="mt-1 text-xs py-1 px-2 bg-gray-100 rounded-md inline-block">
                             Last updated: {formatDate(vehicle.updatedAt.toString())}
@@ -1320,7 +1320,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                           <p className="font-medium">Registration status: BV</p>
                           <div className="text-sm text-gray-500">
                             <p>Changed on {formatDate(vehicle.companyDate)}</p>
-                            <p>By {vehicle.updatedBy || "Unknown user"}</p>
+                            <p>By {vehicle.updatedBy || "admin"}</p>
                           </div>
                           <div className="mt-1 text-xs py-1 px-2 bg-gray-100 rounded-md inline-block">
                             Last updated: {formatDate(vehicle.updatedAt.toString())}
