@@ -323,17 +323,15 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     console.log("Processed vehicle data:", formattedData);
     
     try {
-      // Direct API call instead of using the mutation
+      // Use apiRequest helper instead of raw fetch to ensure consistency
       const url = editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles";
-      console.log(`Sending direct API request to ${url}`);
+      console.log(`Sending API request to ${url}`);
       
-      const response = await fetch(url, {
-        method: editMode ? "PATCH" : "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formattedData)
-      });
+      const response = await apiRequest(
+        editMode ? "PATCH" : "POST", 
+        url, 
+        formattedData
+      );
       
       console.log("API response status:", response.status);
       
@@ -346,12 +344,20 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       const responseData = await response.json();
       console.log("API response data:", responseData);
       
-      // Invalidate all relevant queries
+      // Force more aggressive cache invalidation
+      
+      // First invalidate all vehicle-related queries
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
-      // Also invalidate the specific vehicle query if we're in edit mode
+      // Invalidate dashboard queries that might show vehicle data
+      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      
+      // Also invalidate the specific vehicle query if we're in edit mode with a refetchType of "all"
       if (editMode && initialData?.id) {
-        await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/vehicles/${initialData.id}`],
+          refetchType: "all" 
+        });
       }
       
       toast({
