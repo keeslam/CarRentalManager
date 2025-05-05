@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ExpenseChart, type ExpenseChartData } from "@/components/reports/expense-chart";
@@ -426,22 +427,12 @@ export default function ReportsPage() {
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Vehicle</label>
-              <Select
+              <VehicleSelector
+                vehicles={vehicles || []}
                 value={selectedVehicle}
-                onValueChange={setSelectedVehicle}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Vehicles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Vehicles</SelectItem>
-                  {vehicles?.map(vehicle => (
-                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                      {vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={setSelectedVehicle}
+                placeholder="All Vehicles"
+              />
             </div>
             
             <div className="space-y-2">
