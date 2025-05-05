@@ -176,9 +176,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 e.preventDefault();
                 if (searchQuery.trim().length >= 2) {
                   setShowResults(false);
-                  // Use replaceState to avoid adding to browser history
-                  window.history.replaceState({}, '', `/search-results?q=${encodeURIComponent(searchQuery.trim())}`);
-                  navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`, { replace: true });
+                  // If it looks like a license plate, try to standardize it for better search results
+                  const searchTerm = searchQuery.includes('-') || /^[A-Za-z0-9]{6,8}$/.test(searchQuery.trim()) 
+                    ? formatLicensePlate(searchQuery) 
+                    : searchQuery.trim();
+                  // Use only navigate with replace to avoid adding to browser history
+                  navigate(`/search-results?q=${encodeURIComponent(searchTerm)}`, { replace: true });
                 }
               }}>
                 <input 
@@ -205,8 +208,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
                       e.preventDefault();
                       setShowResults(false);
+                      // If it looks like a license plate, try to standardize it for better search results
+                      const searchTerm = searchQuery.includes('-') || /^[A-Za-z0-9]{6,8}$/.test(searchQuery.trim()) 
+                        ? formatLicensePlate(searchQuery) 
+                        : searchQuery.trim();
                       // Use only navigate with replace to avoid adding to browser history
-                      navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`, { replace: true });
+                      navigate(`/search-results?q=${encodeURIComponent(searchTerm)}`, { replace: true });
                     }
                   }}
                 />
@@ -256,8 +263,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                           className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                           onClick={() => {
                             setShowResults(false);
+                            // If it looks like a license plate, try to standardize it for better search results
+                            const searchTerm = searchQuery.includes('-') || /^[A-Za-z0-9]{6,8}$/.test(searchQuery.trim()) 
+                              ? formatLicensePlate(searchQuery) 
+                              : searchQuery.trim();
                             // Use only navigate with replace to avoid adding to browser history
-                            navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`, { replace: true });
+                            navigate(`/search-results?q=${encodeURIComponent(searchTerm)}`, { replace: true });
                           }}
                         >
                           View all results

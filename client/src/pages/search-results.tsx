@@ -93,7 +93,11 @@ const SearchResults: FC = () => {
     e.preventDefault();
     // Update URL to include the search query using navigate
     if (query) {
-      setLocation(`/search-results?q=${encodeURIComponent(query)}`, { replace: true });
+      // If it looks like a license plate, try to standardize it for better search results
+      const searchTerm = query.includes('-') || /^[A-Za-z0-9]{6,8}$/.test(query.trim()) 
+        ? formatLicensePlate(query) 
+        : query;
+      setLocation(`/search-results?q=${encodeURIComponent(searchTerm)}`, { replace: true });
     }
   };
 
