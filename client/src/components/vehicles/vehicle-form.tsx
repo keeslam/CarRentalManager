@@ -242,8 +242,8 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     // Process the form data before submission
     const formattedData: any = { ...data };
     
-    // Remove registeredToBy and companyBy from the form data
-    // as these should be handled by the server's toggle-registration endpoint
+    // Remove registeredToBy and companyBy from the form data immediately
+    // as these should only be modified by the server-side tracking endpoints
     delete formattedData.registeredToBy;
     delete formattedData.companyBy;
     
@@ -423,6 +423,8 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
           delete formattedData.company;
           delete formattedData.registeredToDate;
           delete formattedData.companyDate;
+          delete formattedData.registeredToBy;
+          delete formattedData.companyBy;
           
           // Get the initial response data
           responseData = await toggleResponse.json();
