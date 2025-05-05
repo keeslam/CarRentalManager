@@ -1169,7 +1169,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
-      if (req.body.totalPrice) req.body.totalPrice = parseFloat(req.body.totalPrice);
+      
+      // Handle totalPrice properly - treat empty string as undefined
+      if (req.body.totalPrice === '') {
+        req.body.totalPrice = undefined;
+      } else if (req.body.totalPrice) {
+        req.body.totalPrice = parseFloat(req.body.totalPrice);
+      }
       
       const reservationData = insertReservationSchema.parse(req.body);
       
@@ -1310,7 +1316,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
-      if (req.body.totalPrice) req.body.totalPrice = parseFloat(req.body.totalPrice);
+      
+      // Handle totalPrice properly - treat empty string as undefined
+      if (req.body.totalPrice === '') {
+        req.body.totalPrice = undefined;
+      } else if (req.body.totalPrice) {
+        req.body.totalPrice = parseFloat(req.body.totalPrice);
+      }
       
       const reservationData = insertReservationSchema.parse(req.body);
       
