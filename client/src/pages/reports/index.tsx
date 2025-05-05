@@ -6,21 +6,26 @@ import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { RevenueChart } from "@/components/reports/revenue-chart";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ExpenseChart, type ExpenseChartData } from "@/components/reports/expense-chart";
+import { UtilizationChart, type UtilizationChartData } from "@/components/reports/utilization-chart";
 import { Vehicle, Expense, Reservation, Customer } from "@shared/schema";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from "date-fns";
-import { Calendar, Download, FileText, TrendingUp, Car, Settings, User, DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench } from "lucide-react";
+import { 
+  Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
+  DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench 
+} from "lucide-react";
 import { DateRange } from "react-day-picker";
-
-
 
 /**
  * Reports Page - Generate and display reports for the car rental business
+ * This page focuses on operational aspects rather than revenue
  */
 export default function ReportsPage() {
-  // Tab state
+  // Tab state - default to operations tab
   const [activeTab, setActiveTab] = useState("operations");
   
   // Date range state with default to last 30 days
@@ -56,7 +61,7 @@ export default function ReportsPage() {
   });
 
   // Filter expenses by date range and selected category
-  const filteredExpenses = expenses?.filter(expense => {
+  const filteredExpenses = expenses.filter(expense => {
     // Skip date filter if dates are undefined
     if (!dateRange.from || !dateRange.to) return false;
     
@@ -70,10 +75,10 @@ export default function ReportsPage() {
     const matchesVehicle = selectedVehicle === "all" || expense.vehicleId.toString() === selectedVehicle;
     
     return withinDateRange && matchesCategory && matchesVehicle;
-  }) || [];
+  });
   
   // Filter reservations by date range and vehicle
-  const filteredReservations = reservations?.filter(reservation => {
+  const filteredReservations = reservations.filter(reservation => {
     // Skip date filter if dates are undefined
     if (!dateRange.from || !dateRange.to) return false;
     
@@ -90,7 +95,7 @@ export default function ReportsPage() {
     const matchesVehicle = selectedVehicle === "all" || reservation.vehicleId.toString() === selectedVehicle;
     
     return overlapsDateRange && matchesVehicle;
-  }) || [];
+  });
   
   // Calculate expense totals by category
   const expensesByCategory: Record<string, number> = {};
@@ -107,16 +112,12 @@ export default function ReportsPage() {
     return sum + Number(expense.amount);
   }, 0);
   
-  // Calculate total revenue from reservations
-  const totalRevenue = filteredReservations.reduce((sum, reservation) => {
-    return sum + Number(reservation.totalPrice || 0);
-  }, 0);
-  
-  // Calculate profit
-  const profit = totalRevenue - totalExpenses;
-  
-  // Calculate average expense per vehicle
-  const activeVehicleCount = vehicles.filter(v => isTrueValue(v.active)).length || 1;
+  // Calculate the number of vehicles with activity (have expenses or reservations) as an alternative to "active" property
+  const vehiclesWithActivity = vehicles.filter(v => 
+    filteredExpenses.some(e => e.vehicleId === v.id) || 
+    filteredReservations.some(r => r.vehicleId === v.id)
+  );
+  const activeVehicleCount = vehiclesWithActivity.length || vehicles.length || 1;
   const avgExpensePerVehicle = totalExpenses / activeVehicleCount;
   
   // Calculate vehicle utilization data
@@ -184,21 +185,29 @@ export default function ReportsPage() {
   const customerReservationStats = customers.map(customer => {
     const customerReservations = filteredReservations.filter(r => r.customerId === customer.id);
     
-    // Calculate total spent
-    const totalSpent = customerReservations.reduce((sum, reservation) => {
-      return sum + Number(reservation.totalPrice || 0);
-    }, 0);
-    
     return {
       id: customer.id,
       name: customer.name,
-      reservationCount: customerReservations.length,
-      totalSpent
+      reservationCount: customerReservations.length
     };
   }).sort((a, b) => b.reservationCount - a.reservationCount);
   
-  // Prepare data for charts
-  const revenueChartData = prepareMonthlyRevenueData(filteredReservations, filteredExpenses);
+  // Prepare expense chart data
+  const expenseChartData: ExpenseChartData[] = Object.entries(expensesByCategory)
+    .map(([category, amount]) => ({
+      name: category.charAt(0).toUpperCase() + category.slice(1),
+      expenses: amount
+    }))
+    .sort((a, b) => b.expenses - a.expenses);
+  
+  // Prepare utilization chart data
+  const utilizationChartData: UtilizationChartData[] = vehicleUtilizationData
+    .filter(v => v.utilizationPercentage > 0)
+    .slice(0, 10)
+    .map(vehicle => ({
+      name: formatLicensePlate(vehicle.licensePlate),
+      utilization: vehicle.utilizationPercentage
+    }));
   
   // Calculate expense trend (last 3 months comparison)
   const expenseTrend = (() => {
@@ -336,9 +345,13 @@ export default function ReportsPage() {
       {/* Report Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="financial">
+          <TabsTrigger value="operations">
+            <Settings className="h-4 w-4 mr-2" />
+            Operations
+          </TabsTrigger>
+          <TabsTrigger value="expenses">
             <DollarSign className="h-4 w-4 mr-2" />
-            Financial
+            Expenses
           </TabsTrigger>
           <TabsTrigger value="vehicles">
             <Car className="h-4 w-4 mr-2" />
@@ -348,24 +361,25 @@ export default function ReportsPage() {
             <User className="h-4 w-4 mr-2" />
             Customers
           </TabsTrigger>
-          <TabsTrigger value="operations">
-            <Settings className="h-4 w-4 mr-2" />
-            Operations
-          </TabsTrigger>
         </TabsList>
         
-        {/* Financial Reports Tab */}
-        <TabsContent value="financial" className="space-y-6">
-          {/* Financial Summary Cards */}
+        {/* Operations Overview Tab */}
+        <TabsContent value="operations" className="space-y-6">
+          {/* Operations Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">Vehicle Utilization</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+                <div className="text-2xl font-bold">
+                  {vehicleUtilizationData.length > 0 
+                    ? `${Math.round(vehicleUtilizationData.reduce((sum, v) => sum + v.utilizationPercentage, 0) / vehicleUtilizationData.length)}%`
+                    : '0%'
+                  }
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  For period {dateRange.from && dateRange.to ? `${format(dateRange.from, 'PP')} - ${format(dateRange.to, 'PP')}` : 'No date range selected'}
+                  Average across {vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} active vehicles
                 </p>
               </CardContent>
             </Card>
@@ -375,7 +389,7 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(Number(totalExpenses))}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Across {filteredExpenses.length} expense entries
                 </p>
@@ -384,33 +398,111 @@ export default function ReportsPage() {
             
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                <CardTitle className="text-sm font-medium">Avg. Cost Per Vehicle</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(profit)}
+                <div className="text-2xl font-bold">
+                  {formatCurrency(Number(avgExpensePerVehicle))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {profit >= 0 ? 'Profit' : 'Loss'} for selected period
+                  For {activeVehicleCount} active vehicles
                 </p>
               </CardContent>
             </Card>
           </div>
           
-          {/* Revenue Chart */}
+          {/* Activity Overview */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Vehicle Utilization Chart */}
+            <Card className="xl:col-span-1">
+              <CardHeader>
+                <CardTitle>Vehicle Utilization</CardTitle>
+                <CardDescription>
+                  Top 10 vehicles by utilization rate
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-80">
+                <UtilizationChart data={utilizationChartData} />
+              </CardContent>
+            </Card>
+            
+            {/* Expense by Category Chart */}
+            <Card className="xl:col-span-1">
+              <CardHeader>
+                <CardTitle>Expenses by Category</CardTitle>
+                <CardDescription>
+                  Distribution of expenses for the selected period
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ExpenseChart data={expenseChartData} />
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Monthly Expense Trend */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue vs. Expenses Over Time</CardTitle>
+              <CardTitle>Expense Trends</CardTitle>
               <CardDescription>
-                Monthly breakdown for the selected date range
+                Monthly expense comparison
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-96">
-              <RevenueChart data={revenueChartData} />
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium">{expenseTrend.currentMonth.name}</h4>
+                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.currentMonth.total)}</p>
+                    </div>
+                    <div className={`text-sm px-2 py-1 rounded-md ${expenseTrend.currentMonth.changePercentage > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                      {expenseTrend.currentMonth.changePercentage > 0 ? '+' : ''}{Math.round(expenseTrend.currentMonth.changePercentage)}%
+                    </div>
+                  </div>
+                  <Progress value={100} className="h-2" />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium">{expenseTrend.previousMonth.name}</h4>
+                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.previousMonth.total)}</p>
+                    </div>
+                    <div className={`text-sm px-2 py-1 rounded-md ${expenseTrend.previousMonth.changePercentage > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                      {expenseTrend.previousMonth.changePercentage > 0 ? '+' : ''}{Math.round(expenseTrend.previousMonth.changePercentage)}%
+                    </div>
+                  </div>
+                  <Progress 
+                    value={expenseTrend.currentMonth.total === 0 
+                      ? 0 
+                      : (expenseTrend.previousMonth.total / expenseTrend.currentMonth.total) * 100} 
+                    className="h-2" 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium">{expenseTrend.twoMonthsAgo.name}</h4>
+                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.twoMonthsAgo.total)}</p>
+                    </div>
+                  </div>
+                  <Progress 
+                    value={expenseTrend.currentMonth.total === 0 
+                      ? 0 
+                      : (expenseTrend.twoMonthsAgo.total / expenseTrend.currentMonth.total) * 100}
+                    className="h-2" 
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
-          
-          {/* Expense Breakdown */}
+        </TabsContent>
+        
+        {/* Expenses Tab */}
+        <TabsContent value="expenses" className="space-y-6">
+          {/* Expense Summary */}
           <Card>
             <CardHeader>
               <CardTitle>Expense Breakdown by Category</CardTitle>
@@ -429,445 +521,286 @@ export default function ReportsPage() {
                           <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
                           <span className="font-medium capitalize">{category}</span>
                         </div>
-                        <div className="font-semibold">{formatCurrency(amount)}</div>
+                        <div className="flex items-center space-x-4">
+                          <span className="text-muted-foreground text-sm">
+                            {filteredExpenses.filter(e => e.category === category).length} items
+                          </span>
+                          <span className="font-medium">{formatCurrency(amount)}</span>
+                        </div>
                       </div>
                     ))
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    No expense data available for the selected filters
-                  </p>
+                  <p className="text-muted-foreground text-center py-4">No expenses found for the selected filters</p>
                 )}
               </div>
             </CardContent>
           </Card>
           
-          {/* Recent Transactions */}
+          {/* Expense List */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
+              <CardTitle>Recent Expenses</CardTitle>
               <CardDescription>
-                The most recent financial transactions
+                Detailed list of expenses for the selected period
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {filteredExpenses.slice(0, 5).map((expense) => (
-                  <div key={expense.id} className="flex justify-between items-center border-b pb-2">
-                    <div>
-                      <div className="font-medium">{expense.category} - {expense.description}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(expense.date)} · {
-                          vehicles?.find(v => v.id === expense.vehicleId)?.licensePlate 
-                          ? formatLicensePlate(vehicles.find(v => v.id === expense.vehicleId)!.licensePlate)
-                          : 'General'
-                        }
-                      </div>
-                    </div>
-                    <div className="font-semibold text-red-600">-{formatCurrency(Number(expense.amount))}</div>
-                  </div>
-                ))}
-                
-                {filteredReservations.slice(0, 5).map((reservation) => (
-                  <div key={reservation.id} className="flex justify-between items-center border-b pb-2">
-                    <div>
-                      <div className="font-medium">
-                        Reservation - {customers?.find(c => c.id === reservation.customerId)?.name || 'Unknown Customer'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(reservation.startDate)} to {formatDate(reservation.endDate)} · {
-                          vehicles?.find(v => v.id === reservation.vehicleId)?.licensePlate 
-                          ? formatLicensePlate(vehicles.find(v => v.id === reservation.vehicleId)!.licensePlate)
-                          : 'Unknown Vehicle'
-                        }
-                      </div>
-                    </div>
-                    <div className="font-semibold text-green-600">+{formatCurrency(Number(reservation.totalPrice || 0))}</div>
-                  </div>
-                ))}
-                
-                {filteredExpenses.length === 0 && filteredReservations.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    No transaction data available for the selected filters
-                  </p>
-                )}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses.length > 0 ? (
+                    filteredExpenses
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 10) // Show most recent 10 expenses
+                      .map(expense => {
+                        const vehicle = vehicles.find(v => v.id === expense.vehicleId);
+                        return (
+                          <TableRow key={expense.id}>
+                            <TableCell>{formatDate(expense.date)}</TableCell>
+                            <TableCell>
+                              {vehicle 
+                                ? `${vehicle.brand} ${vehicle.model} (${formatLicensePlate(vehicle.licensePlate)})` 
+                                : 'Unknown Vehicle'}
+                            </TableCell>
+                            <TableCell className="capitalize">{expense.category}</TableCell>
+                            <TableCell>{expense.description}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(Number(expense.amount))}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">No expenses found for the selected filters</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          {/* Expense Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Expense Visualization</CardTitle>
+              <CardDescription>
+                Visual breakdown by category
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-96">
+              <ExpenseChart data={expenseChartData} />
             </CardContent>
           </Card>
         </TabsContent>
         
-        {/* Vehicles Report Tab */}
+        {/* Vehicles Tab */}
         <TabsContent value="vehicles" className="space-y-6">
+          {/* Vehicle Utilization Stats */}
           <Card>
             <CardHeader>
-              <CardTitle>Vehicle Performance Report</CardTitle>
+              <CardTitle>Vehicle Utilization</CardTitle>
               <CardDescription>
-                Revenue and expense analysis by vehicle
+                Utilization rates across all vehicles
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {vehicles?.map(vehicle => {
-                  // Calculate revenue for this vehicle
-                  const vehicleReservations = filteredReservations.filter(r => r.vehicleId === vehicle.id);
-                  const vehicleRevenue = vehicleReservations.reduce((sum, r) => sum + Number(r.totalPrice || 0), 0);
-                  
-                  // Calculate expenses for this vehicle
-                  const vehicleExpenses = filteredExpenses.filter(e => e.vehicleId === vehicle.id);
-                  const vehicleExpenseTotal = vehicleExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-                  
-                  // Calculate profit
-                  const vehicleProfit = vehicleRevenue - vehicleExpenseTotal;
-                  
-                  // Calculate occupancy rate (days rented / total days in period)
-                  const totalDaysInPeriod = dateRange.from && dateRange.to 
-                    ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) 
-                    : 30; // Default to 30 days if no date range
-                    
-                  const daysRented = vehicleReservations.reduce((days, reservation) => {
-                    if (!dateRange.from || !dateRange.to) return days;
-                    
-                    const reservationStart = new Date(reservation.startDate) < dateRange.from ? dateRange.from : new Date(reservation.startDate);
-                    const reservationEnd = new Date(reservation.endDate) > dateRange.to ? dateRange.to : new Date(reservation.endDate);
-                    
-                    if (!reservationStart || !reservationEnd) return days;
-                    
-                    const reservationDays = Math.ceil((reservationEnd.getTime() - reservationStart.getTime()) / (1000 * 60 * 60 * 24));
-                    return days + reservationDays;
-                  }, 0);
-                  
-                  const occupancyRate = totalDaysInPeriod > 0 ? (daysRented / totalDaysInPeriod) * 100 : 0;
-                  
-                  return (
-                    <div key={vehicle.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">{vehicle.brand} {vehicle.model}</h3>
-                          <p className="text-muted-foreground">{formatLicensePlate(vehicle.licensePlate)}</p>
-                        </div>
-                        <div className={`font-bold ${vehicleProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(vehicleProfit)}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Revenue</p>
-                          <p className="font-medium">{formatCurrency(vehicleRevenue)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Expenses</p>
-                          <p className="font-medium">{formatCurrency(vehicleExpenseTotal)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Occupancy Rate</p>
-                          <p className="font-medium">{occupancyRate.toFixed(1)}%</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Reservations: {vehicleReservations.length}</p>
-                        <div className="h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-primary rounded-full" 
-                            style={{ width: `${occupancyRate}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {!vehicles?.length && (
-                  <p className="text-muted-foreground text-center py-4">
-                    No vehicle data available
-                  </p>
-                )}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>License Plate</TableHead>
+                    <TableHead>Days Reserved</TableHead>
+                    <TableHead>Reservations</TableHead>
+                    <TableHead>Utilization</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vehicleUtilizationData.length > 0 ? (
+                    vehicleUtilizationData
+                      .slice(0, 10) // Show top 10 vehicles
+                      .map(vehicle => (
+                        <TableRow key={vehicle.id}>
+                          <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
+                          <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
+                          <TableCell>{vehicle.daysReserved} days</TableCell>
+                          <TableCell>{vehicle.reservationCount}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress
+                                value={vehicle.utilizationPercentage}
+                                className="h-2 w-20"
+                              />
+                              <span>{vehicle.utilizationPercentage}%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">No vehicle utilization data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
           
+          {/* Vehicle Maintenance Costs */}
           <Card>
             <CardHeader>
-              <CardTitle>Maintenance Cost Analysis</CardTitle>
+              <CardTitle>Maintenance Costs by Vehicle</CardTitle>
               <CardDescription>
-                Expense breakdown by vehicle and category
+                Total maintenance and repair expenses per vehicle
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {vehicles?.map(vehicle => {
-                  const vehicleExpenses = filteredExpenses.filter(e => e.vehicleId === vehicle.id);
-                  
-                  if (vehicleExpenses.length === 0) return null;
-                  
-                  // Group expenses by category
-                  const expenseCategories: Record<string, number> = {};
-                  vehicleExpenses.forEach(expense => {
-                    if (!expenseCategories[expense.category]) {
-                      expenseCategories[expense.category] = 0;
-                    }
-                    expenseCategories[expense.category] += Number(expense.amount);
-                  });
-                  
-                  return (
-                    <div key={vehicle.id} className="border-b pb-4">
-                      <h3 className="font-semibold mb-2">{vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)})</h3>
-                      <div className="space-y-2">
-                        {Object.entries(expenseCategories).map(([category, amount]) => (
-                          <div key={category} className="flex justify-between">
-                            <span className="capitalize">{category}</span>
-                            <span>{formatCurrency(amount)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between font-bold pt-2 border-t">
-                          <span>Total</span>
-                          <span>{formatCurrency(vehicleExpenses.reduce((sum, e) => sum + Number(e.amount), 0))}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {filteredExpenses.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    No expense data available for the selected filters
-                  </p>
-                )}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>License Plate</TableHead>
+                    <TableHead>Expense Count</TableHead>
+                    <TableHead className="text-right">Total Cost</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {maintenanceCostByVehicle.filter(v => v.maintenanceCost > 0).length > 0 ? (
+                    maintenanceCostByVehicle
+                      .filter(v => v.maintenanceCost > 0)
+                      .slice(0, 10) // Show top 10 vehicles by maintenance cost
+                      .map(vehicle => (
+                        <TableRow key={vehicle.id}>
+                          <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
+                          <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
+                          <TableCell>{vehicle.expenseCount} entries</TableCell>
+                          <TableCell className="text-right">{formatCurrency(vehicle.maintenanceCost)}</TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">No maintenance cost data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          {/* Vehicle Utilization Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Vehicle Utilization Visualization</CardTitle>
+              <CardDescription>
+                Top vehicles by utilization percentage
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-96">
+              <UtilizationChart data={utilizationChartData} />
             </CardContent>
           </Card>
         </TabsContent>
         
-        {/* Customers Report Tab */}
+        {/* Customers Tab */}
         <TabsContent value="customers" className="space-y-6">
+          {/* Customer Booking Stats */}
           <Card>
             <CardHeader>
-              <CardTitle>Customer Activity Report</CardTitle>
+              <CardTitle>Customer Bookings</CardTitle>
               <CardDescription>
-                Customer booking patterns and revenue generation
+                Customer activity during the selected period
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {customers?.map(customer => {
-                  // Get reservations for this customer
-                  const customerReservations = filteredReservations.filter(r => r.customerId === customer.id);
-                  if (customerReservations.length === 0) return null;
-                  
-                  // Calculate total revenue from this customer
-                  const customerRevenue = customerReservations.reduce((sum, r) => sum + Number(r.totalPrice || 0), 0);
-                  
-                  // Calculate average reservation duration
-                  const totalDays = customerReservations.reduce((days, reservation) => {
-                    const start = new Date(reservation.startDate);
-                    const end = new Date(reservation.endDate);
-                    const reservationDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                    return days + reservationDays;
-                  }, 0);
-                  
-                  const averageDuration = totalDays / customerReservations.length;
-                  
-                  return (
-                    <div key={customer.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">{customer.name}</h3>
-                          <p className="text-muted-foreground">
-                            {customer.companyName || (customer.firstName && customer.lastName 
-                              ? `${customer.firstName} ${customer.lastName}` 
-                              : 'Individual Customer')}
-                          </p>
-                        </div>
-                        <div className="font-bold text-green-600">
-                          {formatCurrency(customerRevenue)}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Reservations</p>
-                          <p className="font-medium">{customerReservations.length}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Avg. Duration</p>
-                          <p className="font-medium">{averageDuration.toFixed(1)} days</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Avg. Value</p>
-                          <p className="font-medium">{formatCurrency(customerRevenue / customerReservations.length)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {!filteredReservations.length && (
-                  <p className="text-muted-foreground text-center py-4">
-                    No customer activity data for the selected period
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Operations Report Tab */}
-        <TabsContent value="operations" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fleet Utilization</CardTitle>
-              <CardDescription>
-                Overall fleet utilization statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Fleet Status Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="border rounded-lg p-4 text-center">
-                    <p className="text-muted-foreground text-sm">Total Vehicles</p>
-                    <p className="text-2xl font-bold">{vehicles?.length || 0}</p>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 text-center">
-                    <p className="text-muted-foreground text-sm">Currently Reserved</p>
-                    <p className="text-2xl font-bold">
-                      {reservations?.filter(r => {
-                        const now = new Date();
-                        const startDate = new Date(r.startDate);
-                        const endDate = new Date(r.endDate);
-                        return startDate <= now && endDate >= now;
-                      }).length || 0}
-                    </p>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 text-center">
-                    <p className="text-muted-foreground text-sm">Avg. Daily Revenue</p>
-                    <p className="text-2xl font-bold">
-                      {formatCurrency(totalRevenue / Math.max(1, dateRange.from && dateRange.to ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) : 30))}
-                    </p>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 text-center">
-                    <p className="text-muted-foreground text-sm">Maintenance Costs</p>
-                    <p className="text-2xl font-bold">
-                      {formatCurrency(filteredExpenses.filter(e => e.category === 'maintenance').reduce((sum, e) => sum + Number(e.amount), 0))}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Utilization Rate Chart/Graph would go here */}
-                <div className="border rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-4">Fleet Utilization Over Time</h3>
-                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
-                    <p className="text-muted-foreground">Utilization chart will be implemented here</p>
-                  </div>
-                </div>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className="text-right">Reservations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customerReservationStats.filter(c => c.reservationCount > 0).length > 0 ? (
+                    customerReservationStats
+                      .filter(c => c.reservationCount > 0)
+                      .slice(0, 10)
+                      .map(customer => (
+                        <TableRow key={customer.id}>
+                          <TableCell>{customer.name}</TableCell>
+                          <TableCell className="text-right">{customer.reservationCount}</TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-4">No customer activity data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
           
+          {/* Customer Reservation List */}
           <Card>
             <CardHeader>
-              <CardTitle>Maintenance Schedule</CardTitle>
+              <CardTitle>Recent Customer Reservations</CardTitle>
               <CardDescription>
-                Upcoming and recent maintenance activities
+                Details of recent bookings
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* You would load and display maintenance schedule data here */}
-                <p className="text-muted-foreground text-center py-4">
-                  Maintenance schedule data will be implemented in a future update
-                </p>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReservations.length > 0 ? (
+                    filteredReservations
+                      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                      .slice(0, 10)
+                      .map(reservation => {
+                        const vehicle = vehicles.find(v => v.id === reservation.vehicleId);
+                        const customer = customers.find(c => c.id === reservation.customerId);
+                        
+                        return (
+                          <TableRow key={reservation.id}>
+                            <TableCell>{customer?.name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              {vehicle 
+                                ? `${vehicle.brand} ${vehicle.model} (${formatLicensePlate(vehicle.licensePlate)})` 
+                                : 'Unknown Vehicle'}
+                            </TableCell>
+                            <TableCell>{formatDate(reservation.startDate)}</TableCell>
+                            <TableCell>{formatDate(reservation.endDate)}</TableCell>
+                            <TableCell className="capitalize">
+                              {reservation.status?.replace(/_/g, ' ')}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">No reservation data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
-
-// Helper function to prepare monthly revenue data for charts
-function prepareMonthlyRevenueData(reservations: Reservation[], expenses: Expense[]) {
-  const data: { name: string; revenue: number; expenses: number }[] = [];
-  
-  // Get earliest date from both datasets
-  let earliestDate = new Date();
-  if (reservations.length) {
-    const earliestReservation = new Date(Math.min(...reservations.map(r => new Date(r.startDate).getTime())));
-    earliestDate = earliestReservation < earliestDate ? earliestReservation : earliestDate;
-  }
-  if (expenses.length) {
-    const earliestExpense = new Date(Math.min(...expenses.map(e => new Date(e.date).getTime())));
-    earliestDate = earliestExpense < earliestDate ? earliestExpense : earliestDate;
-  }
-  
-  // Get latest date from both datasets
-  let latestDate = new Date(0); // Start with earliest possible date
-  if (reservations.length) {
-    const latestReservation = new Date(Math.max(...reservations.map(r => new Date(r.endDate).getTime())));
-    latestDate = latestReservation > latestDate ? latestReservation : latestDate;
-  }
-  if (expenses.length) {
-    const latestExpense = new Date(Math.max(...expenses.map(e => new Date(e.date).getTime())));
-    latestDate = latestExpense > latestDate ? latestExpense : latestDate;
-  }
-  
-  // Ensure we have at least current month if no data
-  if (latestDate.getTime() === 0) {
-    latestDate = new Date();
-  }
-  
-  // Start from the first day of the earliest month
-  const startDate = startOfMonth(earliestDate);
-  // End at the last day of the latest month
-  const endDate = endOfMonth(latestDate);
-  
-  // Iterate through each month
-  let currentDate = startDate;
-  while (currentDate <= endDate) {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const monthName = format(monthStart, 'MMM yyyy');
-    
-    // Calculate revenue for this month
-    const monthlyRevenue = reservations
-      .filter(reservation => {
-        const startDate = new Date(reservation.startDate);
-        const endDate = new Date(reservation.endDate);
-        // Consider reservation in this month if any part of it falls within the month
-        return (
-          (startDate <= monthEnd && startDate >= monthStart) || // Start date within month
-          (endDate <= monthEnd && endDate >= monthStart) || // End date within month
-          (startDate <= monthStart && endDate >= monthEnd) // Reservation spans entire month
-        );
-      })
-      .reduce((sum, reservation) => {
-        // For simplicity, we'll count the full reservation amount in the month it starts
-        // A more accurate approach would prorate the amount across months
-        return sum + Number(reservation.totalPrice || 0);
-      }, 0);
-    
-    // Calculate expenses for this month
-    const monthlyExpenses = expenses
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate >= monthStart && expenseDate <= monthEnd;
-      })
-      .reduce((sum, expense) => sum + Number(expense.amount), 0);
-    
-    // Add data point for this month
-    data.push({
-      name: monthName,
-      revenue: monthlyRevenue,
-      expenses: monthlyExpenses
-    });
-    
-    // Move to next month
-    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-  }
-  
-  return data;
 }
