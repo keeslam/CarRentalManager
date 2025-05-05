@@ -182,19 +182,33 @@ export function VehicleForm({
         await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
       }
       
+      // Parse the response to get the created/updated vehicle data
+      let vehicleData;
+      try {
+        vehicleData = await response.json();
+      } catch (e) {
+        console.error("Failed to parse response JSON:", e);
+        vehicleData = { id: initialData?.id };
+      }
+      
       // Show success message
       toast({
         title: `Vehicle ${editMode ? "updated" : "created"} successfully`,
         description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
       });
       
-      // Navigate to the appropriate page
-      if (editMode && initialData?.id) {
-        // Navigate to vehicle details page when updating
-        navigate(`/vehicles/${initialData.id}`);
-      } else {
-        // Navigate to vehicles list for new vehicles
-        navigate("/vehicles");
+      // If a success callback was provided, call it with the vehicle data
+      if (onSuccess && typeof onSuccess === 'function') {
+        onSuccess(vehicleData);
+      } else if (redirectToList) {
+        // Navigate to the appropriate page only if redirectToList is true
+        if (editMode && initialData?.id) {
+          // Navigate to vehicle details page when updating
+          navigate(`/vehicles/${initialData.id}`);
+        } else {
+          // Navigate to vehicles list for new vehicles
+          navigate("/vehicles");
+        }
       }
     },
     onError: (error: any) => {
@@ -1223,13 +1237,17 @@ export function VehicleForm({
             </Tabs>
             
             <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/vehicles")}
-              >
-                Cancel
-              </Button>
+              {customCancelButton ? (
+                customCancelButton
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/vehicles")}
+                >
+                  Cancel
+                </Button>
+              )}
               <Button
                 type="button" 
                 disabled={createVehicleMutation.isPending}
