@@ -189,23 +189,33 @@ export class DatabaseStorage implements IStorage {
       
       // Only update the specific fields based on the status
       if (status === 'opnaam') {
+        // Update primary field with tracking info
         updateObject.registeredTo = "true";
         updateObject.registeredToDate = userData.date;
         updateObject.registeredToBy = userData.username;
-        // When enabling "opnaam", automatically disable "company"
-        updateObject.company = "false";
-        updateObject.companyBy = userData.username;
+        
+        // When enabling "opnaam", automatically disable "company" but KEEP original tracking
+        if (currentVehicle.company === "true") {
+          updateObject.company = "false";
+          // Don't update companyBy or companyDate, leave original tracking intact
+        }
       } else if (status === 'not-opnaam') {
+        // Only update the relevant field with tracking
         updateObject.registeredTo = "false";
         updateObject.registeredToBy = userData.username;
       } else if (status === 'bv') {
+        // Update primary field with tracking info
         updateObject.company = "true";
         updateObject.companyDate = userData.date;
         updateObject.companyBy = userData.username;
-        // When enabling "bv", automatically disable "registeredTo"
-        updateObject.registeredTo = "false";
-        updateObject.registeredToBy = userData.username;
+        
+        // When enabling "bv", automatically disable "registeredTo" but KEEP original tracking
+        if (currentVehicle.registeredTo === "true") {
+          updateObject.registeredTo = "false";
+          // Don't update registeredToBy or registeredToDate, leave original tracking intact
+        }
       } else if (status === 'not-bv') {
+        // Only update the relevant field with tracking
         updateObject.company = "false";
         updateObject.companyBy = userData.username;
       } else {
