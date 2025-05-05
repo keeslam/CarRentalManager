@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { insertReservationSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CustomerForm } from "@/components/customers/customer-form";
+import { VehicleQuickForm } from "@/components/vehicles/vehicle-quick-form";
 import { 
   Form, 
   FormControl, 
@@ -588,21 +589,17 @@ export function ReservationForm({
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4">
-                                  {/* Simplified vehicle form could go here */}
-                                  <p className="text-center text-muted-foreground">
-                                    Vehicle creation form would go here. For this MVP version,
-                                    please use the Vehicles section to create a new vehicle first.
-                                  </p>
+                                  {/* Import the VehicleQuickForm component */}
+                                  <VehicleQuickForm 
+                                    onSuccess={(vehicle) => {
+                                      // Set the new vehicle in the form
+                                      form.setValue("vehicleId", vehicle.id.toString());
+                                      // Close the dialog
+                                      setVehicleDialogOpen(false);
+                                    }}
+                                    onCancel={() => setVehicleDialogOpen(false)}
+                                  />
                                 </div>
-                                <DialogFooter>
-                                  <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    onClick={() => setVehicleDialogOpen(false)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </DialogFooter>
                               </DialogContent>
                             </Dialog>
                           </div>
