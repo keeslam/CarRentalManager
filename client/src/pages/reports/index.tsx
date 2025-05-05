@@ -17,7 +17,8 @@ import { isTrueValue } from "@/lib/utils";
 import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { 
   Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
-  DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench 
+  DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench,
+  Printer, RefreshCw, Search, XCircle
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
@@ -459,10 +460,604 @@ export default function ReportsPage() {
     };
   })();
 
-  // Function to handle exporting reports
-  const exportReport = (reportType: string) => {
-    // This would be implemented to generate a PDF or CSV export of the current report
-    console.log(`Exporting ${reportType} report for date range:`, dateRange);
+  // Function to handle printing reports
+  const printReport = (reportType: string) => {
+    // Create a hidden iframe for printing specific content
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    
+    document.body.appendChild(printFrame);
+    
+    // Wait for iframe to load before adding content
+    printFrame.onload = () => {
+      const doc = printFrame.contentDocument || printFrame.contentWindow?.document;
+      
+      if (!doc) {
+        console.error('Could not create print document');
+        return;
+      }
+      
+      // Add base styles
+      doc.head.innerHTML = `
+        <title>Print Report: ${reportType}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+          }
+          h2 {
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .report-meta {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+          }
+          .stat-card {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 15px;
+          }
+          .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+          }
+          .stat-label {
+            font-size: 14px;
+            color: #666;
+          }
+          .status-expired {
+            color: #e11d48;
+            font-weight: bold;
+          }
+          .status-expiring {
+            color: #fb923c;
+            font-weight: bold;
+          }
+          .status-valid {
+            color: #22c55e;
+          }
+          .status-unknown {
+            color: #94a3b8;
+            font-style: italic;
+          }
+          .company-info {
+            margin-bottom: 20px;
+            text-align: right;
+          }
+          .flex-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .flex-item {
+            flex: 1;
+            padding: 10px;
+          }
+          .text-center {
+            text-align: center;
+          }
+        </style>
+      `;
+      
+      // Get date range string
+      const dateRangeString = dateRange.from && dateRange.to 
+        ? `${format(dateRange.from, 'dd/MM/yyyy')} to ${format(dateRange.to, 'dd/MM/yyyy')}`
+        : 'All Data';
+        
+      let content = '';
+      
+      // Create different content based on report type
+      switch (reportType) {
+        case 'apk':
+          // APK expiration report
+          content = `
+            <div class="company-info">
+              <h2>Report Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</h2>
+            </div>
+            <h1>APK Expiration Report</h1>
+            <div class="report-meta">
+              Date range: ${dateRangeString}
+            </div>
+            
+            <div class="flex-container">
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${vehiclesWithExpiredApk.length}</div>
+                  <div class="stat-label">Expired APKs</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${vehiclesWithApkExpiringSoon.length}</div>
+                  <div class="stat-label">APKs Expiring Soon (30 days)</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${vehiclesWithValidApk.length}</div>
+                  <div class="stat-label">Valid APKs</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${vehiclesWithoutApkDate.length}</div>
+                  <div class="stat-label">Vehicles without APK Date</div>
+                </div>
+              </div>
+            </div>
+            
+            <h2>Expired APKs</h2>
+            ${generateAPKTable(vehiclesWithExpiredApk)}
+            
+            <h2>APKs Expiring Soon (Next 30 Days)</h2>
+            ${generateAPKTable(vehiclesWithApkExpiringSoon)}
+            
+            <h2>Valid APKs</h2>
+            ${generateAPKTable(vehiclesWithValidApk)}
+          `;
+          break;
+          
+        case 'utilization':
+          // Vehicle utilization report
+          content = `
+            <div class="company-info">
+              <h2>Report Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</h2>
+            </div>
+            <h1>Vehicle Utilization Report</h1>
+            <div class="report-meta">
+              Date range: ${dateRangeString}
+            </div>
+            
+            <div class="flex-container">
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">
+                    ${vehicleUtilizationData.length > 0 
+                      ? `${Math.round(vehicleUtilizationData.reduce((sum, v) => sum + v.utilizationPercentage, 0) / vehicleUtilizationData.length)}%`
+                      : '0%'
+                    }
+                  </div>
+                  <div class="stat-label">
+                    ${dateRange.from && dateRange.to && dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050
+                      ? `Based on yearly utilization of ${vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} vehicles`
+                      : `Average across ${vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} active vehicles`
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${filteredReservations.length}</div>
+                  <div class="stat-label">Total Reservations</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">
+                    ${vehicleUtilizationData.reduce((sum, v) => sum + v.daysReserved, 0)}
+                  </div>
+                  <div class="stat-label">Total Days Reserved</div>
+                </div>
+              </div>
+            </div>
+            
+            <h2>Vehicle Utilization Details</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>License Plate</th>
+                  <th>Days Reserved</th>
+                  <th>Reservations</th>
+                  <th>Utilization %</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vehicleUtilizationData.sort((a, b) => b.utilizationPercentage - a.utilizationPercentage)
+                  .map(vehicle => `
+                    <tr>
+                      <td>${vehicle.brand} ${vehicle.model}</td>
+                      <td>${formatLicensePlate(vehicle.licensePlate)}</td>
+                      <td>${vehicle.daysReserved} days</td>
+                      <td>${vehicle.reservationCount}</td>
+                      <td>${vehicle.utilizationPercentage}%</td>
+                    </tr>
+                  `).join('')}
+              </tbody>
+            </table>
+          `;
+          break;
+          
+        case 'expenses':
+          // Expense report
+          content = `
+            <div class="company-info">
+              <h2>Report Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</h2>
+            </div>
+            <h1>Expense Report</h1>
+            <div class="report-meta">
+              Date range: ${dateRangeString}${selectedCategory !== 'all' ? ` | Category: ${selectedCategory}` : ''}
+              ${selectedVehicle !== 'all' ? ` | Vehicle: ${vehicles.find(v => v.id.toString() === selectedVehicle)?.licensePlate || ''}` : ''}
+            </div>
+            
+            <div class="flex-container">
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${formatCurrency(Number(totalExpenses))}</div>
+                  <div class="stat-label">Total Expenses</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${filteredExpenses.length}</div>
+                  <div class="stat-label">Number of Expenses</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${formatCurrency(Number(avgExpensePerVehicle))}</div>
+                  <div class="stat-label">Average per Vehicle</div>
+                </div>
+              </div>
+            </div>
+            
+            <h2>Expense Breakdown</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Number of Expenses</th>
+                  <th>Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.entries(expensesByCategory).length > 0 
+                  ? Object.entries(expensesByCategory)
+                      .sort(([_, a], [__, b]) => b - a)
+                      .map(([category, amount]) => `
+                        <tr>
+                          <td style="text-transform: capitalize;">${category}</td>
+                          <td>${filteredExpenses.filter(e => e.category === category).length}</td>
+                          <td>${formatCurrency(Number(amount))}</td>
+                        </tr>
+                      `).join('')
+                  : '<tr><td colspan="3" class="text-center">No expenses found for the selected filters</td></tr>'
+                }
+              </tbody>
+            </table>
+            
+            <h2>Recent Expenses Detail</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Vehicle</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredExpenses.length > 0 
+                  ? filteredExpenses
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 20)
+                      .map(expense => {
+                        const vehicle = vehicles.find(v => v.id === expense.vehicleId);
+                        return `
+                          <tr>
+                            <td>${formatDate(expense.date)}</td>
+                            <td>${vehicle 
+                              ? `${vehicle.brand} ${vehicle.model} (${formatLicensePlate(vehicle.licensePlate)})` 
+                              : 'Unknown Vehicle'}</td>
+                            <td style="text-transform: capitalize;">${expense.category}</td>
+                            <td>${expense.description}</td>
+                            <td>${formatCurrency(Number(expense.amount))}</td>
+                          </tr>
+                        `;
+                      }).join('')
+                  : '<tr><td colspan="5" class="text-center">No expenses found for the selected filters</td></tr>'
+                }
+              </tbody>
+            </table>
+          `;
+          break;
+          
+        case 'warranty':
+          // Warranty expiration report
+          const today = new Date();
+          const vehiclesWithWarranty = vehicles.filter(v => v.warrantyEndDate);
+          
+          // Sort vehicles by warranty end date
+          const sortedVehiclesByWarranty = [...vehiclesWithWarranty].sort((a, b) => {
+            if (!a.warrantyEndDate) return 1;
+            if (!b.warrantyEndDate) return -1;
+            return new Date(a.warrantyEndDate).getTime() - new Date(b.warrantyEndDate).getTime();
+          });
+          
+          const expiredWarranties = sortedVehiclesByWarranty.filter(v => 
+            v.warrantyEndDate && new Date(v.warrantyEndDate) < today
+          );
+          
+          const expiringWarranties = sortedVehiclesByWarranty.filter(v => {
+            if (!v.warrantyEndDate) return false;
+            const warrantyDate = new Date(v.warrantyEndDate);
+            const daysUntil = differenceInDays(warrantyDate, today);
+            return daysUntil >= 0 && daysUntil <= 90; // Expiring in the next 90 days
+          });
+          
+          const validWarranties = sortedVehiclesByWarranty.filter(v => {
+            if (!v.warrantyEndDate) return false;
+            const warrantyDate = new Date(v.warrantyEndDate);
+            const daysUntil = differenceInDays(warrantyDate, today);
+            return daysUntil > 90;
+          });
+          
+          // Function to generate warranty table
+          const generateWarrantyTable = (vehicles: Vehicle[]) => `
+            <table>
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>License Plate</th>
+                  <th>Warranty End Date</th>
+                  <th>Days Remaining</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vehicles.length > 0 
+                  ? vehicles.map(v => {
+                      const warrantyDate = v.warrantyEndDate ? new Date(v.warrantyEndDate) : null;
+                      const daysRemaining = warrantyDate ? differenceInDays(warrantyDate, today) : null;
+                      
+                      let statusClass = 'status-valid';
+                      if (daysRemaining !== null) {
+                        if (daysRemaining < 0) {
+                          statusClass = 'status-expired';
+                        } else if (daysRemaining <= 90) {
+                          statusClass = 'status-expiring';
+                        }
+                      }
+                      
+                      return `
+                        <tr>
+                          <td>${v.brand} ${v.model}</td>
+                          <td>${formatLicensePlate(v.licensePlate)}</td>
+                          <td>${v.warrantyEndDate ? format(new Date(v.warrantyEndDate), 'dd/MM/yyyy') : 'N/A'}</td>
+                          <td class="${statusClass}">${daysRemaining !== null 
+                            ? daysRemaining < 0 
+                              ? `Expired (${Math.abs(daysRemaining)} days ago)` 
+                              : `${daysRemaining} days` 
+                            : 'N/A'}</td>
+                        </tr>
+                      `;
+                    }).join('')
+                  : '<tr><td colspan="4" class="text-center">No vehicles found</td></tr>'
+                }
+              </tbody>
+            </table>
+          `;
+          
+          content = `
+            <div class="company-info">
+              <h2>Report Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</h2>
+            </div>
+            <h1>Warranty Expiration Report</h1>
+            
+            <div class="flex-container">
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${expiredWarranties.length}</div>
+                  <div class="stat-label">Expired Warranties</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${expiringWarranties.length}</div>
+                  <div class="stat-label">Warranties Expiring Soon (90 days)</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${validWarranties.length}</div>
+                  <div class="stat-label">Valid Warranties</div>
+                </div>
+              </div>
+              <div class="flex-item">
+                <div class="stat-card">
+                  <div class="stat-value">${vehicles.length - vehiclesWithWarranty.length}</div>
+                  <div class="stat-label">Vehicles without Warranty Date</div>
+                </div>
+              </div>
+            </div>
+            
+            <h2>Expired Warranties</h2>
+            ${generateWarrantyTable(expiredWarranties)}
+            
+            <h2>Warranties Expiring Soon (Next 90 Days)</h2>
+            ${generateWarrantyTable(expiringWarranties)}
+            
+            <h2>Valid Warranties</h2>
+            ${generateWarrantyTable(validWarranties)}
+          `;
+          break;
+          
+        case 'customer-impact':
+          // Customer Impact Report
+          content = `
+            <div class="company-info">
+              <h2>Report Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</h2>
+            </div>
+            <h1>Customer Impact Analysis Report</h1>
+            <div class="report-meta">
+              Date range: ${dateRangeString}
+            </div>
+            
+            <h2>Customer Usage and Expense Impact</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Reservations</th>
+                  <th>Total Days</th>
+                  <th>Vehicles Used</th>
+                  <th>Related Expenses</th>
+                  <th>Expense Per Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${customerReservationStats.length > 0 
+                  ? customerReservationStats.map(customer => `
+                      <tr>
+                        <td>${customer.name}</td>
+                        <td>${customer.reservationCount}</td>
+                        <td>${customer.totalReservationDays} days</td>
+                        <td>${customer.vehicleCount}</td>
+                        <td>${formatCurrency(Number(customer.totalExpenses))}</td>
+                        <td>${formatCurrency(Number(customer.expensePerDay))}</td>
+                      </tr>
+                    `).join('')
+                  : '<tr><td colspan="6" class="text-center">No customer data found for the selected filters</td></tr>'
+                }
+              </tbody>
+            </table>
+            
+            <h2>Customer Expense Breakdown by Category</h2>
+            ${customerReservationStats.length > 0 
+              ? customerReservationStats.filter(c => c.totalExpenses > 0).map(customer => `
+                  <h3>${customer.name}</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(customer.expensesByCategory).length > 0 
+                        ? Object.entries(customer.expensesByCategory)
+                            .sort(([_, a], [__, b]) => b - a)
+                            .map(([category, amount]) => `
+                              <tr>
+                                <td style="text-transform: capitalize;">${category}</td>
+                                <td>${formatCurrency(Number(amount))}</td>
+                              </tr>
+                            `).join('')
+                        : '<tr><td colspan="2" class="text-center">No expenses recorded</td></tr>'
+                      }
+                    </tbody>
+                  </table>
+                `).join('')
+              : '<p class="text-center">No customer expense data available</p>'
+            }
+          `;
+          break;
+          
+        default:
+          content = '<h1>Report content not available</h1>';
+      }
+      
+      // Generate APK table helper function
+      function generateAPKTable(vehicles: (Vehicle & { apkStatus: string, daysUntilExpiry: number | null })[]) {
+        return `
+          <table>
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>License Plate</th>
+                <th>APK Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vehicles.length > 0 
+                ? vehicles.map(v => {
+                    let statusClass = '';
+                    let statusText = '';
+                    
+                    switch(v.apkStatus) {
+                      case 'expired':
+                        statusClass = 'status-expired';
+                        statusText = `Expired (${Math.abs(v.daysUntilExpiry || 0)} days ago)`;
+                        break;
+                      case 'expiring_soon':
+                        statusClass = 'status-expiring';
+                        statusText = `Expiring soon (${v.daysUntilExpiry} days)`;
+                        break;
+                      case 'valid':
+                        statusClass = 'status-valid';
+                        statusText = `Valid (${v.daysUntilExpiry} days)`;
+                        break;
+                      default:
+                        statusClass = 'status-unknown';
+                        statusText = 'No APK date set';
+                    }
+                    
+                    return `
+                      <tr>
+                        <td>${v.brand} ${v.model}</td>
+                        <td>${formatLicensePlate(v.licensePlate)}</td>
+                        <td>${v.apkDate ? format(new Date(v.apkDate), 'dd/MM/yyyy') : 'Not set'}</td>
+                        <td class="${statusClass}">${statusText}</td>
+                      </tr>
+                    `;
+                  }).join('')
+                : '<tr><td colspan="4" class="text-center">No vehicles found</td></tr>'
+              }
+            </tbody>
+          </table>
+        `;
+      }
+      
+      // Add content to document body
+      doc.body.innerHTML = content;
+      
+      // Print the document
+      setTimeout(() => {
+        printFrame.contentWindow?.print();
+        
+        // Remove the frame after printing
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1000);
+      }, 500);
+    };
+    
+    // Set source to trigger load
+    printFrame.src = 'about:blank';
   };
 
   return (
@@ -644,14 +1239,25 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* Vehicle Utilization Chart */}
             <Card className="xl:col-span-1">
-              <CardHeader>
-                <CardTitle>Vehicle Utilization</CardTitle>
-                <CardDescription>
-                  {dateRange.from && dateRange.to && dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050
-                    ? "Top 10 vehicles by total yearly utilization"
-                    : "Top 10 vehicles by utilization rate for selected period"
-                  }
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Vehicle Utilization</CardTitle>
+                  <CardDescription>
+                    {dateRange.from && dateRange.to && dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050
+                      ? "Top 10 vehicles by total yearly utilization"
+                      : "Top 10 vehicles by utilization rate for selected period"
+                    }
+                  </CardDescription>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('utilization')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
               </CardHeader>
               <CardContent className="h-80">
                 <UtilizationChart data={utilizationChartData} />
@@ -736,11 +1342,22 @@ export default function ReportsPage() {
         <TabsContent value="expenses" className="space-y-6">
           {/* Expense Summary */}
           <Card>
-            <CardHeader>
-              <CardTitle>Expense Breakdown by Category</CardTitle>
-              <CardDescription>
-                Detailed breakdown of expenses for the selected period
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Expense Breakdown by Category</CardTitle>
+                <CardDescription>
+                  Detailed breakdown of expenses for the selected period
+                </CardDescription>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => printReport('expenses')}
+                className="h-8 gap-1"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -934,7 +1551,18 @@ export default function ReportsPage() {
                   Vehicle inspection status and expiration dates
                 </CardDescription>
               </div>
-              <AlertTriangle className={`h-5 w-5 ${apkExpiringVehicles.length > 0 ? 'text-amber-500' : 'text-green-500'}`} />
+              <div className="flex items-center gap-2">
+                <AlertTriangle className={`h-5 w-5 ${apkExpiringVehicles.length > 0 ? 'text-amber-500' : 'text-green-500'}`} />
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('apk')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
