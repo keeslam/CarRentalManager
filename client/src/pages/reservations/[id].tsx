@@ -165,7 +165,7 @@ export default function ReservationDetails() {
             </Button>
           </Link>
           <div className="flex gap-2">
-            <Link href={`/api/contracts/generate/${id}`} target="_blank">
+            <Link href={`/documents/contract/${id}`}>
               <Button>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
@@ -360,7 +360,7 @@ export default function ReservationDetails() {
             <div className="pt-4">
               <h3 className="text-sm font-medium text-gray-500 mb-3">Contract Documents</h3>
               <div className="space-y-2">
-                <Link href={`/api/contracts/generate/${id}`} target="_blank">
+                <Link href={`/documents/contract/${id}`}>
                   <Button variant="outline" className="w-full justify-start" size="sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
