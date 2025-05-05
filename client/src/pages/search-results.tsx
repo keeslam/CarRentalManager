@@ -12,13 +12,9 @@ import { Vehicle } from '@shared/schema';
 import type { Customer } from '@shared/schema';
 import type { Reservation } from '@shared/schema';
 
-type SearchResultsProps = {
-  query?: string;
-};
-
-const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
+const SearchResults: FC = () => {
   const [, setLocation] = useLocation();
-  const [query, setQuery] = useState(initialQuery || '');
+  const [query, setQuery] = useState('');
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
 
