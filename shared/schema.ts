@@ -78,6 +78,7 @@ export const vehicles = pgTable("vehicles", {
   damageCheckAttachmentDate: text("damage_check_attachment_date"),
   creationDate: text("creation_date"),
   createdBy: text("created_by"),
+  updatedBy: text("updated_by"), // Added missing updatedBy column
   departureMileage: integer("departure_mileage"),
   returnMileage: integer("return_mileage"),
   roadsideAssistance: boolean("roadside_assistance"),
