@@ -60,7 +60,10 @@ const formSchema = insertReservationSchema.extend({
   ]),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
-  totalPrice: z.number().optional(),
+  totalPrice: z.union([
+    z.number().optional(),
+    z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
+  ]).optional(),
   damageCheckFile: z.instanceof(File).optional(),
   departureMileage: z.union([
     z.number().min(1, "Please enter a valid mileage"),
