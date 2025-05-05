@@ -181,6 +181,76 @@ export default function ReportsPage() {
     };
   }).sort((a, b) => b.maintenanceCost - a.maintenanceCost);
   
+  // Define APK status types
+  type ApkStatus = 'expired' | 'expiring_soon' | 'valid' | 'unknown';
+  
+  // Process APK date information for all vehicles
+  const today = new Date();
+  const apkStatusList = vehicles.map(vehicle => {
+    // Handle vehicles without APK date set
+    if (!vehicle.apkDate) {
+      return {
+        ...vehicle,
+        apkStatus: 'unknown' as ApkStatus,
+        daysUntilExpiry: null as number | null
+      };
+    }
+    
+    const apkDate = new Date(vehicle.apkDate);
+    const daysUntilExpiry = differenceInDays(apkDate, today);
+    
+    let apkStatus: ApkStatus = 'valid';
+    if (daysUntilExpiry < 0) {
+      apkStatus = 'expired';
+    } else if (daysUntilExpiry < 30) {
+      apkStatus = 'expiring_soon';
+    }
+    
+    return {
+      ...vehicle,
+      apkStatus,
+      daysUntilExpiry
+    };
+  }).sort((a, b) => {
+    // Sort by APK status priority (expired, expiring soon, valid, unknown)
+    type StatusPriority = {
+      expired: number;
+      expiring_soon: number;
+      valid: number;
+      unknown: number;
+    };
+    
+    const statusPriority: StatusPriority = {
+      expired: 0,
+      expiring_soon: 1,
+      valid: 2,
+      unknown: 3
+    };
+    
+    // First sort by status priority
+    const aStatus = a.apkStatus as keyof StatusPriority;
+    const bStatus = b.apkStatus as keyof StatusPriority;
+    const statusDiff = statusPriority[aStatus] - statusPriority[bStatus];
+    if (statusDiff !== 0) return statusDiff;
+    
+    // Then sort by days until expiry for same status
+    // Handle null values for unknown APK dates
+    if (a.daysUntilExpiry === null && b.daysUntilExpiry === null) return 0;
+    if (a.daysUntilExpiry === null) return 1;
+    if (b.daysUntilExpiry === null) return -1;
+    
+    return a.daysUntilExpiry - b.daysUntilExpiry;
+  });
+  
+  // Calculate APK statistics
+  const vehiclesWithValidApk = apkStatusList.filter(v => v.apkStatus === 'valid');
+  const vehiclesWithApkExpiringSoon = apkStatusList.filter(v => v.apkStatus === 'expiring_soon');
+  const vehiclesWithExpiredApk = apkStatusList.filter(v => v.apkStatus === 'expired');
+  const vehiclesWithoutApkDate = apkStatusList.filter(v => v.apkStatus === 'unknown');
+  
+  // Vehicles with APK expiring within 30 days (for alerts)
+  const apkExpiringVehicles = [...vehiclesWithApkExpiringSoon, ...vehiclesWithExpiredApk];
+  
   // Calculate customer reservation stats with expense impact analysis
   const customerReservationStats = customers.map(customer => {
     const customerReservations = filteredReservations.filter(r => r.customerId === customer.id);
@@ -746,6 +816,96 @@ export default function ReportsPage() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+          
+          {/* APK Inspection Status */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>APK Inspection Overview</CardTitle>
+                <CardDescription>
+                  Vehicle inspection status and expiration dates
+                </CardDescription>
+              </div>
+              <AlertTriangle className={`h-5 w-5 ${apkExpiringVehicles.length > 0 ? 'text-amber-500' : 'text-green-500'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* APK Status Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col p-4 rounded-md bg-slate-50">
+                    <span className="text-muted-foreground text-sm">Vehicles with valid APK</span>
+                    <span className="text-2xl font-bold">{vehiclesWithValidApk.length}</span>
+                  </div>
+                  <div className="flex flex-col p-4 rounded-md bg-amber-50">
+                    <span className="text-muted-foreground text-sm">APK expiring in 30 days</span>
+                    <span className="text-2xl font-bold">{vehiclesWithApkExpiringSoon.length}</span>
+                  </div>
+                  <div className="flex flex-col p-4 rounded-md bg-red-50">
+                    <span className="text-muted-foreground text-sm">Expired APK</span>
+                    <span className="text-2xl font-bold">{vehiclesWithExpiredApk.length}</span>
+                  </div>
+                </div>
+                
+                {/* APK Expiry Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>License Plate</TableHead>
+                      <TableHead>APK Expiry</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {apkStatusList.length > 0 ? (
+                      apkStatusList
+                        .slice(0, 10)
+                        .map(vehicle => {
+                          const daysUntilExpiry = vehicle.daysUntilExpiry;
+                          let statusClass = '';
+                          let statusText = '';
+                          
+                          if (daysUntilExpiry === null) {
+                            statusClass = 'bg-slate-100 text-slate-800';
+                            statusText = 'Not set';
+                          } else if (daysUntilExpiry < 0) {
+                            statusClass = 'bg-red-100 text-red-800';
+                            statusText = 'Expired';
+                          } else if (daysUntilExpiry < 30) {
+                            statusClass = 'bg-amber-100 text-amber-800';
+                            statusText = `Expires in ${daysUntilExpiry} days`;
+                          } else {
+                            statusClass = 'bg-green-100 text-green-800';
+                            statusText = 'Valid';
+                          }
+                          
+                          return (
+                            <TableRow key={vehicle.id} className={
+                              daysUntilExpiry === null ? 'bg-slate-50' : 
+                              daysUntilExpiry < 0 ? 'bg-red-50' : 
+                              daysUntilExpiry < 30 ? 'bg-amber-50' : ''
+                            }>
+                              <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
+                              <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
+                              <TableCell>{vehicle.apkDate ? formatDate(vehicle.apkDate) : 'Not set'}</TableCell>
+                              <TableCell className="text-right">
+                                <span className={`px-2 py-1 rounded-full text-xs ${statusClass}`}>
+                                  {statusText}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4">No APK data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
           
