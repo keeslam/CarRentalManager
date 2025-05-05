@@ -15,6 +15,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { formatReservationStatus } from "@/lib/format-utils";
+import { formatCurrency } from "@/lib/utils";
+import { Calendar, User, Car, CreditCard, Edit, Eye } from "lucide-react";
 
 // Calendar view options
 type CalendarView = "month";
@@ -408,24 +416,163 @@ export default function ReservationCalendarPage() {
                             const isPickupDay = isSameDay(day, parseISO(res.startDate));
                             const isReturnDay = isSameDay(day, parseISO(res.endDate));
                             
+                            const rentalDuration = differenceInDays(
+                              parseISO(res.endDate),
+                              parseISO(res.startDate)
+                            ) + 1;
+                            
                             return (
-                              <div 
-                                key={res.id}
-                                className={`px-1 py-0.5 text-xs truncate cursor-pointer ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
-                                title={`${displayLicensePlate(res.vehicle?.licensePlate || '')} - ${res.customer?.name || 'Reserved'} (${isPickupDay ? 'Pickup' : isReturnDay ? 'Return' : 'Reserved'})`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.location.href = `/reservations/${res.id}`;
-                                }}
-                              >
-                                {displayLicensePlate(res.vehicle?.licensePlate || '')}
-                                {isPickupDay && 
-                                  <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
-                                }
-                                {isReturnDay && 
-                                  <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
-                                }
-                              </div>
+                              <HoverCard key={res.id} openDelay={300} closeDelay={200}>
+                                <HoverCardTrigger asChild>
+                                  <div 
+                                    className={`px-1 py-0.5 text-xs truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.location.href = `/reservations/${res.id}`;
+                                    }}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <div className="truncate">
+                                        {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                        {isPickupDay && 
+                                          <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                        }
+                                        {isReturnDay && 
+                                          <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                        }
+                                      </div>
+                                      
+                                      {/* Edit button - only visible on hover */}
+                                      <Button
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Prevent triggering the parent onClick
+                                          window.location.href = `/reservations/${res.id}/edit`;
+                                        }}
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-3 w-3 opacity-0 group-hover/res:opacity-100 transition-opacity p-0"
+                                      >
+                                        <Edit className="h-2 w-2" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </HoverCardTrigger>
+                                <HoverCardContent 
+                                  className="w-80 p-0 shadow-lg" 
+                                  side="right"
+                                  align="start"
+                                >
+                                  {/* Reservation Preview Card */}
+                                  <div className="space-y-2">
+                                    {/* Header with status badge */}
+                                    <div className="flex items-center justify-between border-b p-3">
+                                      <h4 className="font-medium">Reservation Details</h4>
+                                      <Badge 
+                                        className={`${
+                                          res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
+                                          res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
+                                          res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
+                                          res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
+                                          'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
+                                        }`}
+                                        variant="outline"
+                                      >
+                                        {formatReservationStatus(res.status)}
+                                      </Badge>
+                                    </div>
+                                    
+                                    {/* Vehicle details */}
+                                    <div className="px-3 py-1 flex items-start space-x-2">
+                                      <Car className="h-4 w-4 text-gray-500 mt-0.5" />
+                                      <div>
+                                        <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
+                                        <div className="text-xs text-gray-600">{displayLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Customer details */}
+                                    <div className="px-3 py-1 flex items-start space-x-2">
+                                      <User className="h-4 w-4 text-gray-500 mt-0.5" />
+                                      <div>
+                                        <div className="font-medium text-sm">{res.customer?.name}</div>
+                                        <div className="text-xs text-gray-600">{res.customer?.email || 'No email provided'}</div>
+                                        {res.customer?.phone && <div className="text-xs text-gray-600">{res.customer?.phone}</div>}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Dates */}
+                                    <div className="px-3 py-1 flex items-start space-x-2">
+                                      <Calendar className="h-4 w-4 text-gray-500 mt-0.5" />
+                                      <div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-gray-500">Start:</span> {format(parseISO(res.startDate), 'MMM d, yyyy')}
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-500">End:</span> {format(parseISO(res.endDate), 'MMM d, yyyy')}
+                                          </div>
+                                          <div className="col-span-2">
+                                            <span className="text-gray-500">Duration:</span> {rentalDuration} {rentalDuration === 1 ? 'day' : 'days'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Price and mileage */}
+                                    <div className="px-3 py-1 flex items-start space-x-2">
+                                      <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        {res.price && (
+                                          <div>
+                                            <span className="text-gray-500">Price:</span> {formatCurrency(res.price)}
+                                          </div>
+                                        )}
+                                        {res.startMileage && (
+                                          <div>
+                                            <span className="text-gray-500">Start Mileage:</span> {res.startMileage} km
+                                          </div>
+                                        )}
+                                        {res.returnMileage && (
+                                          <div>
+                                            <span className="text-gray-500">Return Mileage:</span> {res.returnMileage} km
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Notes if available */}
+                                    {res.notes && (
+                                      <div className="px-3 py-1 flex items-start space-x-2">
+                                        <div className="bg-gray-50 p-2 rounded text-xs text-gray-700 w-full">
+                                          {res.notes}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Action buttons */}
+                                    <div className="border-t p-3 flex justify-end space-x-2">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-8 text-xs"
+                                        onClick={() => window.location.href = `/reservations/${res.id}`}
+                                      >
+                                        <Eye className="mr-1 h-3 w-3" />
+                                        View
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-8 text-xs"
+                                        onClick={() => window.location.href = `/reservations/${res.id}/edit`}
+                                      >
+                                        <Edit className="mr-1 h-3 w-3" />
+                                        Edit
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
                             );
                           })}
                           
