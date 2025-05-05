@@ -236,23 +236,20 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Applying update with data:", JSON.stringify(updateObject, null, 2));
       
-      // Use Drizzle's SQL builder instead of raw SQL to avoid parameter issues
-      // Use db.execute with SQL template for safer parameter handling
-      const result = await db.execute(sql`
-        UPDATE vehicles 
-        SET 
-          "registeredTo" = ${updateObject.registeredTo || currentVehicle.registeredTo},
-          "registeredToDate" = ${updateObject.registeredToDate || currentVehicle.registeredToDate},
-          "registeredToBy" = ${updateObject.registeredToBy || currentVehicle.registeredToBy},
-          "company" = ${updateObject.company || currentVehicle.company},
-          "companyDate" = ${updateObject.companyDate || currentVehicle.companyDate},
-          "companyBy" = ${updateObject.companyBy || currentVehicle.companyBy}
-        WHERE id = ${id}
-        RETURNING *
-      `);
-      
-      // Extract the vehicle from the result
-      const updatedVehicle = result.rows && result.rows.length > 0 ? result.rows[0] as Vehicle : undefined;
+      // Simply use db.update with the Drizzle ORM directly 
+      // instead of raw SQL to completely avoid parameter issues
+      const [updatedVehicle] = await db
+        .update(vehicles)
+        .set({
+          registeredTo: updateObject.registeredTo || currentVehicle.registeredTo,
+          registeredToDate: updateObject.registeredToDate || currentVehicle.registeredToDate,
+          registeredToBy: updateObject.registeredToBy || currentVehicle.registeredToBy,
+          company: updateObject.company || currentVehicle.company,
+          companyDate: updateObject.companyDate || currentVehicle.companyDate,
+          companyBy: updateObject.companyBy || currentVehicle.companyBy
+        })
+        .where(eq(vehicles.id, id))
+        .returning();
       
       console.log("Database returned vehicle after status update:", JSON.stringify(updatedVehicle, null, 2));
       return updatedVehicle || undefined;
