@@ -229,18 +229,20 @@ export function ReservationCalendar() {
                         )}
                       </div>
                       
-                      {/* Add reservation button - visible on hover */}
+                      {/* Add reservation button - positioned at top center */}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              onClick={() => navigate(`/reservations/add?date=${format(day, 'yyyy-MM-dd')}`)}
-                              size="icon"
-                              variant="ghost"
-                              className="h-5 w-5 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <PlusCircle className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <Button
+                                onClick={() => navigate(`/reservations/add?date=${format(day, 'yyyy-MM-dd')}`)}
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
+                              >
+                                <PlusCircle className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs">Add reservation</p>
