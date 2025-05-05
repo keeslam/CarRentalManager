@@ -12,7 +12,7 @@ import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -32,7 +32,8 @@ export default function VehiclesIndex() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
-  const [visibleVehicleCount, setVisibleVehicleCount] = useState(5); // Show only 5 vehicles initially
+  const [currentPage, setCurrentPage] = useState(1);
+  const vehiclesPerPage = 10; // Show 10 vehicles per page
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -124,10 +125,13 @@ export default function VehiclesIndex() {
     navigate(`/vehicles/${vehicle.id}`);
   };
   
-  // Function to load more vehicles
-  const loadMoreVehicles = () => {
-    setVisibleVehicleCount(prevCount => prevCount + 5);
-  };
+  // Pagination functions
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  const goToNextPage = (totalPages: number) => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const goToLastPage = (totalPages: number) => setCurrentPage(totalPages);
   
   // Custom filtering logic that works regardless of length
   const filteredVehicles = vehicles?.filter(vehicle => {
@@ -493,24 +497,102 @@ export default function VehiclesIndex() {
             </div>
           ) : (
             <>
-              <DataTable
-                columns={columns}
-                data={(filteredVehicles || []).slice(0, visibleVehicleCount)}
-                // Remove the DataTable's built-in search since we're using our own search input
-              />
-              
-              {/* Load more button */}
-              {filteredVehicles && filteredVehicles.length > visibleVehicleCount && (
-                <div className="mt-4 flex justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={loadMoreVehicles}
-                    className="w-full max-w-sm"
-                  >
-                    Load More Vehicles
-                  </Button>
-                </div>
-              )}
+              {/* Calculate current data slice */}
+              {(() => {
+                if (!filteredVehicles) return null;
+                
+                const indexOfLastVehicle = currentPage * vehiclesPerPage;
+                const indexOfFirstVehicle = indexOfLastVehicle - vehiclesPerPage;
+                const currentVehicles = filteredVehicles.slice(indexOfFirstVehicle, indexOfLastVehicle);
+                const totalPages = Math.ceil(filteredVehicles.length / vehiclesPerPage);
+                
+                return (
+                  <>
+                    <DataTable
+                      columns={columns}
+                      data={currentVehicles}
+                      // Remove the DataTable's built-in search since we're using our own search input
+                    />
+                    
+                    {/* Pagination controls */}
+                    {filteredVehicles.length > 0 && (
+                      <div className="mt-4 flex justify-between items-center">
+                        <div className="text-sm text-gray-600">
+                          Showing {indexOfFirstVehicle + 1} to {Math.min(indexOfLastVehicle, filteredVehicles.length)} of {filteredVehicles.length} vehicles
+                        </div>
+                        
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => goToFirstPage()}
+                            disabled={currentPage === 1}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronsLeft className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => goToPreviousPage()}
+                            disabled={currentPage === 1}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Page number buttons */}
+                          {Array.from({ length: Math.min(totalPages, 5) }).map((_, index) => {
+                            let pageNumber: number;
+                            
+                            // Logic to show the current page in the middle when possible
+                            if (totalPages <= 5) {
+                              pageNumber = index + 1;
+                            } else if (currentPage <= 3) {
+                              pageNumber = index + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNumber = totalPages - 4 + index;
+                            } else {
+                              pageNumber = currentPage - 2 + index;
+                            }
+                            
+                            return (
+                              <Button 
+                                key={pageNumber}
+                                variant={currentPage === pageNumber ? "default" : "outline"} 
+                                size="sm"
+                                onClick={() => paginate(pageNumber)}
+                                className="h-8 w-8 p-0"
+                              >
+                                {pageNumber}
+                              </Button>
+                            );
+                          })}
+                          
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => goToNextPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => goToLastPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="h-8 w-8 p-0"
+                          >
+                            <ChevronsRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
         </CardContent>
