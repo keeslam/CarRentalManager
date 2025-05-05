@@ -40,6 +40,44 @@ export default function ReportsPage() {
   
   // Expense category filter
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  
+  // Function to reset all filters to default values
+  const resetFilters = () => {
+    setDateRange({
+      from: subDays(new Date(), 30),
+      to: new Date()
+    });
+    setSelectedVehicle("all");
+    setSelectedCategory("all");
+  };
+  
+  // Date range preset options
+  const setDateRangePreset = (preset: 'all-time' | 'this-month' | 'next-month') => {
+    const now = new Date();
+    
+    switch(preset) {
+      case 'all-time':
+        // Set a very early start date (1 year ago) to effectively show "all time"
+        setDateRange({
+          from: subDays(now, 365),
+          to: now
+        });
+        break;
+      case 'this-month':
+        setDateRange({
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        });
+        break;
+      case 'next-month':
+        const nextMonth = addDays(endOfMonth(now), 1);
+        setDateRange({
+          from: nextMonth,
+          to: endOfMonth(nextMonth)
+        });
+        break;
+    }
+  };
 
   // Fetch all vehicles for filtering
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
@@ -416,6 +454,16 @@ export default function ReportsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="text-xs"
+            >
+              Reset Filters
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium">Date Range</label>
@@ -423,6 +471,32 @@ export default function ReportsPage() {
                 date={dateRange}
                 setDate={setDateRange}
               />
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setDateRangePreset('all-time')}
+                  className="text-xs px-2 py-1 h-7"
+                >
+                  All Time
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setDateRangePreset('this-month')}
+                  className="text-xs px-2 py-1 h-7"
+                >
+                  This Month
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setDateRangePreset('next-month')}
+                  className="text-xs px-2 py-1 h-7"
+                >
+                  Next Month
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-2">
