@@ -5,7 +5,8 @@ import {
   reservations, type Reservation, type InsertReservation,
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
-  pdfTemplates, type PdfTemplate, type InsertPdfTemplate
+  pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
+  customNotifications, type CustomNotification, type InsertCustomNotification
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -857,5 +858,82 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return !!deleted;
+  }
+  
+  // Custom Notifications methods
+  async getAllCustomNotifications(): Promise<CustomNotification[]> {
+    return await db
+      .select()
+      .from(customNotifications)
+      .orderBy(desc(customNotifications.createdAt));
+  }
+  
+  async getCustomNotification(id: number): Promise<CustomNotification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(customNotifications)
+      .where(eq(customNotifications.id, id));
+    
+    return notification || undefined;
+  }
+  
+  async getUnreadCustomNotifications(): Promise<CustomNotification[]> {
+    return await db
+      .select()
+      .from(customNotifications)
+      .where(eq(customNotifications.isRead, false))
+      .orderBy(desc(customNotifications.createdAt));
+  }
+  
+  async getCustomNotificationsByType(type: string): Promise<CustomNotification[]> {
+    return await db
+      .select()
+      .from(customNotifications)
+      .where(eq(customNotifications.type, type))
+      .orderBy(desc(customNotifications.createdAt));
+  }
+  
+  async getCustomNotificationsByUser(userId: number): Promise<CustomNotification[]> {
+    return await db
+      .select()
+      .from(customNotifications)
+      .where(eq(customNotifications.userId, userId))
+      .orderBy(desc(customNotifications.createdAt));
+  }
+  
+  async createCustomNotification(notificationData: InsertCustomNotification): Promise<CustomNotification> {
+    const [notification] = await db
+      .insert(customNotifications)
+      .values(notificationData)
+      .returning();
+    
+    return notification;
+  }
+  
+  async updateCustomNotification(id: number, notificationData: Partial<InsertCustomNotification>): Promise<CustomNotification | undefined> {
+    const [updatedNotification] = await db
+      .update(customNotifications)
+      .set(notificationData)
+      .where(eq(customNotifications.id, id))
+      .returning();
+    
+    return updatedNotification || undefined;
+  }
+  
+  async markCustomNotificationAsRead(id: number): Promise<boolean> {
+    const result = await db
+      .update(customNotifications)
+      .set({ isRead: true })
+      .where(eq(customNotifications.id, id));
+    
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+  
+  async deleteCustomNotification(id: number): Promise<boolean> {
+    const result = await db
+      .delete(customNotifications)
+      .where(eq(customNotifications.id, id));
+    
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }

@@ -288,3 +288,28 @@ export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates)
 
 export type PdfTemplate = typeof pdfTemplates.$inferSelect;
 export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
+
+// Custom Notifications table
+export const customNotifications = pgTable("custom_notifications", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  date: text("date").notNull(),
+  type: text("type").default("custom").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  link: text("link").default(""),
+  icon: text("icon").default("Bell"),
+  priority: text("priority").default("normal"),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCustomNotificationSchema = createInsertSchema(customNotifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CustomNotification = typeof customNotifications.$inferSelect;
+export type InsertCustomNotification = z.infer<typeof insertCustomNotificationSchema>;
