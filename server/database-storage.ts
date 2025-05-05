@@ -929,6 +929,15 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
   
+  async markCustomNotificationAsUnread(id: number): Promise<boolean> {
+    const result = await db
+      .update(customNotifications)
+      .set({ isRead: false })
+      .where(eq(customNotifications.id, id));
+    
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+  
   async deleteCustomNotification(id: number): Promise<boolean> {
     const result = await db
       .delete(customNotifications)
