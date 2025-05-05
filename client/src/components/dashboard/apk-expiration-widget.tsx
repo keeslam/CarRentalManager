@@ -27,6 +27,8 @@ function getUrgencyClass(days: number): string {
 }
 
 export function ApkExpirationWidget() {
+  const [_, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/apk-expiring"],
   });
@@ -36,6 +38,14 @@ export function ApkExpirationWidget() {
     ...vehicle,
     daysUntilExpiration: getDaysUntil(vehicle.apkDate || '')
   })).sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
+  
+  // Function to handle clicking on a vehicle to view its details
+  const handleViewClick = (vehicle: Vehicle) => {
+    // Invalidate the specific vehicle query to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
+    // Navigate to the vehicle details page
+    navigate(`/vehicles/${vehicle.id}`);
+  };
   
   return (
     <Card className="overflow-hidden h-full">
@@ -82,16 +92,19 @@ export function ApkExpirationWidget() {
                   </div>
                 </div>
                 <div>
-                  <Link href={`/vehicles/${vehicle.id}`}>
-                    <Button variant="ghost" size="icon" className="text-warning-600 hover:bg-warning-50 rounded">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
-                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                        <line x1="16" x2="16" y1="2" y2="6" />
-                        <line x1="8" x2="8" y1="2" y2="6" />
-                        <line x1="3" x2="21" y1="10" y2="10" />
-                      </svg>
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-warning-600 hover:bg-warning-50 rounded"
+                    onClick={() => handleViewClick(vehicle)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                      <line x1="16" x2="16" y1="2" y2="6" />
+                      <line x1="8" x2="8" y1="2" y2="6" />
+                      <line x1="3" x2="21" y1="10" y2="10" />
+                    </svg>
+                  </Button>
                 </div>
               </div>
             ))
