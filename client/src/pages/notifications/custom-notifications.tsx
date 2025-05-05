@@ -223,7 +223,7 @@ const CustomNotificationsPage = () => {
       date: notification.date,
       type: notification.type || "custom",
       icon: notification.icon || "Bell",
-      link: notification.link || "/dashboard",
+      link: notification.link || "/notifications",
       priority: notification.priority || "normal"
     });
     setIsEditDialogOpen(true);
@@ -401,10 +401,10 @@ const CustomNotificationsPage = () => {
                     <FormItem>
                       <FormLabel>Link (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="/dashboard" {...field} />
+                        <Input placeholder="/notifications" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Path to navigate to when clicked (e.g., "/dashboard")
+                        Path to navigate to when clicked (e.g., "/notifications")
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -557,8 +557,11 @@ const CustomNotificationsPage = () => {
                   <FormItem>
                     <FormLabel>Link (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="/dashboard" {...field} />
+                      <Input placeholder="/notifications" {...field} />
                     </FormControl>
+                    <FormDescription>
+                      Path to navigate to when clicked (e.g., "/notifications")
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
