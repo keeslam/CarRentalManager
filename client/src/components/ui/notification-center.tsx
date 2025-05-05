@@ -246,7 +246,7 @@ export function NotificationCenter() {
         </Tabs>
         <div className="flex items-center justify-center p-4 border-t">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/reports">View all notifications</Link>
+            <Link href="/notifications">View all notifications</Link>
           </Button>
         </div>
       </PopoverContent>

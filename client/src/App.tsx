@@ -22,6 +22,7 @@ import DocumentsIndex from "@/pages/documents/index";
 import ContractViewer from "@/pages/documents/contract/[id]";
 import TemplateEditor from "@/pages/documents/template-editor";
 import ReportsPage from "@/pages/reports/index";
+import NotificationsPage from "@/pages/notifications/index";
 import UsersIndex from "@/pages/users/index";
 import UserAdd from "@/pages/users/add";
 import UserDetails from "@/pages/users/[id]";
@@ -63,6 +64,7 @@ function AppRoutes() {
         <ProtectedRoute path="/documents/contract/:id" component={ContractViewer} />
         <ProtectedRoute path="/documents/template-editor" component={TemplateEditor} />
         <ProtectedRoute path="/reports" component={ReportsPage} />
+        <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
         <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
