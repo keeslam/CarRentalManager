@@ -91,11 +91,9 @@ const SearchResults: FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Update URL to include the search query
-    const searchParams = new URLSearchParams();
+    // Update URL to include the search query using navigate
     if (query) {
-      searchParams.set('q', query);
-      window.history.replaceState({}, '', `/search-results?${searchParams.toString()}`);
+      setLocation(`/search-results?q=${encodeURIComponent(query)}`, { replace: true });
     }
   };
 

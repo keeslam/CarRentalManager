@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import Dashboard from "@/pages/dashboard";
 import VehiclesIndex from "@/pages/vehicles/index";
 import VehicleAdd from "@/pages/vehicles/add";
@@ -35,10 +35,12 @@ import ChangePasswordPage from "@/pages/profile/change-password";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/protected-route";
 
 function AppRoutes() {
+  const { user } = useAuth();
+  
   return (
     <MainLayout>
       <Switch>
@@ -68,7 +70,12 @@ function AppRoutes() {
         <ProtectedRoute path="/reports" component={ReportsPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
-        <ProtectedRoute path="/search-results" component={SearchResults} />
+        <Route path="/search-results">
+          {() => {
+            const { user } = useAuth();
+            return user ? <SearchResults /> : <Redirect to="/auth" />;
+          }}
+        </Route>
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
         <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
