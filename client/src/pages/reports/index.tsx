@@ -1833,6 +1833,42 @@ export default function ReportsPage() {
                   <Printer className="h-4 w-4" />
                   Print
                 </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('apk')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  APK
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('expenses')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Expenses
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('utilization')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Utilization
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('customer-impact')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Customer Impact
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
