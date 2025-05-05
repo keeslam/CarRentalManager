@@ -175,6 +175,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Updating only the ${status} registration status for vehicle ${id}`);
       
+      // First get the current vehicle data
+      const currentVehicle = await this.getVehicle(id);
+      if (!currentVehicle) {
+        throw new Error(`Vehicle with ID ${id} not found`);
+      }
+      
+      console.log("Current vehicle state before status update:", JSON.stringify(currentVehicle, null, 2));
+      
       let updateObject: Record<string, any> = {
         updatedBy: userData.username
       };
@@ -184,6 +192,9 @@ export class DatabaseStorage implements IStorage {
         updateObject.registeredTo = "true";
         updateObject.registeredToDate = userData.date;
         updateObject.registeredToBy = userData.username;
+        // When enabling "opnaam", automatically disable "company"
+        updateObject.company = "false";
+        updateObject.companyBy = userData.username;
       } else if (status === 'not-opnaam') {
         updateObject.registeredTo = "false";
         updateObject.registeredToBy = userData.username;
@@ -191,12 +202,17 @@ export class DatabaseStorage implements IStorage {
         updateObject.company = "true";
         updateObject.companyDate = userData.date;
         updateObject.companyBy = userData.username;
+        // When enabling "bv", automatically disable "registeredTo"
+        updateObject.registeredTo = "false";
+        updateObject.registeredToBy = userData.username;
       } else if (status === 'not-bv') {
         updateObject.company = "false";
         updateObject.companyBy = userData.username;
       } else {
         throw new Error(`Invalid registration status: ${status}`);
       }
+      
+      console.log("Applying update with data:", JSON.stringify(updateObject, null, 2));
       
       const [updatedVehicle] = await db
         .update(vehicles)

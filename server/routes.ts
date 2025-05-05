@@ -777,11 +777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 3. Setting company to true (bv status)
       // 4. Setting company to false (removing bv status)
       
-      if (status !== 'opnaam' && status !== 'not-opnaam' && status !== 'bv' && status !== 'not-bv') {
-        return res.status(400).json({ 
-          message: "Invalid status. Must be 'opnaam', 'not-opnaam', 'bv', or 'not-bv'" 
-        });
-      }
+      // Note: Validation for status is already done above
       
       console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
       
