@@ -1649,6 +1649,148 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
           
+          {/* Warranty Status */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Warranty Status Overview</CardTitle>
+                <CardDescription>
+                  Vehicle warranty status and expiration dates
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => printReport('warranty')}
+                  className="h-8 gap-1"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Warranty Status Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(() => {
+                    // Process warranty data
+                    const vehiclesWithWarranty = vehicles.filter(v => v.warrantyEndDate);
+                    
+                    // Sort vehicles by warranty end date
+                    const sortedVehiclesByWarranty = [...vehiclesWithWarranty].sort((a, b) => {
+                      if (!a.warrantyEndDate) return 1;
+                      if (!b.warrantyEndDate) return -1;
+                      return new Date(a.warrantyEndDate).getTime() - new Date(b.warrantyEndDate).getTime();
+                    });
+                    
+                    const expiredWarranties = sortedVehiclesByWarranty.filter(v => 
+                      v.warrantyEndDate && new Date(v.warrantyEndDate) < today
+                    );
+                    
+                    const expiringWarranties = sortedVehiclesByWarranty.filter(v => {
+                      if (!v.warrantyEndDate) return false;
+                      const warrantyDate = new Date(v.warrantyEndDate);
+                      const daysUntil = differenceInDays(warrantyDate, today);
+                      return daysUntil >= 0 && daysUntil <= 90; // Expiring in the next 90 days
+                    });
+                    
+                    const validWarranties = sortedVehiclesByWarranty.filter(v => {
+                      if (!v.warrantyEndDate) return false;
+                      const warrantyDate = new Date(v.warrantyEndDate);
+                      const daysUntil = differenceInDays(warrantyDate, today);
+                      return daysUntil > 90;
+                    });
+
+                    return (
+                      <>
+                        <div className="flex flex-col p-4 rounded-md bg-slate-50">
+                          <span className="text-muted-foreground text-sm">Vehicles with valid warranty</span>
+                          <span className="text-2xl font-bold">{validWarranties.length}</span>
+                        </div>
+                        <div className="flex flex-col p-4 rounded-md bg-amber-50">
+                          <span className="text-muted-foreground text-sm">Warranty expiring in 90 days</span>
+                          <span className="text-2xl font-bold">{expiringWarranties.length}</span>
+                        </div>
+                        <div className="flex flex-col p-4 rounded-md bg-red-50">
+                          <span className="text-muted-foreground text-sm">Expired Warranty</span>
+                          <span className="text-2xl font-bold">{expiredWarranties.length}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                {/* Warranty Expiry Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>License Plate</TableHead>
+                      <TableHead>Warranty End Date</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vehicles.filter(v => v.warrantyEndDate).length > 0 ? (
+                      vehicles
+                        .filter(v => v.warrantyEndDate)
+                        .sort((a, b) => {
+                          if (!a.warrantyEndDate) return 1;
+                          if (!b.warrantyEndDate) return -1;
+                          return new Date(a.warrantyEndDate).getTime() - new Date(b.warrantyEndDate).getTime();
+                        })
+                        .slice(0, 10)
+                        .map(vehicle => {
+                          const warrantyDate = vehicle.warrantyEndDate ? new Date(vehicle.warrantyEndDate) : null;
+                          const daysRemaining = warrantyDate ? differenceInDays(warrantyDate, today) : null;
+                          
+                          let statusClass = '';
+                          let statusText = '';
+                          
+                          if (daysRemaining === null) {
+                            statusClass = 'bg-slate-100 text-slate-800';
+                            statusText = 'Not set';
+                          } else if (daysRemaining < 0) {
+                            statusClass = 'bg-red-100 text-red-800';
+                            statusText = `Expired (${Math.abs(daysRemaining)} days ago)`;
+                          } else if (daysRemaining <= 90) {
+                            statusClass = 'bg-amber-100 text-amber-800';
+                            statusText = `Expires in ${daysRemaining} days`;
+                          } else {
+                            statusClass = 'bg-green-100 text-green-800';
+                            statusText = 'Valid';
+                          }
+                          
+                          return (
+                            <TableRow key={vehicle.id} className={
+                              daysRemaining === null ? 'bg-slate-50' : 
+                              daysRemaining < 0 ? 'bg-red-50' : 
+                              daysRemaining < 90 ? 'bg-amber-50' : ''
+                            }>
+                              <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
+                              <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
+                              <TableCell>{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : 'Not set'}</TableCell>
+                              <TableCell className="text-right">
+                                <span className={`px-2 py-1 rounded-full text-xs ${statusClass}`}>
+                                  {statusText}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4">No warranty data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Vehicle Utilization Chart */}
           <Card>
             <CardHeader>
