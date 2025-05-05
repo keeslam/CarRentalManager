@@ -305,40 +305,8 @@ export function ReservationForm({
     queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
   };
   
-  // Create vehicle mutation
-  const createVehicleMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("/api/vehicles", "POST", data);
-    },
-    onSuccess: async (data) => {
-      // Set vehicle ID in the form
-      form.setValue("vehicleId", data.id.toString());
-      
-      // Close dialog
-      setVehicleDialogOpen(false);
-      
-      // Show success message
-      toast({
-        title: "Vehicle created",
-        description: `${data.brand} ${data.model} has been created.`,
-      });
-      
-      // Invalidate vehicles query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create vehicle: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Handle vehicle form submission 
-  const onVehicleSubmit = (data: any) => {
-    createVehicleMutation.mutate(data);
-  };
+  // We no longer need a separate createVehicleMutation as we're using VehicleQuickForm
+  // which handles all the vehicle creation logic and calls our callback directly
   
   // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

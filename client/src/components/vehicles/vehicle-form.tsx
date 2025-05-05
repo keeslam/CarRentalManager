@@ -174,6 +174,19 @@ export function VehicleForm({
     },
     onSuccess: async (response) => {
       console.log("Vehicle saved successfully");
+      
+      // Parse the response to get the created/updated vehicle data
+      let vehicleData;
+      try {
+        // Clone the response before parsing it to avoid the "body already read" error
+        const clonedResponse = response.clone();
+        vehicleData = await response.json();
+        console.log("Successfully parsed vehicle data:", vehicleData);
+      } catch (e) {
+        console.error("Failed to parse response JSON:", e);
+        vehicleData = { id: initialData?.id };
+      }
+      
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
@@ -182,30 +195,26 @@ export function VehicleForm({
         await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
       }
       
-      // Parse the response to get the created/updated vehicle data
-      let vehicleData;
-      try {
-        vehicleData = await response.json();
-      } catch (e) {
-        console.error("Failed to parse response JSON:", e);
-        vehicleData = { id: initialData?.id };
-      }
-      
       // Show success message
       toast({
         title: `Vehicle ${editMode ? "updated" : "created"} successfully`,
         description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
       });
       
+      console.log("onSuccess callback exists:", !!onSuccess);
+      console.log("redirectToList value:", redirectToList);
+      
       // If a success callback was provided, call it with the vehicle data
       if (onSuccess && typeof onSuccess === 'function') {
-        // Call the onSuccess callback with the vehicle data
+        console.log("Calling onSuccess callback with vehicle data");
         onSuccess(vehicleData);
+        // When a callback is provided, we assume it will handle navigation
+        return;
       } 
       
-      // Only navigate if redirectToList is true AND no success callback was provided
-      // This ensures that we don't navigate away when in dialog mode
-      if (redirectToList && (!onSuccess || typeof onSuccess !== 'function')) {
+      // Only navigate if redirectToList is true and we didn't call onSuccess
+      if (redirectToList) {
+        console.log("Navigating based on redirectToList flag");
         if (editMode && initialData?.id) {
           // Navigate to vehicle details page when updating
           navigate(`/vehicles/${initialData.id}`);
@@ -213,6 +222,8 @@ export function VehicleForm({
           // Navigate to vehicles list for new vehicles
           navigate("/vehicles");
         }
+      } else {
+        console.log("Not navigating because redirectToList is false");
       }
     },
     onError: (error: any) => {
