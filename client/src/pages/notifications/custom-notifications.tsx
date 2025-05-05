@@ -228,12 +228,22 @@ const CustomNotificationsPage = () => {
   });
 
   const onCreateSubmit = (data: NotificationFormData) => {
-    createMutation.mutate(data);
+    // Always set link to /notifications
+    const notificationData = {
+      ...data,
+      link: "/notifications"
+    };
+    createMutation.mutate(notificationData);
   };
 
   const onEditSubmit = (data: NotificationFormData) => {
     if (selectedNotification) {
-      updateMutation.mutate({ id: selectedNotification.id, data });
+      // Always set link to /notifications
+      const notificationData = {
+        ...data,
+        link: "/notifications"
+      };
+      updateMutation.mutate({ id: selectedNotification.id, data: notificationData });
     }
   };
 
@@ -420,22 +430,7 @@ const CustomNotificationsPage = () => {
                     )}
                   />
                 </div>
-                <FormField
-                  control={createForm.control}
-                  name="link"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Link (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="/notifications" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Path to navigate to when clicked (e.g., "/notifications")
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+{/* Link field hidden - automatically set to /notifications */}
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">Cancel</Button>
@@ -576,22 +571,7 @@ const CustomNotificationsPage = () => {
                   )}
                 />
               </div>
-              <FormField
-                control={editForm.control}
-                name="link"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Link (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="/notifications" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Path to navigate to when clicked (e.g., "/notifications")
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+{/* Link field hidden - automatically set to /notifications */}
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">Cancel</Button>
