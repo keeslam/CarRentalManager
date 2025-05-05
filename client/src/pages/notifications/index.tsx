@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import { 
   Card, 
@@ -41,11 +41,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Car, AlertTriangle, Bell, Check, X } from "lucide-react";
-import { Vehicle, Reservation } from "@shared/schema";
+import { Calendar, Car, AlertTriangle, Bell, Check, X, Info, ClipboardCheck, MessageSquare } from "lucide-react";
+import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -335,7 +337,7 @@ export default function NotificationsPage() {
           </CardHeader>
           <CardContent className="p-0">
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-4 m-4">
+              <TabsList className="grid grid-cols-5 m-4">
                 <TabsTrigger value="all">
                   All
                 </TabsTrigger>
@@ -347,6 +349,9 @@ export default function NotificationsPage() {
                 </TabsTrigger>
                 <TabsTrigger value="warranty">
                   Warranty
+                </TabsTrigger>
+                <TabsTrigger value="custom">
+                  Custom
                 </TabsTrigger>
               </TabsList>
 
