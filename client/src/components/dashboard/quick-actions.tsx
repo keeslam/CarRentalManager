@@ -345,14 +345,52 @@ export function QuickActions() {
   });
   
   // Handler for changing a single vehicle's registration
-  const handleChangeVehicleRegistration = async (vehicleId: number, newStatus: "opnaam" | "bv") => {
+  const handleChangeVehicleRegistration = async (vehicleId: number, newStatus: "opnaam" | "bv" | "not-opnaam" | "not-bv") => {
     try {
+      // First, get the current vehicle to determine the actual change we need to make
+      const vehicleResponse = await fetch(`/api/vehicles/${vehicleId}`);
+      
+      if (!vehicleResponse.ok) {
+        throw new Error(`Failed to fetch vehicle: ${vehicleResponse.status}`);
+      }
+      
+      const vehicle = await vehicleResponse.json();
+      
+      // Determine the correct toggle status based on current state and desired state
+      let toggleStatus;
+      
+      const currentRegisteredTo = vehicle.registeredTo === "true" || vehicle.registeredTo === true;
+      const currentCompany = vehicle.company === "true" || vehicle.company === true;
+      
+      if (newStatus === "opnaam") {
+        // If already opnaam, no change needed
+        if (currentRegisteredTo) return vehicle;
+        toggleStatus = "opnaam";
+      } else if (newStatus === "bv") {
+        // If already bv, no change needed
+        if (currentCompany) return vehicle;
+        toggleStatus = "bv";
+      } else if (newStatus === "not-opnaam") {
+        // If already not opnaam, no change needed
+        if (!currentRegisteredTo) return vehicle;
+        toggleStatus = "not-opnaam";
+      } else if (newStatus === "not-bv") {
+        // If already not bv, no change needed
+        if (!currentCompany) return vehicle;
+        toggleStatus = "not-bv";
+      }
+      
+      // If no change is needed, return the current vehicle
+      if (!toggleStatus) return vehicle;
+      
+      console.log(`Toggling vehicle ${vehicleId} to status: ${toggleStatus}`);
+      
       const response = await fetch(`/api/vehicles/${vehicleId}/toggle-registration`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: toggleStatus }),
       });
       
       if (!response.ok) {
