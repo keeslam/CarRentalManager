@@ -69,8 +69,14 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   });
   
   // Fetch vehicle details
-  const { data: vehicle, isLoading: isLoadingVehicle } = useQuery<Vehicle>({
-    queryKey: [`/api/vehicles/${vehicleId}`],
+  const vehicleQueryKey = [`/api/vehicles/${vehicleId}`];
+  const { 
+    data: vehicle, 
+    isLoading: isLoadingVehicle,
+    refetch: refetchVehicle 
+  } = useQuery<Vehicle>({
+    queryKey: vehicleQueryKey,
+    staleTime: 0  // Make sure we always get fresh data
   });
   
   // Fetch vehicle expenses
@@ -1282,8 +1288,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <h3 className="text-lg font-medium mb-2">Registration Status Changes</h3>
                   <div className="grid grid-cols-1 gap-4">
                     {vehicle.registeredToDate && (
-                      <div className="flex items-center gap-2">
-                        <div className="bg-amber-100 p-2 rounded-full">
+                      <div className="flex items-start gap-2">
+                        <div className="bg-amber-100 p-2 rounded-full mt-1">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
                             <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
                             <path d="M21.2 8A10 10 0 0 0 12 2v10h10a9.9 9.9 0 0 0-.8-4"></path>
@@ -1291,16 +1297,20 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                         </div>
                         <div>
                           <p className="font-medium">Registration status: Opnaam</p>
-                          <p className="text-sm text-gray-500">
-                            Changed on {formatDate(vehicle.registeredToDate)}
-                          </p>
+                          <div className="text-sm text-gray-500">
+                            <p>Changed on {formatDate(vehicle.registeredToDate)}</p>
+                            <p>By {vehicle.updatedBy || "Unknown user"}</p>
+                          </div>
+                          <div className="mt-1 text-xs py-1 px-2 bg-gray-100 rounded-md inline-block">
+                            Last updated: {formatDate(vehicle.updatedAt.toString())}
+                          </div>
                         </div>
                       </div>
                     )}
                     
                     {vehicle.companyDate && (
-                      <div className="flex items-center gap-2">
-                        <div className="bg-amber-100 p-2 rounded-full">
+                      <div className="flex items-start gap-2">
+                        <div className="bg-amber-100 p-2 rounded-full mt-1">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
                             <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
                             <path d="M21.2 8A10 10 0 0 0 12 2v10h10a9.9 9.9 0 0 0-.8-4"></path>
@@ -1308,9 +1318,13 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                         </div>
                         <div>
                           <p className="font-medium">Registration status: BV</p>
-                          <p className="text-sm text-gray-500">
-                            Changed on {formatDate(vehicle.companyDate)}
-                          </p>
+                          <div className="text-sm text-gray-500">
+                            <p>Changed on {formatDate(vehicle.companyDate)}</p>
+                            <p>By {vehicle.updatedBy || "Unknown user"}</p>
+                          </div>
+                          <div className="mt-1 text-xs py-1 px-2 bg-gray-100 rounded-md inline-block">
+                            Last updated: {formatDate(vehicle.updatedAt.toString())}
+                          </div>
                         </div>
                       </div>
                     )}
