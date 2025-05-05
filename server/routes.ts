@@ -1170,13 +1170,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
       
-      // Handle totalPrice properly - treat empty string as undefined
-      if (req.body.totalPrice === '') {
+      // Handle totalPrice properly - treat empty string and NaN as undefined
+      if (req.body.totalPrice === "" || req.body.totalPrice === null) {
         req.body.totalPrice = undefined;
       } else if (req.body.totalPrice) {
-        req.body.totalPrice = parseFloat(req.body.totalPrice);
+        const parsedPrice = parseFloat(req.body.totalPrice);
+        req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
-      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts
@@ -1317,13 +1317,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
       
-      // Handle totalPrice properly - treat empty string as undefined
-      if (req.body.totalPrice === '') {
+      // Handle totalPrice properly - treat empty string and NaN as undefined
+      if (req.body.totalPrice === "" || req.body.totalPrice === null) {
         req.body.totalPrice = undefined;
       } else if (req.body.totalPrice) {
-        req.body.totalPrice = parseFloat(req.body.totalPrice);
+        const parsedPrice = parseFloat(req.body.totalPrice);
+        req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
-      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts

@@ -195,7 +195,13 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   totalPrice: z.number().optional().or(
     z.string().transform(val => {
       // Convert empty strings to undefined, otherwise convert to number
-      return val === '' ? undefined : (Number(val) || 0);
+      if (val === '' || val === null) {
+        return undefined;
+      }
+      
+      const num = Number(val);
+      // Check if the result is NaN and return undefined instead
+      return isNaN(num) ? undefined : num;
     })
   )
 });
