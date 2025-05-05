@@ -683,7 +683,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Only update if we have valid data
       if (Object.keys(updateData).length > 0) { // Check if we have any data to update
-        const updatedVehicle = await storage.updateVehicle(id, updateData);
+        // Add user tracking information
+        const user = req.user;
+        const dataWithTracking = {
+          ...updateData,
+          updatedBy: user ? user.username : null
+        };
+        
+        const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
         return res.json(updatedVehicle);
       } else {
         return res.status(400).json({ message: "No valid mileage data provided" });
