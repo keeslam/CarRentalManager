@@ -65,6 +65,7 @@ interface VehicleFormProps {
   initialData?: any;
   redirectToList?: boolean;
   onSuccess?: (vehicle: any) => void;
+  onSubmitOverride?: (data: any) => void; // Optional override for form submission
   customCancelButton?: React.ReactNode;
 }
 
