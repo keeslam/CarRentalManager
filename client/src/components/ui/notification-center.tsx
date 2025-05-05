@@ -344,7 +344,7 @@ export function NotificationCenter() {
                   }
                   
                   return (
-                    <div key={`custom-notification-${notification.id}`} onClick={() => setOpen(false)}>
+                    <div key={`custom-notification-${notification.id}`}>
                       <NotificationItem
                         icon={iconComponent}
                         title={notification.title}
@@ -353,6 +353,7 @@ export function NotificationCenter() {
                         link={notification.link || '/notifications'}
                         id={notification.id}
                         isCustom={true}
+                        onClick={() => setOpen(false)}
                       />
                     </div>
                   );
@@ -379,6 +380,7 @@ interface NotificationItemProps {
   link: string;
   id?: number; // Optional ID for custom notifications
   isCustom?: boolean; // Flag to identify custom notifications
+  onClick?: () => void; // Optional click handler to close the popover
 }
 
 function NotificationItem({ 
@@ -388,7 +390,8 @@ function NotificationItem({
   date, 
   link, 
   id, 
-  isCustom = false 
+  isCustom = false,
+  onClick
 }: NotificationItemProps) {
   const navigate = useLocation()[1];
   const queryClient = useQueryClient();
@@ -428,6 +431,11 @@ function NotificationItem({
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }
+    }
+    
+    // If onClick callback is provided, execute it (closes the popover)
+    if (onClick) {
+      onClick();
     }
     
     // Navigate to the link
