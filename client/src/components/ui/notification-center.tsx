@@ -226,7 +226,7 @@ export function NotificationCenter() {
                           title={notification.title}
                           description={notification.description}
                           date={notification.date}
-                          link={notification.link || '/notifications'}
+                          link={notification.link || '/notifications/custom'}
                           id={notification.id}
                           isCustom={true}
                           onClick={() => setOpen(false)}
@@ -350,7 +350,7 @@ export function NotificationCenter() {
                         title={notification.title}
                         description={notification.description}
                         date={notification.date}
-                        link={notification.link || '/notifications'}
+                        link={notification.link || '/notifications/custom'}
                         id={notification.id}
                         isCustom={true}
                         onClick={() => setOpen(false)}
@@ -415,23 +415,8 @@ function NotificationItem({
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // If this is a custom notification and has ID, mark it as read
-    if (isCustom && id) {
-      try {
-        await fetch(`/api/custom-notifications/${id}/read`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        // Invalidate related queries to refresh the notifications list
-        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
-      } catch (error) {
-        console.error('Error marking notification as read:', error);
-      }
-    }
+    // No longer automatically mark notification as read when clicked
+    // Users will now manually mark notifications as read/unread
     
     // If onClick callback is provided, execute it (closes the popover)
     if (onClick) {
