@@ -186,7 +186,7 @@ const CustomNotificationsPage = () => {
       date: new Date().toISOString().split("T")[0],
       type: "custom",
       icon: "Bell",
-      link: "/dashboard",
+      link: "/notifications",
       priority: "normal"
     },
   });
@@ -200,7 +200,7 @@ const CustomNotificationsPage = () => {
       date: new Date().toISOString().split("T")[0],
       type: "custom",
       icon: "Bell",
-      link: "/dashboard",
+      link: "/notifications",
       priority: "normal"
     },
   });
