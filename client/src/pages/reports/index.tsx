@@ -454,7 +454,7 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium">{expenseTrend.currentMonth.name}</h4>
-                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.currentMonth.total)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(Number(expenseTrend.currentMonth.total))}</p>
                     </div>
                     <div className={`text-sm px-2 py-1 rounded-md ${expenseTrend.currentMonth.changePercentage > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {expenseTrend.currentMonth.changePercentage > 0 ? '+' : ''}{Math.round(expenseTrend.currentMonth.changePercentage)}%
@@ -467,7 +467,7 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium">{expenseTrend.previousMonth.name}</h4>
-                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.previousMonth.total)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(Number(expenseTrend.previousMonth.total))}</p>
                     </div>
                     <div className={`text-sm px-2 py-1 rounded-md ${expenseTrend.previousMonth.changePercentage > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {expenseTrend.previousMonth.changePercentage > 0 ? '+' : ''}{Math.round(expenseTrend.previousMonth.changePercentage)}%
@@ -485,7 +485,7 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium">{expenseTrend.twoMonthsAgo.name}</h4>
-                      <p className="text-2xl font-bold">{formatCurrency(expenseTrend.twoMonthsAgo.total)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(Number(expenseTrend.twoMonthsAgo.total))}</p>
                     </div>
                   </div>
                   <Progress 
@@ -525,7 +525,7 @@ export default function ReportsPage() {
                           <span className="text-muted-foreground text-sm">
                             {filteredExpenses.filter(e => e.category === category).length} items
                           </span>
-                          <span className="font-medium">{formatCurrency(amount)}</span>
+                          <span className="font-medium">{formatCurrency(Number(amount))}</span>
                         </div>
                       </div>
                     ))
@@ -680,7 +680,7 @@ export default function ReportsPage() {
                           <TableCell>{vehicle.brand} {vehicle.model}</TableCell>
                           <TableCell>{formatLicensePlate(vehicle.licensePlate)}</TableCell>
                           <TableCell>{vehicle.expenseCount} entries</TableCell>
-                          <TableCell className="text-right">{formatCurrency(vehicle.maintenanceCost)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(Number(vehicle.maintenanceCost))}</TableCell>
                         </TableRow>
                       ))
                   ) : (
