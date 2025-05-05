@@ -90,12 +90,16 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(vehicles);
     }
     
-    // Search by license plate, brand, or model
+    // Sanitize the search query to handle license plates with or without dashes
+    const sanitizedQuery = searchQuery.replace(/-/g, "");
+    
+    // Search by license plate (without dashes), brand, or model
     return await db.select()
       .from(vehicles)
       .where(
         or(
-          ilike(vehicles.licensePlate, `%${searchQuery}%`),
+          // Handle license plate search with or without dashes
+          sql`replace(${vehicles.licensePlate}, '-', '') ILIKE ${`%${sanitizedQuery}%`}`,
           ilike(vehicles.brand, `%${searchQuery}%`),
           ilike(vehicles.model, `%${searchQuery}%`)
         )
@@ -265,12 +269,16 @@ export class DatabaseStorage implements IStorage {
     let reservationsData;
     
     if (searchQuery) {
+      // Sanitize the search query to handle license plates with or without dashes
+      const sanitizedQuery = searchQuery.replace(/-/g, "");
+      
       // First, search for vehicles and customers matching the query
       const matchingVehicles = await db.select()
         .from(vehicles)
         .where(
           or(
-            ilike(vehicles.licensePlate, `%${searchQuery}%`),
+            // Handle license plate search with or without dashes
+            sql`replace(${vehicles.licensePlate}, '-', '') ILIKE ${`%${sanitizedQuery}%`}`,
             ilike(vehicles.brand, `%${searchQuery}%`),
             ilike(vehicles.model, `%${searchQuery}%`)
           )
