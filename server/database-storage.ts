@@ -91,17 +91,17 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sanitize the search query to handle license plates with or without dashes
-    const sanitizedQuery = searchQuery.replace(/-/g, "");
+    const sanitizedQuery = searchQuery.replace(/-/g, "").toUpperCase();
     
     // Search by license plate (without dashes), brand, or model
     return await db.select()
       .from(vehicles)
       .where(
         or(
-          // Handle license plate search with or without dashes
-          sql`replace(${vehicles.licensePlate}, '-', '') ILIKE ${`%${sanitizedQuery}%`}`,
-          ilike(vehicles.brand, `%${searchQuery}%`),
-          ilike(vehicles.model, `%${searchQuery}%`)
+          // Handle license plate search with or without dashes - using upper for case insensitivity
+          sql`UPPER(replace(${vehicles.licensePlate}, '-', '')) LIKE ${`%${sanitizedQuery}%`}`,
+          sql`UPPER(${vehicles.brand}) LIKE ${`%${sanitizedQuery}%`}`,
+          sql`UPPER(${vehicles.model}) LIKE ${`%${sanitizedQuery}%`}`
         )
       )
       .limit(10);
@@ -230,15 +230,18 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(customers);
     }
     
-    // Search by name, email, or phone
+    // Convert to uppercase for case-insensitivity
+    const upperQuery = searchQuery.toUpperCase();
+    
+    // Search by name, email, or phone - using UPPER for consistent case-insensitivity
     return await db.select()
       .from(customers)
       .where(
         or(
-          ilike(customers.name, `%${searchQuery}%`),
-          ilike(customers.email, `%${searchQuery}%`),
-          ilike(customers.phone, `%${searchQuery}%`),
-          ilike(customers.debtorNumber, `%${searchQuery}%`)
+          sql`UPPER(${customers.name}) LIKE ${`%${upperQuery}%`}`,
+          sql`UPPER(${customers.email}) LIKE ${`%${upperQuery}%`}`,
+          sql`UPPER(${customers.phone}) LIKE ${`%${upperQuery}%`}`,
+          sql`UPPER(${customers.debtorNumber}) LIKE ${`%${upperQuery}%`}`
         )
       )
       .limit(10);
@@ -270,17 +273,17 @@ export class DatabaseStorage implements IStorage {
     
     if (searchQuery) {
       // Sanitize the search query to handle license plates with or without dashes
-      const sanitizedQuery = searchQuery.replace(/-/g, "");
+      const sanitizedQuery = searchQuery.replace(/-/g, "").toUpperCase();
       
       // First, search for vehicles and customers matching the query
       const matchingVehicles = await db.select()
         .from(vehicles)
         .where(
           or(
-            // Handle license plate search with or without dashes
-            sql`replace(${vehicles.licensePlate}, '-', '') ILIKE ${`%${sanitizedQuery}%`}`,
-            ilike(vehicles.brand, `%${searchQuery}%`),
-            ilike(vehicles.model, `%${searchQuery}%`)
+            // Handle license plate search with or without dashes - using upper for case insensitivity
+            sql`UPPER(replace(${vehicles.licensePlate}, '-', '')) LIKE ${`%${sanitizedQuery}%`}`,
+            sql`UPPER(${vehicles.brand}) LIKE ${`%${sanitizedQuery}%`}`,
+            sql`UPPER(${vehicles.model}) LIKE ${`%${sanitizedQuery}%`}`
           )
         );
       
@@ -288,9 +291,9 @@ export class DatabaseStorage implements IStorage {
         .from(customers)
         .where(
           or(
-            ilike(customers.name, `%${searchQuery}%`),
-            ilike(customers.email, `%${searchQuery}%`),
-            ilike(customers.phone, `%${searchQuery}%`)
+            sql`UPPER(${customers.name}) LIKE ${`%${sanitizedQuery}%`}`,
+            sql`UPPER(${customers.email}) LIKE ${`%${sanitizedQuery}%`}`,
+            sql`UPPER(${customers.phone}) LIKE ${`%${sanitizedQuery}%`}`
           )
         );
       
@@ -317,9 +320,9 @@ export class DatabaseStorage implements IStorage {
           .from(reservations)
           .where(
             or(
-              ilike(reservations.startDate, `%${searchQuery}%`),
-              ilike(reservations.endDate, `%${searchQuery}%`),
-              ilike(reservations.status, `%${searchQuery}%`)
+              sql`UPPER(${reservations.startDate}) LIKE ${`%${sanitizedQuery}%`}`,
+              sql`UPPER(${reservations.endDate}) LIKE ${`%${sanitizedQuery}%`}`,
+              sql`UPPER(${reservations.status}) LIKE ${`%${sanitizedQuery}%`}`
             )
           )
           .limit(10);
