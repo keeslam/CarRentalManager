@@ -168,14 +168,25 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
+      // Also invalidate the specific vehicle query if we're in edit mode
+      if (editMode && initialData?.id) {
+        await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+      }
+      
       // Show success message
       toast({
         title: `Vehicle ${editMode ? "updated" : "created"} successfully`,
         description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
       });
       
-      // Navigate back to vehicles list
-      navigate("/vehicles");
+      // Navigate to the appropriate page
+      if (editMode && initialData?.id) {
+        // Navigate to vehicle details page when updating
+        navigate(`/vehicles/${initialData.id}`);
+      } else {
+        // Navigate to vehicles list for new vehicles
+        navigate("/vehicles");
+      }
     },
     onError: (error: any) => {
       console.error("Mutation error:", error);
@@ -335,16 +346,27 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
       const responseData = await response.json();
       console.log("API response data:", responseData);
       
-      // Invalidate queries and show success message
+      // Invalidate all relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      
+      // Also invalidate the specific vehicle query if we're in edit mode
+      if (editMode && initialData?.id) {
+        await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+      }
       
       toast({
         title: `Vehicle ${editMode ? "updated" : "created"} successfully`,
         description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
       });
       
-      // Navigate back to vehicles list
-      navigate("/vehicles");
+      // Navigate to the appropriate page
+      if (editMode && initialData?.id) {
+        // Navigate to vehicle details page when updating
+        navigate(`/vehicles/${initialData.id}`);
+      } else {
+        // Navigate to vehicles list for new vehicles
+        navigate("/vehicles");
+      }
     } catch (error: any) {
       console.error("API request failed:", error);
       toast({
