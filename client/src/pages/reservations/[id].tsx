@@ -267,16 +267,24 @@ export default function ReservationDetails() {
                 {vehicle ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                     <div>
-                      <h4 className="font-medium">
-                        {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
+                      <h4 className="font-medium flex items-center gap-2">
+                        <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-semibold">
+                          {formatLicensePlate(vehicle.licensePlate)}
+                        </span>
+                        {vehicle.brand} {vehicle.model}
                       </h4>
                       <p className="text-sm text-gray-500 mt-1">
-                        {vehicle.vehicleType || 'Unknown type'} • {vehicle.fuel || 'Unknown fuel'}
+                        {vehicle.vehicleType || 'Unknown type'} • {vehicle.fuel || 'Unknown fuel'} • {vehicle.color || 'No color specified'}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {vehicle.apkDate && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
-                            APK: {formatDate(vehicle.apkDate)}
+                          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 font-medium">
+                            APK Expiry: {formatDate(vehicle.apkDate)}
+                          </Badge>
+                        )}
+                        {vehicle.currentMileage && (
+                          <Badge variant="outline" className="bg-gray-50 text-gray-800 border-gray-200">
+                            Mileage: {vehicle.currentMileage.toLocaleString()} km
                           </Badge>
                         )}
                       </div>
@@ -303,17 +311,62 @@ export default function ReservationDetails() {
                 {customer ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                     <div>
-                      <h4 className="font-medium">{customer.name}</h4>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {customer.phone && `☎ ${customer.phone}`}
-                        {customer.phone && customer.email && ' • '}
-                        {customer.email && `✉ ${customer.email}`}
-                      </p>
-                      {(customer.city || customer.address) && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          {customer.address}{customer.address && customer.city && ', '}{customer.city}
-                        </p>
-                      )}
+                      <h4 className="font-medium flex items-center gap-2">
+                        {customer.debtorNumber && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                            {customer.debtorNumber}
+                          </span>
+                        )}
+                        <span>{customer.name}</span>
+                        {customer.companyName && (
+                          <span className="text-gray-500 text-sm font-normal">
+                            ({customer.companyName})
+                          </span>
+                        )}
+                      </h4>
+                      
+                      <div className="mt-2 grid grid-cols-1 gap-1">
+                        {/* Contact information */}
+                        {(customer.phone || customer.email) && (
+                          <div className="flex flex-col text-sm">
+                            {customer.phone && (
+                              <div className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                                <span>{customer.phone}</span>
+                              </div>
+                            )}
+                            {customer.email && (
+                              <div className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                  <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                                <span>{customer.email}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Address information */}
+                        {(customer.address || customer.city || customer.postalCode || customer.country) && (
+                          <div className="flex items-start gap-1 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 mt-0.5">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                              <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span>
+                              {customer.address && <span>{customer.address}</span>}
+                              {customer.address && (customer.postalCode || customer.city) && <span>, </span>}
+                              {customer.postalCode && <span>{customer.postalCode} </span>}
+                              {customer.city && <span>{customer.city}</span>}
+                              {(customer.address || customer.postalCode || customer.city) && customer.country && <span>, </span>}
+                              {customer.country && <span>{customer.country}</span>}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <Link href={`/customers/${customer.id}`}>
                       <Button variant="ghost" size="sm" className="mt-2 sm:mt-0">
