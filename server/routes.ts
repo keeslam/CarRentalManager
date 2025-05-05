@@ -793,9 +793,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
       
+      // Declare variable outside try block to maintain scope
+      let updatedVehicle;
+      
       try {
         // Use the dedicated method that only updates the relevant field
-        const updatedVehicle = await storage.updateVehicleRegistrationStatus(id, status, {
+        updatedVehicle = await storage.updateVehicleRegistrationStatus(id, status, {
           username,
           date: currentDate
         });
@@ -812,6 +815,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error in toggle-registration endpoint:", error);
         return res.status(400).json({ message: `Error toggling registration status: ${error.message}` });
+      }
+      
+      // If we've reached here, the update was successful
+      if (!updatedVehicle) {
+        // This is a fallback - if somehow we get here without an error but also without data
+        // Use the verified vehicle data
+        updatedVehicle = await storage.getVehicle(id);
       }
       
       // Store last action to ensure history shows the correct user for this specific action
