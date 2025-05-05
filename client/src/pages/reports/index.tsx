@@ -57,9 +57,9 @@ export default function ReportsPage() {
     
     switch(preset) {
       case 'all-time':
-        // Set a very early start date (1 year ago) to effectively show "all time"
+        // Set a very early start date (3 years ago) to effectively show "all time"
         setDateRange({
-          from: subDays(now, 365),
+          from: subMonths(now, 36), // Go back 3 years
           to: now
         });
         break;
