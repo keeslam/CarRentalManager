@@ -765,20 +765,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create update data with user attribution
       let updateData;
 
+      // Get the current vehicle to know its status
+      const currentVehicle = await storage.getVehicle(id);
+      if (!currentVehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      // Now we handle four cases:
+      // 1. Setting registeredTo to true (opnaam status)
+      // 2. Setting registeredTo to false (removing opnaam status)
+      // 3. Setting company to true (bv status)
+      // 4. Setting company to false (removing bv status)
+      
       if (status === 'opnaam') {
         updateData = {
           registeredTo: "true", // Use string "true" to match database schema
-          company: "false",     // Use string "false" to match database schema
           registeredToDate: currentDate,
           updatedBy: username   // Add the actual username here for user tracking
         };
-      } else {
+      } else if (status === 'not-opnaam') {
         updateData = {
           registeredTo: "false", // Use string "false" to match database schema
-          company: "true",       // Use string "true" to match database schema
-          companyDate: currentDate,
           updatedBy: username   // Add the actual username here for user tracking
         };
+      } else if (status === 'bv') {
+        updateData = {
+          company: "true",     // Use string "true" to match database schema
+          companyDate: currentDate,
+          updatedBy: username  // Add the actual username here for user tracking
+        };
+      } else if (status === 'not-bv') {
+        updateData = {
+          company: "false",    // Use string "false" to match database schema
+          updatedBy: username  // Add the actual username here for user tracking
+        };
+      } else {
+        return res.status(400).json({ 
+          message: "Invalid status. Must be 'opnaam', 'not-opnaam', 'bv', or 'not-bv'" 
+        });
       }
       
       console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
@@ -792,9 +816,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Vehicle after update:", JSON.stringify(verifiedVehicle, null, 2));
       
       // Store last action to ensure history shows the correct user for this specific action
-      const historyNote = status === 'opnaam' 
-        ? `Registration changed to Opnaam by ${username}`
-        : `Registration changed to BV by ${username}`;
+      let historyNote;
+      
+      if (status === 'opnaam') {
+        historyNote = `Registration set to Opnaam by ${username}`;
+      } else if (status === 'not-opnaam') {
+        historyNote = `Opnaam registration removed by ${username}`;
+      } else if (status === 'bv') {
+        historyNote = `Registration set to BV by ${username}`;
+      } else if (status === 'not-bv') {
+        historyNote = `BV registration removed by ${username}`;
+      }
         
       // Log the history action
       console.log("Vehicle registration history action:", historyNote);

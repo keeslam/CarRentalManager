@@ -358,15 +358,21 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
         console.log("Using dedicated registration toggle endpoint");
         
         // Determine which status we're changing to based on new values
+        // We now have 4 possible toggles:
+        // - opnaam: Set registeredTo to true
+        // - not-opnaam: Set registeredTo to false
+        // - bv: Set company to true
+        // - not-bv: Set company to false
         let toggleStatus = null;
         
         if (newRegisteredTo && !prevRegisteredTo) {
-          toggleStatus = "opnaam"; // Switching to "opnaam"
+          toggleStatus = "opnaam"; // Setting to "opnaam"
+        } else if (!newRegisteredTo && prevRegisteredTo) {
+          toggleStatus = "not-opnaam"; // Removing "opnaam"
         } else if (newCompany && !prevCompany) {
-          toggleStatus = "bv"; // Switching to "bv"
-        } else if (!newRegisteredTo && !newCompany) {
-          // If both are now false, use the one that was previously true
-          toggleStatus = prevRegisteredTo ? "bv" : "opnaam";
+          toggleStatus = "bv"; // Setting to "bv"
+        } else if (!newCompany && prevCompany) {
+          toggleStatus = "not-bv"; // Removing "bv"
         }
         
         console.log(`Selected toggle status: ${toggleStatus}`);
