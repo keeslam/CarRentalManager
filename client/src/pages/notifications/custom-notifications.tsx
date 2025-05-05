@@ -208,7 +208,7 @@ const CustomNotificationsPage = () => {
       date: new Date().toISOString().split("T")[0],
       type: "custom",
       icon: "Bell",
-      link: "/notifications",
+      link: "/notifications/custom",
       priority: "normal"
     },
   });
@@ -222,26 +222,26 @@ const CustomNotificationsPage = () => {
       date: new Date().toISOString().split("T")[0],
       type: "custom",
       icon: "Bell",
-      link: "/notifications",
+      link: "/notifications/custom",
       priority: "normal"
     },
   });
 
   const onCreateSubmit = (data: NotificationFormData) => {
-    // Always set link to /notifications
+    // Always set link to /notifications/custom
     const notificationData = {
       ...data,
-      link: "/notifications"
+      link: "/notifications/custom"
     };
     createMutation.mutate(notificationData);
   };
 
   const onEditSubmit = (data: NotificationFormData) => {
     if (selectedNotification) {
-      // Always set link to /notifications
+      // Always set link to /notifications/custom
       const notificationData = {
         ...data,
-        link: "/notifications"
+        link: "/notifications/custom"
       };
       updateMutation.mutate({ id: selectedNotification.id, data: notificationData });
     }
@@ -255,7 +255,7 @@ const CustomNotificationsPage = () => {
       date: notification.date,
       type: notification.type || "custom",
       icon: notification.icon || "Bell",
-      link: notification.link || "/notifications",
+      link: notification.link || "/notifications/custom",
       priority: notification.priority || "normal"
     });
     setIsEditDialogOpen(true);
@@ -430,7 +430,7 @@ const CustomNotificationsPage = () => {
                     )}
                   />
                 </div>
-{/* Link field hidden - automatically set to /notifications */}
+{/* Link field hidden - automatically set to /notifications/custom */}
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">Cancel</Button>
@@ -571,7 +571,7 @@ const CustomNotificationsPage = () => {
                   )}
                 />
               </div>
-{/* Link field hidden - automatically set to /notifications */}
+{/* Link field hidden - automatically set to /notifications/custom */}
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">Cancel</Button>
