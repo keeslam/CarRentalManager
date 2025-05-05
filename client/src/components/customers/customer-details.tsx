@@ -32,18 +32,26 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
   const customerQueryKey = [`/api/customers/${customerId}`];
   const customerReservationsQueryKey = [`/api/reservations/customer/${customerId}`];
   
-  // Fetch customer details
-  const { data: customer, isLoading: isLoadingCustomer } = useQuery<Customer>({
+  // Fetch customer details with refetchOnMount to ensure fresh data
+  const { 
+    data: customer, 
+    isLoading: isLoadingCustomer,
+    refetch: refetchCustomer
+  } = useQuery<Customer>({
     queryKey: customerQueryKey,
+    refetchOnMount: true,
+    staleTime: 0 // Consider the data immediately stale to force a refetch
   });
   
-  // Fetch customer reservations
+  // Fetch customer reservations with refetch options
   const { 
     data: reservations, 
     isLoading: isLoadingReservations,
     refetch: refetchReservations
   } = useQuery<Reservation[]>({
     queryKey: customerReservationsQueryKey,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
   
   // Delete reservation mutation

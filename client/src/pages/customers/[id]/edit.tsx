@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { Customer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 export default function CustomerEdit() {
   const params = useParams<{ id: string }>();
   const [_, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const customerId = parseInt(params.id);
 
   // Fetch customer details
@@ -51,7 +52,14 @@ export default function CustomerEdit() {
       <CustomerForm 
         editMode={true} 
         initialData={customer} 
-        onSuccess={() => navigate(`/customers/${customerId}`)} 
+        onSuccess={(data) => {
+          // Force a refresh of all customer data before navigation
+          queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+          queryClient.removeQueries({ queryKey: [`/api/customers/${customerId}`] });
+          
+          // Then navigate back to the customer details page
+          navigate(`/customers/${customerId}`);
+        }} 
       />
     </div>
   );
