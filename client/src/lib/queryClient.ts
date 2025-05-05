@@ -59,13 +59,16 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Default refresh interval in milliseconds (5 seconds)
+export const DEFAULT_REFRESH_INTERVAL = 5000;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      refetchInterval: DEFAULT_REFRESH_INTERVAL, // Enable auto-refresh every 5 seconds
+      refetchOnWindowFocus: true, // Also refetch when window gets focus
+      staleTime: 0, // Data becomes stale immediately, enabling refetching
       retry: false,
     },
     mutations: {
