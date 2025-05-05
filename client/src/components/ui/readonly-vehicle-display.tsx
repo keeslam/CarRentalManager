@@ -36,16 +36,30 @@ export function ReadonlyVehicleDisplay({ vehicleId }: ReadonlyVehicleDisplayProp
 
   return (
     <div className="p-3 border rounded-md bg-muted/30">
-      <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-      <div className="text-sm text-muted-foreground">{formatLicensePlate(vehicle.licensePlate)}</div>
-      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+      <div className="font-medium flex items-center gap-2">
+        <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-semibold">
+          {formatLicensePlate(vehicle.licensePlate)}
+        </span>
+        <span>{vehicle.brand} {vehicle.model}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         {vehicle.vehicleType && (
-          <Badge variant="outline">{vehicle.vehicleType}</Badge>
+          <Badge variant="outline" className="text-xs">{vehicle.vehicleType}</Badge>
         )}
         {vehicle.fuel && (
-          <Badge variant="outline">{vehicle.fuel}</Badge>
+          <Badge variant="outline" className="text-xs">{vehicle.fuel}</Badge>
+        )}
+        {vehicle.apkDate && (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-xs">
+            APK: {new Date(vehicle.apkDate).toLocaleDateString()}
+          </Badge>
         )}
       </div>
+      {vehicle.color && (
+        <div className="text-xs text-muted-foreground mt-1">
+          Color: {vehicle.color}
+        </div>
+      )}
     </div>
   );
 }

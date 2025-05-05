@@ -613,13 +613,23 @@ export function ReservationForm({
                           
                           {selectedVehicle && !actualVehicleId && (
                             <div className="mt-2 text-sm bg-muted p-2 rounded-md">
-                              <div className="font-medium">{selectedVehicle.brand} {selectedVehicle.model}</div>
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                              <div className="font-medium flex items-center gap-2">
+                                <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-xs font-semibold">
+                                  {formatLicensePlate(selectedVehicle.licensePlate)}
+                                </span>
+                                <span>{selectedVehicle.brand} {selectedVehicle.model}</span>
+                              </div>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
                                 {selectedVehicle.vehicleType && (
-                                  <Badge variant="outline">{selectedVehicle.vehicleType}</Badge>
+                                  <Badge variant="outline" className="text-xs">{selectedVehicle.vehicleType}</Badge>
                                 )}
                                 {selectedVehicle.fuel && (
-                                  <Badge variant="outline">{selectedVehicle.fuel}</Badge>
+                                  <Badge variant="outline" className="text-xs">{selectedVehicle.fuel}</Badge>
+                                )}
+                                {selectedVehicle.apkDate && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-xs">
+                                    APK: {new Date(selectedVehicle.apkDate).toLocaleDateString()}
+                                  </Badge>
                                 )}
                               </div>
                             </div>
@@ -683,16 +693,58 @@ export function ReservationForm({
                       <FormMessage />
                       {selectedCustomer && (
                         <div className="mt-2 text-sm bg-muted p-2 rounded-md">
+                          {/* Name and Company Information */}
+                          <div className="font-medium flex items-center gap-2 mb-1">
+                            {selectedCustomer.debtorNumber && (
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                                #{selectedCustomer.debtorNumber}
+                              </span>
+                            )}
+                            <span>{selectedCustomer.name}</span>
+                          </div>
+                          
+                          {selectedCustomer.companyName && (
+                            <div className="flex items-center gap-1 mb-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                              </svg>
+                              <span className="text-muted-foreground">Company:</span>
+                              <span>{selectedCustomer.companyName}</span>
+                            </div>
+                          )}
+                          
+                          {/* Contact Information */}
                           {selectedCustomer.phone && (
                             <div className="flex items-center gap-1">
-                              <span className="text-muted-foreground">Phone:</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                              </svg>
                               <span>{selectedCustomer.phone}</span>
                             </div>
                           )}
                           {selectedCustomer.email && (
                             <div className="flex items-center gap-1">
-                              <span className="text-muted-foreground">Email:</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                              </svg>
                               <span>{selectedCustomer.email}</span>
+                            </div>
+                          )}
+                          
+                          {/* Address Information if available */}
+                          {(selectedCustomer.address || selectedCustomer.city) && (
+                            <div className="flex items-start gap-1 mt-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground mt-0.5">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                              </svg>
+                              <span>
+                                {selectedCustomer.address && <span>{selectedCustomer.address}</span>}
+                                {selectedCustomer.address && selectedCustomer.city && <span>, </span>}
+                                {selectedCustomer.city && <span>{selectedCustomer.city}</span>}
+                              </span>
                             </div>
                           )}
                         </div>
