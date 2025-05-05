@@ -167,13 +167,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Special method just for updating registration status that only updates the specific field
+  // Completely rewritten method to simplify and avoid issues
   async updateVehicleRegistrationStatus(id: number, status: string, userData: {
     username: string;
     date: string;
   }): Promise<Vehicle | undefined> {
     try {
-      console.log(`Updating only the ${status} registration status for vehicle ${id}`);
+      console.log(`Updating vehicle ${id} registration status to ${status}`);
       
       // First get the current vehicle data
       const currentVehicle = await this.getVehicle(id);
@@ -181,73 +181,44 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Vehicle with ID ${id} not found`);
       }
       
-      console.log("Current vehicle state before status update:", JSON.stringify(currentVehicle, null, 2));
+      // Define our update data based on status
+      const updateData: Partial<Vehicle> = {};
       
-      // Important: Do NOT update the general updatedBy field to ensure we don't overwrite
-      // the last person who edited the vehicle information
-      let updateObject: Record<string, any> = {};
-      
-      // Only update the specific fields based on the status
+      // Process data based on status type
       if (status === 'opnaam') {
-        // Update primary field with tracking info
-        updateObject.registeredTo = "true";
-        updateObject.registeredToDate = userData.date;
-        updateObject.registeredToBy = userData.username;
-        
-        // When enabling "opnaam", automatically disable "company" but KEEP original tracking
-        if (currentVehicle.company === "true") {
-          updateObject.company = "false";
-          // Explicitly preserve the original tracking info
-          updateObject.companyBy = currentVehicle.companyBy;
-          updateObject.companyDate = currentVehicle.companyDate;
-        }
-      } else if (status === 'not-opnaam') {
-        // Only update the relevant field with tracking
-        updateObject.registeredTo = "false";
-        updateObject.registeredToDate = userData.date;
-        updateObject.registeredToBy = userData.username;
-        // Explicitly preserve company tracking
-        updateObject.companyBy = currentVehicle.companyBy;
-        updateObject.companyDate = currentVehicle.companyDate;
-      } else if (status === 'bv') {
-        // Update primary field with tracking info
-        updateObject.company = "true";
-        updateObject.companyDate = userData.date;
-        updateObject.companyBy = userData.username;
-        
-        // When enabling "bv", automatically disable "registeredTo" but KEEP original tracking
-        if (currentVehicle.registeredTo === "true") {
-          updateObject.registeredTo = "false";
-          // Explicitly preserve the original tracking info
-          updateObject.registeredToBy = currentVehicle.registeredToBy;
-          updateObject.registeredToDate = currentVehicle.registeredToDate;
-        }
-      } else if (status === 'not-bv') {
-        // Only update the relevant field with tracking
-        updateObject.company = "false";
-        updateObject.companyDate = userData.date;
-        updateObject.companyBy = userData.username;
-        // Explicitly preserve registeredTo tracking
-        updateObject.registeredToBy = currentVehicle.registeredToBy;
-        updateObject.registeredToDate = currentVehicle.registeredToDate;
-      } else {
+        updateData.registeredTo = "true";
+        updateData.registeredToDate = userData.date;
+        updateData.registeredToBy = userData.username;
+        // When setting opnaam, we also need to ensure company is set to false
+        updateData.company = "false";
+      }
+      else if (status === 'not-opnaam') {
+        updateData.registeredTo = "false";
+        updateData.registeredToDate = userData.date;
+        updateData.registeredToBy = userData.username;
+      }
+      else if (status === 'bv') {
+        updateData.company = "true";
+        updateData.companyDate = userData.date;
+        updateData.companyBy = userData.username;
+        // When setting BV, we also need to ensure registeredTo is set to false
+        updateData.registeredTo = "false";
+      }
+      else if (status === 'not-bv') {
+        updateData.company = "false";
+        updateData.companyDate = userData.date;
+        updateData.companyBy = userData.username;
+      }
+      else {
         throw new Error(`Invalid registration status: ${status}`);
       }
       
-      console.log("Applying update with data:", JSON.stringify(updateObject, null, 2));
+      console.log("Applying update with data:", JSON.stringify(updateData, null, 2));
       
-      // Simply use db.update with the Drizzle ORM directly 
-      // instead of raw SQL to completely avoid parameter issues
+      // Execute the update
       const [updatedVehicle] = await db
         .update(vehicles)
-        .set({
-          registeredTo: updateObject.registeredTo || currentVehicle.registeredTo,
-          registeredToDate: updateObject.registeredToDate || currentVehicle.registeredToDate,
-          registeredToBy: updateObject.registeredToBy || currentVehicle.registeredToBy,
-          company: updateObject.company || currentVehicle.company,
-          companyDate: updateObject.companyDate || currentVehicle.companyDate,
-          companyBy: updateObject.companyBy || currentVehicle.companyBy
-        })
+        .set(updateData)
         .where(eq(vehicles.id, id))
         .returning();
       
