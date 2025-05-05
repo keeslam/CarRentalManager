@@ -273,6 +273,13 @@ export default function ReservationDetails() {
                       <p className="text-sm text-gray-500 mt-1">
                         {vehicle.vehicleType || 'Unknown type'} • {vehicle.fuel || 'Unknown fuel'}
                       </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {vehicle.apkDate && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                            APK: {formatDate(vehicle.apkDate)}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <Button 
                       variant="ghost" 
