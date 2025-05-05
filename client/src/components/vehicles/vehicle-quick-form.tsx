@@ -58,56 +58,10 @@ export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps)
   });
   
   // Pass our direct submitHandler to the form
-  const handleSubmit = (data: any) => {
-    // Process the form data before submission (copied from vehicle-form.tsx)
-    const formattedData: any = { ...data };
-    
-    // Handle empty string values for numeric fields
-    if (formattedData.departureMileage === "") formattedData.departureMileage = null;
-    if (formattedData.returnMileage === "") formattedData.returnMileage = null;
-    if (formattedData.monthlyPrice === "") formattedData.monthlyPrice = null;
-    if (formattedData.dailyPrice === "") formattedData.dailyPrice = null;
-    
-    // Convert boolean fields
-    const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
-      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps', 'adBlue'];
-    
-    // These fields are stored as strings in the database despite being boolean in the UI
-    const stringBooleanFields = ['registeredTo', 'company'];
-    
-    booleanFields.forEach(field => {
-      if (field in formattedData) {
-        if (formattedData[field] === "" || formattedData[field] === "false" || formattedData[field] === false || formattedData[field] === null || formattedData[field] === undefined) {
-          formattedData[field] = false;
-        } else {
-          formattedData[field] = true;
-        }
-      } else {
-        formattedData[field] = false; 
-      }
-    });
-    
-    // Handle string-boolean fields differently - convert to strings "true" or "false"
-    stringBooleanFields.forEach(field => {
-      if (field in formattedData) {
-        if (formattedData[field] === "" || formattedData[field] === "false" || formattedData[field] === false || formattedData[field] === null || formattedData[field] === undefined) {
-          formattedData[field] = "false";
-        } else {
-          formattedData[field] = "true";
-        }
-      } else {
-        formattedData[field] = "false"; 
-      }
-    });
-    
-    // Clean up date fields if they're empty strings
-    Object.keys(formattedData).forEach(key => {
-      if (key.toLowerCase().includes('date') && formattedData[key] === "") {
-        formattedData[key] = null;
-      }
-    });
-    
-    // Submit the processed data
+  const handleSubmit = (formattedData: any) => {
+    console.log("VehicleQuickForm handling submission with formatted data");
+    // Data is already processed by the VehicleForm component
+    // Just submit directly to our mutation
     createVehicleMutation.mutate(formattedData);
   };
   

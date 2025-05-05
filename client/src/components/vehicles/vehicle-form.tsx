@@ -31,7 +31,7 @@ import {
 import { useLocation } from "wouter";
 
 // Extended schema with validation
-const formSchema = insertVehicleSchema.extend({
+export const formSchema = insertVehicleSchema.extend({
   licensePlate: z.string().min(1, "License plate is required"),
   brand: z.string().min(1, "Brand is required"),
   model: z.string().min(1, "Model is required"),
@@ -74,6 +74,7 @@ export function VehicleForm({
   initialData,
   redirectToList = true,
   onSuccess,
+  onSubmitOverride,
   customCancelButton
 }: VehicleFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -367,6 +368,12 @@ export function VehicleForm({
     });
     
     console.log("Processed vehicle data:", formattedData);
+    
+    // If a submission override was provided, use that instead of our default flow
+    if (onSubmitOverride && typeof onSubmitOverride === 'function') {
+      console.log("Using submission override function");
+      return onSubmitOverride(formattedData);
+    }
     
     try {
       // First, check if we're making a registration status change
