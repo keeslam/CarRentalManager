@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { insertCustomerSchema } from "@shared/schema";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { invalidateRelatedQueries } from "@/lib/invalidateRelatedQueries";
 import { 
   Form, 
   FormControl, 
@@ -136,8 +137,8 @@ export function CustomerForm({
       );
     },
     onSuccess: async (data) => {
-      // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      // Use the helper function to properly invalidate all related queries
+      await invalidateRelatedQueries("customers", editMode ? initialData?.id : undefined);
       
       // Show success message
       toast({
