@@ -252,7 +252,7 @@ export function NotificationCenter() {
           </ScrollArea>
         </Tabs>
         <div className="flex items-center justify-center p-4 border-t">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" onClick={() => setOpen(false)} asChild>
             <Link href="/notifications">View all notifications</Link>
           </Button>
         </div>
