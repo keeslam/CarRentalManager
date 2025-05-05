@@ -1731,8 +1731,7 @@ export default function ReportsPage() {
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
                       <SelectItem value="expired">Expired</SelectItem>
-                      <SelectItem value="expiring_soon">Expiring Soon (30 days)</SelectItem>
-                      <SelectItem value="expiring_2to3_months">Expiring in 2-3 Months</SelectItem>
+                      <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
                       <SelectItem value="valid">Valid</SelectItem>
                     </SelectContent>
                   </Select>
