@@ -175,27 +175,42 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative" ref={searchRef}>
-              <input 
-                type="text" 
-                placeholder="Search..."
-                autoComplete="off"
-                className="w-full py-2 pl-10 pr-4 text-gray-700 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                value={searchQuery}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSearchQuery(value);
-                  if (value.length >= 2) {
-                    setShowResults(true);
-                  } else {
-                    setShowResults(false);
-                  }
-                }}
-                onFocus={() => {
-                  if (searchQuery.length >= 2) {
-                    setShowResults(true);
-                  }
-                }}
-              />
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim().length >= 2) {
+                  setShowResults(false);
+                  navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`);
+                }
+              }}>
+                <input 
+                  type="text" 
+                  placeholder="Search..."
+                  autoComplete="off"
+                  className="w-full py-2 pl-10 pr-4 text-gray-700 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+                    if (value.length >= 2) {
+                      setShowResults(true);
+                    } else {
+                      setShowResults(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.length >= 2) {
+                      setShowResults(true);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+                      e.preventDefault();
+                      setShowResults(false);
+                      navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`);
+                    }
+                  }}
+                />
+              </form>
               {searchQuery ? (
                 <button 
                   className="absolute right-3 top-2.5 text-gray-500"
@@ -230,6 +245,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
                      (!vehicleResults?.length && !customerResults?.length && !reservationResults?.length) && (
                       <div className="p-4 text-center text-gray-500">
                         No results found for "{searchQuery}"
+                      </div>
+                    )}
+                    
+                    {/* View all results link */}
+                    {!vehiclesLoading && !customersLoading && !reservationsLoading && 
+                     (vehicleResults?.length > 0 || customerResults?.length > 0 || reservationResults?.length > 0) && (
+                      <div className="p-2 border-t border-gray-100 text-center">
+                        <button 
+                          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                          onClick={() => {
+                            setShowResults(false);
+                            navigate(`/search-results?q=${encodeURIComponent(searchQuery.trim())}`);
+                          }}
+                        >
+                          View all results
+                        </button>
                       </div>
                     )}
                     
@@ -340,5 +371,7 @@ function getPageTitle(location: string): string {
   if (location.startsWith("/expenses")) return "Expenses";
   if (location.startsWith("/documents")) return "Documents";
   if (location.startsWith("/reports")) return "Reports";
+  if (location.startsWith("/search-results")) return "Search Results";
+  if (location.startsWith("/notifications")) return "Notifications";
   return "Auto Lease LAM";
 }

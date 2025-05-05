@@ -24,6 +24,7 @@ import TemplateEditor from "@/pages/documents/template-editor";
 import ReportsPage from "@/pages/reports/index";
 import NotificationsPage from "@/pages/notifications/index";
 import CustomNotificationsPage from "@/pages/notifications/custom-notifications";
+import SearchResults from "@/pages/search-results";
 import UsersIndex from "@/pages/users/index";
 import UserAdd from "@/pages/users/add";
 import UserDetails from "@/pages/users/[id]";
@@ -67,6 +68,7 @@ function AppRoutes() {
         <ProtectedRoute path="/reports" component={ReportsPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
+        <ProtectedRoute path="/search-results" component={SearchResults} />
         <ProtectedRoute path="/users" component={UsersIndex} />
         <ProtectedRoute path="/users/add" component={UserAdd} />
         <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
