@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import {
   Popover,
@@ -22,7 +22,7 @@ import { Info } from "lucide-react";
 import { ClipboardCheck } from "lucide-react";
 import { MessageSquare } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export function NotificationCenter() {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -227,6 +227,8 @@ export function NotificationCenter() {
                           description={notification.description}
                           date={notification.date}
                           link={notification.link || '/notifications'}
+                          id={notification.id}
+                          isCustom={true}
                         />
                       </div>
                     );
@@ -348,6 +350,8 @@ export function NotificationCenter() {
                         description={notification.description}
                         date={notification.date}
                         link={notification.link || '/notifications'}
+                        id={notification.id}
+                        isCustom={true}
                       />
                     </div>
                   );
@@ -372,9 +376,22 @@ interface NotificationItemProps {
   description: string;
   date: string;
   link: string;
+  id?: number; // Optional ID for custom notifications
+  isCustom?: boolean; // Flag to identify custom notifications
 }
 
-function NotificationItem({ icon, title, description, date, link }: NotificationItemProps) {
+function NotificationItem({ 
+  icon, 
+  title, 
+  description, 
+  date, 
+  link, 
+  id, 
+  isCustom = false 
+}: NotificationItemProps) {
+  const navigate = useLocation()[1];
+  const queryClient = useQueryClient();
+  
   // Calculate days until date
   const today = new Date();
   const itemDate = new Date(date);
@@ -391,9 +408,34 @@ function NotificationItem({ icon, title, description, date, link }: Notification
     timeText = `In ${daysUntil} days`;
   }
 
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // If this is a custom notification and has ID, mark it as read
+    if (isCustom && id) {
+      try {
+        await fetch(`/api/custom-notifications/${id}/read`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // Invalidate related queries to refresh the notifications list
+        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+    
+    // Navigate to the link
+    navigate(link);
+  };
+
   return (
-    <Link href={link}>
-      <div className="p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors">
+    <div onClick={handleClick} className="cursor-pointer">
+      <div className="p-4 border-b hover:bg-gray-50 transition-colors">
         <div className="flex">
           <div className="mr-3 mt-0.5">
             <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center">
@@ -409,6 +451,6 @@ function NotificationItem({ icon, title, description, date, link }: Notification
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
