@@ -57,10 +57,10 @@ export default function ReportsPage() {
     
     switch(preset) {
       case 'all-time':
-        // Set a very early start date (3 years ago) to effectively show "all time"
+        // Set a very early start date and far future end date to truly show all data
         setDateRange({
-          from: subMonths(now, 36), // Go back 3 years
-          to: now
+          from: new Date('2000-01-01'), // Go way back to cover all historical data
+          to: new Date('2050-12-31')    // Go way forward to include all future data
         });
         break;
       case 'this-month':
@@ -478,7 +478,7 @@ export default function ReportsPage() {
                   onClick={() => setDateRangePreset('all-time')}
                   className="text-xs px-2 py-1 h-7"
                 >
-                  All Time
+                  All Data (Past & Future)
                 </Button>
                 <Button 
                   variant="outline" 
