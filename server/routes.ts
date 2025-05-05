@@ -617,11 +617,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse the sanitized merged data
       const vehicleData = insertVehicleSchema.parse(mergedData);
       
+      // Preserve the registration specific tracking fields
+      const { registeredToBy, companyBy } = existingVehicle;
+      
       // Add user tracking information for updates
       const user = req.user;
       const dataWithTracking = {
         ...vehicleData,
-        updatedBy: user ? user.username : null
+        updatedBy: user ? user.username : null,
+        // Preserve the registration tracking fields
+        registeredToBy,
+        companyBy
       };
       
       const vehicle = await storage.updateVehicle(id, dataWithTracking);
@@ -683,11 +689,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Only update if we have valid data
       if (Object.keys(updateData).length > 0) { // Check if we have any data to update
+        // Preserve registration tracking fields
+        const { registeredToBy, companyBy } = vehicle;
+        
         // Add user tracking information
         const user = req.user;
         const dataWithTracking = {
           ...updateData,
-          updatedBy: user ? user.username : null
+          updatedBy: user ? user.username : null,
+          // Preserve the registration tracking fields
+          registeredToBy,
+          companyBy
         };
         
         const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
