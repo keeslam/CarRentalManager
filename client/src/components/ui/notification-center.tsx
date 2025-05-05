@@ -19,6 +19,7 @@ import { Link } from "wouter";
 
 export function NotificationCenter() {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [open, setOpen] = useState(false);
   const today = new Date();
 
   // Fetch vehicles
@@ -72,7 +73,7 @@ export function NotificationCenter() {
     upcomingReservationItems.length;
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
@@ -129,14 +130,15 @@ export function NotificationCenter() {
                     </div>
                   )}
                   {upcomingReservationItems.map(reservation => (
-                    <NotificationItem
-                      key={`reservation-${reservation.id}`}
-                      icon={<Calendar className="text-blue-500" />}
-                      title={`Reservation #${reservation.id} starts tomorrow`}
-                      description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
-                      date={reservation.startDate}
-                      link={`/reservations/${reservation.id}`}
-                    />
+                    <div key={`reservation-${reservation.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={<Calendar className="text-blue-500" />}
+                        title={`Reservation #${reservation.id} starts tomorrow`}
+                        description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
+                        date={reservation.startDate}
+                        link={`/reservations/${reservation.id}`}
+                      />
+                    </div>
                   ))}
                   
                   {apkExpiringItems.length > 0 && (
@@ -145,14 +147,15 @@ export function NotificationCenter() {
                     </div>
                   )}
                   {apkExpiringItems.map(vehicle => (
-                    <NotificationItem
-                      key={`apk-${vehicle.id}`}
-                      icon={<AlertTriangle className="text-amber-500" />}
-                      title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
-                      description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
-                      date={vehicle.apkDate || ""}
-                      link={`/vehicles/${vehicle.id}`}
-                    />
+                    <div key={`apk-${vehicle.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={<AlertTriangle className="text-amber-500" />}
+                        title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
+                        description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
+                        date={vehicle.apkDate || ""}
+                        link={`/vehicles/${vehicle.id}`}
+                      />
+                    </div>
                   ))}
                   
                   {warrantyExpiringItems.length > 0 && (
@@ -263,6 +266,14 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ icon, title, description, date, link }: NotificationItemProps) {
+  const setOpen = useContext(PopoverContext);
+  
+  const handleClick = () => {
+    // Close the popover when a notification is clicked
+    if (typeof setOpen === 'function') {
+      setOpen(false);
+    }
+  };
   // Calculate days until date
   const today = new Date();
   const itemDate = new Date(date);
