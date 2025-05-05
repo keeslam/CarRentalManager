@@ -724,8 +724,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // Use hardcoded username since the authentication system is not working properly in this project
-      const adminUsername = "admin";
+      // Get username from authenticated session
+      let username = "admin"; // Default fallback
+      
+      // Log authentication state for debugging
+      console.log("Authentication state:", {
+        isAuthenticated: req.isAuthenticated(),
+        userExists: !!req.user,
+        sessionID: req.sessionID
+      });
+      
+      // Try to get the current user's username from the session
+      if (req.user && typeof req.user === 'object') {
+        // Check if username exists in the user object
+        if ('username' in req.user && req.user.username) {
+          username = req.user.username;
+          console.log("Using authenticated username:", username);
+        } else {
+          console.log("User object exists but has no username property:", req.user);
+        }
+      } else {
+        console.log("User not available in request:", req.user);
+      }
       
       // Create update data with user attribution
       let updateData;
@@ -735,26 +755,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           registeredTo: "true", // Use string "true" to match database schema
           company: "false",     // Use string "false" to match database schema
           registeredToDate: currentDate,
-          updatedBy: adminUsername   // Add the username here for user tracking
+          updatedBy: username   // Add the actual username here for user tracking
         };
       } else {
         updateData = {
           registeredTo: "false", // Use string "false" to match database schema
           company: "true",       // Use string "true" to match database schema
           companyDate: currentDate,
-          updatedBy: adminUsername   // Add the username here for user tracking
+          updatedBy: username   // Add the actual username here for user tracking
         };
       }
       
+      console.log("Updating vehicle with user:", username);
       const updatedVehicle = await storage.updateVehicle(id, updateData);
       
       // Store last action to ensure history shows the correct user for this specific action
       const historyNote = status === 'opnaam' 
-        ? `Registration changed to Opnaam by ${adminUsername}`
-        : `Registration changed to BV by ${adminUsername}`;
+        ? `Registration changed to Opnaam by ${username}`
+        : `Registration changed to BV by ${username}`;
         
-      // Update the database to record this specific action
-      console.log("Updating vehicle with history note:", historyNote);
+      // Log the history action
+      console.log("Vehicle registration history action:", historyNote);
       
       res.json(updatedVehicle);
     } catch (error) {
