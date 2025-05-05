@@ -250,8 +250,12 @@ export default function VehiclesIndex() {
       header: "License Plate",
       cell: ({ row }) => {
         const licensePlate = row.getValue("licensePlate") as string;
-        // Display without hyphens using formatLicensePlate utility
-        return <div className="font-medium">{formatLicensePlate(licensePlate)}</div>;
+        // Display without hyphens using formatLicensePlate utility and ensure it stays on a single line
+        return (
+          <div className="font-medium whitespace-nowrap bg-primary-50 text-primary-700 px-2 py-1 rounded inline-block">
+            {formatLicensePlate(licensePlate)}
+          </div>
+        );
       },
     },
     {
