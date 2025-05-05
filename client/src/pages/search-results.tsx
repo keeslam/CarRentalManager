@@ -411,7 +411,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
                     <CardHeader className="pb-2">
                       <CardTitle className="flex justify-between items-center">
                         <span>
-                          {reservation.vehicle?.licensePlate || 'Unknown vehicle'}
+                          {reservation.vehicle?.licensePlate ? formatLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
                         </span>
                         <Badge variant={reservation.status === 'booked' ? 'default' : reservation.status === 'cancelled' ? 'destructive' : 'secondary'}>
                           {reservation.status}
