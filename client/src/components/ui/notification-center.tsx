@@ -164,14 +164,15 @@ export function NotificationCenter() {
                     </div>
                   )}
                   {warrantyExpiringItems.map(vehicle => (
-                    <NotificationItem
-                      key={`warranty-${vehicle.id}`}
-                      icon={<Car className="text-indigo-500" />}
-                      title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
-                      description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
-                      date={vehicle.warrantyEndDate || ""}
-                      link={`/vehicles/${vehicle.id}`}
-                    />
+                    <div key={`warranty-${vehicle.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={<Car className="text-indigo-500" />}
+                        title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
+                        description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
+                        date={vehicle.warrantyEndDate || ""}
+                        link={`/vehicles/${vehicle.id}`}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -188,14 +189,15 @@ export function NotificationCenter() {
                 </div>
               ) : (
                 upcomingReservationItems.map(reservation => (
-                  <NotificationItem
-                    key={`reservation-tab-${reservation.id}`}
-                    icon={<Calendar className="text-blue-500" />}
-                    title={`Reservation #${reservation.id} starts soon`}
-                    description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
-                    date={reservation.startDate}
-                    link={`/reservations/${reservation.id}`}
-                  />
+                  <div key={`reservation-tab-${reservation.id}`} onClick={() => setOpen(false)}>
+                    <NotificationItem
+                      icon={<Calendar className="text-blue-500" />}
+                      title={`Reservation #${reservation.id} starts soon`}
+                      description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
+                      date={reservation.startDate}
+                      link={`/reservations/${reservation.id}`}
+                    />
+                  </div>
                 ))
               )}
             </TabsContent>
@@ -211,14 +213,15 @@ export function NotificationCenter() {
                 </div>
               ) : (
                 apkExpiringItems.map(vehicle => (
-                  <NotificationItem
-                    key={`apk-tab-${vehicle.id}`}
-                    icon={<AlertTriangle className="text-amber-500" />}
-                    title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
-                    description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
-                    date={vehicle.apkDate || ""}
-                    link={`/vehicles/${vehicle.id}`}
-                  />
+                  <div key={`apk-tab-${vehicle.id}`} onClick={() => setOpen(false)}>
+                    <NotificationItem
+                      icon={<AlertTriangle className="text-amber-500" />}
+                      title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
+                      description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
+                      date={vehicle.apkDate || ""}
+                      link={`/vehicles/${vehicle.id}`}
+                    />
+                  </div>
                 ))
               )}
             </TabsContent>
@@ -234,14 +237,15 @@ export function NotificationCenter() {
                 </div>
               ) : (
                 warrantyExpiringItems.map(vehicle => (
-                  <NotificationItem
-                    key={`warranty-tab-${vehicle.id}`}
-                    icon={<Car className="text-indigo-500" />}
-                    title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
-                    description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
-                    date={vehicle.warrantyEndDate || ""}
-                    link={`/vehicles/${vehicle.id}`}
-                  />
+                  <div key={`warranty-tab-${vehicle.id}`} onClick={() => setOpen(false)}>
+                    <NotificationItem
+                      icon={<Car className="text-indigo-500" />}
+                      title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
+                      description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
+                      date={vehicle.warrantyEndDate || ""}
+                      link={`/vehicles/${vehicle.id}`}
+                    />
+                  </div>
                 ))
               )}
             </TabsContent>
@@ -266,14 +270,6 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ icon, title, description, date, link }: NotificationItemProps) {
-  const setOpen = useContext(PopoverContext);
-  
-  const handleClick = () => {
-    // Close the popover when a notification is clicked
-    if (typeof setOpen === 'function') {
-      setOpen(false);
-    }
-  };
   // Calculate days until date
   const today = new Date();
   const itemDate = new Date(date);
