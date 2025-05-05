@@ -141,6 +141,7 @@ export const customers = pgTable("customers", {
   // Status
   status: text("status"),
   statusDate: text("status_date"),
+  statusBy: text("status_by"), // Track who changed the status
   
   // Notes
   notes: text("notes"),

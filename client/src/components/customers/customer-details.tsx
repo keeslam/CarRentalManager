@@ -342,6 +342,13 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Status Date</h4>
                     <p className="text-base">{customer.statusDate ? formatDate(customer.statusDate) : "Not provided"}</p>
                   </div>
+                  
+                  {customer.statusBy && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Status Changed By</h4>
+                      <p className="text-base">{customer.statusBy}</p>
+                    </div>
+                  )}
                 </div>
                 
                 {customer.notes && (
@@ -350,6 +357,40 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                     <p className="text-base">{customer.notes}</p>
                   </div>
                 )}
+              </div>
+              
+              {/* Tracking Information */}
+              <div className="mt-6 border-t pt-6">
+                <h3 className="text-lg font-medium mb-3">Tracking Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {customer.createdBy && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Created By</h4>
+                      <p className="text-base">{customer.createdBy}</p>
+                    </div>
+                  )}
+                  
+                  {customer.createdAt && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Created At</h4>
+                      <p className="text-base">{new Date(customer.createdAt).toLocaleString()}</p>
+                    </div>
+                  )}
+                  
+                  {customer.updatedBy && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated By</h4>
+                      <p className="text-base">{customer.updatedBy}</p>
+                    </div>
+                  )}
+                  
+                  {customer.updatedAt && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Last Updated At</h4>
+                      <p className="text-base">{new Date(customer.updatedAt).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
