@@ -918,10 +918,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(conflicts);
   });
 
-  // Get all reservations
+  // Get all reservations with optional search
   app.get("/api/reservations", async (req, res) => {
-    const reservations = await storage.getAllReservations();
-    res.json(reservations);
+    try {
+      const searchQuery = req.query.search as string | undefined;
+      const reservations = await storage.getAllReservations(searchQuery);
+      res.json(reservations);
+    } catch (error) {
+      console.error("Error fetching reservations:", error);
+      res.status(500).json({ message: "Failed to fetch reservations", error });
+    }
   });
 
   // Get single reservation
