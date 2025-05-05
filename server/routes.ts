@@ -1659,8 +1659,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Special handling for Contract type documents - use the same structure as generated contracts
       if (req.body.documentType && req.body.documentType.toLowerCase() === 'contract') {
+        // For contracts, always remove all special characters including dashes
+        const sanitizedPlateNoDashes = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        
         const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
-        const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
+        const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlateNoDashes);
         
         if (!fs.existsSync(contractsBaseDir)) {
           fs.mkdirSync(contractsBaseDir, { recursive: true });
@@ -2041,6 +2044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Get vehicle license plate for folder structure
         if (reservation.vehicle && reservation.vehicle.licensePlate) {
+          // Ensure we remove ALL special characters including dashes for contract folders/filenames
           const sanitizedPlate = reservation.vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
           const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
           const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
