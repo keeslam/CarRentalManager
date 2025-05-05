@@ -1215,9 +1215,15 @@ export default function ReportsPage() {
             <Printer className="mr-2 h-4 w-4" />
             Customer Impact
           </Button>
-          <Button onClick={() => printReport(activeTab)}>
+          <Button 
+            variant="default"
+            className="bg-primary" 
+            onClick={() => printReport(activeTab)}
+          >
             <Printer className="mr-2 h-4 w-4" />
-            Current Tab
+            {activeTab === 'operations' ? 'Operations' :
+             activeTab === 'expenses' ? 'Expenses' :
+             activeTab === 'vehicles' ? 'Vehicles' : 'Customers'} Report
           </Button>
         </div>
       </div>
