@@ -167,60 +167,49 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Completely rewritten method to simplify and avoid issues
+  // Complete rewrite with basic direct statements to update vehicle registration
   async updateVehicleRegistrationStatus(id: number, status: string, userData: {
     username: string;
     date: string;
   }): Promise<Vehicle | undefined> {
     try {
-      console.log(`Updating vehicle ${id} registration status to ${status}`);
-      
-      // First get the current vehicle data
-      const currentVehicle = await this.getVehicle(id);
-      if (!currentVehicle) {
-        throw new Error(`Vehicle with ID ${id} not found`);
-      }
-      
-      // Define our update data based on status
-      const updateData: Partial<Vehicle> = {};
-      
-      // Process data based on status type
+      // Simple backup approach without any SQL parameters
       if (status === 'opnaam') {
-        updateData.registeredTo = "true";
-        updateData.registeredToDate = userData.date;
-        updateData.registeredToBy = userData.username;
-        // When setting opnaam, we also need to ensure company is set to false
-        updateData.company = "false";
+        await this.updateVehicle(id, {
+          registeredTo: "true",
+          registeredToDate: userData.date,
+          registeredToBy: userData.username,
+          company: "false"
+        });
       }
       else if (status === 'not-opnaam') {
-        updateData.registeredTo = "false";
-        updateData.registeredToDate = userData.date;
-        updateData.registeredToBy = userData.username;
+        await this.updateVehicle(id, {
+          registeredTo: "false",
+          registeredToDate: userData.date,
+          registeredToBy: userData.username
+        });
       }
       else if (status === 'bv') {
-        updateData.company = "true";
-        updateData.companyDate = userData.date;
-        updateData.companyBy = userData.username;
-        // When setting BV, we also need to ensure registeredTo is set to false
-        updateData.registeredTo = "false";
+        await this.updateVehicle(id, {
+          company: "true",
+          companyDate: userData.date,
+          companyBy: userData.username,
+          registeredTo: "false"
+        });
       }
       else if (status === 'not-bv') {
-        updateData.company = "false";
-        updateData.companyDate = userData.date;
-        updateData.companyBy = userData.username;
+        await this.updateVehicle(id, {
+          company: "false",
+          companyDate: userData.date,
+          companyBy: userData.username
+        });
       }
       else {
         throw new Error(`Invalid registration status: ${status}`);
       }
       
-      console.log("Applying update with data:", JSON.stringify(updateData, null, 2));
-      
-      // Execute the update
-      const [updatedVehicle] = await db
-        .update(vehicles)
-        .set(updateData)
-        .where(eq(vehicles.id, id))
-        .returning();
+      // Get the updated vehicle data
+      const updatedVehicle = await this.getVehicle(id);
       
       console.log("Database returned vehicle after status update:", JSON.stringify(updatedVehicle, null, 2));
       return updatedVehicle || undefined;
