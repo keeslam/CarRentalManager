@@ -947,10 +947,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add user tracking information for updates
       const user = req.user;
+      const username = user ? user.username : null;
+      
+      // Get the current customer to check if status has changed
+      const existingCustomer = await storage.getCustomer(id);
+      
+      if (!existingCustomer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
+      // Add tracking information
       const dataWithTracking = {
         ...customerData,
-        updatedBy: user ? user.username : null
+        updatedBy: username
       };
+      
+      // Specifically track status changes
+      if (customerData.status && customerData.status !== existingCustomer.status) {
+        dataWithTracking.statusBy = username;
+        dataWithTracking.statusDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      }
       
       const customer = await storage.updateCustomer(id, dataWithTracking);
       
