@@ -717,6 +717,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status. Must be 'opnaam' or 'bv'" });
       }
 
+      // Debug user information
+      console.log("User object from request:", JSON.stringify(req.user, null, 2));
+      console.log("Is authenticated:", req.isAuthenticated());
+      console.log("Session contents:", JSON.stringify(req.session, null, 2));
+      
       const vehicle = await storage.getVehicle(id);
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
@@ -743,14 +748,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add user tracking information
       const user = req.user;
+      console.log("User for tracking:", user);
+      
+      // Use admin as a fallback if username isn't available
+      let username = "admin";
+      if (user && typeof user === 'object') {
+        if ('username' in user) {
+          username = user.username as string;
+        } else if ('id' in user) {
+          // Try to use user ID if username isn't available
+          username = `user-${user.id}`;
+        }
+      }
+      
       const dataWithTracking = {
         ...updateData,
-        updatedBy: user ? user.username : null
+        updatedBy: username
       };
+      
+      console.log("Data with tracking:", dataWithTracking);
       
       const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
       res.json(updatedVehicle);
     } catch (error) {
+      console.error("Error in toggle-registration endpoint:", error);
       res.status(400).json({ message: "Error toggling registration status", error });
     }
   });
