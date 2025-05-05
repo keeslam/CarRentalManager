@@ -1195,13 +1195,29 @@ export default function ReportsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => printReport('apk')}>
+            <Printer className="mr-2 h-4 w-4" />
+            APK Report
+          </Button>
           <Button variant="outline" onClick={() => printReport('warranty')}>
             <Printer className="mr-2 h-4 w-4" />
             Warranty Report
           </Button>
+          <Button variant="outline" onClick={() => printReport('expenses')}>
+            <Printer className="mr-2 h-4 w-4" />
+            Expenses Report
+          </Button>
+          <Button variant="outline" onClick={() => printReport('utilization')}>
+            <Printer className="mr-2 h-4 w-4" />
+            Utilization Report
+          </Button>
+          <Button variant="outline" onClick={() => printReport('customer-impact')}>
+            <Printer className="mr-2 h-4 w-4" />
+            Customer Impact
+          </Button>
           <Button onClick={() => printReport(activeTab)}>
             <Printer className="mr-2 h-4 w-4" />
-            Print Report
+            Current Tab
           </Button>
         </div>
       </div>
@@ -1832,42 +1848,6 @@ export default function ReportsPage() {
                 >
                   <Printer className="h-4 w-4" />
                   Print
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => printReport('apk')}
-                  className="h-8 gap-1"
-                >
-                  <Printer className="h-4 w-4" />
-                  APK
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => printReport('expenses')}
-                  className="h-8 gap-1"
-                >
-                  <Printer className="h-4 w-4" />
-                  Expenses
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => printReport('utilization')}
-                  className="h-8 gap-1"
-                >
-                  <Printer className="h-4 w-4" />
-                  Utilization
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => printReport('customer-impact')}
-                  className="h-8 gap-1"
-                >
-                  <Printer className="h-4 w-4" />
-                  Customer Impact
                 </Button>
               </div>
             </CardHeader>
