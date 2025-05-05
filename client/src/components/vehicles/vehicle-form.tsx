@@ -325,29 +325,55 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     try {
       // First, check if we're making a registration status change
       const previousData = initialData || {};
-      const isRegStatusChange = 
-        editMode && 
-        (formattedData.registeredTo !== previousData.registeredTo || 
-         formattedData.company !== previousData.company);
+      
+      // Convert string "true"/"false" to actual booleans for comparison
+      const prevRegisteredTo = previousData.registeredTo === "true" || previousData.registeredTo === true;
+      const prevCompany = previousData.company === "true" || previousData.company === true;
+      const newRegisteredTo = formattedData.registeredTo === "true" || formattedData.registeredTo === true;
+      const newCompany = formattedData.company === "true" || formattedData.company === true;
+      
+      // Check if there's an actual change in registration status
+      const isRegStatusChange = editMode && (
+        (prevRegisteredTo !== newRegisteredTo) || 
+        (prevCompany !== newCompany)
+      );
+      
+      console.log("Previous registration status:", {
+        registeredTo: prevRegisteredTo,
+        company: prevCompany
+      });
+      
+      console.log("New registration status:", {
+        registeredTo: newRegisteredTo,
+        company: newCompany
+      });
+      
+      console.log("Registration status change detected:", isRegStatusChange);
       
       // Track the response data
       let responseData;
       
       // If we're changing registration status, use the dedicated endpoint first
       if (isRegStatusChange && editMode) {
-        console.log("Registration status change detected, using dedicated endpoint");
+        console.log("Using dedicated registration toggle endpoint");
         
-        // Determine which status we're changing to
+        // Determine which status we're changing to based on new values
         let toggleStatus = null;
-        if (formattedData.registeredTo === "true") {
-          toggleStatus = "opnaam";
-        } else if (formattedData.company === "true") {
-          toggleStatus = "bv";
+        
+        if (newRegisteredTo && !prevRegisteredTo) {
+          toggleStatus = "opnaam"; // Switching to "opnaam"
+        } else if (newCompany && !prevCompany) {
+          toggleStatus = "bv"; // Switching to "bv"
+        } else if (!newRegisteredTo && !newCompany) {
+          // If both are now false, use the one that was previously true
+          toggleStatus = prevRegisteredTo ? "bv" : "opnaam";
         }
         
-        // Only call toggle endpoint if we're setting one of the statuses to true
+        console.log(`Selected toggle status: ${toggleStatus}`);
+        
+        // Call toggle endpoint if we've determined which status to change to
         if (toggleStatus) {
-          console.log(`Setting registration status to: ${toggleStatus}`);
+          console.log(`Sending toggle registration request with status: ${toggleStatus}`);
           
           const toggleResponse = await apiRequest(
             "PATCH",
@@ -370,6 +396,8 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
           // Get the initial response data
           responseData = await toggleResponse.json();
           console.log("Registration toggle response:", responseData);
+        } else {
+          console.warn("Could not determine appropriate toggle status, skipping dedicated endpoint");
         }
       }
       
