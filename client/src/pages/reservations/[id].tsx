@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -429,6 +429,35 @@ export default function ReservationDetails() {
                     Create New Expense
                   </Button>
                 </Link>
+              </div>
+            </div>
+            
+            {/* Tracking information */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-500 mb-3">Tracking Information</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Created By:</span>
+                  <span className="font-medium">{reservation.createdBy || 'Unknown'}</span>
+                </div>
+                {reservation.createdAt && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Created On:</span>
+                    <span className="font-medium">{new Date(reservation.createdAt).toLocaleString()}</span>
+                  </div>
+                )}
+                {reservation.updatedBy && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Last Modified By:</span>
+                    <span className="font-medium">{reservation.updatedBy}</span>
+                  </div>
+                )}
+                {reservation.updatedAt && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Last Modified On:</span>
+                    <span className="font-medium">{new Date(reservation.updatedAt).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
