@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Plus, Edit, Trash2, Check, X, CalendarDays, ClipboardCheck, Bell, AlertCircle, Info } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Check, X, CalendarDays, ClipboardCheck, Bell, AlertCircle, Info, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -300,7 +301,13 @@ const CustomNotificationsPage = () => {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Custom Notifications</h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/notifications">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Notification Center
+            </Link>
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Add Notification
@@ -446,6 +453,7 @@ const CustomNotificationsPage = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Edit Notification Dialog */}
