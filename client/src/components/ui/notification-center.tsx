@@ -10,10 +10,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Vehicle, Reservation } from "@shared/schema";
+import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format-utils";
-import { Bell, Calendar, Car, AlertTriangle, Info, ClipboardCheck } from "lucide-react";
+// Import each component individually to ensure they're properly loaded
+import { Bell } from "lucide-react";
+import { Calendar } from "lucide-react";
+import { Car } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { Info } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
 
@@ -183,6 +190,47 @@ export function NotificationCenter() {
                       />
                     </div>
                   ))}
+                  
+                  {customNotifications.length > 0 && (
+                    <div className="px-4 py-2 bg-gray-50">
+                      <h5 className="text-xs font-medium">Custom Notifications</h5>
+                    </div>
+                  )}
+                  {customNotifications.map(notification => {
+                    // Determine icon based on notification.icon field
+                    let iconComponent;
+                    switch (notification.icon) {
+                      case 'Info':
+                        iconComponent = <Info className="text-blue-500" />;
+                        break;
+                      case 'AlertTriangle':
+                        iconComponent = <AlertTriangle className="text-amber-500" />;
+                        break;
+                      case 'Calendar':
+                        iconComponent = <Calendar className="text-green-500" />;
+                        break;
+                      case 'Car':
+                        iconComponent = <Car className="text-indigo-500" />;
+                        break;
+                      case 'ClipboardCheck':
+                        iconComponent = <ClipboardCheck className="text-purple-500" />;
+                        break;
+                      default:
+                        iconComponent = <Bell className="text-slate-500" />;
+                    }
+                    
+                    return (
+                      <div key={`custom-all-${notification.id}`} onClick={() => setOpen(false)}>
+                        <NotificationItem
+                          icon={iconComponent}
+                          title={notification.title}
+                          description={notification.description}
+                          date={notification.date}
+                          link={notification.link || '/notifications/custom'}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -256,6 +304,54 @@ export function NotificationCenter() {
                     />
                   </div>
                 ))
+              )}
+            </TabsContent>
+            
+            <TabsContent value="custom" className="m-0">
+              {customNotifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[280px] text-center p-4">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
+                  <h3 className="font-medium">No custom notifications</h3>
+                  <p className="text-sm text-muted-foreground">
+                    No custom notifications have been created.
+                  </p>
+                </div>
+              ) : (
+                customNotifications.map(notification => {
+                  // Determine icon based on notification.icon field
+                  let iconComponent;
+                  switch (notification.icon) {
+                    case 'Info':
+                      iconComponent = <Info className="text-blue-500" />;
+                      break;
+                    case 'AlertTriangle':
+                      iconComponent = <AlertTriangle className="text-amber-500" />;
+                      break;
+                    case 'Calendar':
+                      iconComponent = <Calendar className="text-green-500" />;
+                      break;
+                    case 'Car':
+                      iconComponent = <Car className="text-indigo-500" />;
+                      break;
+                    case 'ClipboardCheck':
+                      iconComponent = <ClipboardCheck className="text-purple-500" />;
+                      break;
+                    default:
+                      iconComponent = <Bell className="text-slate-500" />;
+                  }
+                  
+                  return (
+                    <div key={`custom-notification-${notification.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={iconComponent}
+                        title={notification.title}
+                        description={notification.description}
+                        date={notification.date}
+                        link={notification.link || '/notifications/custom'}
+                      />
+                    </div>
+                  );
+                })
               )}
             </TabsContent>
           </ScrollArea>
