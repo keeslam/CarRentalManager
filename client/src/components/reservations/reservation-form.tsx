@@ -158,7 +158,7 @@ export function ReservationForm({
   });
   
   // Fetch vehicles for select field
-  const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
+  const { data: vehicles, isLoading: isLoadingVehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
   
@@ -559,11 +559,21 @@ export function ReservationForm({
                                 <div className="py-4">
                                   {/* Import the VehicleQuickForm component */}
                                   <VehicleQuickForm 
-                                    onSuccess={(vehicle) => {
+                                    onSuccess={async (vehicle) => {
+                                      // Refresh the vehicles list to include the new vehicle
+                                      await refetchVehicles();
+                                      
                                       // Set the new vehicle in the form
                                       form.setValue("vehicleId", vehicle.id.toString());
+                                      
                                       // Close the dialog
                                       setVehicleDialogOpen(false);
+                                      
+                                      // Show success message
+                                      toast({
+                                        title: "Vehicle Added",
+                                        description: `${vehicle.brand} ${vehicle.model} has been added to your fleet and selected for this reservation.`,
+                                      });
                                     }}
                                     onCancel={() => setVehicleDialogOpen(false)}
                                   />
