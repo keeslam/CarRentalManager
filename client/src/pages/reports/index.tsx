@@ -13,7 +13,7 @@ import { UtilizationChart, type UtilizationChartData } from "@/components/report
 import { Vehicle, Expense, Reservation, Customer } from "@shared/schema";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
-import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from "date-fns";
+import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { 
   Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
   DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench 
@@ -181,16 +181,72 @@ export default function ReportsPage() {
     };
   }).sort((a, b) => b.maintenanceCost - a.maintenanceCost);
   
-  // Calculate customer reservation stats
+  // Calculate customer reservation stats with expense impact analysis
   const customerReservationStats = customers.map(customer => {
     const customerReservations = filteredReservations.filter(r => r.customerId === customer.id);
+    
+    // Calculate vehicle usage days for this customer
+    let totalReservationDays = 0;
+    customerReservations.forEach(reservation => {
+      const startDate = new Date(reservation.startDate);
+      const endDate = new Date(reservation.endDate);
+      const days = differenceInDays(endDate, startDate) + 1;
+      totalReservationDays += days;
+    });
+    
+    // Get all the vehicles this customer has used
+    const customerVehicleIds = Array.from(new Set(customerReservations.map(r => r.vehicleId)));
+    
+    // Find expenses that occurred during or shortly after this customer's reservations
+    // (using a 7-day window after reservation ends)
+    const relatedExpenses: Expense[] = [];
+    customerReservations.forEach(reservation => {
+      const reservationEndDate = new Date(reservation.endDate);
+      const postReservationWindow = addDays(reservationEndDate, 7); // 7 days after reservation ended
+      
+      filteredExpenses.forEach(expense => {
+        if (expense.vehicleId === reservation.vehicleId) {
+          const expenseDate = new Date(expense.date);
+          // Include expenses that occurred during reservation or up to 7 days after
+          if (
+            (expenseDate >= new Date(reservation.startDate) && expenseDate <= postReservationWindow)
+          ) {
+            relatedExpenses.push(expense);
+          }
+        }
+      });
+    });
+    
+    // Calculate expense totals by category for this customer
+    const expensesByCategory: Record<string, number> = {};
+    relatedExpenses.forEach(expense => {
+      const category = expense.category;
+      if (!expensesByCategory[category]) {
+        expensesByCategory[category] = 0;
+      }
+      expensesByCategory[category] += Number(expense.amount);
+    });
+    
+    // Calculate total expenses
+    const totalExpenses = relatedExpenses.reduce((sum, expense) => {
+      return sum + Number(expense.amount);
+    }, 0);
+    
+    // Calculate expense per day metrics
+    const expensePerDay = totalReservationDays > 0 ? totalExpenses / totalReservationDays : 0;
     
     return {
       id: customer.id,
       name: customer.name,
-      reservationCount: customerReservations.length
+      reservationCount: customerReservations.length,
+      totalReservationDays,
+      totalExpenses,
+      expensePerDay,
+      expensesByCategory,
+      vehicleCount: customerVehicleIds.length,
+      relatedExpenses
     };
-  }).sort((a, b) => b.reservationCount - a.reservationCount);
+  }).sort((a, b) => b.totalExpenses - a.totalExpenses);
   
   // Prepare expense chart data
   const expenseChartData: ExpenseChartData[] = Object.entries(expensesByCategory)
@@ -709,12 +765,12 @@ export default function ReportsPage() {
         
         {/* Customers Tab */}
         <TabsContent value="customers" className="space-y-6">
-          {/* Customer Booking Stats */}
+          {/* Customer Impact Analysis */}
           <Card>
             <CardHeader>
-              <CardTitle>Customer Bookings</CardTitle>
+              <CardTitle>Customer Impact Analysis</CardTitle>
               <CardDescription>
-                Customer activity during the selected period
+                Analysis of customer impact on vehicle expenses and maintenance
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -722,7 +778,11 @@ export default function ReportsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
-                    <TableHead className="text-right">Reservations</TableHead>
+                    <TableHead>Reservations</TableHead>
+                    <TableHead>Total Days</TableHead>
+                    <TableHead>Total Vehicles</TableHead>
+                    <TableHead>Related Expenses</TableHead>
+                    <TableHead className="text-right">Cost Per Day</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -731,14 +791,111 @@ export default function ReportsPage() {
                       .filter(c => c.reservationCount > 0)
                       .slice(0, 10)
                       .map(customer => (
-                        <TableRow key={customer.id}>
+                        <TableRow key={customer.id} className={customer.expensePerDay > 10 ? "bg-red-50" : ""}>
                           <TableCell>{customer.name}</TableCell>
-                          <TableCell className="text-right">{customer.reservationCount}</TableCell>
+                          <TableCell>{customer.reservationCount}</TableCell>
+                          <TableCell>{customer.totalReservationDays} days</TableCell>
+                          <TableCell>{customer.vehicleCount}</TableCell>
+                          <TableCell>{formatCurrency(Number(customer.totalExpenses))}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(Number(customer.expensePerDay))}
+                            {customer.expensePerDay > 0 && (
+                              <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                customer.expensePerDay > (avgExpensePerVehicle / 30) * 2
+                                  ? "bg-red-100 text-red-800"
+                                  : customer.expensePerDay > (avgExpensePerVehicle / 30)
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}>
+                                {customer.expensePerDay > (avgExpensePerVehicle / 30) * 2
+                                  ? "High"
+                                  : customer.expensePerDay > (avgExpensePerVehicle / 30)
+                                  ? "Medium"
+                                  : "Low"}
+                              </span>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center py-4">No customer activity data available</TableCell>
+                      <TableCell colSpan={6} className="text-center py-4">No customer analysis data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          {/* Customer Expense Impact Detail */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Expense Categories by Customer</CardTitle>
+              <CardDescription>
+                Breakdown of expense categories associated with each customer
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Tires</TableHead>
+                    <TableHead>Maintenance</TableHead>
+                    <TableHead>Damage</TableHead>
+                    <TableHead>Repair</TableHead>
+                    <TableHead>Other</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customerReservationStats.filter(c => c.totalExpenses > 0).length > 0 ? (
+                    customerReservationStats
+                      .filter(c => c.totalExpenses > 0)
+                      .slice(0, 10)
+                      .map(customer => {
+                        // Get amounts for each category or default to 0
+                        const tires = customer.expensesByCategory['tires'] || 0;
+                        const maintenance = customer.expensesByCategory['maintenance'] || 0;
+                        const damage = customer.expensesByCategory['damage'] || 0;
+                        const repair = customer.expensesByCategory['repair'] || 0;
+                        const other = customer.expensesByCategory['other'] || 0;
+                        
+                        // Determine which category has the highest expense
+                        const categories = [
+                          { name: 'tires', amount: tires },
+                          { name: 'maintenance', amount: maintenance },
+                          { name: 'damage', amount: damage },
+                          { name: 'repair', amount: repair },
+                          { name: 'other', amount: other }
+                        ];
+                        
+                        const highestCategory = categories.reduce((prev, current) => 
+                          (current.amount > prev.amount) ? current : prev, { name: '', amount: 0 });
+                        
+                        return (
+                          <TableRow key={customer.id}>
+                            <TableCell>{customer.name}</TableCell>
+                            <TableCell className={highestCategory.name === 'tires' ? "font-bold" : ""}>
+                              {tires > 0 ? formatCurrency(Number(tires)) : "—"}
+                            </TableCell>
+                            <TableCell className={highestCategory.name === 'maintenance' ? "font-bold" : ""}>
+                              {maintenance > 0 ? formatCurrency(Number(maintenance)) : "—"}
+                            </TableCell>
+                            <TableCell className={highestCategory.name === 'damage' ? "font-bold" : ""}>
+                              {damage > 0 ? formatCurrency(Number(damage)) : "—"}
+                            </TableCell>
+                            <TableCell className={highestCategory.name === 'repair' ? "font-bold" : ""}>
+                              {repair > 0 ? formatCurrency(Number(repair)) : "—"}
+                            </TableCell>
+                            <TableCell className={highestCategory.name === 'other' ? "font-bold" : ""}>
+                              {other > 0 ? formatCurrency(Number(other)) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">No expense data available</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
