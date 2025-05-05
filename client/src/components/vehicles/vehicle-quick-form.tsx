@@ -11,13 +11,18 @@ interface VehicleQuickFormProps {
  * A wrapper component that uses the main VehicleForm but in a dialog context
  */
 export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps) {
+  console.log("VehicleQuickForm mounted - preventing navigation");
+  
+  const handleVehicleSuccess = (vehicle: any) => {
+    console.log("Vehicle created in quick form, calling parent onSuccess with:", vehicle);
+    onSuccess(vehicle);
+  };
+  
   return (
     <div className="max-h-[75vh] overflow-y-auto pr-2">
       <VehicleForm 
         redirectToList={false}
-        onSuccess={(vehicle) => {
-          onSuccess(vehicle);
-        }}
+        onSuccess={handleVehicleSuccess}
         customCancelButton={
           <button 
             type="button" 
