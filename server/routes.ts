@@ -713,8 +713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { status } = req.body;
-      if (status !== 'opnaam' && status !== 'bv') {
-        return res.status(400).json({ message: "Invalid status. Must be 'opnaam' or 'bv'" });
+      if (status !== 'opnaam' && status !== 'not-opnaam' && status !== 'bv' && status !== 'not-bv') {
+        return res.status(400).json({ message: "Invalid status. Must be 'opnaam', 'not-opnaam', 'bv', or 'not-bv'" });
       }
       
       const vehicle = await storage.getVehicle(id);
