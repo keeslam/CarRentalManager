@@ -10,16 +10,18 @@ import { RevenueChart } from "@/components/reports/revenue-chart";
 import { Vehicle, Expense, Reservation, Customer } from "@shared/schema";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
-import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Calendar, Download, FileText, TrendingUp, Car, Settings, User, DollarSign } from "lucide-react";
+import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from "date-fns";
+import { Calendar, Download, FileText, TrendingUp, Car, Settings, User, DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench } from "lucide-react";
 import { DateRange } from "react-day-picker";
+
+
 
 /**
  * Reports Page - Generate and display reports for the car rental business
  */
 export default function ReportsPage() {
   // Tab state
-  const [activeTab, setActiveTab] = useState("financial");
+  const [activeTab, setActiveTab] = useState("operations");
   
   // Date range state with default to last 30 days
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -34,22 +36,22 @@ export default function ReportsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // Fetch all vehicles for filtering
-  const { data: vehicles } = useQuery<Vehicle[]>({
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
   
   // Fetch expenses with date filtering
-  const { data: expenses } = useQuery<Expense[]>({
+  const { data: expenses = [] } = useQuery<Expense[]>({
     queryKey: ["/api/expenses"],
   });
   
   // Fetch reservations with date filtering
-  const { data: reservations } = useQuery<Reservation[]>({
+  const { data: reservations = [] } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations"],
   });
   
   // Fetch customers 
-  const { data: customers } = useQuery<Customer[]>({
+  const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
 
@@ -100,22 +102,153 @@ export default function ReportsPage() {
     expensesByCategory[category] += Number(expense.amount);
   });
   
-  // Calculate total revenue from reservations
-  const totalRevenue = filteredReservations.reduce((sum, reservation) => {
-    return sum + Number(reservation.totalPrice || 0);
-  }, 0);
-  
   // Calculate total expenses
   const totalExpenses = filteredExpenses.reduce((sum, expense) => {
     return sum + Number(expense.amount);
   }, 0);
   
+  // Calculate total revenue from reservations
+  const totalRevenue = filteredReservations.reduce((sum, reservation) => {
+    return sum + Number(reservation.totalPrice || 0);
+  }, 0);
+  
   // Calculate profit
   const profit = totalRevenue - totalExpenses;
   
+  // Calculate average expense per vehicle
+  const activeVehicleCount = vehicles.filter(v => isTrueValue(v.active)).length || 1;
+  const avgExpensePerVehicle = totalExpenses / activeVehicleCount;
+  
+  // Calculate vehicle utilization data
+  const vehicleUtilizationData = vehicles.map(vehicle => {
+    const vehicleReservations = filteredReservations.filter(r => r.vehicleId === vehicle.id);
+    
+    // Calculate total days reserved
+    let daysReserved = 0;
+    if (dateRange.from && dateRange.to) {
+      const totalDaysInRange = differenceInDays(dateRange.to, dateRange.from) + 1;
+      
+      // For each day in the range, check if the vehicle was reserved
+      for (let d = 0; d < totalDaysInRange; d++) {
+        const currentDate = addDays(dateRange.from, d);
+        const isReserved = vehicleReservations.some(reservation => {
+          const startDate = new Date(reservation.startDate);
+          const endDate = new Date(reservation.endDate);
+          return currentDate >= startDate && currentDate <= endDate;
+        });
+        
+        if (isReserved) {
+          daysReserved++;
+        }
+      }
+    }
+    
+    // Calculate utilization percentage
+    const utilizationPercentage = dateRange.from && dateRange.to
+      ? (daysReserved / (differenceInDays(dateRange.to, dateRange.from) + 1)) * 100
+      : 0;
+    
+    return {
+      id: vehicle.id,
+      licensePlate: vehicle.licensePlate,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      daysReserved,
+      utilizationPercentage: Math.round(utilizationPercentage),
+      reservationCount: vehicleReservations.length
+    };
+  }).sort((a, b) => b.utilizationPercentage - a.utilizationPercentage);
+  
+  // Calculate maintenance cost by vehicle
+  const maintenanceCostByVehicle = vehicles.map(vehicle => {
+    const vehicleExpenses = filteredExpenses.filter(e => e.vehicleId === vehicle.id);
+    const maintenanceExpenses = vehicleExpenses.filter(e => 
+      e.category === 'maintenance' || e.category === 'repair' || e.category === 'tires'
+    );
+    
+    const totalMaintenanceCost = maintenanceExpenses.reduce((sum, expense) => {
+      return sum + Number(expense.amount);
+    }, 0);
+    
+    return {
+      id: vehicle.id,
+      licensePlate: vehicle.licensePlate,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      maintenanceCost: totalMaintenanceCost,
+      expenseCount: maintenanceExpenses.length
+    };
+  }).sort((a, b) => b.maintenanceCost - a.maintenanceCost);
+  
+  // Calculate customer reservation stats
+  const customerReservationStats = customers.map(customer => {
+    const customerReservations = filteredReservations.filter(r => r.customerId === customer.id);
+    
+    // Calculate total spent
+    const totalSpent = customerReservations.reduce((sum, reservation) => {
+      return sum + Number(reservation.totalPrice || 0);
+    }, 0);
+    
+    return {
+      id: customer.id,
+      name: customer.name,
+      reservationCount: customerReservations.length,
+      totalSpent
+    };
+  }).sort((a, b) => b.reservationCount - a.reservationCount);
+  
   // Prepare data for charts
-  // Group financial data by month for the revenue chart
   const revenueChartData = prepareMonthlyRevenueData(filteredReservations, filteredExpenses);
+  
+  // Calculate expense trend (last 3 months comparison)
+  const expenseTrend = (() => {
+    // Get expense totals for current month, previous month, and 2 months ago
+    const now = new Date();
+    const currentMonth = startOfMonth(now);
+    const previousMonth = startOfMonth(subMonths(now, 1));
+    const twoMonthsAgo = startOfMonth(subMonths(now, 2));
+    
+    const currentMonthExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= currentMonth && expenseDate <= endOfMonth(currentMonth);
+    }).reduce((sum, expense) => sum + Number(expense.amount), 0);
+    
+    const previousMonthExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= previousMonth && expenseDate < currentMonth;
+    }).reduce((sum, expense) => sum + Number(expense.amount), 0);
+    
+    const twoMonthsAgoExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= twoMonthsAgo && expenseDate < previousMonth;
+    }).reduce((sum, expense) => sum + Number(expense.amount), 0);
+    
+    // Calculate month-over-month change percentages
+    const currentVsPrevious = previousMonthExpenses === 0 
+      ? 100 
+      : ((currentMonthExpenses - previousMonthExpenses) / previousMonthExpenses) * 100;
+      
+    const previousVsTwoMonths = twoMonthsAgoExpenses === 0 
+      ? 100 
+      : ((previousMonthExpenses - twoMonthsAgoExpenses) / twoMonthsAgoExpenses) * 100;
+    
+    return {
+      currentMonth: {
+        name: format(currentMonth, 'MMM yyyy'),
+        total: currentMonthExpenses,
+        changePercentage: currentVsPrevious
+      },
+      previousMonth: {
+        name: format(previousMonth, 'MMM yyyy'),
+        total: previousMonthExpenses,
+        changePercentage: previousVsTwoMonths
+      },
+      twoMonthsAgo: {
+        name: format(twoMonthsAgo, 'MMM yyyy'),
+        total: twoMonthsAgoExpenses
+      }
+    };
+  })();
 
   // Function to handle exporting reports
   const exportReport = (reportType: string) => {
