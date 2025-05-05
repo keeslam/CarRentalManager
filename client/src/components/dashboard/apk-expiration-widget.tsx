@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Vehicle } from "@shared/schema";
 
 // Function to get days until a date

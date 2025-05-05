@@ -117,6 +117,13 @@ export default function VehiclesIndex() {
     navigate(`/vehicles/${vehicle.id}/edit`);
   };
   
+  const handleViewClick = (vehicle: Vehicle) => {
+    // Invalidate the specific vehicle query to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
+    // Navigate to the vehicle details page
+    navigate(`/vehicles/${vehicle.id}`);
+  };
+  
   // Function to load more vehicles
   const loadMoreVehicles = () => {
     setVisibleVehicleCount(prevCount => prevCount + 5);
@@ -198,11 +205,13 @@ export default function VehiclesIndex() {
         
         return (
           <div className="flex gap-2">
-            <Link href={`/vehicles/${vehicle.id}`}>
-              <Button variant="ghost" size="sm">
-                View
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleViewClick(vehicle)}
+            >
+              View
+            </Button>
             <Button 
               variant="ghost" 
               size="sm"
