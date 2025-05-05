@@ -236,33 +236,23 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Applying update with data:", JSON.stringify(updateObject, null, 2));
       
-      // Use direct SQL to guarantee we only update the specific fields we want
-      const query = `
+      // Use Drizzle's SQL builder instead of raw SQL to avoid parameter issues
+      // Use db.execute with SQL template for safer parameter handling
+      const result = await db.execute(sql`
         UPDATE vehicles 
         SET 
-          "registeredTo" = $1,
-          "registeredToDate" = $2,
-          "registeredToBy" = $3,
-          "company" = $4,
-          "companyDate" = $5,
-          "companyBy" = $6
-        WHERE id = $7
+          "registeredTo" = ${updateObject.registeredTo || currentVehicle.registeredTo},
+          "registeredToDate" = ${updateObject.registeredToDate || currentVehicle.registeredToDate},
+          "registeredToBy" = ${updateObject.registeredToBy || currentVehicle.registeredToBy},
+          "company" = ${updateObject.company || currentVehicle.company},
+          "companyDate" = ${updateObject.companyDate || currentVehicle.companyDate},
+          "companyBy" = ${updateObject.companyBy || currentVehicle.companyBy}
+        WHERE id = ${id}
         RETURNING *
-      `;
+      `);
       
-      const params = [
-        updateObject.registeredTo || currentVehicle.registeredTo,
-        updateObject.registeredToDate || currentVehicle.registeredToDate,
-        updateObject.registeredToBy || currentVehicle.registeredToBy,
-        updateObject.company || currentVehicle.company,
-        updateObject.companyDate || currentVehicle.companyDate,
-        updateObject.companyBy || currentVehicle.companyBy,
-        id
-      ];
-      
-      // Execute the update query
-      const result = await db.execute(sql.raw(query, params));
-      const updatedVehicle = result.length > 0 ? result[0] : undefined;
+      // Extract the vehicle from the result
+      const updatedVehicle = result.rows && result.rows.length > 0 ? result.rows[0] as Vehicle : undefined;
       
       console.log("Database returned vehicle after status update:", JSON.stringify(updatedVehicle, null, 2));
       return updatedVehicle || undefined;

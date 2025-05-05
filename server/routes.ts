@@ -793,16 +793,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
       
-      // Use the dedicated method that only updates the relevant field
-      const updatedVehicle = await storage.updateVehicleRegistrationStatus(id, status, {
-        username,
-        date: currentDate
-      });
-      console.log("Database response:", JSON.stringify(updatedVehicle, null, 2));
-      
-      // Verify if the update was applied correctly - fetch the vehicle again
-      const verifiedVehicle = await storage.getVehicle(id);
-      console.log("Vehicle after update:", JSON.stringify(verifiedVehicle, null, 2));
+      try {
+        // Use the dedicated method that only updates the relevant field
+        const updatedVehicle = await storage.updateVehicleRegistrationStatus(id, status, {
+          username,
+          date: currentDate
+        });
+        
+        if (!updatedVehicle) {
+          return res.status(500).json({ message: "Failed to update vehicle registration status" });
+        }
+        
+        console.log("Database response:", JSON.stringify(updatedVehicle, null, 2));
+        
+        // Verify if the update was applied correctly - fetch the vehicle again
+        const verifiedVehicle = await storage.getVehicle(id);
+        console.log("Vehicle after update:", JSON.stringify(verifiedVehicle, null, 2));
+      } catch (error) {
+        console.error("Error in toggle-registration endpoint:", error);
+        return res.status(400).json({ message: `Error toggling registration status: ${error.message}` });
+      }
       
       // Store last action to ensure history shows the correct user for this specific action
       let historyNote;

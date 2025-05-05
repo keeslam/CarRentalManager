@@ -420,13 +420,16 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
             throw new Error(errorData.message || "Failed to update registration status");
           }
           
-          // Remove registration fields from the main update since we already handled them
+          // Remove ALL registration-related fields from the main update since we already handled them
+          // This ensures we don't accidentally update registration tracking fields through the vehicle update
           delete formattedData.registeredTo;
           delete formattedData.company;
           delete formattedData.registeredToDate;
           delete formattedData.companyDate;
           delete formattedData.registeredToBy;
           delete formattedData.companyBy;
+          // This is very important - we need to ensure that when using the dedicated endpoint,
+          // we don't update any registration fields through the regular update endpoint
           
           // Get the initial response data
           responseData = await toggleResponse.json();
