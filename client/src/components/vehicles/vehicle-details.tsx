@@ -451,20 +451,28 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To</h4>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={isTrueValue(vehicle.registeredTo)} disabled />
-                      <span className="text-sm text-gray-500">
-                        {isTrueValue(vehicle.registeredTo) ? "Opnaam" : 
-                         (isTrueValue(vehicle.company) ? "BV" : "Not specified")}
-                      </span>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registration Status</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={isTrueValue(vehicle.registeredTo)} disabled />
+                        <span className="text-sm">
+                          Registration: Opnaam
+                          {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
+                            <span className="block text-xs text-gray-500">Last updated: {formatDate(vehicle.registeredToDate)}</span>
+                          )}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Switch checked={isTrueValue(vehicle.company)} disabled />
+                        <span className="text-sm">
+                          Registration: BV
+                          {isTrueValue(vehicle.company) && vehicle.companyDate && (
+                            <span className="block text-xs text-gray-500">Last updated: {formatDate(vehicle.companyDate)}</span>
+                          )}
+                        </span>
+                      </div>
                     </div>
-                    {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
-                      <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.registeredToDate)}</p>
-                    )}
-                    {isTrueValue(vehicle.company) && vehicle.companyDate && (
-                      <p className="text-xs text-gray-500 mt-1">Last updated: {formatDate(vehicle.companyDate)}</p>
-                    )}
                   </div>
                 </div>
               </div>
