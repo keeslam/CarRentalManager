@@ -29,6 +29,7 @@ import { formatFileSize } from "@/lib/format-utils";
 // Document types
 const documentTypes = [
   "APK Inspection",
+  "Contract",
   "Damage Report",
   "Insurance",
   "Maintenance Record",

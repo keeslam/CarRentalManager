@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { UploadContractButton } from "@/components/documents/contract-upload-button";
 
 export default function ReservationDetails() {
   const { id } = useParams();
@@ -163,11 +164,18 @@ export default function ReservationDetails() {
               Edit Reservation
             </Button>
           </Link>
-          <Link href={`/documents/contract/${id}`}>
-            <Button>
-              View Contract
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/api/contracts/generate/${id}`} target="_blank">
+              <Button>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                  <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/>
+                </svg>
+                View Contract
+              </Button>
+            </Link>
+            <UploadContractButton vehicleId={reservation.vehicleId} reservationId={reservation.id} />
+          </div>
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="destructive">
@@ -348,36 +356,63 @@ export default function ReservationDetails() {
               )}
             </div>
 
+            {/* Contract Documents */}
+            <div className="pt-4">
+              <h3 className="text-sm font-medium text-gray-500 mb-3">Contract Documents</h3>
+              <div className="space-y-2">
+                <Link href={`/api/contracts/generate/${id}`} target="_blank">
+                  <Button variant="outline" className="w-full justify-start" size="sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                      <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/>
+                    </svg>
+                    View Contract
+                  </Button>
+                </Link>
+                
+                <div className="w-full">
+                  <div className="w-full">
+                    <UploadContractButton 
+                      vehicleId={reservation.vehicleId} 
+                      reservationId={reservation.id}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <Link href={`/vehicles/${vehicle?.id}`}>
+                  <Button variant="outline" className="w-full justify-start" size="sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <rect width="18" height="18" x="3" y="3" rx="2"/>
+                      <path d="M7 7h.01"/>
+                      <path d="M12 15l-3-3-3 3"/>
+                      <path d="M9 12v-3"/>
+                      <path d="M14 7h3"/>
+                      <path d="M14 11h3"/>
+                      <path d="M14 15h3"/>
+                    </svg>
+                    All Vehicle Documents
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            
             {/* Related actions */}
             <div className="pt-4">
               <h3 className="text-sm font-medium text-gray-500 mb-3">Actions</h3>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" x2="12" y1="15" y2="3"/>
-                  </svg>
-                  Download Contract PDF
-                </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" x2="12" y1="8" y2="16"/>
-                    <line x1="8" x2="16" y1="12" y2="12"/>
-                  </svg>
-                  Create New Expense
-                </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <rect width="18" height="18" x="3" y="3" rx="2"/>
-                    <path d="M3 15h18"/>
-                    <path d="M3 9h18"/>
-                    <path d="M9 21V3"/>
-                    <path d="M15 21V3"/>
-                  </svg>
-                  Upload Document
-                </Button>
+                <Link href={`/expenses/new?vehicleId=${reservation.vehicleId}`}>
+                  <Button variant="outline" className="w-full justify-start" size="sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" x2="12" y1="8" y2="16"/>
+                      <line x1="8" x2="16" y1="12" y2="12"/>
+                    </svg>
+                    Create New Expense
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>
