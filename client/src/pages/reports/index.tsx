@@ -272,7 +272,7 @@ export default function ReportsPage() {
   }).sort((a, b) => b.maintenanceCost - a.maintenanceCost);
   
   // Define APK status types
-  type ApkStatus = 'expired' | 'expiring_soon' | 'valid' | 'unknown';
+  type ApkStatus = 'expired' | 'expiring_soon' | 'expiring_2to3_months' | 'valid' | 'unknown';
   
   // Process APK date information for all vehicles
   const today = new Date();
@@ -292,8 +292,10 @@ export default function ReportsPage() {
     let apkStatus: ApkStatus = 'valid';
     if (daysUntilExpiry < 0) {
       apkStatus = 'expired';
-    } else if (daysUntilExpiry < 30) {
+    } else if (daysUntilExpiry <= 30) {
       apkStatus = 'expiring_soon';
+    } else if (daysUntilExpiry <= 90) {
+      apkStatus = 'expiring_2to3_months';
     }
     
     return {
@@ -529,6 +531,54 @@ export default function ReportsPage() {
     };
   })();
 
+  // Function to generate APK table for reports
+  const generateAPKTable = (vehicles: (Vehicle & { apkStatus: string, daysUntilExpiry: number | null })[]) => `
+    <table>
+      <thead>
+        <tr>
+          <th>Vehicle</th>
+          <th>License Plate</th>
+          <th>APK Expiry Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${vehicles.length > 0 
+          ? vehicles.map(v => {
+              const daysUntilExpiry = v.daysUntilExpiry;
+              
+              let statusClass = 'status-valid';
+              let statusText = 'Valid';
+              
+              if (daysUntilExpiry === null) {
+                statusClass = 'status-unknown';
+                statusText = 'Not set';
+              } else if (daysUntilExpiry < 0) {
+                statusClass = 'status-expired';
+                statusText = `Expired (${Math.abs(daysUntilExpiry)} days ago)`;
+              } else if (daysUntilExpiry <= 30) {
+                statusClass = 'status-expiring';
+                statusText = `Expires in ${daysUntilExpiry} days`;
+              } else if (daysUntilExpiry <= 90) {
+                statusClass = 'status-expiring';
+                statusText = `Expires in ${daysUntilExpiry} days`;
+              }
+              
+              return `
+                <tr>
+                  <td>${v.brand} ${v.model}</td>
+                  <td>${formatLicensePlate(v.licensePlate)}</td>
+                  <td>${v.apkDate ? formatDate(v.apkDate) : 'Not set'}</td>
+                  <td class="${statusClass}">${statusText}</td>
+                </tr>
+              `;
+            }).join('')
+          : '<tr><td colspan="4" class="text-center">No vehicles found</td></tr>'
+        }
+      </tbody>
+    </table>
+  `;
+
   // Function to handle printing reports
   const printReport = (reportType: string) => {
     // Create a hidden iframe for printing specific content
@@ -651,6 +701,15 @@ export default function ReportsPage() {
       // Create different content based on report type
       switch (reportType) {
         case 'apk':
+          // Filter APK vehicles that are expiring within 2-3 months (60-90 days)
+          const apkExpiringNext2To3Months = apkStatusList.filter(vehicle => {
+            const daysUntilExpiry = vehicle.daysUntilExpiry;
+            return daysUntilExpiry !== null && daysUntilExpiry > 30 && daysUntilExpiry <= 90;
+          }).sort((a, b) => {
+            if (a.daysUntilExpiry === null || b.daysUntilExpiry === null) return 0;
+            return a.daysUntilExpiry - b.daysUntilExpiry;
+          });
+          
           // APK expiration report
           content = `
             <div class="company-info">
@@ -676,14 +735,8 @@ export default function ReportsPage() {
               </div>
               <div class="flex-item">
                 <div class="stat-card">
-                  <div class="stat-value">${vehiclesWithValidApk.length}</div>
-                  <div class="stat-label">Valid APKs</div>
-                </div>
-              </div>
-              <div class="flex-item">
-                <div class="stat-card">
-                  <div class="stat-value">${vehiclesWithoutApkDate.length}</div>
-                  <div class="stat-label">Vehicles without APK Date</div>
+                  <div class="stat-value">${apkExpiringNext2To3Months.length}</div>
+                  <div class="stat-label">APKs Expiring in 2-3 Months</div>
                 </div>
               </div>
             </div>
@@ -694,8 +747,8 @@ export default function ReportsPage() {
             <h2>APKs Expiring Soon (Next 30 Days)</h2>
             ${generateAPKTable(vehiclesWithApkExpiringSoon)}
             
-            <h2>Valid APKs</h2>
-            ${generateAPKTable(vehiclesWithValidApk)}
+            <h2>APKs Expiring in 2-3 Months</h2>
+            ${generateAPKTable(apkExpiringNext2To3Months)}
           `;
           break;
           
