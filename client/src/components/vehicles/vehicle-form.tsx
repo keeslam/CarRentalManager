@@ -199,9 +199,13 @@ export function VehicleForm({
       
       // If a success callback was provided, call it with the vehicle data
       if (onSuccess && typeof onSuccess === 'function') {
+        // Call the onSuccess callback with the vehicle data
         onSuccess(vehicleData);
-      } else if (redirectToList) {
-        // Navigate to the appropriate page only if redirectToList is true
+      } 
+      
+      // Only navigate if redirectToList is true AND no success callback was provided
+      // This ensures that we don't navigate away when in dialog mode
+      if (redirectToList && (!onSuccess || typeof onSuccess !== 'function')) {
         if (editMode && initialData?.id) {
           // Navigate to vehicle details page when updating
           navigate(`/vehicles/${initialData.id}`);
