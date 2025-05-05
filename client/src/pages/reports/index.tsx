@@ -308,6 +308,7 @@ export default function ReportsPage() {
     type StatusPriority = {
       expired: number;
       expiring_soon: number;
+      expiring_2to3_months: number;
       valid: number;
       unknown: number;
     };
@@ -315,8 +316,9 @@ export default function ReportsPage() {
     const statusPriority: StatusPriority = {
       expired: 0,
       expiring_soon: 1,
-      valid: 2,
-      unknown: 3
+      expiring_2to3_months: 2,
+      valid: 3,
+      unknown: 4
     };
     
     // First sort by status priority
@@ -337,6 +339,7 @@ export default function ReportsPage() {
   // Calculate APK statistics
   const vehiclesWithValidApk = apkStatusList.filter(v => v.apkStatus === 'valid');
   const vehiclesWithApkExpiringSoon = apkStatusList.filter(v => v.apkStatus === 'expiring_soon');
+  const vehiclesWithApkExpiring2to3Months = apkStatusList.filter(v => v.apkStatus === 'expiring_2to3_months');
   const vehiclesWithExpiredApk = apkStatusList.filter(v => v.apkStatus === 'expired');
   const vehiclesWithoutApkDate = apkStatusList.filter(v => v.apkStatus === 'unknown');
   
