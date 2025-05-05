@@ -163,40 +163,75 @@ export default function ReportsPage() {
   const vehicleUtilizationData = vehicles.map(vehicle => {
     const vehicleReservations = filteredReservations.filter(r => r.vehicleId === vehicle.id);
     
-    // Calculate total days reserved
-    let daysReserved = 0;
-    if (dateRange.from && dateRange.to) {
-      const totalDaysInRange = differenceInDays(dateRange.to, dateRange.from) + 1;
+    // Check if we're using the "All Data" preset with the very wide date range
+    const isAllDataView = dateRange.from && dateRange.to && 
+      dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050;
+    
+    // For "All Data" view, we'll calculate utilization differently
+    if (isAllDataView) {
+      // Calculate total reservation days for this vehicle
+      let totalReservationDays = 0;
+      vehicleReservations.forEach(reservation => {
+        const startDate = new Date(reservation.startDate);
+        const endDate = new Date(reservation.endDate);
+        const days = differenceInDays(endDate, startDate) + 1;
+        totalReservationDays += days;
+      });
       
-      // For each day in the range, check if the vehicle was reserved
-      for (let d = 0; d < totalDaysInRange; d++) {
-        const currentDate = addDays(dateRange.from, d);
-        const isReserved = vehicleReservations.some(reservation => {
-          const startDate = new Date(reservation.startDate);
-          const endDate = new Date(reservation.endDate);
-          return currentDate >= startDate && currentDate <= endDate;
-        });
+      // For "All Data" view, use the number of active days in a year as base (260 workdays)
+      // This gives a more meaningful utilization percentage based on typical business days
+      const averageYearlyWorkdays = 260;
+      
+      // For vehicles with no reservations, utilization is 0
+      const utilizationPercentage = vehicleReservations.length > 0
+        ? Math.min(100, (totalReservationDays / averageYearlyWorkdays) * 100)
+        : 0;
+      
+      return {
+        id: vehicle.id,
+        licensePlate: vehicle.licensePlate,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        daysReserved: totalReservationDays,
+        utilizationPercentage: Math.round(utilizationPercentage),
+        reservationCount: vehicleReservations.length
+      };
+    } else {
+      // Standard calculation for normal date ranges
+      let daysReserved = 0;
+      if (dateRange.from && dateRange.to) {
+        const totalDaysInRange = differenceInDays(dateRange.to, dateRange.from) + 1;
         
-        if (isReserved) {
-          daysReserved++;
+        // For each day in the range, check if the vehicle was reserved
+        for (let d = 0; d < totalDaysInRange; d++) {
+          const currentDate = addDays(dateRange.from, d);
+          const isReserved = vehicleReservations.some(reservation => {
+            const startDate = new Date(reservation.startDate);
+            const endDate = new Date(reservation.endDate);
+            return currentDate >= startDate && currentDate <= endDate;
+          });
+          
+          if (isReserved) {
+            daysReserved++;
+          }
         }
       }
+      
+      // Calculate utilization percentage
+      const utilizationPercentage = dateRange.from && dateRange.to
+        ? (daysReserved / (differenceInDays(dateRange.to, dateRange.from) + 1)) * 100
+        : 0;
+      
+      return {
+        id: vehicle.id,
+        licensePlate: vehicle.licensePlate,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        daysReserved,
+        utilizationPercentage: Math.round(utilizationPercentage),
+        reservationCount: vehicleReservations.length
+      };
     }
-    
-    // Calculate utilization percentage
-    const utilizationPercentage = dateRange.from && dateRange.to
-      ? (daysReserved / (differenceInDays(dateRange.to, dateRange.from) + 1)) * 100
-      : 0;
-    
-    return {
-      id: vehicle.id,
-      licensePlate: vehicle.licensePlate,
-      brand: vehicle.brand,
-      model: vehicle.model,
-      daysReserved,
-      utilizationPercentage: Math.round(utilizationPercentage),
-      reservationCount: vehicleReservations.length
-    };
   }).sort((a, b) => b.utilizationPercentage - a.utilizationPercentage);
   
   // Calculate maintenance cost by vehicle
@@ -570,7 +605,10 @@ export default function ReportsPage() {
                   }
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Average across {vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} active vehicles
+                  {dateRange.from && dateRange.to && dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050
+                    ? `Based on yearly utilization of ${vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} vehicles`
+                    : `Average across ${vehicleUtilizationData.filter(v => v.utilizationPercentage > 0).length} active vehicles`
+                  }
                 </p>
               </CardContent>
             </Card>
@@ -609,7 +647,10 @@ export default function ReportsPage() {
               <CardHeader>
                 <CardTitle>Vehicle Utilization</CardTitle>
                 <CardDescription>
-                  Top 10 vehicles by utilization rate
+                  {dateRange.from && dateRange.to && dateRange.from.getFullYear() <= 2000 && dateRange.to.getFullYear() >= 2050
+                    ? "Top 10 vehicles by total yearly utilization"
+                    : "Top 10 vehicles by utilization rate for selected period"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-80">
