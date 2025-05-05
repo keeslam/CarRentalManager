@@ -323,26 +323,79 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     console.log("Processed vehicle data:", formattedData);
     
     try {
-      // Use apiRequest helper instead of raw fetch to ensure consistency
-      const url = editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles";
-      console.log(`Sending API request to ${url}`);
+      // First, check if we're making a registration status change
+      const previousData = initialData || {};
+      const isRegStatusChange = 
+        editMode && 
+        (formattedData.registeredTo !== previousData.registeredTo || 
+         formattedData.company !== previousData.company);
       
-      const response = await apiRequest(
-        editMode ? "PATCH" : "POST", 
-        url, 
-        formattedData
-      );
+      // Track the response data
+      let responseData;
       
-      console.log("API response status:", response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API error:", errorData);
-        throw new Error(errorData.message || "Failed to save vehicle data");
+      // If we're changing registration status, use the dedicated endpoint first
+      if (isRegStatusChange && editMode) {
+        console.log("Registration status change detected, using dedicated endpoint");
+        
+        // Determine which status we're changing to
+        let toggleStatus = null;
+        if (formattedData.registeredTo === "true") {
+          toggleStatus = "opnaam";
+        } else if (formattedData.company === "true") {
+          toggleStatus = "bv";
+        }
+        
+        // Only call toggle endpoint if we're setting one of the statuses to true
+        if (toggleStatus) {
+          console.log(`Setting registration status to: ${toggleStatus}`);
+          
+          const toggleResponse = await apiRequest(
+            "PATCH",
+            `/api/vehicles/${initialData.id}/toggle-registration`,
+            { status: toggleStatus }
+          );
+          
+          if (!toggleResponse.ok) {
+            const errorData = await toggleResponse.json();
+            console.error("Registration toggle error:", errorData);
+            throw new Error(errorData.message || "Failed to update registration status");
+          }
+          
+          // Remove registration fields from the main update since we already handled them
+          delete formattedData.registeredTo;
+          delete formattedData.company;
+          delete formattedData.registeredToDate;
+          delete formattedData.companyDate;
+          
+          // Get the initial response data
+          responseData = await toggleResponse.json();
+          console.log("Registration toggle response:", responseData);
+        }
       }
       
-      const responseData = await response.json();
-      console.log("API response data:", responseData);
+      // If there are still fields to update OR we're creating a new vehicle, make the standard request
+      if (Object.keys(formattedData).length > 0 || !editMode) {
+        // Use apiRequest helper instead of raw fetch to ensure consistency
+        const url = editMode ? `/api/vehicles/${initialData?.id}` : "/api/vehicles";
+        console.log(`Sending API request to ${url}`);
+        
+        const response = await apiRequest(
+          editMode ? "PATCH" : "POST", 
+          url, 
+          formattedData
+        );
+        
+        console.log("API response status:", response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("API error:", errorData);
+          throw new Error(errorData.message || "Failed to save vehicle data");
+        }
+        
+        responseData = await response.json();
+        console.log("API response data:", responseData);
+      }
       
       // Force more aggressive cache invalidation
       
