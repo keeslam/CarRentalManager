@@ -130,13 +130,27 @@ export function CustomerForm({
   
   const createCustomerMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest(
-        editMode ? "PATCH" : "POST", 
+      const response = await fetch(
         editMode ? `/api/customers/${initialData?.id}` : "/api/customers", 
-        data
+        {
+          method: editMode ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data)
+        }
       );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create customer");
+      }
+      
+      return await response.json();
     },
     onSuccess: async (data) => {
+      console.log("Customer created/updated successfully:", data);
+      
       // Use the helper function to properly invalidate all related queries
       await invalidateRelatedQueries("customers", editMode ? initialData?.id : undefined);
       

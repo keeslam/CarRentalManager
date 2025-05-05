@@ -288,9 +288,17 @@ export function ReservationForm({
   }, [vehicles]);
   
   // Handle customer creation form
-  const handleCustomerCreated = (data: Customer) => {
-    // Set the new customer in the form
-    form.setValue("customerId", data.id.toString());
+  const handleCustomerCreated = async (data: Customer) => {
+    console.log("Customer created in reservation form:", data);
+    
+    // Refresh customers list first
+    await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+    
+    // Set the new customer in the form using toString to ensure it's a string
+    if (data && data.id) {
+      form.setValue("customerId", String(data.id));
+    }
     
     // Close the dialog
     setCustomerDialogOpen(false);
@@ -298,11 +306,8 @@ export function ReservationForm({
     // Show success toast
     toast({
       title: "Customer Created",
-      description: `${data.name} has been added.`,
+      description: `${data.name} has been added and selected for this reservation.`,
     });
-    
-    // Refresh customers list
-    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
   };
   
   // We no longer need a separate createVehicleMutation as we're using VehicleQuickForm
