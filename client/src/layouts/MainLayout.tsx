@@ -55,20 +55,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const title = getPageTitle(location);
   
   // Query for vehicles based on search
-  const { data: vehicleResults, isLoading: vehiclesLoading } = useQuery({
-    queryKey: ["/api/search/vehicles", searchQuery],
+  const { data: vehicleResults = [], isLoading: vehiclesLoading } = useQuery({
+    queryKey: ["/api/vehicles", "search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
+      console.log("Searching vehicles for:", searchQuery);
       const response = await fetch(`/api/vehicles?search=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) throw new Error("Failed to search vehicles");
-      return response.json();
+      const data = await response.json();
+      console.log("Vehicle search results:", data);
+      return data;
     },
     enabled: searchQuery.length >= 2
   });
 
   // Query for customers based on search
-  const { data: customerResults, isLoading: customersLoading } = useQuery({
-    queryKey: ["/api/search/customers", searchQuery],
+  const { data: customerResults = [], isLoading: customersLoading } = useQuery({
+    queryKey: ["/api/customers", "search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
       const response = await fetch(`/api/customers?search=${encodeURIComponent(searchQuery)}`);
@@ -79,8 +82,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   });
 
   // Query for reservations based on search
-  const { data: reservationResults, isLoading: reservationsLoading } = useQuery({
-    queryKey: ["/api/search/reservations", searchQuery],
+  const { data: reservationResults = [], isLoading: reservationsLoading } = useQuery({
+    queryKey: ["/api/reservations", "search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
       const response = await fetch(`/api/reservations?search=${encodeURIComponent(searchQuery)}`);
@@ -90,23 +93,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
     enabled: searchQuery.length >= 2
   });
   
-  // Format license plate to display with dashes
-  const formatLicensePlate = (plate: string) => {
+  // Sanitize license plate to remove dashes
+  const sanitizeLicensePlate = (plate: string) => {
     if (!plate) return "";
-    
     // Remove any existing dashes
-    const sanitized = plate.replace(/-/g, "");
-    
-    // Apply formatting based on length
-    if (sanitized.length === 6) { // Format: XX-XX-XX
-      return `${sanitized.substring(0, 2)}-${sanitized.substring(2, 4)}-${sanitized.substring(4, 6)}`;
-    } else if (sanitized.length === 8) { // Format: XX-XXX-XX
-      return `${sanitized.substring(0, 2)}-${sanitized.substring(2, 5)}-${sanitized.substring(5, 8)}`;
-    } else if (sanitized.length === 7) { // Format: X-XXX-XX
-      return `${sanitized.substring(0, 1)}-${sanitized.substring(1, 4)}-${sanitized.substring(4, 7)}`;
-    }
-    
-    return sanitized;
+    return plate.replace(/-/g, "");
   };
   
   // Handle click away from search results
@@ -186,12 +177,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <div className="relative" ref={searchRef}>
               <input 
                 type="text" 
-                placeholder="Search..." 
+                placeholder="Search..."
+                autoComplete="off"
                 className="w-full py-2 pl-10 pr-4 text-gray-700 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (e.target.value.length >= 2) {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  if (value.length >= 2) {
                     setShowResults(true);
                   } else {
                     setShowResults(false);
