@@ -379,20 +379,20 @@ export default function ReservationCalendarPage() {
                           }
                         }}
                       >
-                        {/* Quick add button - only shows on hover for current month days, positioned at center */}
+                        {/* Quick add button - only shows on hover for current month days, positioned at top center */}
                         {isCurrentMonth && (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="h-8 w-8 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm"
+                              className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const formattedDate = format(day, "yyyy-MM-dd");
                                 window.location.href = `/reservations/add?date=${formattedDate}`;
                               }}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
                                 <path d="M5 12h14"/>
                                 <path d="M12 5v14"/>
                               </svg>
