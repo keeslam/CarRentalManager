@@ -192,7 +192,12 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   updatedByUser: true,
 })
 .extend({
-  totalPrice: z.number().optional().or(z.string().transform(val => Number(val) || 0))
+  totalPrice: z.number().optional().or(
+    z.string().transform(val => {
+      // Convert empty strings to undefined, otherwise convert to number
+      return val === '' ? undefined : (Number(val) || 0);
+    })
+  )
 });
 
 // Expenses table
