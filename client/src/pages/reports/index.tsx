@@ -1736,6 +1736,14 @@ export default function ReportsPage() {
                     )}
                   </TableBody>
                 </Table>
+                
+                {filteredApkStatusList.length > 0 && (
+                  <Pagination
+                    currentPage={apkCurrentPage}
+                    totalPages={Math.ceil(filteredApkStatusList.length / pageSize)}
+                    onPageChange={setApkCurrentPage}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1894,6 +1902,14 @@ export default function ReportsPage() {
                     )}
                   </TableBody>
                 </Table>
+                
+                {filteredWarrantyList.length > 0 && (
+                  <Pagination
+                    currentPage={warrantyCurrentPage}
+                    totalPages={Math.ceil(filteredWarrantyList.length / pageSize)}
+                    onPageChange={setWarrantyCurrentPage}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
