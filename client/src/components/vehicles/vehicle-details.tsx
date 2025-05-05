@@ -794,7 +794,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
               {/* Document Categories */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">Quick Upload Categories</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
                     <InlineDocumentUpload 
                       vehicleId={vehicleId} 
@@ -819,7 +819,34 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
+                      preselectedType="Contract"
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                      }}
+                    >
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-orange-500">
+                          <path d="M20 7h-3a2 2 0 0 1-2-2V2" />
+                          <path d="M9 9h6" />
+                          <path d="M9 13h6" />
+                          <path d="M9 17h3" />
+                          <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
+                          <path d="M2 15h6v6H2z" />
+                        </svg>
+                        <span className="block text-sm font-medium">Contract</span>
+                      </div>
+                    </InlineDocumentUpload>
+                  </div>
+                  
+                  <div className="flex flex-col items-center bg-slate-50 p-3 rounded-md hover:bg-slate-100 cursor-pointer transition-colors">
+                    <InlineDocumentUpload 
+                      vehicleId={vehicleId}
                       preselectedType="Damage Report"
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                      }}
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-red-500">
@@ -835,6 +862,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
                       preselectedType="Vehicle Photos"
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                      }}
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-green-500">
@@ -851,6 +882,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                     <InlineDocumentUpload 
                       vehicleId={vehicleId}
                       preselectedType="Maintenance Record"
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                      }}
                     >
                       <div className="text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-purple-500">
