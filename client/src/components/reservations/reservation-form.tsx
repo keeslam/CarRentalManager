@@ -419,6 +419,13 @@ export function ReservationForm({
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       
+      // If we're in edit mode, make sure we invalidate the specific reservation details
+      if (editMode && initialData?.id) {
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/reservations/${initialData.id}`] 
+        });
+      }
+      
       // Also invalidate vehicle-specific reservation queries
       if (vehicleIdWatch) {
         await queryClient.invalidateQueries({ 
@@ -435,8 +442,14 @@ export function ReservationForm({
       // Force refetch if needed
       queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
       
-      // Navigate back to reservations list
-      navigate("/reservations");
+      // If editing, navigate back to the details page, otherwise go to the list
+      if (editMode && initialData?.id) {
+        // Navigate to reservation details page
+        navigate(`/reservations/${initialData.id}`);
+      } else {
+        // Navigate back to reservations list
+        navigate("/reservations");
+      }
     },
     onError: (error) => {
       toast({
@@ -843,7 +856,7 @@ export function ReservationForm({
                   name="totalPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Price (€)</FormLabel>
+                      <FormLabel>Total Price (€) <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -851,8 +864,14 @@ export function ReservationForm({
                           min="0" 
                           placeholder="0.00" 
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          value={field.value || ""}
+                          onChange={(e) => {
+                            // Allow emptying the field (making it optional)
+                            const value = e.target.value === "" 
+                              ? undefined 
+                              : parseFloat(e.target.value) || 0;
+                            field.onChange(value);
+                          }}
+                          value={field.value === undefined || field.value === null ? "" : field.value}
                         />
                       </FormControl>
                       <FormDescription>
