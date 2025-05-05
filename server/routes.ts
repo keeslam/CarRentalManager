@@ -724,27 +724,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const currentDate = new Date().toISOString().split('T')[0];
       
-      // Get username from authenticated session
-      let username = "admin"; // Default fallback
-      
-      // Log authentication state for debugging
-      console.log("Authentication state:", {
+      // More extensive logging for debugging authentication state
+      console.log("TOGGLE REGISTRATION - Complete authentication state:", {
         isAuthenticated: req.isAuthenticated(),
         userExists: !!req.user,
-        sessionID: req.sessionID
+        sessionID: req.sessionID,
+        userObject: req.user,
+        session: req.session
       });
       
-      // Try to get the current user's username from the session
-      if (req.user && typeof req.user === 'object') {
-        // Check if username exists in the user object
-        if ('username' in req.user && req.user.username) {
-          username = req.user.username;
-          console.log("Using authenticated username:", username);
+      // Get the actual user from the database if possible, to ensure we have the full object
+      let username = "admin"; // Default fallback for development
+      
+      if (req.user) {
+        if (typeof req.user === 'object') {
+          if ('username' in req.user) {
+            username = req.user.username;
+            console.log("Found username directly in user object:", username);
+          } else if ('id' in req.user) {
+            try {
+              const userId = req.user.id;
+              const fullUser = await storage.getUser(userId);
+              if (fullUser && fullUser.username) {
+                username = fullUser.username;
+                console.log("Retrieved username from database using ID:", username);
+              }
+            } catch (err) {
+              console.error("Error retrieving user details:", err);
+            }
+          } else {
+            console.log("User object exists but lacks id and username properties:", req.user);
+          }
         } else {
-          console.log("User object exists but has no username property:", req.user);
+          console.log("User exists but is not an object:", typeof req.user);
         }
       } else {
-        console.log("User not available in request:", req.user);
+        console.log("No user object in request");
       }
       
       // Create update data with user attribution
@@ -766,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
       
-      console.log("Updating vehicle with user:", username);
+      console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
       const updatedVehicle = await storage.updateVehicle(id, updateData);
       
       // Store last action to ensure history shows the correct user for this specific action
@@ -777,7 +792,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the history action
       console.log("Vehicle registration history action:", historyNote);
       
-      res.json(updatedVehicle);
+      // Add tracking to response
+      const vehicleWithAudit = {
+        ...updatedVehicle,
+        lastAction: historyNote
+      };
+      
+      res.json(vehicleWithAudit);
     } catch (error) {
       console.error("Error in toggle-registration endpoint:", error);
       res.status(400).json({ message: "Error toggling registration status", error });
