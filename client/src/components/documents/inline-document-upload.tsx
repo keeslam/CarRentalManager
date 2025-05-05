@@ -148,9 +148,11 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
       });
     },
     onSuccess: async () => {
-      // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      // Use invalidateRelatedQueries to refresh all related data
+      invalidateRelatedQueries('documents');
+      if (vehicleId) {
+        invalidateRelatedQueries('vehicles', vehicleId);
+      }
       
       // Show success message
       toast({

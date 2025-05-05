@@ -13,7 +13,7 @@ import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,8 +52,11 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
         description: "The vehicle has been successfully deleted."
       });
       
-      // Invalidate and redirect
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      // Use invalidateRelatedQueries to refresh all affected data
+      invalidateRelatedQueries('vehicles');
+      invalidateRelatedQueries('dashboard');
+      
+      // Navigate back to vehicles list
       navigate("/vehicles");
     },
     onError: (error: Error) => {
@@ -113,14 +116,13 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
       return await response.json();
     },
     onSuccess: async () => {
-      // Invalidate and refetch reservations for this vehicle
-      await queryClient.invalidateQueries({ queryKey: vehicleReservationsQueryKey });
+      // Use invalidateRelatedQueries to refresh all related data
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles', vehicleId);
+      invalidateRelatedQueries('dashboard');
       
-      // Explicitly force a refetch to ensure the UI updates
+      // Explicitly force a refetch to ensure the UI updates immediately
       await refetchReservations();
-      
-      // Also update the general reservations list
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       
       toast({
         title: "Reservation deleted",
