@@ -1069,10 +1069,16 @@ export default function ReportsPage() {
             Generate and analyze reports for your car rental business
           </p>
         </div>
-        <Button onClick={() => exportReport(activeTab)}>
-          <Download className="mr-2 h-4 w-4" />
-          Export Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => printReport('warranty')}>
+            <Printer className="mr-2 h-4 w-4" />
+            Warranty Report
+          </Button>
+          <Button onClick={() => printReport(activeTab)}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print Report
+          </Button>
+        </div>
       </div>
       
       {/* Filter Controls */}
@@ -1661,11 +1667,22 @@ export default function ReportsPage() {
         <TabsContent value="customers" className="space-y-6">
           {/* Customer Impact Analysis */}
           <Card>
-            <CardHeader>
-              <CardTitle>Customer Impact Analysis</CardTitle>
-              <CardDescription>
-                Analysis of customer impact on vehicle expenses and maintenance
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Customer Impact Analysis</CardTitle>
+                <CardDescription>
+                  Analysis of customer impact on vehicle expenses and maintenance
+                </CardDescription>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => printReport('customer-impact')}
+                className="h-8 gap-1"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
