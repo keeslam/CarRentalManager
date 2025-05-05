@@ -1823,6 +1823,7 @@ export default function ReportsPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                <AlertTriangle className={`h-5 w-5 ${vehicles.filter(v => v.warrantyEndDate && differenceInDays(new Date(v.warrantyEndDate), today) >= 0 && differenceInDays(new Date(v.warrantyEndDate), today) <= 90).length > 0 ? 'text-amber-500' : 'text-green-500'}`} />
                 <Button 
                   size="sm" 
                   variant="outline" 
