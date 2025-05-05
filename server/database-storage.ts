@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, inArray, not } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike } from "drizzle-orm";
 import { IStorage } from "./storage";
 
 // Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
@@ -85,8 +85,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Vehicle methods
-  async getAllVehicles(): Promise<Vehicle[]> {
-    return await db.select().from(vehicles);
+  async getAllVehicles(searchQuery?: string): Promise<Vehicle[]> {
+    if (!searchQuery) {
+      return await db.select().from(vehicles);
+    }
+    
+    // Search by license plate, brand, or model
+    return await db.select()
+      .from(vehicles)
+      .where(
+        or(
+          ilike(vehicles.licensePlate, `%${searchQuery}%`),
+          ilike(vehicles.brand, `%${searchQuery}%`),
+          ilike(vehicles.model, `%${searchQuery}%`)
+        )
+      )
+      .limit(10);
   }
 
   async getVehicle(id: number): Promise<Vehicle | undefined> {
@@ -207,8 +221,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Customer methods
-  async getAllCustomers(): Promise<Customer[]> {
-    return await db.select().from(customers);
+  async getAllCustomers(searchQuery?: string): Promise<Customer[]> {
+    if (!searchQuery) {
+      return await db.select().from(customers);
+    }
+    
+    // Search by name, email, or phone
+    return await db.select()
+      .from(customers)
+      .where(
+        or(
+          ilike(customers.name, `%${searchQuery}%`),
+          ilike(customers.email, `%${searchQuery}%`),
+          ilike(customers.phone, `%${searchQuery}%`),
+          ilike(customers.debtorNumber, `%${searchQuery}%`)
+        )
+      )
+      .limit(10);
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
@@ -232,8 +261,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Reservation methods
-  async getAllReservations(): Promise<Reservation[]> {
-    const reservationsData = await db.select().from(reservations);
+  async getAllReservations(searchQuery?: string): Promise<Reservation[]> {
+    let reservationsData;
+    
+    if (searchQuery) {
+      // First, search for vehicles and customers matching the query
+      const matchingVehicles = await db.select()
+        .from(vehicles)
+        .where(
+          or(
+            ilike(vehicles.licensePlate, `%${searchQuery}%`),
+            ilike(vehicles.brand, `%${searchQuery}%`),
+            ilike(vehicles.model, `%${searchQuery}%`)
+          )
+        );
+      
+      const matchingCustomers = await db.select()
+        .from(customers)
+        .where(
+          or(
+            ilike(customers.name, `%${searchQuery}%`),
+            ilike(customers.email, `%${searchQuery}%`),
+            ilike(customers.phone, `%${searchQuery}%`)
+          )
+        );
+      
+      const vehicleIds = matchingVehicles.map(v => v.id);
+      const customerIds = matchingCustomers.map(c => c.id);
+      
+      // Query reservations that match either vehicle or customer
+      if (vehicleIds.length > 0 || customerIds.length > 0) {
+        const conditions = [];
+        if (vehicleIds.length > 0) {
+          conditions.push(inArray(reservations.vehicleId, vehicleIds));
+        }
+        if (customerIds.length > 0) {
+          conditions.push(inArray(reservations.customerId, customerIds));
+        }
+        
+        reservationsData = await db.select()
+          .from(reservations)
+          .where(or(...conditions))
+          .limit(10);
+      } else {
+        // If no matching vehicles or customers, check if search matches a date
+        reservationsData = await db.select()
+          .from(reservations)
+          .where(
+            or(
+              ilike(reservations.startDate, `%${searchQuery}%`),
+              ilike(reservations.endDate, `%${searchQuery}%`),
+              ilike(reservations.status, `%${searchQuery}%`)
+            )
+          )
+          .limit(10);
+      }
+    } else {
+      reservationsData = await db.select().from(reservations);
+    }
+    
     const result: Reservation[] = [];
     
     // Fetch vehicle and customer data for each reservation
