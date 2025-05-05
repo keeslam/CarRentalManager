@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate } from '@/lib/format-utils';
+import { formatDate, formatLicensePlate } from '@/lib/format-utils';
 import { Vehicle } from '@shared/schema';
 import type { Customer } from '@shared/schema';
 import type { Reservation } from '@shared/schema';
@@ -207,7 +207,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
                       <Card key={vehicle.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleVehicleClick(vehicle)}>
                         <CardHeader className="pb-2">
                           <CardTitle className="flex justify-between items-center">
-                            <span className="font-mono">{vehicle.licensePlate}</span>
+                            <span className="font-mono">{sanitizeLicensePlate(vehicle.licensePlate)}</span>
                             <Badge>{vehicle.vehicleType || 'Unknown'}</Badge>
                           </CardTitle>
                           <CardDescription>
@@ -289,7 +289,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
                         <CardHeader className="pb-2">
                           <CardTitle className="flex justify-between items-center">
                             <span>
-                              {reservation.vehicle?.licensePlate || 'Unknown vehicle'}
+                              {reservation.vehicle?.licensePlate ? formatLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
                             </span>
                             <Badge variant={reservation.status === 'booked' ? 'default' : reservation.status === 'cancelled' ? 'destructive' : 'secondary'}>
                               {reservation.status}
@@ -329,7 +329,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
                   <Card key={vehicle.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleVehicleClick(vehicle)}>
                     <CardHeader className="pb-2">
                       <CardTitle className="flex justify-between items-center">
-                        <span className="font-mono">{vehicle.licensePlate}</span>
+                        <span className="font-mono">{formatLicensePlate(vehicle.licensePlate)}</span>
                         <Badge>{vehicle.vehicleType || 'Unknown'}</Badge>
                       </CardTitle>
                       <CardDescription>
