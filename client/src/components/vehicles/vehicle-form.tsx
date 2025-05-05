@@ -242,10 +242,12 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     // Process the form data before submission
     const formattedData: any = { ...data };
     
-    // Remove registeredToBy and companyBy from the form data immediately
+    // Remove all registration tracking fields from the form data
     // as these should only be modified by the server-side tracking endpoints
     delete formattedData.registeredToBy;
     delete formattedData.companyBy;
+    delete formattedData.registeredToDate;
+    delete formattedData.companyDate;
     
     console.log("Original form data:", data);
     
