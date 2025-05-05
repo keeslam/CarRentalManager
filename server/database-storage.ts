@@ -123,18 +123,44 @@ export class DatabaseStorage implements IStorage {
       // Explicitly debug the updatedBy value
       if ('updatedBy' in vehicleData) {
         console.log(`updatedBy value before database call: "${vehicleData.updatedBy}"`);
+        
+        // Try a direct SQL update to ensure the updated_by field is set
+        console.log("Executing direct SQL update for updated_by field");
+        const updateResult = await db.execute(sql`
+          UPDATE vehicles
+          SET updated_by = ${vehicleData.updatedBy}
+          WHERE id = ${id}
+        `);
+        console.log("Direct SQL update result:", updateResult);
       } else {
         console.log("No updatedBy field in update data");
       }
       
-      const [updatedVehicle] = await db
-        .update(vehicles)
-        .set(vehicleData)
-        .where(eq(vehicles.id, id))
-        .returning();
+      // Handle other properties normally
+      const updateObject = {...vehicleData};
+      if ('updatedBy' in updateObject) {
+        delete updateObject.updatedBy; // Remove since we're handling separately
+      }
       
-      console.log("Database returned vehicle:", JSON.stringify(updatedVehicle, null, 2));
-      return updatedVehicle || undefined;
+      // Normal update for all other fields
+      if (Object.keys(updateObject).length > 0) {
+        const [updatedVehicle] = await db
+          .update(vehicles)
+          .set(updateObject)
+          .where(eq(vehicles.id, id))
+          .returning();
+        
+        console.log("Database returned vehicle:", JSON.stringify(updatedVehicle, null, 2));
+        return updatedVehicle || undefined;
+      } else {
+        // If we only updated updatedBy, we need to return the vehicle anyway
+        const [vehicle] = await db
+          .select()
+          .from(vehicles)
+          .where(eq(vehicles.id, id));
+        
+        return vehicle || undefined;
+      }
     } catch (error) {
       console.error("Error in database updateVehicle:", error);
       throw error;

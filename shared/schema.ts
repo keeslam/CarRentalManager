@@ -99,6 +99,9 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  // No longer omit these fields so they can be set during insert/update
+  // createdBy: true, 
+  // updatedBy: true,
 });
 
 // Customers table
