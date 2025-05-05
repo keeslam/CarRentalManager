@@ -429,10 +429,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(vehicles);
   });
   
-  // Get all vehicles
+  // Get all vehicles with optional search
   app.get("/api/vehicles", async (req, res) => {
-    const vehicles = await storage.getAllVehicles();
-    res.json(vehicles);
+    try {
+      const searchQuery = req.query.search as string | undefined;
+      const vehicles = await storage.getAllVehicles(searchQuery);
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      res.status(500).json({ message: "Failed to fetch vehicles", error });
+    }
   });
 
   // Get single vehicle
@@ -770,10 +776,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== CUSTOMER ROUTES ====================
-  // Get all customers
+  // Get all customers with optional search
   app.get("/api/customers", async (req, res) => {
-    const customers = await storage.getAllCustomers();
-    res.json(customers);
+    try {
+      const searchQuery = req.query.search as string | undefined;
+      const customers = await storage.getAllCustomers(searchQuery);
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      res.status(500).json({ message: "Failed to fetch customers", error });
+    }
   });
 
   // Get single customer
