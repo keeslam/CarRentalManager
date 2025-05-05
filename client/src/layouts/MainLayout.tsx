@@ -7,6 +7,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { NotificationCenter } from "@/components/ui/notification-center";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X } from "lucide-react";
+import { formatLicensePlate } from "@/lib/format-utils";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -93,12 +94,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
     enabled: searchQuery.length >= 2
   });
   
-  // Sanitize license plate to remove dashes
-  const sanitizeLicensePlate = (plate: string) => {
-    if (!plate) return "";
-    // Remove any existing dashes
-    return plate.replace(/-/g, "");
-  };
+  // Import the utility function from format-utils.ts instead of defining it here
+  // This ensures consistency across the application
   
   // Handle click away from search results
   useEffect(() => {
@@ -286,7 +283,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                                 <Car className="h-4 w-4 text-primary-500 mr-2" />
                                 <div>
                                   <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-                                  <div className="text-xs text-gray-500">{sanitizeLicensePlate(vehicle.licensePlate)}</div>
+                                  <div className="text-xs text-gray-500">{formatLicensePlate(vehicle.licensePlate)}</div>
                                 </div>
                               </button>
                             </li>

@@ -23,15 +23,16 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
   const [activeTab, setActiveTab] = useState('all');
 
   // Get the current URL search parameters
-  const searchParams = new URLSearchParams(window.location.search);
-  const urlQuery = searchParams.get('q') || '';
+  const [location] = useLocation();
   
   // Parse query parameter from URL if available and refresh when URL changes
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlQuery = searchParams.get('q') || '';
     if (urlQuery) {
       setQuery(urlQuery);
     }
-  }, [urlQuery]); // Re-run effect when URL query parameter changes
+  }, [location]); // Re-run effect when URL location changes
 
   // Fetch vehicles matching the search query
   const {
@@ -207,7 +208,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
                       <Card key={vehicle.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleVehicleClick(vehicle)}>
                         <CardHeader className="pb-2">
                           <CardTitle className="flex justify-between items-center">
-                            <span className="font-mono">{sanitizeLicensePlate(vehicle.licensePlate)}</span>
+                            <span className="font-mono">{formatLicensePlate(vehicle.licensePlate)}</span>
                             <Badge>{vehicle.vehicleType || 'Unknown'}</Badge>
                           </CardTitle>
                           <CardDescription>
