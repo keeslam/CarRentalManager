@@ -459,36 +459,65 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Registration Status</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Switch checked={isTrueValue(vehicle.registeredTo)} disabled />
-                        <span className="text-sm">
-                          Registration: Opnaam
-                          {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
-                            <span className="block text-xs text-gray-500">
-                              Last updated: {formatDate(vehicle.registeredToDate)}
-                              {vehicle.registeredToBy && (
-                                <span className="ml-1">by <span className="font-medium">{vehicle.registeredToBy}</span></span>
-                              )}
-                            </span>
-                          )}
-                        </span>
+                    <div className="space-y-4 rounded border p-3">
+                      <div className="bg-gray-50 p-2 rounded-sm text-gray-700 text-xs mb-2">
+                        Note: A vehicle can either be registered to an individual (Opnaam) or to a company (BV), but not both at the same time.
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <Switch checked={isTrueValue(vehicle.company)} disabled />
-                        <span className="text-sm">
-                          Registration: BV
-                          {isTrueValue(vehicle.company) && vehicle.companyDate && (
-                            <span className="block text-xs text-gray-500">
-                              Last updated: {formatDate(vehicle.companyDate)}
-                              {vehicle.companyBy && (
-                                <span className="ml-1">by <span className="font-medium">{vehicle.companyBy}</span></span>
-                              )}
-                            </span>
+                      <div className="flex items-start gap-3">
+                        <div className="pt-0.5">
+                          <Switch checked={isTrueValue(vehicle.registeredTo)} disabled />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">
+                            Individual Registration (Opnaam): {isTrueValue(vehicle.registeredTo) ? 
+                              <span className="text-green-600 font-semibold">Active</span> : 
+                              <span className="text-gray-500">Not active</span>}
+                          </span>
+                          {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
+                            <div className="mt-1 text-xs text-gray-600 bg-gray-50 p-1.5 rounded">
+                              <span className="block">
+                                Last updated: {formatDate(vehicle.registeredToDate)}
+                                {vehicle.registeredToBy && (
+                                  <span className="ml-1">by <span className="font-medium">{vehicle.registeredToBy}</span></span>
+                                )}
+                              </span>
+                            </div>
                           )}
-                        </span>
+                        </div>
                       </div>
+                      
+                      <div className="border-t my-2 border-gray-100"></div>
+                      
+                      <div className="flex items-start gap-3">
+                        <div className="pt-0.5">
+                          <Switch checked={isTrueValue(vehicle.company)} disabled />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">
+                            Company Registration (BV): {isTrueValue(vehicle.company) ? 
+                              <span className="text-green-600 font-semibold">Active</span> : 
+                              <span className="text-gray-500">Not active</span>}
+                          </span>
+                          {isTrueValue(vehicle.company) && vehicle.companyDate && (
+                            <div className="mt-1 text-xs text-gray-600 bg-gray-50 p-1.5 rounded">
+                              <span className="block">
+                                Last updated: {formatDate(vehicle.companyDate)}
+                                {vehicle.companyBy && (
+                                  <span className="ml-1">by <span className="font-medium">{vehicle.companyBy}</span></span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {(isTrueValue(vehicle.registeredTo) && isTrueValue(vehicle.company)) && (
+                        <div className="bg-amber-50 border border-amber-200 p-2 rounded text-amber-800 text-xs">
+                          <span className="font-semibold">Warning:</span> Both registration types are active, which may cause confusion. 
+                          Please edit this vehicle to set only one registration type.
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

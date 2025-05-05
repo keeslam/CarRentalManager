@@ -363,16 +363,36 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
         // - not-opnaam: Set registeredTo to false
         // - bv: Set company to true
         // - not-bv: Set company to false
+        
+        // Important: When toggling one status, automatically turn off the other
+        // to maintain the business rule that a car can't be both Opnaam and BV
         let toggleStatus = null;
         
-        if (newRegisteredTo && !prevRegisteredTo) {
-          toggleStatus = "opnaam"; // Setting to "opnaam"
-        } else if (!newRegisteredTo && prevRegisteredTo) {
-          toggleStatus = "not-opnaam"; // Removing "opnaam"
-        } else if (newCompany && !prevCompany) {
-          toggleStatus = "bv"; // Setting to "bv"
-        } else if (!newCompany && prevCompany) {
-          toggleStatus = "not-bv"; // Removing "bv"
+        // Check which status was actually changed by the user
+        if (newRegisteredTo !== prevRegisteredTo) {
+          if (newRegisteredTo) {
+            toggleStatus = "opnaam"; // Setting to "opnaam"
+            
+            // Auto-disable company status if enabling registeredTo
+            if (prevCompany) {
+              console.log("Automatically disabling BV status because Opnaam is being activated");
+              formattedData.company = "false";
+            }
+          } else {
+            toggleStatus = "not-opnaam"; // Removing "opnaam"
+          }
+        } else if (newCompany !== prevCompany) {
+          if (newCompany) {
+            toggleStatus = "bv"; // Setting to "bv"
+            
+            // Auto-disable registeredTo status if enabling company
+            if (prevRegisteredTo) {
+              console.log("Automatically disabling Opnaam status because BV is being activated");
+              formattedData.registeredTo = "false";
+            }
+          } else {
+            toggleStatus = "not-bv"; // Removing "bv"
+          }
         }
         
         console.log(`Selected toggle status: ${toggleStatus}`);
