@@ -226,7 +226,7 @@ export function NotificationCenter() {
                           title={notification.title}
                           description={notification.description}
                           date={notification.date}
-                          link={notification.link || '/notifications/custom'}
+                          link={notification.link || '/notifications'}
                         />
                       </div>
                     );
@@ -347,7 +347,7 @@ export function NotificationCenter() {
                         title={notification.title}
                         description={notification.description}
                         date={notification.date}
-                        link={notification.link || '/notifications/custom'}
+                        link={notification.link || '/notifications'}
                       />
                     </div>
                   );

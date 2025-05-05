@@ -2585,7 +2585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      res.json({ success: true, message: "Notification marked as read" });
+      // Get the updated notification to return
+      const updatedNotification = await storage.getCustomNotification(id);
+      res.json(updatedNotification || { success: true, message: "Notification marked as read" });
     } catch (error) {
       console.error("Error marking notification as read:", error);
       res.status(500).json({ 
