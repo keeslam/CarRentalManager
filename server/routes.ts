@@ -26,6 +26,19 @@ function getRelativePath(absolutePath: string): string {
   return absolutePath.replace(/^\/home\/runner\/workspace\//, '');
 }
 
+// Helper function to format dates consistently
+function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return format(date, 'dd-MM-yyyy');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1992,7 +2005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pdfBuffer = await generateRentalContract(reservation);
       }
       
-      // Save a copy of the contract PDF to the contracts folder
+      // Save a copy of the contract PDF to the contracts folder and register it as a document
       try {
         // Get vehicle license plate for folder structure
         if (reservation.vehicle && reservation.vehicle.licensePlate) {
@@ -2033,6 +2046,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Save the file
           fs.writeFileSync(filePath, pdfBuffer);
           console.log(`Contract successfully saved to: ${filePath}`);
+          
+          // Register the contract as a document entry
+          try {
+            // Create document entry for the contract
+            const documentData = {
+              vehicleId: reservation.vehicleId,
+              documentType: 'Contract',
+              fileName: filename,
+              filePath: getRelativePath(filePath),
+              fileSize: pdfBuffer.length,
+              contentType: 'application/pdf',
+              createdBy: req.user ? req.user.username : 'System',
+              notes: `Rental contract for reservation #${reservationId} (${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)})`
+            };
+            
+            // Check if a contract document already exists for this reservation
+            const existingDocs = await storage.getDocumentsByVehicle(reservation.vehicleId);
+            const existingContract = existingDocs.find(doc => 
+              doc.documentType === 'Contract' && 
+              doc.fileName.includes(`${sanitizedPlate}_contract_${currentDate}`)
+            );
+            
+            // Only create a new document if one doesn't already exist for today's date
+            if (!existingContract) {
+              const document = await storage.createDocument(documentData);
+              console.log(`Created document entry for contract: ID ${document.id}`);
+            } else {
+              console.log(`Contract document already exists: ID ${existingContract.id}`);
+            }
+          } catch (docError) {
+            console.error('Error registering contract as document:', docError);
+            // Continue even if document registration fails
+          }
         } else {
           console.log('Cannot save contract: Vehicle or license plate is missing');
         }
