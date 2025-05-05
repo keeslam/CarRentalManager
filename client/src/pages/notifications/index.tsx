@@ -162,6 +162,12 @@ export default function NotificationsPage() {
             Manage and customize notifications for your car rental business
           </p>
         </div>
+        <Button asChild>
+          <Link href="/notifications/custom">
+            <Bell className="mr-2 h-4 w-4" />
+            Manage Custom Notifications
+          </Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

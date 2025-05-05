@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Vehicle, Reservation } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format-utils";
-import { Bell, Calendar, Car, AlertTriangle } from "lucide-react";
+import { Bell, Calendar, Car, AlertTriangle, Info, ClipboardCheck } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
 
