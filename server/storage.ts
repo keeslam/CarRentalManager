@@ -5,7 +5,8 @@ import {
   reservations, type Reservation, type InsertReservation,
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
-  pdfTemplates, type PdfTemplate, type InsertPdfTemplate
+  pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
+  customNotifications, type CustomNotification, type InsertCustomNotification
 } from "@shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -71,6 +72,17 @@ export interface IStorage {
   createPdfTemplate(template: InsertPdfTemplate): Promise<PdfTemplate>;
   updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined>;
   deletePdfTemplate(id: number): Promise<boolean>;
+  
+  // Custom Notification methods
+  getAllCustomNotifications(): Promise<CustomNotification[]>;
+  getCustomNotification(id: number): Promise<CustomNotification | undefined>;
+  getUnreadCustomNotifications(): Promise<CustomNotification[]>;
+  getCustomNotificationsByType(type: string): Promise<CustomNotification[]>;
+  getCustomNotificationsByUser(userId: number): Promise<CustomNotification[]>;
+  createCustomNotification(notification: InsertCustomNotification): Promise<CustomNotification>;
+  updateCustomNotification(id: number, notificationData: Partial<InsertCustomNotification>): Promise<CustomNotification | undefined>;
+  markCustomNotificationAsRead(id: number): Promise<boolean>;
+  deleteCustomNotification(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -81,6 +93,7 @@ export class MemStorage implements IStorage {
   private expenses: Map<number, Expense>;
   private documents: Map<number, Document>;
   private pdfTemplates: Map<number, PdfTemplate>;
+  private customNotifications: Map<number, CustomNotification>;
   
   private userId: number;
   private vehicleId: number;
@@ -89,6 +102,7 @@ export class MemStorage implements IStorage {
   private expenseId: number;
   private documentId: number;
   private pdfTemplateId: number;
+  private customNotificationId: number;
 
   constructor() {
     this.users = new Map();
@@ -98,6 +112,7 @@ export class MemStorage implements IStorage {
     this.expenses = new Map();
     this.documents = new Map();
     this.pdfTemplates = new Map();
+    this.customNotifications = new Map();
     
     this.userId = 1;
     this.vehicleId = 1;
@@ -106,6 +121,7 @@ export class MemStorage implements IStorage {
     this.expenseId = 1;
     this.documentId = 1;
     this.pdfTemplateId = 1;
+    this.customNotificationId = 1;
     
     // Initialize with sample data for demo
     this.initializeSampleData();
@@ -202,8 +218,8 @@ export class MemStorage implements IStorage {
     
     // Sample reservations
     const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
+    const weekLater = new Date();
+    weekLater.setDate(today.getDate() + 7);
     
     const nextDay = new Date();
     nextDay.setDate(today.getDate() + 1);
@@ -224,7 +240,7 @@ export class MemStorage implements IStorage {
     this.createReservation({
       vehicleId: 2,
       customerId: 2,
-      startDate: nextWeek.toISOString().split('T')[0],
+      startDate: weekLater.toISOString().split('T')[0],
       endDate: nextMonth.toISOString().split('T')[0],
       status: "pending",
       totalPrice: 1200,
@@ -328,6 +344,37 @@ export class MemStorage implements IStorage {
           source: "endDate"
         }
       ])
+    });
+    
+    // Sample custom notifications
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    this.createCustomNotification({
+      title: "Team Meeting",
+      description: "Team meeting to discuss new vehicle arrivals",
+      date: tomorrow.toISOString().split('T')[0],
+      type: "custom",
+      isRead: false,
+      icon: "CalendarDays",
+      link: "/dashboard",
+      priority: "high",
+      userId: 1
+    });
+    
+    const inventoryDate = new Date();
+    inventoryDate.setDate(inventoryDate.getDate() + 7);
+    
+    this.createCustomNotification({
+      title: "Inventory Check",
+      description: "Perform monthly inventory check of all vehicles",
+      date: inventoryDate.toISOString().split('T')[0],
+      type: "custom",
+      isRead: false,
+      icon: "ClipboardCheck",
+      link: "/vehicles",
+      priority: "normal",
+      userId: 1
     });
   }
 
@@ -891,6 +938,83 @@ export class MemStorage implements IStorage {
     }
     
     return deleted;
+  }
+  
+  // Custom Notification methods
+  async getAllCustomNotifications(): Promise<CustomNotification[]> {
+    return Array.from(this.customNotifications.values())
+      .sort((a, b) => (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }
+  
+  async getCustomNotification(id: number): Promise<CustomNotification | undefined> {
+    return this.customNotifications.get(id);
+  }
+  
+  async getUnreadCustomNotifications(): Promise<CustomNotification[]> {
+    return Array.from(this.customNotifications.values())
+      .filter(notification => !notification.isRead)
+      .sort((a, b) => (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }
+  
+  async getCustomNotificationsByType(type: string): Promise<CustomNotification[]> {
+    return Array.from(this.customNotifications.values())
+      .filter(notification => notification.type === type)
+      .sort((a, b) => (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }
+  
+  async getCustomNotificationsByUser(userId: number): Promise<CustomNotification[]> {
+    return Array.from(this.customNotifications.values())
+      .filter(notification => notification.userId === userId)
+      .sort((a, b) => (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }
+  
+  async createCustomNotification(notificationData: InsertCustomNotification): Promise<CustomNotification> {
+    const id = this.customNotificationId++;
+    const now = new Date();
+    const notification: CustomNotification = {
+      ...notificationData,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.customNotifications.set(id, notification);
+    return notification;
+  }
+  
+  async updateCustomNotification(id: number, notificationData: Partial<InsertCustomNotification>): Promise<CustomNotification | undefined> {
+    const existingNotification = this.customNotifications.get(id);
+    if (!existingNotification) {
+      return undefined;
+    }
+    
+    const updatedNotification: CustomNotification = {
+      ...existingNotification,
+      ...notificationData,
+      updatedAt: new Date()
+    };
+    
+    this.customNotifications.set(id, updatedNotification);
+    return updatedNotification;
+  }
+  
+  async markCustomNotificationAsRead(id: number): Promise<boolean> {
+    const existingNotification = this.customNotifications.get(id);
+    if (!existingNotification) {
+      return false;
+    }
+    
+    const updatedNotification: CustomNotification = {
+      ...existingNotification,
+      isRead: true,
+      updatedAt: new Date()
+    };
+    
+    this.customNotifications.set(id, updatedNotification);
+    return true;
+  }
+  
+  async deleteCustomNotification(id: number): Promise<boolean> {
+    return this.customNotifications.delete(id);
   }
 }
 
