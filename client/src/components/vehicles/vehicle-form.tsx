@@ -74,9 +74,8 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
   // Process initial data to ensure boolean fields are properly formatted
   const processedInitialData = initialData ? {
     ...initialData,
+    // For regular boolean fields
     adBlue: Boolean(initialData.adBlue),
-    registeredTo: Boolean(initialData.registeredTo),
-    company: Boolean(initialData.company),
     gps: Boolean(initialData.gps),
     damageCheck: Boolean(initialData.damageCheck),
     roadsideAssistance: Boolean(initialData.roadsideAssistance),
@@ -85,6 +84,10 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
     wokNotification: Boolean(initialData.wokNotification),
     seatcovers: Boolean(initialData.seatcovers),
     backupbeepers: Boolean(initialData.backupbeepers),
+    
+    // For string-boolean fields, convert to actual boolean for UI
+    registeredTo: initialData.registeredTo === "true" || initialData.registeredTo === true,
+    company: initialData.company === "true" || initialData.company === true,
   } : null;
 
   // Setup form with react-hook-form and zod validation
@@ -736,9 +739,10 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                           <Switch
                             checked={field.value === true || field.value === "true"}
                             onCheckedChange={(checked) => {
+                              // Store as boolean in form for UI consistency
                               field.onChange(checked);
                               if (checked) {
-                                // If registeredTo is turned on, turn off company
+                                // If registeredTo is turned on, turn off company (as boolean for UI)
                                 form.setValue('company', false);
                                 // Update registeredToDate with current date
                                 form.setValue('registeredToDate', new Date().toISOString().split('T')[0]);
@@ -770,9 +774,10 @@ export function VehicleForm({ editMode = false, initialData }: VehicleFormProps)
                           <Switch
                             checked={field.value === true || field.value === "true"}
                             onCheckedChange={(checked) => {
+                              // Store as boolean in form for UI consistency
                               field.onChange(checked);
                               if (checked) {
-                                // If company is turned on, turn off registeredTo
+                                // If company is turned on, turn off registeredTo (as boolean for UI)
                                 form.setValue('registeredTo', false);
                                 // Update companyDate with current date
                                 form.setValue('companyDate', new Date().toISOString().split('T')[0]);
