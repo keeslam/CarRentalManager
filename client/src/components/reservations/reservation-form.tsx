@@ -291,23 +291,32 @@ export function ReservationForm({
   const handleCustomerCreated = async (data: Customer) => {
     console.log("Customer created in reservation form:", data);
     
-    // Refresh customers list first
+    // Refresh customers list first to ensure the new customer is available
     await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
     await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
     
-    // Set the new customer in the form using toString to ensure it's a string
-    if (data && data.id) {
-      form.setValue("customerId", String(data.id));
-    }
-    
-    // Close the dialog
-    setCustomerDialogOpen(false);
-    
-    // Show success toast
-    toast({
-      title: "Customer Created",
-      description: `${data.name} has been added and selected for this reservation.`,
-    });
+    // Update form with a slight delay to ensure the revalidation has completed
+    setTimeout(() => {
+      // Set the new customer in the form
+      if (data && data.id) {
+        console.log("Setting customer ID to:", data.id);
+        // Set the value and trigger form update
+        form.setValue("customerId", String(data.id), { 
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true
+        });
+      }
+      
+      // Close the dialog
+      setCustomerDialogOpen(false);
+      
+      // Show success toast
+      toast({
+        title: "Customer Created",
+        description: `${data.name} has been added and selected for this reservation.`,
+      });
+    }, 500); // Small delay to ensure state updates
   };
   
   // We no longer need a separate createVehicleMutation as we're using VehicleQuickForm
@@ -657,7 +666,13 @@ export function ReservationForm({
                           options={customerOptions}
                           value={field.value ? field.value.toString() : ''}
                           onChange={(value) => {
-                            field.onChange(value);
+                            console.log("Customer selected:", value);
+                            // Force form update with the new customer ID
+                            form.setValue("customerId", value, {
+                              shouldDirty: true,
+                              shouldTouch: true,
+                              shouldValidate: true
+                            });
                           }}
                           placeholder="Search and select a customer..."
                           searchPlaceholder="Search by name, phone, or city..."
