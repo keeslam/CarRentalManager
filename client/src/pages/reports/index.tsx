@@ -1187,43 +1187,45 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
           <p className="text-muted-foreground">
             Generate and analyze reports for your car rental business
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => printReport('apk')}>
-            <Printer className="mr-2 h-4 w-4" />
-            APK Report
+        
+        {/* Print Buttons - Mobile Optimized */}
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => printReport('apk')} className="h-8">
+            <Printer className="mr-1 h-3 w-3" />
+            <span className="text-xs">APK</span>
           </Button>
-          <Button variant="outline" onClick={() => printReport('warranty')}>
-            <Printer className="mr-2 h-4 w-4" />
-            Warranty Report
+          <Button variant="outline" size="sm" onClick={() => printReport('warranty')} className="h-8">
+            <Printer className="mr-1 h-3 w-3" />
+            <span className="text-xs">Warranty</span>
           </Button>
-          <Button variant="outline" onClick={() => printReport('expenses')}>
-            <Printer className="mr-2 h-4 w-4" />
-            Expenses Report
+          <Button variant="outline" size="sm" onClick={() => printReport('expenses')} className="h-8">
+            <Printer className="mr-1 h-3 w-3" />
+            <span className="text-xs">Expenses</span>
           </Button>
-          <Button variant="outline" onClick={() => printReport('utilization')}>
-            <Printer className="mr-2 h-4 w-4" />
-            Utilization Report
+          <Button variant="outline" size="sm" onClick={() => printReport('utilization')} className="h-8">
+            <Printer className="mr-1 h-3 w-3" />
+            <span className="text-xs">Utilization</span>
           </Button>
-          <Button variant="outline" onClick={() => printReport('customer-impact')}>
-            <Printer className="mr-2 h-4 w-4" />
-            Customer Impact
+          <Button variant="outline" size="sm" onClick={() => printReport('customer-impact')} className="h-8">
+            <Printer className="mr-1 h-3 w-3" />
+            <span className="text-xs">Customers</span>
           </Button>
           {activeTab !== 'operations' && (
             <Button 
               variant="default"
-              className="bg-primary" 
+              size="sm"
+              className="bg-primary h-8" 
               onClick={() => printReport(activeTab)}
             >
-              <Printer className="mr-2 h-4 w-4" />
-              {activeTab === 'expenses' ? 'Expenses' :
-               activeTab === 'vehicles' ? 'Vehicles' : 'Customers'} Report
+              <Printer className="mr-1 h-3 w-3" />
+              <span className="text-xs">Current Tab</span>
             </Button>
           )}
         </div>
