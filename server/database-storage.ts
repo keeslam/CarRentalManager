@@ -167,6 +167,51 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Special method just for updating registration status that only updates the specific field
+  async updateVehicleRegistrationStatus(id: number, status: string, userData: {
+    username: string;
+    date: string;
+  }): Promise<Vehicle | undefined> {
+    try {
+      console.log(`Updating only the ${status} registration status for vehicle ${id}`);
+      
+      let updateObject: Record<string, any> = {
+        updatedBy: userData.username
+      };
+      
+      // Only update the specific field based on the status
+      if (status === 'opnaam') {
+        updateObject.registeredTo = "true";
+        updateObject.registeredToDate = userData.date;
+        updateObject.registeredToBy = userData.username;
+      } else if (status === 'not-opnaam') {
+        updateObject.registeredTo = "false";
+        updateObject.registeredToBy = userData.username;
+      } else if (status === 'bv') {
+        updateObject.company = "true";
+        updateObject.companyDate = userData.date;
+        updateObject.companyBy = userData.username;
+      } else if (status === 'not-bv') {
+        updateObject.company = "false";
+        updateObject.companyBy = userData.username;
+      } else {
+        throw new Error(`Invalid registration status: ${status}`);
+      }
+      
+      const [updatedVehicle] = await db
+        .update(vehicles)
+        .set(updateObject)
+        .where(eq(vehicles.id, id))
+        .returning();
+      
+      console.log("Database returned vehicle after status update:", JSON.stringify(updatedVehicle, null, 2));
+      return updatedVehicle || undefined;
+    } catch (error) {
+      console.error(`Error in updateVehicleRegistrationStatus for ${status}:`, error);
+      throw error;
+    }
+  }
+  
   async deleteVehicle(id: number): Promise<boolean> {
     // Start a transaction to ensure all related records are deleted
     return await db.transaction(async (tx) => {

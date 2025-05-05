@@ -771,48 +771,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Vehicle not found" });
       }
       
-      // Now we handle four cases:
+      // Now we handle four cases using our specialized method instead of general update
       // 1. Setting registeredTo to true (opnaam status)
       // 2. Setting registeredTo to false (removing opnaam status)
       // 3. Setting company to true (bv status)
       // 4. Setting company to false (removing bv status)
       
-      if (status === 'opnaam') {
-        updateData = {
-          registeredTo: "true", // Use string "true" to match database schema
-          registeredToDate: currentDate,
-          registeredToBy: username, // Track who last changed registeredTo status
-          updatedBy: username       // General tracking
-        };
-      } else if (status === 'not-opnaam') {
-        updateData = {
-          registeredTo: "false", // Use string "false" to match database schema
-          registeredToBy: username, // Track who last changed registeredTo status
-          updatedBy: username       // General tracking
-        };
-      } else if (status === 'bv') {
-        updateData = {
-          company: "true",     // Use string "true" to match database schema
-          companyDate: currentDate,
-          companyBy: username, // Track who last changed company status
-          updatedBy: username  // General tracking
-        };
-      } else if (status === 'not-bv') {
-        updateData = {
-          company: "false",    // Use string "false" to match database schema
-          companyBy: username, // Track who last changed company status
-          updatedBy: username  // General tracking
-        };
-      } else {
+      if (status !== 'opnaam' && status !== 'not-opnaam' && status !== 'bv' && status !== 'not-bv') {
         return res.status(400).json({ 
           message: "Invalid status. Must be 'opnaam', 'not-opnaam', 'bv', or 'not-bv'" 
         });
       }
       
       console.log(`Updating vehicle ${id} registration status to ${status} by user:`, username);
-      console.log("Update data being sent to database:", JSON.stringify(updateData, null, 2));
       
-      const updatedVehicle = await storage.updateVehicle(id, updateData);
+      // Use the dedicated method that only updates the relevant field
+      const updatedVehicle = await storage.updateVehicleRegistrationStatus(id, status, {
+        username,
+        date: currentDate
+      });
       console.log("Database response:", JSON.stringify(updatedVehicle, null, 2));
       
       // Verify if the update was applied correctly - fetch the vehicle again
