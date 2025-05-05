@@ -64,8 +64,10 @@ export const vehicles = pgTable("vehicles", {
   apkDate: text("apk_date"),
   company: text("company"),
   companyDate: text("company_date"),
+  companyBy: text("company_by"), // Track who changed the company status
   registeredTo: text("registered_to"),
   registeredToDate: text("registered_to_date"),
+  registeredToBy: text("registered_to_by"), // Track who changed the registeredTo status
   gps: boolean("gps"),
   monthlyPrice: numeric("monthly_price"),
   dailyPrice: numeric("daily_price"),

@@ -781,23 +781,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData = {
           registeredTo: "true", // Use string "true" to match database schema
           registeredToDate: currentDate,
-          updatedBy: username   // Add the actual username here for user tracking
+          registeredToBy: username, // Track who last changed registeredTo status
+          updatedBy: username       // General tracking
         };
       } else if (status === 'not-opnaam') {
         updateData = {
           registeredTo: "false", // Use string "false" to match database schema
-          updatedBy: username   // Add the actual username here for user tracking
+          registeredToBy: username, // Track who last changed registeredTo status
+          updatedBy: username       // General tracking
         };
       } else if (status === 'bv') {
         updateData = {
           company: "true",     // Use string "true" to match database schema
           companyDate: currentDate,
-          updatedBy: username  // Add the actual username here for user tracking
+          companyBy: username, // Track who last changed company status
+          updatedBy: username  // General tracking
         };
       } else if (status === 'not-bv') {
         updateData = {
           company: "false",    // Use string "false" to match database schema
-          updatedBy: username  // Add the actual username here for user tracking
+          companyBy: username, // Track who last changed company status
+          updatedBy: username  // General tracking
         };
       } else {
         return res.status(400).json({ 

@@ -465,7 +465,12 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                         <span className="text-sm">
                           Registration: Opnaam
                           {isTrueValue(vehicle.registeredTo) && vehicle.registeredToDate && (
-                            <span className="block text-xs text-gray-500">Last updated: {formatDate(vehicle.registeredToDate)}</span>
+                            <span className="block text-xs text-gray-500">
+                              Last updated: {formatDate(vehicle.registeredToDate)}
+                              {vehicle.registeredToBy && (
+                                <span className="ml-1">by <span className="font-medium">{vehicle.registeredToBy}</span></span>
+                              )}
+                            </span>
                           )}
                         </span>
                       </div>
@@ -475,7 +480,12 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                         <span className="text-sm">
                           Registration: BV
                           {isTrueValue(vehicle.company) && vehicle.companyDate && (
-                            <span className="block text-xs text-gray-500">Last updated: {formatDate(vehicle.companyDate)}</span>
+                            <span className="block text-xs text-gray-500">
+                              Last updated: {formatDate(vehicle.companyDate)}
+                              {vehicle.companyBy && (
+                                <span className="ml-1">by <span className="font-medium">{vehicle.companyBy}</span></span>
+                              )}
+                            </span>
                           )}
                         </span>
                       </div>
