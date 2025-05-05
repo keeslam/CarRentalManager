@@ -220,7 +220,7 @@ export function NotificationCenter() {
                     }
                     
                     return (
-                      <div key={`custom-all-${notification.id}`} onClick={() => setOpen(false)}>
+                      <div key={`custom-all-${notification.id}`}>
                         <NotificationItem
                           icon={iconComponent}
                           title={notification.title}
@@ -229,6 +229,7 @@ export function NotificationCenter() {
                           link={notification.link || '/notifications'}
                           id={notification.id}
                           isCustom={true}
+                          onClick={() => setOpen(false)}
                         />
                       </div>
                     );

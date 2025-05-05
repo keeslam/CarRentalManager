@@ -2597,6 +2597,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark notification as unread
+  app.post("/api/custom-notifications/:id/unread", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid notification ID" });
+      }
+
+      const success = await storage.markCustomNotificationAsUnread(id);
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      // Get the updated notification to return
+      const updatedNotification = await storage.getCustomNotification(id);
+      res.json(updatedNotification || { success: true, message: "Notification marked as unread" });
+    } catch (error) {
+      console.error("Error marking notification as unread:", error);
+      res.status(500).json({ 
+        message: "Failed to mark notification as unread", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Delete a custom notification
   app.delete("/api/custom-notifications/:id", requireAuth, async (req: Request, res: Response) => {
     try {

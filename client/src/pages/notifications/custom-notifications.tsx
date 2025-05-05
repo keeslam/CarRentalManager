@@ -176,6 +176,28 @@ const CustomNotificationsPage = () => {
       });
     },
   });
+  
+  // Mark as unread mutation
+  const markAsUnreadMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/custom-notifications/${id}/unread`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      toast({
+        title: "Success",
+        description: "Notification marked as unread",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to mark notification as unread: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Form for creating notifications
   const createForm = useForm<NotificationFormData>({
@@ -236,6 +258,10 @@ const CustomNotificationsPage = () => {
 
   const handleMarkAsRead = (id: number) => {
     markAsReadMutation.mutate(id);
+  };
+  
+  const handleMarkAsUnread = (id: number) => {
+    markAsUnreadMutation.mutate(id);
   };
 
   // Render priority badge with appropriate color
@@ -651,7 +677,15 @@ const CustomNotificationsPage = () => {
                     <Trash2 className="h-4 w-4 mr-1" /> Delete
                   </Button>
                 </div>
-                {!notification.isRead && (
+                {notification.isRead ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleMarkAsUnread(notification.id)}
+                  >
+                    <X className="h-4 w-4 mr-1" /> Mark as Unread
+                  </Button>
+                ) : (
                   <Button 
                     variant="outline" 
                     size="sm" 
