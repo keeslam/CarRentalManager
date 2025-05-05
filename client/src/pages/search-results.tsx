@@ -22,14 +22,16 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
 
-  // Parse query parameter from URL if available
+  // Get the current URL search parameters
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlQuery = searchParams.get('q') || '';
+  
+  // Parse query parameter from URL if available and refresh when URL changes
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const searchQuery = params.get('q');
-    if (searchQuery) {
-      setQuery(searchQuery);
+    if (urlQuery) {
+      setQuery(urlQuery);
     }
-  }, []);
+  }, [urlQuery]); // Re-run effect when URL query parameter changes
 
   // Fetch vehicles matching the search query
   const {
@@ -96,7 +98,7 @@ const SearchResults: FC<SearchResultsProps> = ({ query: initialQuery }) => {
     const searchParams = new URLSearchParams();
     if (query) {
       searchParams.set('q', query);
-      window.history.pushState({}, '', `/search-results?${searchParams.toString()}`);
+      window.history.replaceState({}, '', `/search-results?${searchParams.toString()}`);
     }
   };
 
