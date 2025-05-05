@@ -31,6 +31,11 @@ export function NotificationCenter() {
   const { data: upcomingReservations = [] } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/upcoming"],
   });
+  
+  // Fetch custom notifications (unread only)
+  const { data: customNotifications = [] } = useQuery<CustomNotification[]>({
+    queryKey: ["/api/custom-notifications/unread"],
+  });
 
   // Calculate notifications
   const apkExpiringItems = vehicles
@@ -70,7 +75,8 @@ export function NotificationCenter() {
   const totalNotifications = 
     apkExpiringItems.length + 
     warrantyExpiringItems.length + 
-    upcomingReservationItems.length;
+    upcomingReservationItems.length + 
+    customNotifications.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -97,7 +103,7 @@ export function NotificationCenter() {
           </p>
         </div>
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 m-2">
+          <TabsList className="grid grid-cols-5 m-2">
             <TabsTrigger value="all" className="text-xs">
               All
             </TabsTrigger>
@@ -109,6 +115,9 @@ export function NotificationCenter() {
             </TabsTrigger>
             <TabsTrigger value="warranty" className="text-xs">
               Warranty
+            </TabsTrigger>
+            <TabsTrigger value="custom" className="text-xs">
+              Custom
             </TabsTrigger>
           </TabsList>
 
