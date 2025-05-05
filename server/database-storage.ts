@@ -197,12 +197,18 @@ export class DatabaseStorage implements IStorage {
         // When enabling "opnaam", automatically disable "company" but KEEP original tracking
         if (currentVehicle.company === "true") {
           updateObject.company = "false";
-          // Don't update companyBy or companyDate, leave original tracking intact
+          // Explicitly preserve the original tracking info
+          updateObject.companyBy = currentVehicle.companyBy;
+          updateObject.companyDate = currentVehicle.companyDate;
         }
       } else if (status === 'not-opnaam') {
         // Only update the relevant field with tracking
         updateObject.registeredTo = "false";
+        updateObject.registeredToDate = userData.date;
         updateObject.registeredToBy = userData.username;
+        // Explicitly preserve company tracking
+        updateObject.companyBy = currentVehicle.companyBy;
+        updateObject.companyDate = currentVehicle.companyDate;
       } else if (status === 'bv') {
         // Update primary field with tracking info
         updateObject.company = "true";
@@ -212,23 +218,51 @@ export class DatabaseStorage implements IStorage {
         // When enabling "bv", automatically disable "registeredTo" but KEEP original tracking
         if (currentVehicle.registeredTo === "true") {
           updateObject.registeredTo = "false";
-          // Don't update registeredToBy or registeredToDate, leave original tracking intact
+          // Explicitly preserve the original tracking info
+          updateObject.registeredToBy = currentVehicle.registeredToBy;
+          updateObject.registeredToDate = currentVehicle.registeredToDate;
         }
       } else if (status === 'not-bv') {
         // Only update the relevant field with tracking
         updateObject.company = "false";
+        updateObject.companyDate = userData.date;
         updateObject.companyBy = userData.username;
+        // Explicitly preserve registeredTo tracking
+        updateObject.registeredToBy = currentVehicle.registeredToBy;
+        updateObject.registeredToDate = currentVehicle.registeredToDate;
       } else {
         throw new Error(`Invalid registration status: ${status}`);
       }
       
       console.log("Applying update with data:", JSON.stringify(updateObject, null, 2));
       
-      const [updatedVehicle] = await db
-        .update(vehicles)
-        .set(updateObject)
-        .where(eq(vehicles.id, id))
-        .returning();
+      // Use direct SQL to guarantee we only update the specific fields we want
+      const query = `
+        UPDATE vehicles 
+        SET 
+          "registeredTo" = $1,
+          "registeredToDate" = $2,
+          "registeredToBy" = $3,
+          "company" = $4,
+          "companyDate" = $5,
+          "companyBy" = $6
+        WHERE id = $7
+        RETURNING *
+      `;
+      
+      const params = [
+        updateObject.registeredTo || currentVehicle.registeredTo,
+        updateObject.registeredToDate || currentVehicle.registeredToDate,
+        updateObject.registeredToBy || currentVehicle.registeredToBy,
+        updateObject.company || currentVehicle.company,
+        updateObject.companyDate || currentVehicle.companyDate,
+        updateObject.companyBy || currentVehicle.companyBy,
+        id
+      ];
+      
+      // Execute the update query
+      const result = await db.execute(sql.raw(query, params));
+      const updatedVehicle = result.length > 0 ? result[0] : undefined;
       
       console.log("Database returned vehicle after status update:", JSON.stringify(updatedVehicle, null, 2));
       return updatedVehicle || undefined;
