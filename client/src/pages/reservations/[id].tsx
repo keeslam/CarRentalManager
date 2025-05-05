@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ export default function ReservationDetails() {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const clientQuery = useQueryClient();
 
   // Fetch reservation details
   const { data: reservation, isLoading, error } = useQuery<Reservation>({
@@ -103,6 +104,15 @@ export default function ReservationDetails() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+  
+  // Handle viewing a vehicle (with cache invalidation)
+  const handleViewVehicle = (vehicleId: number) => {
+    if (vehicleId) {
+      // Invalidate vehicle cache before navigating
+      clientQuery.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+      navigate(`/vehicles/${vehicleId}`);
     }
   };
 
@@ -264,11 +274,14 @@ export default function ReservationDetails() {
                         {vehicle.vehicleType || 'Unknown type'} • {vehicle.fuel || 'Unknown fuel'}
                       </p>
                     </div>
-                    <Link href={`/vehicles/${vehicle.id}`}>
-                      <Button variant="ghost" size="sm" className="mt-2 sm:mt-0">
-                        View Vehicle
-                      </Button>
-                    </Link>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 sm:mt-0"
+                      onClick={() => handleViewVehicle(vehicle.id)}
+                    >
+                      View Vehicle
+                    </Button>
                   </div>
                 ) : (
                   <p className="text-gray-500">Vehicle information unavailable</p>
@@ -382,20 +395,23 @@ export default function ReservationDetails() {
                   </div>
                 </div>
                 
-                <Link href={`/vehicles/${vehicle?.id}`}>
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                      <rect width="18" height="18" x="3" y="3" rx="2"/>
-                      <path d="M7 7h.01"/>
-                      <path d="M12 15l-3-3-3 3"/>
-                      <path d="M9 12v-3"/>
-                      <path d="M14 7h3"/>
-                      <path d="M14 11h3"/>
-                      <path d="M14 15h3"/>
-                    </svg>
-                    All Vehicle Documents
-                  </Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
+                  size="sm"
+                  onClick={() => vehicle && handleViewVehicle(vehicle.id)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/>
+                    <path d="M7 7h.01"/>
+                    <path d="M12 15l-3-3-3 3"/>
+                    <path d="M9 12v-3"/>
+                    <path d="M14 7h3"/>
+                    <path d="M14 11h3"/>
+                    <path d="M14 15h3"/>
+                  </svg>
+                  All Vehicle Documents
+                </Button>
               </div>
             </div>
             
