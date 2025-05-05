@@ -618,8 +618,29 @@ export default function NotificationsPage() {
                                     {notification.isRead ? "Read" : "Unread"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <Button size="sm" asChild>
+                                <TableCell className="text-right space-x-2">
+                                  {notification.isRead ? (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleMarkAsUnread(notification.id)}
+                                      disabled={markAsUnreadMutation.isPending}
+                                    >
+                                      <X className="mr-1 h-4 w-4" />
+                                      Mark Unread
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleMarkAsRead(notification.id)}
+                                      disabled={markAsReadMutation.isPending}
+                                    >
+                                      <Check className="mr-1 h-4 w-4" />
+                                      Mark Read
+                                    </Button>
+                                  )}
+                                  <Button size="sm" asChild className="ml-2">
                                     <Link href="/notifications/custom">Manage</Link>
                                   </Button>
                                 </TableCell>
@@ -865,7 +886,7 @@ export default function NotificationsPage() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => markAsUnreadMutation.mutate()}
+                                    onClick={() => handleMarkAsUnread(notification.id)}
                                     disabled={markAsUnreadMutation.isPending}
                                   >
                                     <X className="mr-1 h-4 w-4" />
@@ -875,7 +896,7 @@ export default function NotificationsPage() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => markAsReadMutation.mutate()}
+                                    onClick={() => handleMarkAsRead(notification.id)}
                                     disabled={markAsReadMutation.isPending}
                                   >
                                     <Check className="mr-1 h-4 w-4" />
