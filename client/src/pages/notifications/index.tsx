@@ -82,6 +82,46 @@ export default function NotificationsPage() {
     resolver: zodResolver(notificationSettingsSchema),
     defaultValues: defaultSettings,
   });
+  
+  // QueryClient for mutations
+  const queryClient = useQueryClient();
+  
+  // Mark notification as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return await apiRequest("POST", `/api/custom-notifications/${notificationId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      toast({
+        title: "Notification marked as read",
+        description: "The notification has been marked as read.",
+      });
+    },
+  });
+  
+  // Mark notification as unread mutation
+  const markAsUnreadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return await apiRequest("POST", `/api/custom-notifications/${notificationId}/unread`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      toast({
+        title: "Notification marked as unread",
+        description: "The notification has been marked as unread.",
+      });
+    },
+  });
+  
+  // Handler functions
+  const handleMarkAsRead = (notificationId: number) => {
+    markAsReadMutation.mutate(notificationId);
+  };
+  
+  const handleMarkAsUnread = (notificationId: number) => {
+    markAsUnreadMutation.mutate(notificationId);
+  };
 
   // Fetch vehicles
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
@@ -91,6 +131,11 @@ export default function NotificationsPage() {
   // Fetch upcoming reservations
   const { data: upcomingReservations = [] } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/upcoming"],
+  });
+  
+  // Fetch custom notifications
+  const { data: customNotifications = [] } = useQuery<CustomNotification[]>({
+    queryKey: ["/api/custom-notifications"],
   });
 
   // Calculate notifications based on form values
@@ -136,7 +181,8 @@ export default function NotificationsPage() {
   const totalNotifications = 
     apkExpiringItems.length + 
     warrantyExpiringItems.length + 
-    upcomingReservationItems.length;
+    upcomingReservationItems.length + 
+    customNotifications.length;
 
   // Handle form submission
   const onSubmit: SubmitHandler<NotificationSettings> = (data) => {
@@ -541,6 +587,48 @@ export default function NotificationsPage() {
                         </Table>
                       </>
                     )}
+
+                    {/* Custom Notifications Section */}
+                    {customNotifications.length > 0 && (
+                      <>
+                        <div className="px-4 py-2 bg-gray-50 border-y">
+                          <h5 className="font-medium">Custom Notifications</h5>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Title</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {customNotifications.map(notification => (
+                              <TableRow key={`custom-all-${notification.id}`}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{notification.title}</span>
+                                    <span className="text-sm text-muted-foreground">{notification.description}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{formatDate(notification.date)}</TableCell>
+                                <TableCell>
+                                  <Badge variant={notification.isRead ? "outline" : "default"}>
+                                    {notification.isRead ? "Read" : "Unread"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button size="sm" asChild>
+                                    <Link href="/notifications/custom">Manage</Link>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </>
+                    )}
                   </div>
                 )}
               </TabsContent>
@@ -730,6 +818,80 @@ export default function NotificationsPage() {
                       })}
                     </TableBody>
                   </Table>
+                )}
+              </TabsContent>
+
+              <TabsContent value="custom" className="m-0">
+                {customNotifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[280px] text-center p-4">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
+                    <h3 className="font-medium">No custom notifications</h3>
+                    <p className="text-sm text-muted-foreground">
+                      You haven't created any custom notifications yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="px-4 py-2 bg-gray-50 border-y">
+                      <h5 className="font-medium">Custom Notifications</h5>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customNotifications.map(notification => {
+                          return (
+                            <TableRow key={`custom-${notification.id}`}>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{notification.title}</span>
+                                  <span className="text-sm text-muted-foreground">{notification.description}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{formatDate(notification.date)}</TableCell>
+                              <TableCell>
+                                <Badge variant={notification.isRead ? "outline" : "default"}>
+                                  {notification.isRead ? "Read" : "Unread"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right space-x-2">
+                                {notification.isRead ? (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => markAsUnreadMutation.mutate()}
+                                    disabled={markAsUnreadMutation.isPending}
+                                  >
+                                    <X className="mr-1 h-4 w-4" />
+                                    Mark Unread
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => markAsReadMutation.mutate()}
+                                    disabled={markAsReadMutation.isPending}
+                                  >
+                                    <Check className="mr-1 h-4 w-4" />
+                                    Mark Read
+                                  </Button>
+                                )}
+                                <Button size="sm" asChild className="ml-2">
+                                  <Link href="/notifications/custom">Manage</Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
