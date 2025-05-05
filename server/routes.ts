@@ -1656,6 +1656,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create folders if they don't exist
       const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      
+      // Special handling for Contract type documents - use the same structure as generated contracts
+      if (req.body.documentType && req.body.documentType.toLowerCase() === 'contract') {
+        const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
+        const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
+        
+        if (!fs.existsSync(contractsBaseDir)) {
+          fs.mkdirSync(contractsBaseDir, { recursive: true });
+        }
+        
+        if (!fs.existsSync(vehicleContractsDir)) {
+          fs.mkdirSync(vehicleContractsDir, { recursive: true });
+        }
+        
+        callback(null, vehicleContractsDir);
+        return;
+      }
+      
+      // Standard handling for non-contract documents
       const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
       let documentsDir = baseDir;
       
@@ -1705,7 +1724,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sanitize license plate for filename (remove spaces, etc.)
         const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
         
-        // Create filename with license plate, document type, and date
+        // Special handling for Contract documents to match the auto-generated format
+        if (documentType.toLowerCase() === 'contract') {
+          const currentDate = new Date().getFullYear().toString() + 
+                             (new Date().getMonth() + 1).toString().padStart(2, '0') + 
+                             new Date().getDate().toString().padStart(2, '0');
+          
+          // Match format used in contract generation route
+          const newFilename = `${sanitizedPlate}_contract_${currentDate}${extension}`;
+          console.log(`Creating contract filename: ${newFilename}`);
+          cb(null, newFilename);
+          return;
+        }
+        
+        // Standard handling for other document types
         const newFilename = `${sanitizedPlate}_${documentType.replace(/\s+/g, '_')}_${dateString}_${timestamp}${extension}`;
         
         cb(null, newFilename);
