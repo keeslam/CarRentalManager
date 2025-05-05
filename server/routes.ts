@@ -941,8 +941,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return callback(new Error("Vehicle not found"), false);
       }
       
-      // Create folders if they don't exist
-      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      // Always remove all special characters including dashes from license plates for folder names
+      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
       const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
       const damageCheckDir = path.join(baseDir, 'damage_checks');
       
@@ -1247,8 +1247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return callback(new Error("Vehicle not found"), false);
       }
       
-      // Create folders if they don't exist - follow the same pattern used by document uploads
-      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      // Always remove all special characters including dashes from license plates for folder names
+      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
       const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
       const receiptsDir = path.join(baseDir, 'receipts');
       
@@ -1654,14 +1654,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return callback(new Error("Vehicle not found"), false);
       }
       
-      // Create folders if they don't exist
-      const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9-]/g, '_');
+      // Always remove all special characters including dashes from license plates for folder names
+      const sanitizedPlateNoDashes = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
       
-      // Special handling for Contract type documents - use the same structure as generated contracts
+      // Special handling for Contract type documents - use the contracts folder structure
       if (req.body.documentType && req.body.documentType.toLowerCase() === 'contract') {
-        // For contracts, always remove all special characters including dashes
-        const sanitizedPlateNoDashes = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
-        
         const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
         const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlateNoDashes);
         
@@ -1677,8 +1674,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // Standard handling for non-contract documents
-      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      // Standard handling for non-contract documents - use consistent folder naming
+      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlateNoDashes);
       let documentsDir = baseDir;
       
       // Organize by document type if provided
