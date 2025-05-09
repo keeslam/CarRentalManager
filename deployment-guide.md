@@ -1,6 +1,9 @@
 # Deployment Guide for Car Rental Management System
 
-This guide provides step-by-step instructions for deploying the Car Rental Management System to your own server.
+This guide provides step-by-step instructions for deploying the Car Rental Management System to your own server. There are two main methods for deployment:
+
+1. **GitHub Deployment** (Recommended) - Using Git for version control and easier updates
+2. **ZIP File Deployment** - Direct transfer of files using a ZIP archive
 
 ## Prerequisites
 
@@ -55,7 +58,84 @@ This guide provides step-by-step instructions for deploying the Car Rental Manag
    # Type \q to exit
    ```
 
-## Application Deployment
+## GitHub Deployment Method (Recommended)
+
+### Step 1: Create a GitHub Repository
+
+1. **Create a new GitHub repository**:
+   - Go to [GitHub](https://github.com) and log in to your account
+   - Click the "+" icon in the top right and select "New repository"
+   - Name your repository (e.g., "car-rental-manager")
+   - Set it to private if you want to keep your code secure
+   - Click "Create repository"
+
+2. **Push your code to GitHub**:
+   ```bash
+   # On your local machine, after downloading the project from Replit
+   cd car-rental-manager
+   
+   # Initialize Git repository
+   git init
+   
+   # Add the GitHub repository as remote
+   git remote add origin https://github.com/your-username/car-rental-manager.git
+   
+   # Add all files
+   git add .
+   
+   # Commit changes
+   git commit -m "Initial commit"
+   
+   # Push to GitHub
+   git push -u origin main
+   ```
+
+### Step 2: Deploy from GitHub to Your Server
+
+1. **Install Git on your server**:
+   ```bash
+   sudo apt install git
+   ```
+
+2. **Clone the repository**:
+   ```bash
+   # Create the application directory
+   sudo mkdir -p /var/www
+   
+   # Clone your repository
+   cd /var/www
+   sudo git clone https://github.com/your-username/car-rental-manager.git carrentalmanager
+   cd carrentalmanager
+   ```
+
+3. **Set up deployment key (optional but recommended)**:
+   For secure deployments without entering your password:
+   ```bash
+   # Generate SSH key on your server
+   ssh-keygen -t ed25519 -C "your-email@example.com"
+   
+   # View and copy the public key
+   cat ~/.ssh/id_ed25519.pub
+   ```
+   
+   Then add this key to your GitHub repository:
+   - Go to your repository on GitHub
+   - Click "Settings" > "Deploy keys" > "Add deploy key"
+   - Paste your public key and give it a title
+   - Check "Allow write access" if you need to push from the server
+   - Click "Add key"
+
+4. **Configure Git on your server**:
+   ```bash
+   git config --global user.name "Your Name"
+   git config --global user.email "your-email@example.com"
+   ```
+
+### Step 3: Set Up Application
+
+Now proceed with installing dependencies, setting up the environment file, and building the application:
+
+## ZIP File Deployment Method
 
 1. **Transfer the ZIP file to your server**:
    ```bash
@@ -222,6 +302,58 @@ chown -R www-data:www-data /var/www/carrentalmanager/uploads
    ```
 
 ## Updating the Application
+
+### GitHub Update Method (Recommended)
+
+When you have updates to the application:
+
+1. **Push changes to GitHub first**:
+   ```bash
+   # On your local machine, make changes to the code
+   
+   # Commit and push changes to GitHub
+   git add .
+   git commit -m "Description of changes"
+   git push origin main
+   ```
+
+2. **Pull changes on your server**:
+   ```bash
+   # Navigate to the application directory
+   cd /var/www/carrentalmanager
+   
+   # Create a backup of your .env file
+   cp .env /tmp/.env.backup
+   
+   # Pull the latest changes
+   sudo git pull
+   
+   # Restore your .env file if it was overwritten
+   cp /tmp/.env.backup .env
+   
+   # Install any new dependencies
+   npm install
+   
+   # Rebuild the application
+   npm run build
+   
+   # Apply any database migrations
+   npm run db:push
+   
+   # Restart the application
+   pm2 restart car-rental-manager
+   ```
+
+3. **Verify the update**:
+   ```bash
+   # Check application status
+   pm2 status
+   
+   # Check logs for any errors
+   pm2 logs car-rental-manager
+   ```
+
+### ZIP File Update Method
 
 When you have new versions of the application:
 
