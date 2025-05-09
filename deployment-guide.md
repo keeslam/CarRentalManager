@@ -57,9 +57,18 @@ This guide provides step-by-step instructions for deploying the Car Rental Manag
 
 ## Application Deployment
 
-1. **Clone the repository**:
+1. **Transfer the ZIP file to your server**:
    ```bash
-   git clone https://your-repository-url.git /var/www/carrentalmanager
+   # On your local machine, download the ZIP file from Replit
+   
+   # Option 1: Use SCP to transfer the ZIP file to your server
+   scp car-rental-manager.zip username@your-server-ip:/tmp/
+   
+   # Option 2: Or use SFTP to upload the file
+   
+   # On your server, extract the ZIP file
+   sudo mkdir -p /var/www/carrentalmanager
+   sudo unzip /tmp/car-rental-manager.zip -d /var/www/carrentalmanager
    cd /var/www/carrentalmanager
    ```
 
@@ -214,17 +223,66 @@ chown -R www-data:www-data /var/www/carrentalmanager/uploads
 
 ## Updating the Application
 
-1. **Pull latest changes**:
+When you have new versions of the application:
+
+1. **Transfer the new ZIP file to your server**:
    ```bash
-   cd /var/www/carrentalmanager
-   git pull
+   # On your local machine, download the new ZIP file from Replit
+   
+   # Use SCP to transfer the ZIP file to your server
+   scp car-rental-manager.zip username@your-server-ip:/tmp/
    ```
 
-2. **Rebuild and restart**:
+2. **Back up your .env file**:
    ```bash
+   cp /var/www/carrentalmanager/.env /tmp/.env.backup
+   ```
+
+3. **Extract the new version**:
+   ```bash
+   # Create a new directory for the updated application
+   sudo mkdir -p /var/www/carrentalmanager-new
+   
+   # Extract the ZIP file
+   sudo unzip /tmp/car-rental-manager.zip -d /var/www/carrentalmanager-new
+   
+   # Restore your .env file
+   sudo cp /tmp/.env.backup /var/www/carrentalmanager-new/.env
+   
+   # Copy uploads directory if it contains important data
+   sudo cp -r /var/www/carrentalmanager/uploads /var/www/carrentalmanager-new/
+   ```
+
+4. **Switch to new version**:
+   ```bash
+   # Stop the current app
+   pm2 stop car-rental-manager
+   
+   # Rename directories
+   sudo mv /var/www/carrentalmanager /var/www/carrentalmanager-old
+   sudo mv /var/www/carrentalmanager-new /var/www/carrentalmanager
+   
+   # Install dependencies and build
+   cd /var/www/carrentalmanager
    npm install
    npm run build
-   pm2 restart car-rental-manager
+   
+   # Restart the application
+   pm2 restart car-rental-manager || pm2 start dist/index.js --name "car-rental-manager"
+   
+   # Verify it's running
+   pm2 status
+   ```
+
+5. **Apply any database migrations if needed**:
+   ```bash
+   npm run db:push
+   ```
+
+6. **Clean up**:
+   ```bash
+   # After confirming everything works, remove the old version
+   sudo rm -rf /var/www/carrentalmanager-old
    ```
 
 ## Troubleshooting
