@@ -1,19 +1,29 @@
 # Coolify deployment configuration using Nixpacks
+
 [variables]
+# Node version to use
 NIXPACKS_NODE_VERSION = "20"
 
+[phases.setup]
+# Install any necessary nix packages and prepare git
+nixPkgs = ["nodejs-20_x"]
+cmds = [
+  # Configure Git to handle large repos / LFS
+  "git config --global http.postBuffer 524288000",
+  "git config --global http.maxRequestBuffer 524288000",
+  "git config --global http.version HTTP/1.1",
+  # Install Git LFS
+  "apt-get update && apt-get install -y git-lfs && git lfs install"
+]
+
 [phases.install]
+# Install dependencies
 cmds = ["npm ci"]
 
-[phases.setup]
-nixPkgs = ["nodejs-18_x"]
-
-[phases.install]
-cmds = ["npm install"]
-
-
 [phases.build]
+# Build the app
 cmds = ["npm run build"]
 
 [start]
+# Start command
 cmd = "npm start"
