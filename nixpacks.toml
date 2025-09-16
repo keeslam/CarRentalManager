@@ -1,12 +1,12 @@
 # Coolify deployment configuration using Nixpacks
 
 [variables]
-# Node version to use
-NIXPACKS_NODE_VERSION = "20"
+# Node version to use (Railway/Nixpacks will pick this version)
+NIXPACKS_NODE_VERSION = "18"  # changed from 20
 
 [phases.setup]
 # Install necessary nix packages and prepare git for large repos/LFS
-nixPkgs = ["nodejs-20_x"]
+nixPkgs = ["nodejs"]  # just 'nodejs' to use the version from NIXPACKS_NODE_VERSION
 cmds = [
   # Install Git LFS
   "apt-get update && apt-get install -y git-lfs && git lfs install",
