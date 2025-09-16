@@ -13,8 +13,8 @@ import createMemoryStore from "memorystore";
 // Extend Express.User interface with our User type properties
 declare global {
   namespace Express {
-    // Use 'type' instead of 'interface' to avoid self-referencing issue
-    type User = Omit<import('@shared/schema').User, 'password'>;
+    // Use 'interface' to extend the Express User type
+    interface User extends Omit<import('@shared/schema').User, 'password'> {}
   }
 }
 
@@ -34,32 +34,27 @@ export async function hashPassword(password: string) {
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
-  console.log(`Comparing passwords: supplied=${supplied}, stored=${stored}`);
+  // Remove password logging for security - never log passwords or hashes
   
   // For development only: allow plain text password comparison
   // In a real app, you would never store passwords in plain text
-  if (stored === "password") {
-    console.log("Using plain text comparison");
+  if (stored === "password" && process.env.NODE_ENV === "development") {
     return supplied === "password";
   }
   
   // Check if it's a bcrypt hash (starts with $2a$, $2b$, etc.)
-  if (stored.startsWith('$2')) {
-    console.log("Detected bcrypt hash, using direct comparison for test data");
+  if (stored.startsWith('$2') && process.env.NODE_ENV === "development") {
     return supplied === "password"; // Simple comparison for fixed password in our test data
   }
   
   // Otherwise, assume it's our scrypt format (hash.salt)
   try {
-    console.log("Using scrypt comparison");
     const [hashed, salt] = stored.split(".");
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-    const result = timingSafeEqual(hashedBuf, suppliedBuf);
-    console.log("Password comparison result:", result);
-    return result;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
   } catch (error) {
-    console.error("Error comparing passwords:", error);
+    console.error("Error comparing passwords");
     return false;
   }
 }
@@ -108,50 +103,48 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log("Login attempt for username:", username);
-        
-        // Check existing users for debugging
-        const allUsers = await storage.getAllUsers();
-        console.log("Available users in system:", allUsers.map(u => u.username).join(", "));
+        if (process.env.NODE_ENV === "development") {
+          console.log("Login attempt for username:", username);
+        }
         
         const user = await storage.getUserByUsername(username);
         if (!user) {
-          console.log("User not found:", username);
-          
-          // For testing purposes: allow login with known users with default password
-          if (username === "admin1" || username === "kees" || username === "keeslam") {
-            console.log("Creating session for test user:", username);
-            const testUser = allUsers.find(u => u.username === username);
-            if (testUser && password === "password") {
-              console.log("Using development bypass for test account:", username);
-              return done(null, testUser);
+          if (process.env.NODE_ENV === "development") {
+            console.log("User not found:", username);
+            
+            // For testing purposes: allow login with known users with default password
+            if (username === "admin1" || username === "kees" || username === "keeslam") {
+              const allUsers = await storage.getAllUsers();
+              const testUser = allUsers.find(u => u.username === username);
+              if (testUser && password === "password") {
+                return done(null, testUser);
+              }
             }
           }
           
           return done(null, false, { message: "Incorrect username" });
         }
         
-        console.log("Found user:", username, "user object:", JSON.stringify(user, null, 2));
-        
-        // Force auth success for test accounts
-        if (username === "admin" && (password === "password" || password === "admin123")) {
-          console.log("Using development bypass for admin account");
-          return done(null, user);
-        }
-        
-        if ((username === "admin1" || username === "kees" || username === "keeslam") && password === "password") {
-          console.log("Using development bypass for account:", username);
-          return done(null, user);
+        // Development bypasses - only in development mode
+        if (process.env.NODE_ENV === "development") {
+          if (username === "admin" && (password === "password" || password === "admin123")) {
+            return done(null, user);
+          }
+          
+          if ((username === "admin1" || username === "kees" || username === "keeslam") && password === "password") {
+            return done(null, user);
+          }
         }
         
         const passwordMatches = await comparePasswords(password, user.password);
-        console.log("Password comparison result:", passwordMatches);
         
         if (!passwordMatches) {
           return done(null, false, { message: "Incorrect password" });
         }
         
-        console.log("Successfully authenticated:", username);
+        if (process.env.NODE_ENV === "development") {
+          console.log("Successfully authenticated:", username);
+        }
         return done(null, user);
       } catch (error) {
         console.error("Authentication error:", error);
@@ -165,20 +158,20 @@ export function setupAuth(app: Express) {
     try {
       const user = await storage.getUser(id);
       if (!user) {
-        console.error(`Failed to deserialize user with ID ${id} - user not found`);
+        if (process.env.NODE_ENV === "development") {
+          console.error(`Failed to deserialize user with ID ${id} - user not found`);
+        }
         return done(null, false);
       }
       
-      console.log(`Deserialized user:`, JSON.stringify({
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        active: user.active
-      }, null, 2));
+      // Remove excessive logging - only log in debug mode
+      if (process.env.DEBUG === "auth" && process.env.NODE_ENV === "development") {
+        console.log(`Deserialized user: ${user.username} (${user.role})`);
+      }
       
       done(null, user);
     } catch (error) {
-      console.error(`Error deserializing user with ID ${id}:`, error);
+      console.error(`Error deserializing user with ID ${id}`);
       done(error);
     }
   });

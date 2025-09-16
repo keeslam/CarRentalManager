@@ -1,9 +1,10 @@
 # Deployment Guide for Car Rental Management System
 
-This guide provides step-by-step instructions for deploying the Car Rental Management System to your own server. There are two main methods for deployment:
+This guide provides step-by-step instructions for deploying the Car Rental Management System to your own server. There are three main methods for deployment:
 
-1. **GitHub Deployment** (Recommended) - Using Git for version control and easier updates
-2. **ZIP File Deployment** - Direct transfer of files using a ZIP archive
+1. **Coolify Deployment** (Easiest) - Using your own Coolify server for automated deployments
+2. **GitHub Deployment** (Traditional) - Using Git for version control and easier updates
+3. **ZIP File Deployment** - Direct transfer of files using a ZIP archive
 
 ## Prerequisites
 
@@ -58,7 +59,173 @@ This guide provides step-by-step instructions for deploying the Car Rental Manag
    # Type \q to exit
    ```
 
-## GitHub Deployment Method (Recommended)
+## Coolify Deployment Method (Easiest)
+
+Coolify is a self-hosted platform that automates your deployments directly from GitHub. This method is the easiest and most automated way to deploy your application.
+
+### Prerequisites for Coolify
+
+- A running Coolify server (v4.0 or newer)
+- GitHub account with your code repository
+- Access to your Coolify dashboard
+
+### Step 1: Prepare Your Code for Coolify
+
+1. **Upload your code to GitHub** (if not already done):
+   ```bash
+   # In your project directory
+   git init
+   git add .
+   git commit -m "Initial commit for Coolify deployment"
+   
+   # Add your GitHub repository as remote
+   git remote add origin https://github.com/your-username/car-rental-manager.git
+   git push -u origin main
+   ```
+
+2. **Verify required files are present**:
+   Your repository should include these Coolify-specific files (already included):
+   - `nixpacks.toml` - Coolify build configuration
+   - `.env.coolify` - Environment variables template
+   - `package.json` - Dependencies and build scripts
+
+### Step 2: Create a New Project in Coolify
+
+1. **Log in to your Coolify dashboard**
+2. **Create a new project**:
+   - Click "Create New Project"
+   - Give your project a name (e.g., "Car Rental Manager")
+   - Select your preferred server
+
+3. **Create a new application**:
+   - Click "Create Application"
+   - Choose "GitHub" as the source
+   - Select your repository (`car-rental-manager`)
+   - Set branch to `main`
+   - Leave build pack as "Nixpacks" (default)
+
+### Step 3: Configure Application Settings
+
+1. **Basic Configuration**:
+   - **Name**: car-rental-manager
+   - **Port**: 3000 (Coolify will handle port mapping automatically)
+   - **Build Command**: `npm run build` (automatically detected)
+   - **Start Command**: `npm start` (automatically detected)
+
+2. **Environment Variables**:
+   In your Coolify application dashboard, go to "Environment Variables" and add:
+   
+   ```bash
+   NODE_ENV=production
+   PORT=3000
+   SESSION_SECRET=your_secure_random_32_character_string
+   
+   # Database variables (use your Coolify database service)
+   DATABASE_URL=postgresql://username:password@database:5432/car_rental
+   PGUSER=your_db_user
+   PGPASSWORD=your_db_password
+   PGHOST=database
+   PGPORT=5432
+   PGDATABASE=car_rental
+   ```
+
+   **Important**: Mark database-related environment variables as "Build Variables" if you need them during the build process.
+
+### Step 4: Set Up Database Service
+
+1. **Create a PostgreSQL database service**:
+   - In your Coolify project, click "Create Database"
+   - Choose "PostgreSQL"
+   - Name it "car-rental-db"
+   - Set a strong password
+   - Create the database
+
+2. **Get database connection details**:
+   - Note the internal URL (usually: `postgresql://postgres:password@database:5432/postgres`)
+   - Update your environment variables with the correct database URL
+
+### Step 5: Deploy Your Application
+
+1. **Configure build settings** (if needed):
+   - Coolify automatically uses the `nixpacks.toml` configuration
+   - Node.js version 20 is specified in the config
+   - Build process will run `npm run build` automatically
+
+2. **Deploy the application**:
+   - Click "Deploy" in your Coolify dashboard
+   - Monitor the build logs for any issues
+   - The deployment typically takes 2-5 minutes
+
+3. **Verify deployment**:
+   - Once deployed, click on your application URL
+   - You should see the Car Rental Management System login page
+   - Test the application functionality
+
+### Step 6: Database Migration (First Deployment)
+
+After your first successful deployment, you need to set up the database schema:
+
+1. **Access application logs**:
+   - In Coolify dashboard, go to your application
+   - Click on "Logs" to see runtime logs
+
+2. **Run database migrations**:
+   - The application will automatically create tables on first connection
+   - Monitor the logs to ensure database setup completes successfully
+
+### Step 7: Configure Domain (Optional)
+
+1. **Set up custom domain**:
+   - In Coolify, go to your application settings
+   - Add your domain name
+   - Coolify will automatically handle SSL certificates
+
+### Coolify Deployment Benefits
+
+- **Automatic deployments**: Push to GitHub triggers automatic rebuilds
+- **Built-in SSL**: Automatic HTTPS certificates
+- **Container management**: Automatic scaling and health checks
+- **Easy rollbacks**: One-click rollback to previous versions
+- **Environment management**: Easy environment variable management
+- **Integrated databases**: Built-in PostgreSQL service
+- **Log monitoring**: Centralized application and build logs
+
+### Updating Your Application
+
+To update your deployed application:
+
+1. **Make changes to your code**
+2. **Commit and push to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Update: description of changes"
+   git push
+   ```
+3. **Coolify automatically deploys** the changes (if auto-deploy is enabled)
+4. **Or manually trigger deployment** from the Coolify dashboard
+
+### Troubleshooting Coolify Deployment
+
+**Build fails**:
+- Check the build logs in Coolify dashboard
+- Verify `nixpacks.toml` configuration
+- Ensure all dependencies are listed in `package.json`
+
+**Application won't start**:
+- Check runtime logs
+- Verify environment variables are set correctly
+- Ensure database connection is working
+
+**Database connection issues**:
+- Verify database service is running
+- Check database credentials in environment variables
+- Ensure `DATABASE_URL` format is correct
+
+**Port binding issues**:
+- Coolify expects apps to use the `PORT` environment variable
+- Your app should bind to `0.0.0.0:$PORT` (already configured)
+
+## GitHub Deployment Method (Traditional)
 
 ### Step 1: Create a GitHub Repository
 
