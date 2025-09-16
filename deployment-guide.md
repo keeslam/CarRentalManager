@@ -71,7 +71,23 @@ Coolify is a self-hosted platform that automates your deployments directly from 
 
 ### Step 1: Prepare Your Code for Coolify
 
-1. **Upload your code to GitHub** (if not already done):
+1. **Clean up your repository first** (CRITICAL for fast deployment):
+   
+   Your repository may contain large uploaded files that make deployment very slow. Run the cleanup script:
+   ```bash
+   # Make the script executable
+   chmod +x cleanup-repo.sh
+   
+   # Run the cleanup (this will rewrite git history)
+   ./cleanup-repo.sh
+   
+   # Force push the cleaned repository
+   git push --force-with-lease origin main
+   ```
+   
+   **Warning**: This removes upload files from git history. Your team should coordinate this change.
+
+2. **Upload your code to GitHub** (if not already done):
    ```bash
    # In your project directory
    git init
@@ -83,11 +99,12 @@ Coolify is a self-hosted platform that automates your deployments directly from 
    git push -u origin main
    ```
 
-2. **Verify required files are present**:
+3. **Verify required files are present**:
    Your repository should include these Coolify-specific files (already included):
    - `nixpacks.toml` - Coolify build configuration
    - `.env.coolify` - Environment variables template
    - `package.json` - Dependencies and build scripts
+   - `cleanup-repo.sh` - Repository optimization script
 
 ### Step 2: Create a New Project in Coolify
 
@@ -103,6 +120,7 @@ Coolify is a self-hosted platform that automates your deployments directly from 
    - Select your repository (`car-rental-manager`)
    - Set branch to `main`
    - Leave build pack as "Nixpacks" (default)
+   - **Set "Clone Depth" to 1** for faster cloning
 
 ### Step 3: Configure Application Settings
 
@@ -143,6 +161,12 @@ Coolify is a self-hosted platform that automates your deployments directly from 
 2. **Get database connection details**:
    - Note the internal URL (usually: `postgresql://postgres:password@database:5432/postgres`)
    - Update your environment variables with the correct database URL
+
+3. **Create a persistent volume for uploads**:
+   - In your Coolify project, click "Create Volume"
+   - Name: `uploads-storage`
+   - Mount path: `/app/uploads`
+   - This ensures uploaded files persist across deployments
 
 ### Step 5: Deploy Your Application
 
