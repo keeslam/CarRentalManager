@@ -5,25 +5,33 @@
 NIXPACKS_NODE_VERSION = "20"
 
 [phases.setup]
-# Install any necessary nix packages and prepare git
+# Install necessary nix packages and prepare git for large repos/LFS
 nixPkgs = ["nodejs-20_x"]
 cmds = [
-  # Configure Git to handle large repos / LFS
+  # Install Git LFS
+  "apt-get update && apt-get install -y git-lfs && git lfs install",
+  # Git tweaks to handle large repos / LFS
   "git config --global http.postBuffer 524288000",
   "git config --global http.maxRequestBuffer 524288000",
-  "git config --global http.version HTTP/1.1",
-  # Install Git LFS
-  "apt-get update && apt-get install -y git-lfs && git lfs install"
+  "git config --global http.version HTTP/1.1"
 ]
 
 [phases.install]
-# Install dependencies
-cmds = ["npm ci"]
+# Clone the repo shallowly and pull LFS files
+cmds = [
+  "rm -rf /artifacts/app || true",
+  "git clone --depth=1 https://github.com/keeslam/CarRentalManager.git /artifacts/app",
+  "cd /artifacts/app && git lfs pull",
+  # Install npm dependencies
+  "cd /artifacts/app && npm ci"
+]
 
 [phases.build]
 # Build the app
-cmds = ["npm run build"]
+cmds = [
+  "cd /artifacts/app && npm run build"
+]
 
 [start]
 # Start command
-cmd = "npm start"
+cmd = "cd /artifacts/app && npm start"
