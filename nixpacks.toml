@@ -5,29 +5,25 @@
 NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-# Install necessary nix packages and configure git
-nixPkgs = ["nodejs" "git"]
+# Install necessary nix packages
+nixPkgs = ["nodejs", "tar"]
 cmds = [
-  # Increase Git buffers and force HTTP/1.1 for stability
-  "git config --global http.postBuffer 1048576000",
-  "git config --global http.maxRequestBuffer 1048576000",
-  "git config --global http.version HTTP/1.1"
+  "apt-get update && apt-get install -y tar"
 ]
 
 [phases.install]
-# Clone the repo shallowly (public repo, no LFS) and install npm dependencies
+# Use a local tar.gz archive of the repo
 cmds = [
   "rm -rf /artifacts/app || true",
-  "git clone --depth=1 https://github.com/keeslam/CarRentalManager.git /artifacts/app",
+  "mkdir -p /artifacts/app",
+  "tar -xzf /artifacts/source.tar.gz -C /artifacts/app",
   "cd /artifacts/app && npm ci"
 ]
 
 [phases.build]
-# Build the app
 cmds = [
   "cd /artifacts/app && npm run build"
 ]
 
 [start]
-# Start the app
 cmd = "cd /artifacts/app && npm start"
