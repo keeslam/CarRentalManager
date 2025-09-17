@@ -1,35 +1,15 @@
-# Coolify deployment configuration using Nixpacks
-# Vereenvoudigd: geen Git clone nodig (Nixpacks doet dit al)
+# Minimale nixpacks.toml - laat Nixpacks de defaults doen
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 
-[phases.setup]
-nixPkgs = ["nodejs", "tar", "curl"]
-cmds = [
-  # Alleen Git config als backup, maar niet nodig voor normale operaties
-  "git config --global http.version HTTP/1.1",
-  "git config --global http.postBuffer 524288000"
-]
+# Override alleen de start command
+[start]
+cmd = "npm start"
 
+# Optioneel: force production build
 [phases.install]
-# Installeer direct in /app (waar Nixpacks de source heeft gekopieerd)
-cmds = [
-  # Debug: check wat er in /app staat
-  "echo '=== DEBUG: Contents of /app ===' && ls -la /app",
-  "echo '=== DEBUG: package.json exists? ===' && test -f /app/package.json && echo 'YES' || echo 'NO'",
-  
-  # Installeer Node dependencies in /app
-  "cd /app && npm ci --only=production"
-]
-cacheDirectories = ['/root/.npm']
-paths = ['/app/node_modules/.bin']
+cmds = ["npm ci --only=production"]
 
 [phases.build]
-cmds = [
-  "cd /app && npm run build"
-]
-cacheDirectories = ['node_modules/.cache']
-
-[start]
-cmd = "cd /app && npm start"
+cmds = ["npm run build"]
