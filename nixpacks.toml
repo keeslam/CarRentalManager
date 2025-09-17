@@ -5,21 +5,33 @@
 NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-# Just install node from nixpkgs
+# Install necessary packages
 nixPkgs = ["nodejs"]
+cmds = [
+  # Git tweaks in case of large repos
+  "git config --global http.postBuffer 524288000",
+  "git config --global http.maxRequestBuffer 524288000",
+  "git config --global http.version HTTP/1.1"
+]
 
 [phases.install]
-# Install npm dependencies (Coolify already checked out the repo)
 cmds = [
-  "npm ci"
+  # Clean previous artifacts
+  "rm -rf /app || true",
+
+  # Clone your repo (full clone, no depth)
+  "git clone https://github.com/keeslam/CarRentalManager.git /app",
+
+  # Install npm dependencies
+  "cd /app && npm ci"
 ]
 
 [phases.build]
-# Build the app
 cmds = [
-  "npm run build"
+  # Build the app
+  "cd /app && npm run build"
 ]
 
 [start]
-# Start command
-cmd = "npm start"
+# Start the app
+cmd = "cd /app && npm start"
