@@ -1,7 +1,8 @@
-// server/index.ts - Complete Docker-ready versie
+// server/index.ts - Volledig ESM-compatible voor Docker
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import * as fs from 'fs'; // ← FIX: ES6 import i.p.v. require()
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
@@ -121,46 +122,60 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       console.log('📁 Static public path:', publicPath);
       console.log('📁 Assets path:', assetsPath);
       
-      // Check of de build files bestaan
-      const fs = require('fs');
-      if (fs.existsSync(publicPath)) {
-        console.log('✅ Public directory found');
-        
-        // Serve static files met caching
-        app.use('/public', express.static(publicPath, {
-          index: false,
-          maxAge: '1y',
-          etag: true
-        }));
-        
-        app.use('/assets', express.static(assetsPath, {
-          maxAge: '1y',
-          etag: true
-        }));
-        
-        console.log('✅ Static files configured');
-      } else {
-        console.warn('⚠️  Public directory NOT found - frontend build missing');
-        console.warn('   Run "npm run build" locally to generate /dist/public');
+      // Check of de build files bestaan (met ESM fs)
+      try {
+        if (fs.existsSync(publicPath)) {
+          console.log('✅ Public directory found');
+          
+          // Serve static files met caching
+          app.use('/public', express.static(publicPath, {
+            index: false,
+            maxAge: '1y',
+            etag: true
+          }));
+          
+          if (fs.existsSync(assetsPath)) {
+            app.use('/assets', express.static(assetsPath, {
+              maxAge: '1y',
+              etag: true
+            }));
+            console.log('✅ Assets directory found');
+          } else {
+            console.warn('⚠️  Assets directory not found');
+          }
+          
+          console.log('✅ Static files configured');
+        } else {
+          console.warn('⚠️  Public directory NOT found - frontend build missing');
+          console.warn('   Run "npm run build" locally to generate /dist/public');
+        }
+      } catch (fsError) {
+        console.error('❌ File system error:', fsError);
       }
 
       // SPA fallback voor client-side routing
-      app.get(['/', '/public/*', '/assets/*'], (req: Request, res: Response) => {
+      app.get(['/', '/public/*'], (req: Request, res: Response) => {
         const indexPath = path.join(publicPath, 'index.html');
-        if (fs.existsSync(indexPath)) {
-          res.sendFile(indexPath);
-        } else {
-          res.status(404).json({ 
-            error: 'Frontend not built', 
-            message: 'Run "npm run build" to generate frontend assets'
-          });
+        try {
+          if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+          } else {
+            res.status(404).json({ 
+              error: 'Frontend not built', 
+              message: 'Run "npm run build" to generate frontend assets',
+              debug: { indexPath }
+            });
+          }
+        } catch (sendFileError) {
+          console.error('SendFile error:', sendFileError);
+          res.status(500).json({ error: 'File serving error' });
         }
       });
 
     } else {
       // Development mode - Vite dev server
       console.log('🔄 Development mode - Vite dev server will handle frontend');
-      // setupVite(app, server); // Je originele Vite dev setup
+      // Hier kun je je setupVite(app, server) call toevoegen als je die hebt
     }
 
     // API routes komen eerst (belangrijk!)
