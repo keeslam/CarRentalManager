@@ -9,19 +9,17 @@ NIXPACKS_NODE_VERSION = "18"
 nixPkgs = ["nodejs"]
 
 [phases.install]
-# Clone the repo fully and install dependencies
+# Install npm dependencies (Coolify already checked out the repo)
 cmds = [
-  "rm -rf /artifacts/app || true",
-  "git clone https://github.com/keeslam/CarRentalManager.git /artifacts/app",
-  "cd /artifacts/app && npm ci"
+  "npm ci"
 ]
 
 [phases.build]
 # Build the app
 cmds = [
-  "cd /artifacts/app && npm run build"
+  "npm run build"
 ]
 
 [start]
 # Start command
-cmd = "cd /artifacts/app && npm start"
+cmd = "npm start"
