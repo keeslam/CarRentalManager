@@ -5,29 +5,23 @@
 NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-# Install necessary nix packages and prepare git for large repos/LFS
-nixPkgs = ["nodejs", "git", "git-lfs"]
-cmds = [
-  # Enable Git LFS (won’t fail if no LFS files exist)
-  "git lfs install || true",
-  # Git tweaks to handle large repos / LFS
-  "git config --global http.postBuffer 524288000",
-  "git config --global http.maxRequestBuffer 524288000",
-  "git config --global http.version HTTP/1.1"
-]
+# Just install node from nixpkgs
+nixPkgs = ["nodejs"]
 
 [phases.install]
-# Install npm dependencies
+# Clone the repo fully and install dependencies
 cmds = [
-  "npm ci"
+  "rm -rf /artifacts/app || true",
+  "git clone https://github.com/keeslam/CarRentalManager.git /artifacts/app",
+  "cd /artifacts/app && npm ci"
 ]
 
 [phases.build]
 # Build the app
 cmds = [
-  "npm run build"
+  "cd /artifacts/app && npm run build"
 ]
 
 [start]
 # Start command
-cmd = "npm start"
+cmd = "cd /artifacts/app && npm start"
