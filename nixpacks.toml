@@ -1,46 +1,35 @@
 # Coolify deployment configuration using Nixpacks
-# Fixed Git clone issues + Node.js setup
+# Vereenvoudigd: geen Git clone nodig (Nixpacks doet dit al)
 
 [variables]
-# Node version to use
 NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-# Install necessary nix packages
-nixPkgs = ["nodejs", "tar", "git", "curl"]
+nixPkgs = ["nodejs", "tar", "curl"]
 cmds = [
-  # Fix Git HTTP/2 issues voor alle Git operations
+  # Alleen Git config als backup, maar niet nodig voor normale operaties
   "git config --global http.version HTTP/1.1",
-  "git config --global http.postBuffer 524288000",
-  "git config --global http.maxRequestBuffer 100M",
-  "apt-get update && apt-get install -y tar git"
+  "git config --global http.postBuffer 524288000"
 ]
 
 [phases.install]
-# Clone repo + install dependencies (ALLEEN DEZE EÉN KEER!)
+# Installeer direct in /app (waar Nixpacks de source heeft gekopieerd)
 cmds = [
-  # Clean previous attempts
-  "rm -rf /artifacts/app /artifacts/source.tar.gz || true",
+  # Debug: check wat er in /app staat
+  "echo '=== DEBUG: Contents of /app ===' && ls -la /app",
+  "echo '=== DEBUG: package.json exists? ===' && test -f /app/package.json && echo 'YES' || echo 'NO'",
   
-  # Clone het repo direct in de build environment
-  "mkdir -p /artifacts/app",
-  "cd /artifacts/app && git clone https://github.com/keeslam/CarRentalManager.git .",
-  
-  # Fallback: als clone faalt, probeer download als zip
-  "cd /artifacts/app && [ -d .git ] || (rm -rf * && wget -qO- https://github.com/keeslam/CarRentalManager/archive/refs/heads/main.zip | tar -xzf - --strip-components=1)",
-  
-  # Debug info (optioneel, verwijder na succesvolle deployment)
-  "cd /artifacts/app && echo '=== DEBUG: Contents after clone ===' && ls -la",
-  "cd /artifacts/app && echo '=== DEBUG: package.json exists? ===' && test -f package.json && echo 'YES' || echo 'NO'",
-  
-  # Install Node dependencies
-  "cd /artifacts/app && npm ci --only=production"
+  # Installeer Node dependencies in /app
+  "cd /app && npm ci --only=production"
 ]
+cacheDirectories = ['/root/.npm']
+paths = ['/app/node_modules/.bin']
 
 [phases.build]
 cmds = [
-  "cd /artifacts/app && npm run build"
+  "cd /app && npm run build"
 ]
+cacheDirectories = ['node_modules/.cache']
 
 [start]
-cmd = "cd /artifacts/app && npm start"
+cmd = "cd /app && npm start"
