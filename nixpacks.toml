@@ -1,20 +1,21 @@
-# Nixpacks deployment configuration for CarRentalManager
+# Coolify deployment configuration using Nixpacks
 
 [variables]
 # Node version to use
 NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-# Install Git and other necessary packages
+# Install necessary nix packages and configure git
 nixPkgs = ["nodejs" "git"]
 cmds = [
-  "git config --global http.postBuffer 524288000",
-  "git config --global http.maxRequestBuffer 524288000",
+  # Increase Git buffers and force HTTP/1.1 for stability
+  "git config --global http.postBuffer 1048576000",
+  "git config --global http.maxRequestBuffer 1048576000",
   "git config --global http.version HTTP/1.1"
 ]
 
 [phases.install]
-# Clone repo and install dependencies
+# Clone the repo shallowly (public repo, no LFS) and install npm dependencies
 cmds = [
   "rm -rf /artifacts/app || true",
   "git clone --depth=1 https://github.com/keeslam/CarRentalManager.git /artifacts/app",
@@ -22,12 +23,11 @@ cmds = [
 ]
 
 [phases.build]
-# Build frontend + server
+# Build the app
 cmds = [
   "cd /artifacts/app && npm run build"
 ]
 
 [start]
-# Start the server
+# Start the app
 cmd = "cd /artifacts/app && npm start"
-
