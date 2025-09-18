@@ -23,9 +23,5 @@ cmds = [
 [start]
 cmd = "npm start"
 
-# Optioneel: force production build
-[phases.install]
-cmds = ["npm ci --only=production"]
-
 [phases.build]
 cmds = ["npm run build"]
