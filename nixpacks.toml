@@ -3,13 +3,20 @@
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 
+# Installatie: installeer dependencies voor root EN frontend map
+[phases.install]
+cmds = [
+  "npm ci --only=production",           # Root dependencies (backend)
+  "cd frontend && npm ci --only=production"  # Frontend dependencies
+]
+
+# Build: bouw eerst frontend, dan eventueel backend
+[phases.build]
+cmds = [
+  "cd frontend && npm run build",       # Bouw React app (maakt dist/ of build/)
+  "npm run build"                       # Optioneel: backend build als die bestaat
+]
+
 # Override alleen de start command
 [start]
 cmd = "npm start"
-
-# Optioneel: force production build
-[phases.install]
-cmds = ["npm ci --only=production"]
-
-[phases.build]
-cmds = ["npm run build"]
