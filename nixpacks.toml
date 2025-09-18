@@ -7,13 +7,13 @@ NIXPACKS_NODE_VERSION = "18"
 [phases.install]
 cmds = [
   "npm ci --only=production",           # Root dependencies (backend)
-  "cd frontend && npm ci --only=production"  # Frontend dependencies
+  "cd client && npm ci --only=production"  # Frontend dependencies
 ]
 
 # Build: bouw eerst frontend, dan eventueel backend
 [phases.build]
 cmds = [
-  "cd frontend && npm run build",       # Bouw React app (maakt dist/ of build/)
+  "cd client && npm run build",       # Bouw React app (maakt dist/ of build/)
   "npm run build"                       # Optioneel: backend build als die bestaat
 ]
 
