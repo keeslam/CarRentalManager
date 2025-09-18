@@ -6,21 +6,20 @@ NIXPACKS_NODE_VERSION = "18"
 # Installatie: installeer dependencies voor root EN frontend map
 [phases.install]
 cmds = [
-  "npm ci --only=production",           # Root dependencies (backend)
-  "cd client && npm ci --only=production"  # Frontend dependencies
+  "npm ci --omit=dev",                 # Root dependencies (backend)
+  "cd client && npm ci --omit=dev"     # Frontend dependencies
 ]
 
-# Build: bouw eerst frontend, dan eventueel backend
+# Build: bouw frontend + kopieer naar verwachte structuur
 [phases.build]
 cmds = [
-  "cd client && npm run build",       # Bouw React app (maakt dist/ of build/)
-  "npm run build"                       # Optioneel: backend build als die bestaat
+  "cd client && npm run build",        # Bouw React app
+  "mkdir -p dist/public",              # Maak verwachte map
+  "cp -r client/dist/* dist/public/ 2>/dev/null || cp -r client/build/* dist/public/ 2>/dev/null",  # Kopieer files
+  "if [ -f 'dist/public/index.html' ]; then echo '✅ Frontend ready in dist/public'; fi",  # Check
+  "npm run build"                      # Backend build
 ]
-
-# Minimale nixpacks.toml - laat Nixpacks de defaults doen
 
 # Override alleen de start command
 [start]
 cmd = "npm start"
-
-
