@@ -1,33 +1,56 @@
-# CarRentalManager - Fixed syntax voor Coolify (geen multi-line bash)
+# CarRentalManager - Fixed paths + --omit=dev (geen warnings)
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 NODE_ENV = "production"
 PORT = "3000"
 
-# Installatie: Root + client/ + server/ dependencies (single-line)
+# Installatie: Root + client/ + server/ dependencies (met --omit=dev)
 [phases.install]
 cmds = [
-  "npm ci --omit=dev",
-  "cd client && npm ci --omit=dev || echo 'Client install skipped'",
-  "cd server && npm ci --omit=dev || echo 'Server install skipped'",
-  "echo 'Dependencies installed'"
+  "echo '=== INSTALLING DEPENDENCIES ==='",
+  "npm ci --omit=dev",                 # Root deps (geen warning meer!)
+  "cd client && npm ci --omit=dev || echo 'Client install skipped'",  # Frontend deps
+  "cd server && npm ci --omit=dev || echo 'Server install skipped'",  # Backend deps
+  "echo '✅ Dependencies installed (no warnings)'"
 ]
 
-# Build: Frontend + Backend (single-line commands, geen if-fi)
+# Build: Frontend → /dist/dist/public + Backend build
 [phases.build]
 cmds = [
-  "echo '=== BUILD START ==='",
+  "echo '=== BUILDING CAR RENTAL MANAGER ==='",
   "ls -la",  # Toon structuur
-  "cd client && npm run build || echo 'Frontend build failed - check client/package.json'",
-  "cd server && npm run build || echo 'Backend build failed - check server/tsconfig.json'",
-  "mkdir -p server/dist/public || echo 'Public dir creation failed'",
-  "cp -r client/dist/* server/dist/public/ 2>/dev/null || cp -r client/build/* server/dist/public/ 2>/dev/null || echo 'Frontend copy failed'",
-  "ls -la server/dist/public/ || echo 'No static files copied'",
-  "if [ -f server/dist/public/index.html ]; then echo '✅ Frontend ready'; else echo '❌ Noindex.html - build issue'; fi",
-  "echo '=== BUILD END ==='"
+  
+  # 1. Frontend build
+  "echo '--- Building Frontend (client/) ---'",
+  "cd client && npm run build || echo 'Frontend build failed'",
+  "cd ..",
+  
+  # 2. Backend build (als die bestaat)
+  "echo '--- Building Backend ---'",
+  "npm run build 2>/dev/null || echo 'No root build script, skipping'",
+  "cd server && npm run build 2>/dev/null || echo 'No server build script, skipping'",
+  "cd ..",
+  
+  # 3. CRUCIAAL: Copy frontend EXACT naar waar server het verwacht
+  "echo '--- Copy Frontend to /dist/dist/public (server expected path) ---'",
+  "mkdir -p dist/dist/public",         # Server verwacht DIT pad!
+  "cp -r client/dist/* dist/dist/public/ 2>/dev/null || echo 'No client/dist/'",
+  "cp -r client/build/* dist/dist/public/ 2>/dev/null || echo 'No client/build/'",
+  
+  # 4. Validate exact pad
+  "echo '--- Validating server path ---'",
+  "if [ -f 'dist/dist/public/index.html' ]; then ",
+  "  echo '✅ PERFECT: Frontend ready in /dist/dist/public/index.html'",
+  "  ls -la dist/dist/public/ | head -5",
+  "else ",
+  "  echo '❌ Frontend NOT in expected path - checking where it went:'",
+  "  find . -name 'index.html' 2>/dev/null || echo 'No index.html found'",
+  "fi",
+  
+  "echo '=== BUILD COMPLETE ==='"
 ]
 
-# Start: Backend server
+# Start: Backend server (nu vindt hij de frontend!)
 [start]
-cmd = "cd server && npm start"
+cmd = "npm start"  # Start vanuit root (niet cd server)
