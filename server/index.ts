@@ -8,7 +8,7 @@ import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 
 // ESM __dirname fix voor Docker
-const __filename = fileURLToPath(import.meta.url);
+const __filename = fileURLToFileURL(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..'); // /app in Docker
 
@@ -65,17 +65,102 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Simple root endpoint voor testing
-app.get('/', (req: Request, res: Response) => {
+// API root endpoint (behoud, maar na static serving)
+app.get('/api', (req: Request, res: Response) => {
   res.json({ 
     message: 'Car Rental Manager API', 
     version: '1.0.0',
     endpoints: ['/health', '/api/*'],
-    frontend: process.env.NODE_ENV === 'production' ? '/public' : '/'
+    frontend: '/'  // Nu op root!
   });
 });
 
-// Error handling middleware
+// Setup static file serving (CRUCIAAL FIX: Serveer op root '/', NIET '/public')
+if (process.env.NODE_ENV === "production") {
+  console.log('📦 Setting up production static files...');
+  
+  // FIX: Juiste pad naar frontend build (dubbele dist van nixpacks.toml)
+  const publicPath = path.join(appRoot, 'dist', 'dist', 'public');  // ← Veranderd naar dubbele dist
+  const assetsPath = path.join(publicPath, 'assets');
+  
+  console.log('📁 Static public path:', publicPath);
+  console.log('📁 Assets path:', assetsPath);
+  
+  // Check of de build files bestaan
+  try {
+    if (fs.existsSync(publicPath)) {
+      console.log('✅ Public directory found');
+      
+      // FIX: Serveer static files op ROOT ('/'), NIET '/public'
+      app.use(express.static(publicPath, {
+        index: false,
+        maxAge: '1y',
+        etag: true
+      }));
+      
+      // Assets subroute (optioneel, maar voor caching)
+      if (fs.existsSync(assetsPath)) {
+        app.use('/assets', express.static(assetsPath, {
+          maxAge: '1y',
+          etag: true
+        }));
+        console.log('✅ Assets directory found');
+      } else {
+        console.warn('⚠️  Assets directory not found');
+      }
+      
+      console.log('✅ Static files configured on root');
+    } else {
+      console.warn('⚠️  Public directory NOT found - frontend build missing');
+      console.warn('   Run "npm run build" locally to generate /dist/dist/public');
+    }
+  } catch (fsError) {
+    console.error('❌ File system error:', fsError);
+  }
+
+  // FIX: Volledige SPA fallback voor ALLE non-API routes
+  app.get('*', (req: Request, res: Response) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    const indexPath = path.join(publicPath, 'index.html');
+    try {
+      if (fs.existsSync(indexPath)) {
+        console.log(`Serving SPA fallback for: ${req.path}`);
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).json({ 
+          error: 'Frontend not built', 
+          message: 'Run "npm run build" to generate frontend assets'
+        });
+      }
+    } catch (sendFileError) {
+      console.error('SendFile error:', sendFileError);
+      res.status(500).json({ error: 'File serving error' });
+    }
+  });
+} else {
+  // Development mode - Vite dev server
+  console.log('🔄 Development mode - Vite dev server will handle frontend');
+}
+
+// API routes komen ná static serving (maar vóór fallback)
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  console.log(`🔗 API route: ${req.method} ${req.path}`);
+  next();
+});
+
+// 404 handler voor API routes (na /api middleware)
+app.use('/api/*', (req: Request, res: Response) => {
+  res.status(404).json({ 
+    error: 'Not Found', 
+    message: `API endpoint ${req.path} not found`,
+    available: ['/api/health', '/api/cars', '/api/rentals']
+  });
+});
+
+// Error handling middleware (blijft hetzelfde)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('❌ Error:', err.message);
   console.error('Stack:', err.stack);
@@ -90,12 +175,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Main startup function
+// Main startup function (blijft hetzelfde, maar met server.listen fix)
 (async () => {
   try {
     console.log('🚀 Starting Car Rental Manager...');
     
-    // Debug info voor Docker
+    // Debug info voor Docker (blijft hetzelfde)
     if (process.env.NODE_ENV === 'production') {
       console.log('\n=== 🐳 DOCKER PRODUCTION STARTUP ===');
       console.log('📁 Working directory:', process.cwd());
@@ -111,109 +196,23 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const server = await registerRoutes(app);
     console.log('✅ API routes registered');
 
-    // Setup static file serving (vervangt serveStatic)
-    if (process.env.NODE_ENV === "production") {
-      console.log('📦 Setting up production static files...');
-      
-      // Serve built frontend assets
-      const publicPath = path.join(appRoot, 'dist', 'public');
-      const assetsPath = path.join(appRoot, 'dist', 'public', 'assets');
-      
-      console.log('📁 Static public path:', publicPath);
-      console.log('📁 Assets path:', assetsPath);
-      
-      // Check of de build files bestaan (met ESM fs)
-      try {
-        if (fs.existsSync(publicPath)) {
-          console.log('✅ Public directory found');
-          
-          // Serve static files met caching
-          app.use('/public', express.static(publicPath, {
-            index: false,
-            maxAge: '1y',
-            etag: true
-          }));
-          
-          if (fs.existsSync(assetsPath)) {
-            app.use('/assets', express.static(assetsPath, {
-              maxAge: '1y',
-              etag: true
-            }));
-            console.log('✅ Assets directory found');
-          } else {
-            console.warn('⚠️  Assets directory not found');
-          }
-          
-          console.log('✅ Static files configured');
-        } else {
-          console.warn('⚠️  Public directory NOT found - frontend build missing');
-          console.warn('   Run "npm run build" locally to generate /dist/public');
-        }
-      } catch (fsError) {
-        console.error('❌ File system error:', fsError);
-      }
-
-      // SPA fallback voor client-side routing
-      app.get(['/', '/public/*'], (req: Request, res: Response) => {
-        const indexPath = path.join(publicPath, 'index.html');
-        try {
-          if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-          } else {
-            res.status(404).json({ 
-              error: 'Frontend not built', 
-              message: 'Run "npm run build" to generate frontend assets',
-              debug: { indexPath }
-            });
-          }
-        } catch (sendFileError) {
-          console.error('SendFile error:', sendFileError);
-          res.status(500).json({ error: 'File serving error' });
-        }
-      });
-
-    } else {
-      // Development mode - Vite dev server
-      console.log('🔄 Development mode - Vite dev server will handle frontend');
-      // Hier kun je je setupVite(app, server) call toevoegen als je die hebt
-    }
-
-    // API routes komen eerst (belangrijk!)
-    app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-      console.log(`🔗 API route: ${req.method} ${req.path}`);
-      next();
-    });
-
-    // 404 handler voor API routes
-    app.use('/api/*', (req: Request, res: Response) => {
-      res.status(404).json({ 
-        error: 'Not Found', 
-        message: `API endpoint ${req.path} not found`,
-        available: ['/api/health', '/api/cars', '/api/rentals']
-      });
-    });
-
-    // Start server
+    // Start server (FIX: Gebruik app.listen i.p.v. server.listen voor eenvoud)
     const port = process.env.PORT ? parseInt(process.env.PORT, 10) || 3000 : 3000;
     
-    server.listen({
-      port,
-      host: "0.0.0.0", // Belangrijk voor Docker
-      reusePort: process.env.NODE_ENV === 'production',
-    }, () => {
+    app.listen(port, '0.0.0.0', () => {  // ← FIX: Gebruik app.listen, niet server.listen
       console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
       console.log(`🌐 API Server:    http://0.0.0.0:${port}`);
-      console.log(`📱 Frontend:     http://localhost:${port}/`);
+      console.log(`📱 Frontend:     http://localhost:${port}/`);  // Nu root!
       console.log(`🔍 Health check: http://localhost:${port}/health`);
       console.log(`🐳 Docker mode:  ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
       console.log(`📊 Uptime:       ${Math.round(process.uptime())}s`);
       console.log('=======================================\n');
     });
 
-    // Graceful shutdown
+    // Graceful shutdown (aanpassen voor app.close)
     process.on('SIGTERM', () => {
       console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
-      server.close(() => {
+      app.close(() => {  // ← FIX: app.close
         console.log('✅ Server closed');
         process.exit(0);
       });
@@ -221,7 +220,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
     process.on('SIGINT', () => {
       console.log('\n🛑 Received SIGINT, shutting down gracefully...');
-      server.close(() => {
+      app.close(() => {  // ← FIX: app.close
         console.log('✅ Server closed');
         process.exit(0);
       });
