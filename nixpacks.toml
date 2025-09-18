@@ -1,58 +1,45 @@
-# Minimale nixpacks.toml - laat Nixpacks de defaults doen (met debug voor structuur)
+# Full-stack nixpacks.toml - Frontend build + Backend server in één container
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
+NODE_ENV = "production"
+PORT = "3000"
 
-# Installatie: installeer dependencies voor root EN frontend map
+# Installatie: beide dependencies
 [phases.install]
 cmds = [
-  "npm ci --omit=dev",                 # Root dependencies (backend)
-  "echo '=== CHECKING FOR CLIENT DIRECTORY AFTER INSTALL ==='",
-  "ls -la | grep client || echo 'No client/ directory found'",
-  "cd client && npm ci --omit=dev 2>/dev/null || echo 'Client dir not found or install skipped - no frontend?'"  # Frontend dependencies (fallback zonder error)
+  "npm ci --omit=dev",                 # Root (backend) dependencies
+  "if [ -d 'client' ]; then cd client && npm ci --omit=dev && cd .. && echo '✅ Frontend dependencies installed'; else echo '⚠️ No client/ dir - skipping frontend deps'; fi"
 ]
 
-# Build: debug structuur + bouw frontend + kopieer naar verwachte structuur
+# Build: Frontend bouwen + Backend compileren
 [phases.build]
 cmds = [
-  # Debug: Toon volledige project structuur (zoals op GitHub)
-  "echo '=== PROJECT STRUCTURE (like GitHub tree/main) ==='",
-  "pwd",
-  "ls -la",  # Root files en mappen
-  "find . -maxdepth 3 -type d | sort",  # Toon directories tot 3 levels diep
-  "find . -name 'package.json' -type f | head -5",  # Alle package.json locaties
-  "echo '=== END STRUCTURE DEBUG ==='",
+  # Debug structuur (tijdelijk - verwijder later)
+  "echo '=== PROJECT STRUCTURE ==='",
+  "ls -la",
+  "find . -name 'package.json' -type f",
+  "echo '=== END STRUCTURE ==='",
   
-  # Check of client map bestaat
-  "if [ -d 'client' ]; then echo '✅ Client directory found - proceeding with build'; else echo '❌ NO CLIENT DIRECTORY! Possible alternatives: frontend/, src/, app/. Check GitHub tree/main'; fi",
+  # Frontend build (als client/ bestaat)
+  "if [ -d 'client' ]; then ",
+  "  echo 'Building frontend...'",
+  "  cd client && npm run build",
+  "  echo 'Copying frontend to backend static path...'",
+  "  mkdir -p ../dist/public",  # Backend verwacht /dist/public
+  "  cp -r dist/* ../dist/public/ 2>/dev/null || cp -r build/* ../dist/public/ 2>/dev/null",
+  "  cd ..",
+  "  echo '✅ Frontend built and copied to dist/public'",
+  "else ",
+  "  echo '⚠️ No client/ directory - skipping frontend build'",
+  "fi",
   
-  # Bouw frontend alleen als client bestaat (met logging)
-  "if [ -d 'client' ]; then echo 'Building frontend in client/...'; cd client && npm run build && echo '✅ Frontend build completed' || echo '❌ Frontend build in client/ FAILED - check package.json scripts'; cd ..; else echo 'Skipping frontend build (no client/)'; fi",
-  
-  # Check build output (als build liep)
-  "if [ -d 'client' ]; then echo 'Checking client build output...'; ls -la client/ | grep -E 'dist|build|out' || echo 'No dist/build/out found in client/'; fi",
-  
-  # Maak de verwachte map
-  "echo 'Creating /dist/public structure...'",
-  "mkdir -p dist/public",
-  
-  # Robuuste copy: alleen als source bestaat, geen force error
-  "if [ -d 'client/dist' ]; then echo '✅ Copying from client/dist/...'; cp -r client/dist/* dist/public/ 2>/dev/null || echo 'Copy from dist/ failed but continuing'; ",
-  "elif [ -d 'client/build' ]; then echo '✅ Copying from client/build/...'; cp -r client/build/* dist/public/ 2>/dev/null || echo 'Copy from build/ failed but continuing'; ",
-  "elif [ -d 'client/out' ]; then echo '✅ Copying from client/out/...'; cp -r client/out/* dist/public/ 2>/dev/null || echo 'Copy from out/ failed but continuing'; ",
-  "else echo '⚠️ No build output in client/ (dist, build, or out) - trying alternatives...'; fi",
-  
-  # Probeer alternatieve frontend mappen (als client/ niet werkt, bijv. frontend/ van GitHub)
-  "if [ ! -d 'client' ] && [ -d 'frontend' ]; then echo 'Trying frontend/ as alternative...'; cd frontend && npm run build && cd .. && cp -r frontend/dist/* dist/public/ 2>/dev/null || cp -r frontend/build/* dist/public/ 2>/dev/null; fi",
-  "if [ ! -d 'client' ] && [ -d 'src' ]; then echo 'Trying src/ as alternative...'; cd src && npm run build && cd .. && cp -r src/dist/* dist/public/ 2>/dev/null || cp -r src/build/* dist/public/ 2>/dev/null; fi",
-  
-  # Finale check (zonder force fail)
-  "if [ -f 'dist/public/index.html' ]; then echo '✅ Frontend ready in dist/public - index.html found!'; ls -la dist/public/ | head -5; else echo '❌ Still no index.html in dist/public - frontend build issue. Check logs above.'; fi",
-  
-  # Backend build (optioneel, met fallback)
-  "npm run build 2>/dev/null || echo 'No root npm run build script - skipping backend build'"
+  # Backend build (TypeScript → JavaScript)
+  "echo 'Building backend...'",
+  "npm run build",  # Compileert src/ → dist/
+  "echo '✅ Backend built'"
 ]
 
-# Override alleen de start command
+# Start: Backend server (serveert automatisch frontend static files)
 [start]
-cmd = "npm start"
+cmd = "npm start"  # Of "node dist/server/index.js" - wat je package.json heeft
