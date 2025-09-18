@@ -101,7 +101,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       console.log('📁 Working directory:', process.cwd());
       console.log('📂 App root:', appRoot);
       console.log('🌐 NODE_ENV:', process.env.NODE_ENV);
-      console.log('🔌 PORT:', process.env.PORT || 5000);
+      console.log('🔌 PORT:', process.env.PORT || 3000);
       console.log('📊 DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Missing');
       console.log('==============================\n');
     }
@@ -194,7 +194,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     });
 
     // Start server
-    const port = process.env.PORT ? parseInt(process.env.PORT, 10) || 5000 : 5000;
+    const port = process.env.PORT ? parseInt(process.env.PORT, 10) || 3000 : 3000;
     
     server.listen({
       port,
