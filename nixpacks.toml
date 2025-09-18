@@ -23,5 +23,4 @@ cmds = [
 [start]
 cmd = "npm start"
 
-[phases.build]
-cmds = ["npm run build"]
+
