@@ -17,6 +17,15 @@ cmds = [
   "npm run build"                       # Optioneel: backend build als die bestaat
 ]
 
+# Minimale nixpacks.toml - laat Nixpacks de defaults doen
+
 # Override alleen de start command
 [start]
 cmd = "npm start"
+
+# Optioneel: force production build
+[phases.install]
+cmds = ["npm ci --only=production"]
+
+[phases.build]
+cmds = ["npm run build"]
