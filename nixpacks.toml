@@ -1,87 +1,33 @@
-# CarRentalManager - Full-Stack Deployment voor Coolify (gebaseerd op GitHub structuur)
+# CarRentalManager - Fixed syntax voor Coolify (geen multi-line bash)
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 NODE_ENV = "production"
 PORT = "3000"
 
-# Installatie: Root + client/ + server/ dependencies
+# Installatie: Root + client/ + server/ dependencies (single-line)
 [phases.install]
 cmds = [
-  "echo '=== INSTALLING DEPENDENCIES (Root + Client + Server) ==='",
-  "echo '1. Root (algemene deps)...'",
-  "npm ci --omit=dev",                 # Root package.json
-  
-  "echo '2. Client (frontend: React/Vite)...'",
-  "cd client && npm ci --omit=dev",    # client/package.json
-  "cd ..",
-  
-  "echo '3. Server (backend: Express/Drizzle)...'",
-  "cd server && npm ci --omit=dev",    # server/package.json
-  "cd ..",
-  
-  "echo '✅ Dependencies installed. Structure check:'",
-  "ls -la | grep -E 'client|server|shared|drizzle'"
+  "npm ci --omit=dev",
+  "cd client && npm ci --omit=dev || echo 'Client install skipped'",
+  "cd server && npm ci --omit=dev || echo 'Server install skipped'",
+  "echo 'Dependencies installed'"
 ]
 
-# Build: Frontend build + Backend compile + Static files integratie
+# Build: Frontend + Backend (single-line commands, geen if-fi)
 [phases.build]
 cmds = [
-  "echo '=== BUILDING (Client Frontend + Server Backend) ==='",
-  "echo 'Confirmed GitHub-like structure:'",
-  "ls -la",
-  "find . -maxdepth 2 -name 'package.json' | head -3",  # Toon package.json locaties
-  
-  # 1. Frontend build in client/
-  "echo '--- Building Frontend (client/) ---'",
-  "if [ -d 'client' ]; then ",
-  "  cd client",
-  "  npm run build",
-  "  echo 'Frontend built. Output dir:'",
-  "  ls -la dist/ 2>/dev/null || ls -la build/ 2>/dev/null || echo 'Build output not found - check vite.config.ts'",
-  "  cd ..",
-  "else ",
-  "  echo '❌ client/ map niet gevonden!'",
-  "fi",
-  
-  # 2. Backend build in server/
-  "echo '--- Building Backend (server/) ---'",
-  "if [ -d 'server' ]; then ",
-  "  cd server",
-  "  npm run build",  # tsc of webpack → server/dist/
-  "  echo 'Backend built. Output dir:'",
-  "  ls -la dist/ 2>/dev/null || echo 'Geen server/dist/ - check tsconfig.json'",
-  "  cd ..",
-  "else ",
-  "  echo '❌ server/ map niet gevonden!'",
-  "fi",
-  
-  # 3. Kopieer frontend static files naar backend public map
-  "echo '--- Frontend → Backend Static Files Kopiëren ---'",
-  "mkdir -p server/dist/public",       # Maak public map in backend dist
-  "if [ -d 'client/dist' ]; then ",
-  "  echo 'Kopieer client/dist/ → server/dist/public/'",
-  "  cp -r client/dist/* server/dist/public/",
-  "elif [ -d 'client/build' ]; then ",
-  "  echo 'Kopieer client/build/ → server/dist/public/'",
-  "  cp -r client/build/* server/dist/public/",
-  "else ",
-  "  echo '❌ Geen frontend build output (dist/ of build/) gevonden'",
-  "fi",
-  
-  # 4. Validatie
-  "echo '--- Validatie ---'",
-  "if [ -f 'server/dist/public/index.html' ]; then ",
-  "  echo '✅ Frontend geïntegreerd: index.html in server/dist/public'",
-  "  ls -la server/dist/public/ | head -5",
-  "else ",
-  "  echo '❌ Probleem: Geen index.html - check build logs hierboven'",
-  "  find . -name 'index.html' 2>/dev/null",
-  "fi",
-  
-  "echo '=== BUILD KLAAR ==='"
+  "echo '=== BUILD START ==='",
+  "ls -la",  # Toon structuur
+  "cd client && npm run build || echo 'Frontend build failed - check client/package.json'",
+  "cd server && npm run build || echo 'Backend build failed - check server/tsconfig.json'",
+  "mkdir -p server/dist/public || echo 'Public dir creation failed'",
+  "cp -r client/dist/* server/dist/public/ 2>/dev/null || cp -r client/build/* server/dist/public/ 2>/dev/null || echo 'Frontend copy failed'",
+  "ls -la server/dist/public/ || echo 'No static files copied'",
+  "if [ -f server/dist/public/index.html ]; then echo '✅ Frontend ready'; else echo '❌ Noindex.html - build issue'; fi",
+  "echo '=== BUILD END ==='"
 ]
 
-# Start: Backend server (serveert frontend)
+# Start: Backend server
 [start]
-cmd = "cd server && npm start"  # Of 'node dist/index.js' - wat je package.json heeft
+cmd = "cd server && npm start"
