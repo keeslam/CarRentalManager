@@ -1,48 +1,60 @@
-# CarRentalManager - NO npm warnings + juiste paden
+# CarRentalManager - Nixpacks.toml (no warnings + correct paths)
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 NODE_ENV = "production"
 PORT = "3000"
 
-# Installatie: Unset NODE_ENV om npm warnings te voorkomen
+# ------------------------
+# Installatie van dependencies
+# ------------------------
 [phases.install]
 cmds = [
   "echo '=== INSTALLING DEPENDENCIES (NO WARNINGS) ==='",
-  "NODE_ENV='' npm ci --omit=dev",     # Root: Unset NODE_ENV
-  "cd client && NODE_ENV='' npm ci --omit=dev || echo 'Client install skipped'",  # Frontend
-  "cd server && NODE_ENV='' npm ci --omit=dev || echo 'Server install skipped'",  # Backend
+
+  # Root dependencies
+  "NODE_ENV='' npm ci --omit=dev",
+
+  # Frontend dependencies
+  "cd client && NODE_ENV='' npm ci --omit=dev || echo 'Client install skipped'",
+
+  # Backend dependencies
+  "cd ../server && NODE_ENV='' npm ci --omit=dev || echo 'Server install skipped'",
+
   "echo '✅ Dependencies installed - NO warnings!'"
 ]
 
-# Build: Frontend + Backend + Copy naar server pad
+# ------------------------
+# Build frontend + backend
+# ------------------------
 [phases.build]
 cmds = [
   "echo '=== BUILDING CAR RENTAL MANAGER ==='",
-  "ls -la",
-  
-  # Frontend build (output naar root /dist/public/)
+
+  # Frontend build
   "echo '--- Building Frontend ---'",
-  "npm run build",  # Jouw root build script (vite + esbuild)
-  
-  # Backend build (als apart nodig)
-  "echo '--- Backend bundling ---'",
-  "cd server && npm run build 2>/dev/null || echo 'No separate server build'",
-  "cd ..",
-  
-  # Copy frontend van /dist/public/ naar /dist/dist/public/ (server verwacht dit)
-  "echo '--- Copy Frontend to /dist/dist/public (server expected path) ---'",
-  "mkdir -p dist/dist/public",
-  "cp -r dist/public/* dist/dist/public/ 2>/dev/null || echo 'No /dist/public/ found'",
-  
-  # Validate zonder if-statement
-  "echo '--- Validating ---'",
-  "test -f dist/dist/public/index.html && echo '✅ Frontend ready in /dist/dist/public' || echo '❌ No index.html in expected path'",
-  "ls -la dist/dist/public/ 2>/dev/null || echo 'dist/dist/public is empty'",
-  
+  "cd client && npm run build && cd ..",
+
+  # Zorg dat backend public folder bestaat
+  "mkdir -p server/dist/public",
+
+  # Kopieer frontend build naar backend/public
+  "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
+
+  # Backend build (optioneel)
+  "echo '--- Building Backend ---'",
+  "cd server && npm run build || echo 'No separate server build' && cd ..",
+
+  # Validate frontend build
+  "echo '--- Validating Frontend ---'",
+  "test -f server/dist/public/index.html && echo '✅ Frontend ready in server/dist/public' || echo '❌ Frontend missing index.html'",
+
   "echo '=== BUILD COMPLETE ==='"
 ]
 
-# Start: Backend server
+# ------------------------
+# Start backend server
+# ------------------------
 [start]
-cmd = "npm start"
+cmd = "cd server && npm start"
+
