@@ -151,15 +151,9 @@ if (process.env.NODE_ENV === "production") {
       });
     }
   });
-} else {
-  console.log('🔄 Development mode - Setting up Vite dev server');
-  const { createServer } = await import("http");
-  const { setupVite } = await import("./vite");
-  const server = createServer(app);
-  await setupVite(app, server);
 }
 
-// Register API routes
+// Register API routes BEFORE Vite middleware to prevent routing conflicts
 await registerRoutes(app);
 
 // 404 for API
@@ -170,6 +164,15 @@ app.use('/api/*', (_req, res) => {
     available: ['/api/health', '/api/cars', '/api/rentals']
   });
 });
+
+// Set up Vite dev server AFTER API routes are registered
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔄 Development mode - Setting up Vite dev server');
+  const { createServer } = await import("http");
+  const { setupVite } = await import("./vite");
+  const server = createServer(app);
+  await setupVite(app, server);
+}
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
