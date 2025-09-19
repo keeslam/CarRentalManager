@@ -34,9 +34,9 @@ cmds = [
   "echo '=== BUILDING BACKEND ==='",
   "cd server && npm run build && cd ..",
 
-  "echo '=== COPYING FRONTEND TO BACKEND ==='",
+  "echo '=== COPYING FRONTEND BUILD TO BACKEND ==='",
   "mkdir -p server/dist/public",
-  "cp -r client/* server/dist/public/ || echo '⚠️ Frontend build not found'",
+  "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
 
   "echo '=== VALIDATING FRONTEND ==='",
   "test -f server/dist/public/index.html && echo '✅ Frontend ready in server/dist/public' || echo '❌ Frontend missing'"
@@ -46,4 +46,4 @@ cmds = [
 # Start phase
 # ------------------------
 [start]
-cmd = "cd server && NODE_ENV=production node dist/index.js || tail -f /dev/null"
+cmd = "cd server && NODE_ENV=production node dist/server/index.js"
