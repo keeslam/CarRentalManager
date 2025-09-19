@@ -1,29 +1,52 @@
+# CarRentalManager - Nixpacks.toml (werkend + automatische build + correcte paden)
+
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 NODE_ENV = "production"
 PORT = "3000"
 
+# ------------------------
+# Installatie van dependencies
+# ------------------------
 [phases.install]
 cmds = [
-  "echo '=== INSTALLING DEPENDENCIES ==='",
-  "NODE_ENV='' npm ci --omit=dev",
-  "cd client && NODE_ENV='' npm ci --omit=dev",
-  "cd ../server && NODE_ENV='' npm ci --omit=dev"
+  "echo '=== INSTALLING DEPENDENCIES (ROOT) ==='",
+  "NODE_ENV='' npm ci --omit=dev",  # Root dependencies
+
+  "echo '=== INSTALLING FRONTEND DEPENDENCIES ==='",
+  "cd client && NODE_ENV='' npm ci --omit=dev && cd ..",  # Frontend dependencies
+
+  "echo '=== INSTALLING BACKEND DEPENDENCIES ==='",
+  "cd server && NODE_ENV='' npm ci --omit=dev && cd .."   # Backend dependencies
 ]
 
+# ------------------------
+# Build frontend + backend
+# ------------------------
 [phases.build]
 cmds = [
   "echo '=== BUILDING FRONTEND ==='",
-  "cd client && npm run build && cd ..",
+  "cd client",
+  "npm run build",
+  "cd ..",
+  
+  "echo '=== PREPARING BACKEND PUBLIC FOLDER ==='",
   "mkdir -p server/dist/public",
-  "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
-
+  
+  "echo '=== COPYING FRONTEND TO BACKEND ==='",
+  "cp -r client/dist/* server/dist/public/",
+  
   "echo '=== BUILDING BACKEND ==='",
-  "cd server && npm run build || echo 'No separate backend build' && cd ..",
-
+  "cd server",
+  "npm run build || echo 'No separate backend build'",
+  "cd ..",
+  
   "echo '=== VALIDATING FRONTEND ==='",
-  "test -f server/dist/public/index.html && echo '✅ Frontend ready' || echo '❌ Frontend missing index.html'"
+  "if [ -f server/dist/public/index.html ]; then echo '✅ Frontend ready in server/dist/public'; else echo '❌ Frontend missing'; fi"
 ]
 
+# ------------------------
+# Start backend server
+# ------------------------
 [start]
 cmd = "cd server && npm start"
