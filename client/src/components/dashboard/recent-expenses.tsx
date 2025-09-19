@@ -82,8 +82,8 @@ export function RecentExpenses() {
           <div className="text-center py-4 text-gray-500">No recent expenses</div>
         ) : (
           <div className="max-h-[265px] overflow-y-auto pr-1 space-y-3">
-            {expenses.slice(0, 10).map((expense, index) => (
-              <div key={expense.id} className={`${index < expenses.length - 1 ? 'border-b pb-3' : ''}`}>
+            {expenses?.slice(0, 10).map((expense, index) => (
+              <div key={expense.id} className={`${index < (expenses?.length ?? 0) - 1 ? 'border-b pb-3' : ''}`}>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
