@@ -1,4 +1,8 @@
-# CarRentalManager - Nixpacks.toml (werkend + automatische build + correcte paden)
+# CarRentalManager - Werkende Nixpacks.toml
+# Voor Coolify / Nixpacks deployment
+# Frontend build output: dist/public
+# Backend: server
+# Node 18, production mode
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
@@ -6,47 +10,43 @@ NODE_ENV = "production"
 PORT = "3000"
 
 # ------------------------
-# Installatie van dependencies
+# Installatie fase
 # ------------------------
 [phases.install]
 cmds = [
-  "echo '=== INSTALLING DEPENDENCIES (ROOT) ==='",
-  "NODE_ENV='' npm ci --omit=dev",  # Root dependencies
+  "echo '=== INSTALLING ROOT DEPENDENCIES ==='",
+  "NODE_ENV='' npm ci --omit=dev",
 
-  "echo '=== INSTALLING FRONTEND DEPENDENCIES ==='",
-  "cd client && NODE_ENV='' npm ci --omit=dev && cd ..",  # Frontend dependencies
+  "echo '=== INSTALLING CLIENT DEPENDENCIES ==='",
+  "cd client && NODE_ENV='' npm ci --omit=dev && cd ..",
 
-  "echo '=== INSTALLING BACKEND DEPENDENCIES ==='",
-  "cd server && NODE_ENV='' npm ci --omit=dev && cd .."   # Backend dependencies
+  "echo '=== INSTALLING SERVER DEPENDENCIES ==='",
+  "cd server && NODE_ENV='' npm ci --omit=dev && cd .."
 ]
 
 # ------------------------
-# Build frontend + backend
+# Build fase
 # ------------------------
 [phases.build]
 cmds = [
-  "echo '=== BUILDING FRONTEND ==='",
-  "cd client",
-  "npm run build",
-  "cd ..",
-  
+  "echo '=== BUILDING FRONTEND AND ROOT PROJECT ==='",
+  "npm run build",  # root build script doet frontend + server bundling
+
   "echo '=== PREPARING BACKEND PUBLIC FOLDER ==='",
   "mkdir -p server/dist/public",
-  
+
   "echo '=== COPYING FRONTEND TO BACKEND ==='",
-  "cp -r client/dist/* server/dist/public/",
-  
+  "cp -r dist/public/* server/dist/public/ || echo '⚠️ Frontend build not found'",
+
   "echo '=== BUILDING BACKEND ==='",
-  "cd server",
-  "npm run build || echo 'No separate backend build'",
-  "cd ..",
-  
+  "cd server && npm run build || echo 'No separate backend build' && cd ..",
+
   "echo '=== VALIDATING FRONTEND ==='",
-  "if [ -f server/dist/public/index.html ]; then echo '✅ Frontend ready in server/dist/public'; else echo '❌ Frontend missing'; fi"
+  "test -f server/dist/public/index.html && echo '✅ Frontend ready in server/dist/public' || echo '❌ Frontend missing'"
 ]
 
 # ------------------------
-# Start backend server
+# Start fase
 # ------------------------
 [start]
-cmd = "cd server && npm start"
+cmd = "cd server && NODE_ENV=production node dist/index.js"
