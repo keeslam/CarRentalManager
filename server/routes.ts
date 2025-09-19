@@ -15,6 +15,7 @@ import {
   insertDocumentSchema,
   insertUserSchema,
   insertPdfTemplateSchema,
+  Reservation,
   UserRole,
   UserPermission
 } from "@shared/schema";
