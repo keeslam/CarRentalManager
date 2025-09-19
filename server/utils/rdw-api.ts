@@ -2,7 +2,7 @@
  * RDW API client for interacting with the Dutch Vehicle Authority API
  */
 
-import { InsertVehicle } from "@shared/schema";
+import { InsertVehicle } from "../../shared/schema";
 import { addMonths } from "date-fns";
 import { format } from 'date-fns';
 

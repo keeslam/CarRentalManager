@@ -7,7 +7,7 @@ import {
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification
-} from "@shared/schema";
+} from "../shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
 export interface IStorage {

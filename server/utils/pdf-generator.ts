@@ -3,7 +3,7 @@
  * Using the ELENA AVL ALL contract template or custom templates
  */
 
-import { Reservation, PdfTemplate } from "@shared/schema";
+import { Reservation, PdfTemplate } from "../../shared/schema";
 import { format } from "date-fns";
 import * as fs from 'fs';
 import * as path from 'path';

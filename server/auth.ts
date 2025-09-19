@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User } from "@shared/schema";
+import { User } from "../shared/schema";
 import { pool } from "./db";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
@@ -14,7 +14,7 @@ import createMemoryStore from "memorystore";
 declare global {
   namespace Express {
     // Use 'interface' to extend the Express User type
-    interface User extends Omit<import('@shared/schema').User, 'password'> {}
+    interface User extends Omit<import('../shared/schema').User, 'password'> {}
   }
 }
 

@@ -18,7 +18,7 @@ import {
   Reservation,
   UserRole,
   UserPermission
-} from "@shared/schema";
+} from "../shared/schema";
 import multer from "multer";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 
