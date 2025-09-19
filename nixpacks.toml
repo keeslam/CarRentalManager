@@ -1,6 +1,5 @@
-# CarRentalManager - Werkende Nixpacks.toml
-# Voor Coolify / Nixpacks deployment
-# Frontend build output: dist/public
+# CarRentalManager - Coolify / Nixpacks deployment configuration
+# Frontend build output: client/dist
 # Backend: server
 # Node 18, production mode
 
@@ -10,7 +9,7 @@ NODE_ENV = "production"
 PORT = "3000"
 
 # ------------------------
-# Installatie fase
+# Install phase
 # ------------------------
 [phases.install]
 cmds = [
@@ -25,28 +24,26 @@ cmds = [
 ]
 
 # ------------------------
-# Build fase
+# Build phase
 # ------------------------
 [phases.build]
 cmds = [
-  "echo '=== BUILDING FRONTEND AND ROOT PROJECT ==='",
-  "npm run build",  # root build script doet frontend + server bundling
-
-  "echo '=== PREPARING BACKEND PUBLIC FOLDER ==='",
-  "mkdir -p server/dist/public",
-
-  "echo '=== COPYING FRONTEND TO BACKEND ==='",
-  "cp -r dist/public/* server/dist/public/ || echo '⚠️ Frontend build not found'",
+  "echo '=== BUILDING FRONTEND ==='",
+  "cd client && npm run build && cd ..",
 
   "echo '=== BUILDING BACKEND ==='",
-  "cd server && npm run build || echo 'No separate backend build' && cd ..",
+  "cd server && npm run build && cd ..",
+
+  "echo '=== COPYING FRONTEND TO BACKEND ==='",
+  "mkdir -p server/dist/public",
+  "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
 
   "echo '=== VALIDATING FRONTEND ==='",
   "test -f server/dist/public/index.html && echo '✅ Frontend ready in server/dist/public' || echo '❌ Frontend missing'"
 ]
 
 # ------------------------
-# Start fase
+# Start phase
 # ------------------------
 [start]
-cmd = "cd server && NODE_ENV=production node dist/index.js"
+cmd = "cd server && NODE_ENV=production node dist/index.js || tail -f /dev/null"
