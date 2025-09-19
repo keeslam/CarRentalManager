@@ -12,7 +12,11 @@ cmds = [
 ]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "npm run build",
+  "mkdir -p dist/server/public",
+  "cp -r dist/public/* dist/server/public/"
+]
 
 [start]
 cmd = "npm start"
