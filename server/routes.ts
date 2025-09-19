@@ -2814,6 +2814,5 @@ export async function registerRoutes(app: Express): Promise<void> {
     });
   });
 
-  // Create HTTP server and return it
-  return createServer(app);
+  // Routes registered successfully
 }
