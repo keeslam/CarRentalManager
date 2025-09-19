@@ -13,7 +13,7 @@ const appRoot = path.resolve(__dirname, '..'); // /app in Docker
 
 // Setup Express
 const app = express();
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 // Middleware
 app.use(express.json());
