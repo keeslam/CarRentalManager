@@ -245,10 +245,12 @@ export function VehicleForm({
     onSuccess: async (response) => {
       const vehicleData = await response.json();
       
-      // Fill form with retrieved data
+      // Fill form with retrieved data, converting null values to empty strings
       Object.keys(vehicleData).forEach((key) => {
         if (form.getValues(key as any) !== undefined) {
-          form.setValue(key as any, vehicleData[key]);
+          // Convert null values to empty strings for form compatibility
+          const value = vehicleData[key] === null ? "" : vehicleData[key];
+          form.setValue(key as any, value);
         }
       });
       
