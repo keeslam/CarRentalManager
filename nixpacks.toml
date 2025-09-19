@@ -1,52 +1,29 @@
-# CarRentalManager - Nixpacks.toml (Frontend + Backend correct)
-
 [variables]
 NIXPACKS_NODE_VERSION = "18"
 NODE_ENV = "production"
 PORT = "3000"
 
-# ------------------------
-# Install dependencies
-# ------------------------
 [phases.install]
 cmds = [
-  "echo '=== INSTALLING DEPENDENCIES (NO WARNINGS) ==='",
+  "echo '=== INSTALLING DEPENDENCIES ==='",
   "NODE_ENV='' npm ci --omit=dev",
-  "cd client && NODE_ENV='' npm ci --omit=dev || echo 'Client install skipped'",
-  "cd ../server && NODE_ENV='' npm ci --omit=dev || echo 'Server install skipped'",
-  "echo '✅ Dependencies installed - NO warnings!'"
+  "cd client && NODE_ENV='' npm ci --omit=dev",
+  "cd ../server && NODE_ENV='' npm ci --omit=dev"
 ]
 
-# ------------------------
-# Build frontend + backend
-# ------------------------
 [phases.build]
 cmds = [
-  "echo '=== BUILDING CAR RENTAL MANAGER ==='",
-
-  # Frontend build
-  "echo '--- Building Frontend ---'",
+  "echo '=== BUILDING FRONTEND ==='",
   "cd client && npm run build && cd ..",
-
-  # Zorg dat backend public folder bestaat
   "mkdir -p server/dist/public",
-
-  # Kopieer frontend build naar backend/public
   "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
 
-  # Backend build
-  "echo '--- Building Backend ---'",
-  "cd server && npm run build || echo 'No separate server build' && cd ..",
+  "echo '=== BUILDING BACKEND ==='",
+  "cd server && npm run build || echo 'No separate backend build' && cd ..",
 
-  # Validate frontend build
-  "echo '--- Validating Frontend ---'",
-  "test -f server/dist/public/index.html && echo '✅ Frontend ready in server/dist/public' || echo '❌ Frontend missing index.html'",
-
-  "echo '=== BUILD COMPLETE ==='"
+  "echo '=== VALIDATING FRONTEND ==='",
+  "test -f server/dist/public/index.html && echo '✅ Frontend ready' || echo '❌ Frontend missing index.html'"
 ]
 
-# ------------------------
-# Start backend server
-# ------------------------
 [start]
 cmd = "cd server && npm start"
