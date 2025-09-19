@@ -392,7 +392,20 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
     const now = new Date();
-    const user: User = { ...insertUser, id, createdAt: now, updatedAt: now };
+    const user: User = {
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      fullName: insertUser.fullName ?? null,
+      email: insertUser.email ?? null,
+      role: insertUser.role ?? 'user',
+      permissions: insertUser.permissions ?? [],
+      active: insertUser.active ?? true,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: insertUser.createdBy ?? null,
+      updatedBy: insertUser.updatedBy ?? null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -454,7 +467,51 @@ export class MemStorage implements IStorage {
   async createVehicle(vehicleData: InsertVehicle): Promise<Vehicle> {
     const id = this.vehicleId++;
     const now = new Date();
-    const vehicle: Vehicle = { ...vehicleData, id, createdAt: now, updatedAt: now };
+    const vehicle: Vehicle = {
+      ...vehicleData,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: vehicleData.createdBy ?? null,
+      updatedBy: vehicleData.updatedBy ?? null,
+      vehicleType: vehicleData.vehicleType ?? null,
+      chassisNumber: vehicleData.chassisNumber ?? null,
+      fuel: vehicleData.fuel ?? null,
+      adBlue: vehicleData.adBlue ?? null,
+      euroZone: vehicleData.euroZone ?? null,
+      euroZoneEndDate: vehicleData.euroZoneEndDate ?? null,
+      internalAppointments: vehicleData.internalAppointments ?? null,
+      apkDate: vehicleData.apkDate ?? null,
+      company: vehicleData.company ?? null,
+      companyDate: vehicleData.companyDate ?? null,
+      companyBy: vehicleData.companyBy ?? null,
+      registeredTo: vehicleData.registeredTo ?? null,
+      registeredToDate: vehicleData.registeredToDate ?? null,
+      registeredToBy: vehicleData.registeredToBy ?? null,
+      gps: vehicleData.gps ?? null,
+      monthlyPrice: vehicleData.monthlyPrice ?? null,
+      dailyPrice: vehicleData.dailyPrice ?? null,
+      dateIn: vehicleData.dateIn ?? null,
+      dateOut: vehicleData.dateOut ?? null,
+      contractNumber: vehicleData.contractNumber ?? null,
+      damageCheck: vehicleData.damageCheck ?? null,
+      damageCheckDate: vehicleData.damageCheckDate ?? null,
+      damageCheckAttachment: vehicleData.damageCheckAttachment ?? null,
+      damageCheckAttachmentDate: vehicleData.damageCheckAttachmentDate ?? null,
+      creationDate: vehicleData.creationDate ?? null,
+      departureMileage: vehicleData.departureMileage ?? null,
+      returnMileage: vehicleData.returnMileage ?? null,
+      roadsideAssistance: vehicleData.roadsideAssistance ?? null,
+      spareKey: vehicleData.spareKey ?? null,
+      remarks: vehicleData.remarks ?? null,
+      winterTires: vehicleData.winterTires ?? null,
+      tireSize: vehicleData.tireSize ?? null,
+      wokNotification: vehicleData.wokNotification ?? null,
+      radioCode: vehicleData.radioCode ?? null,
+      warrantyEndDate: vehicleData.warrantyEndDate ?? null,
+      seatcovers: vehicleData.seatcovers ?? null,
+      backupbeepers: vehicleData.backupbeepers ?? null
+    };
     this.vehicles.set(id, vehicle);
     return vehicle;
   }

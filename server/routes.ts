@@ -39,7 +39,7 @@ function formatDate(dateString: string): string {
   }
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Create uploads directory if it doesn't exist
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
@@ -51,12 +51,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== USER MANAGEMENT ROUTES ====================
   // A middleware to check for admin permissions
-  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated()) {
+  const requireAdmin = (req: Request & { user?: any; isAuthenticated?: () => boolean }, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated?.()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    if (req.user.role !== UserRole.ADMIN) {
+    if (req.user?.role !== UserRole.ADMIN) {
       return res.status(403).json({ message: "Not authorized. Admin access required." });
     }
     
