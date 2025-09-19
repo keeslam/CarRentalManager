@@ -30,6 +30,11 @@ import {
 } from "@/components/ui/select";
 import { useLocation } from "wouter";
 
+// Utility function to handle null values for form inputs
+const handleFieldValue = (value: any): string => {
+  return value === null || value === undefined ? '' : String(value);
+};
+
 // Extended schema with validation
 export const formSchema = insertVehicleSchema.extend({
   licensePlate: z.string().min(1, "License plate is required"),
@@ -661,7 +666,7 @@ export function VehicleForm({
                         <FormLabel>Vehicle Type</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
-                          defaultValue={field.value}
+                          defaultValue={handleFieldValue(field.value) || undefined}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -690,7 +695,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Chassis Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="VIN/Chassis number" {...field} />
+                          <Input placeholder="VIN/Chassis number" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -705,7 +710,7 @@ export function VehicleForm({
                         <FormLabel>Fuel Type</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
-                          defaultValue={field.value}
+                          defaultValue={handleFieldValue(field.value) || undefined}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -758,7 +763,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Euro Zone End Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormDescription>
                           Date when the Euro Zone classification expires
@@ -779,7 +784,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>APK Expiration Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormDescription>
                           Date when the APK (inspection) expires
@@ -796,7 +801,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Warranty Expiration Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormDescription>
                           Date when the warranty expires
@@ -813,7 +818,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Registered To Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -827,7 +832,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Company Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -841,7 +846,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Date In</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -855,7 +860,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Date Out</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -875,7 +880,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Monthly Price (€)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -889,7 +894,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Daily Price (€)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -903,7 +908,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Contract Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="Contract number" {...field} />
+                          <Input placeholder="Contract number" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -932,7 +937,7 @@ export function VehicleForm({
                         </div>
                         <FormControl>
                           <Switch
-                            checked={field.value === true || field.value === "true"}
+                            checked={!!field.value}
                             onCheckedChange={(checked) => {
                               // Store as boolean in form for UI consistency
                               field.onChange(checked);
@@ -967,7 +972,7 @@ export function VehicleForm({
                         </div>
                         <FormControl>
                           <Switch
-                            checked={field.value === true || field.value === "true"}
+                            checked={!!field.value}
                             onCheckedChange={(checked) => {
                               // Store as boolean in form for UI consistency
                               field.onChange(checked);
@@ -1197,7 +1202,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Tire Size</FormLabel>
                         <FormControl>
-                          <Input placeholder="Tire size" {...field} />
+                          <Input placeholder="Tire size" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1211,7 +1216,7 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Radio Code</FormLabel>
                         <FormControl>
-                          <Input placeholder="Radio code" {...field} />
+                          <Input placeholder="Radio code" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1230,6 +1235,7 @@ export function VehicleForm({
                               className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               placeholder="Internal appointments and notes" 
                               {...field} 
+                              value={handleFieldValue(field.value)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1250,6 +1256,7 @@ export function VehicleForm({
                               className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               placeholder="Additional remarks" 
                               {...field} 
+                              value={handleFieldValue(field.value)}
                             />
                           </FormControl>
                           <FormMessage />
