@@ -1,4 +1,4 @@
-# CarRentalManager - Nixpacks.toml (no warnings + correct paths)
+# CarRentalManager - Nixpacks.toml (Frontend + Backend correct)
 
 [variables]
 NIXPACKS_NODE_VERSION = "18"
@@ -6,21 +6,14 @@ NODE_ENV = "production"
 PORT = "3000"
 
 # ------------------------
-# Installatie van dependencies
+# Install dependencies
 # ------------------------
 [phases.install]
 cmds = [
   "echo '=== INSTALLING DEPENDENCIES (NO WARNINGS) ==='",
-
-  # Root dependencies
   "NODE_ENV='' npm ci --omit=dev",
-
-  # Frontend dependencies
   "cd client && NODE_ENV='' npm ci --omit=dev || echo 'Client install skipped'",
-
-  # Backend dependencies
   "cd ../server && NODE_ENV='' npm ci --omit=dev || echo 'Server install skipped'",
-
   "echo '✅ Dependencies installed - NO warnings!'"
 ]
 
@@ -41,7 +34,7 @@ cmds = [
   # Kopieer frontend build naar backend/public
   "cp -r client/dist/* server/dist/public/ || echo '⚠️ Frontend build not found'",
 
-  # Backend build (optioneel)
+  # Backend build
   "echo '--- Building Backend ---'",
   "cd server && npm run build || echo 'No separate server build' && cd ..",
 
@@ -57,4 +50,3 @@ cmds = [
 # ------------------------
 [start]
 cmd = "cd server && npm start"
-
