@@ -152,7 +152,11 @@ if (process.env.NODE_ENV === "production") {
     }
   });
 } else {
-  console.log('🔄 Development mode - Vite dev server handles frontend');
+  console.log('🔄 Development mode - Setting up Vite dev server');
+  const { createServer } = await import("http");
+  const { setupVite } = await import("./vite");
+  const server = createServer(app);
+  await setupVite(app, server);
 }
 
 // Register API routes
