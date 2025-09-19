@@ -15,7 +15,8 @@ cmds = [
 cmds = [
   "npm run build",
   "mkdir -p dist/server/public",
-  "cp -r dist/public/* dist/server/public/"
+  "cp -r dist/public/* dist/server/public/",
+  "npm run db:push"
 ]
 
 [start]
