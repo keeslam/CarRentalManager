@@ -48,14 +48,59 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Health check
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/health', async (_req, res) => {
+  try {
+    // Test database connection
+    const dbStatus = await testDatabaseConnection();
+    
+    res.json({
+      status: dbStatus.connected ? 'OK' : 'ERROR',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      database: dbStatus,
+      envVars: {
+        DATABASE_URL: !!process.env.DATABASE_URL,
+        SESSION_SECRET: !!process.env.SESSION_SECRET,
+        NODE_ENV: process.env.NODE_ENV
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      database: { connected: false, error: 'Connection test failed' },
+      envVars: {
+        DATABASE_URL: !!process.env.DATABASE_URL,
+        SESSION_SECRET: !!process.env.SESSION_SECRET,
+        NODE_ENV: process.env.NODE_ENV
+      }
+    });
+  }
 });
+
+// Helper function to test database connection
+async function testDatabaseConnection() {
+  try {
+    const { storage } = await import('./storage');
+    // Try to get a user count or similar simple operation
+    const users = await storage.getAllUsers();
+    return { 
+      connected: true, 
+      userCount: users.length,
+      message: 'Database connection successful'
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      error: error instanceof Error ? error.message : 'Unknown database error',
+      message: 'Database connection failed'
+    };
+  }
+}
 
 // API root
 app.get('/api', (_req, res) => {
