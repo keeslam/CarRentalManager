@@ -641,12 +641,7 @@ export function ReservationForm({
                                           // Refresh vehicles list to show updated data
                                           await refetchVehicles();
                                           
-                                          // Update the selected vehicle state with fresh data
-                                          const updatedVehicles = await queryClient.getQueryData(["/api/vehicles"]);
-                                          const freshVehicle = updatedVehicles?.find(v => v.id === updatedVehicle.id);
-                                          if (freshVehicle) {
-                                            setSelectedVehicle(freshVehicle);
-                                          }
+                                              // The vehicle selector will automatically show updated data after cache refresh
                                           
                                           // Close the dialog
                                           setVehicleEditDialogOpen(false);
@@ -792,12 +787,7 @@ export function ReservationForm({
                                       await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
                                       await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
                                       
-                                      // Update the selected customer state with fresh data
-                                      const updatedCustomers = await queryClient.getQueryData(["/api/customers"]);
-                                      const freshCustomer = updatedCustomers?.find(c => c.id === updatedCustomer.id);
-                                      if (freshCustomer) {
-                                        setSelectedCustomer(freshCustomer);
-                                      }
+                                      // The customer selector will automatically show updated data after cache refresh
                                       
                                       // Close the dialog
                                       setCustomerEditDialogOpen(false);
