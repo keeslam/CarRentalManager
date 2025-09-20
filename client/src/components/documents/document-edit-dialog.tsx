@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@shared/schema";
 import { 
@@ -80,12 +80,9 @@ export function DocumentEditDialog({ document, trigger, onSuccess }: DocumentEdi
   // Update document mutation
   const updateDocumentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest(`/api/documents/${document.id}`, {
-        method: "PATCH",
-        data,
-      });
+      return await apiRequest("PATCH", `/api/documents/${document.id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Document updated",
         description: "The document has been updated successfully.",
@@ -94,9 +91,8 @@ export function DocumentEditDialog({ document, trigger, onSuccess }: DocumentEdi
       // Close the dialog
       setIsOpen(false);
       
-      // Refresh document list
-      queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${document.vehicleId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${document.vehicleId}`] });
+      // Use unified invalidation system
+      await invalidateRelatedQueries('documents', { vehicleId: document.vehicleId });
       
       // Call the onSuccess callback if provided
       if (onSuccess) {

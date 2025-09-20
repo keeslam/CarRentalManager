@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { 
   Card, 
   CardContent, 
@@ -90,19 +90,11 @@ export default function ExpenseDetailsPage() {
         description: "The expense has been successfully deleted.",
       });
       
-      // Invalidate and refetch all relevant queries
-      await queryClient.invalidateQueries({ queryKey: mainExpensesQueryKey });
-      
-      // Invalidate vehicle expenses if applicable
-      if (expense?.vehicleId) {
-        await queryClient.invalidateQueries({ queryKey: vehicleExpensesQueryKey });
-      }
-      
-      // Invalidate the current expense data
-      await queryClient.invalidateQueries({ queryKey: currentExpenseQueryKey });
-      
-      // Force refetch the main expenses list to ensure UI updates
-      await queryClient.refetchQueries({ queryKey: mainExpensesQueryKey });
+      // Use unified invalidation system for comprehensive cache updates
+      await invalidateRelatedQueries('expenses', { 
+        id: Number(expenseId),
+        vehicleId: expense?.vehicleId 
+      });
       
       // Navigate back to expenses list
       navigate("/expenses");

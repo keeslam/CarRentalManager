@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import {
   Select,
   SelectContent,
@@ -58,11 +58,8 @@ export default function ReservationsIndex() {
       return await response.json();
     },
     onSuccess: async () => {
-      // Wait for the invalidation to complete
-      await queryClient.invalidateQueries({ queryKey: reservationsQueryKey });
-      
-      // Explicitly force a refetch to ensure the UI updates
-      await refetchReservations();
+      // Use unified invalidation system to update all related data
+      await invalidateRelatedQueries('reservations');
       
       toast({
         title: "Reservation deleted",
@@ -90,11 +87,8 @@ export default function ReservationsIndex() {
       return await response.json();
     },
     onSuccess: async () => {
-      // Wait for the invalidation to complete
-      await queryClient.invalidateQueries({ queryKey: reservationsQueryKey });
-      
-      // Explicitly force a refetch to ensure the UI updates
-      await refetchReservations();
+      // Use unified invalidation system to update all related data
+      await invalidateRelatedQueries('reservations');
       
       toast({
         title: "Status updated",
@@ -467,7 +461,7 @@ export default function ReservationsIndex() {
       header: "Total",
       cell: ({ row }) => {
         const price = row.getValue("totalPrice") as string;
-        return formatCurrency(price);
+        return formatCurrency(Number(price || 0));
       },
     },
     {
@@ -728,8 +722,19 @@ export default function ReservationsIndex() {
           onOpenChange={setStatusDialogOpen}
           reservationId={selectedReservation.id}
           initialStatus={selectedReservation.status}
-          vehicle={selectedReservation.vehicle}
-          customer={selectedReservation.customer}
+          vehicle={selectedReservation.vehicle ? {
+            ...selectedReservation.vehicle,
+            departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
+            returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
+          } : undefined}
+          customer={selectedReservation.customer ? {
+            ...selectedReservation.customer,
+            firstName: selectedReservation.customer.firstName ?? undefined,
+            lastName: selectedReservation.customer.lastName ?? undefined,
+            companyName: selectedReservation.customer.companyName ?? undefined,
+            phone: selectedReservation.customer.phone ?? undefined,
+            email: selectedReservation.customer.email ?? undefined
+          } : undefined}
           onStatusChanged={async () => {
             // Force an immediate and complete refetch of all reservation data
             await refetchReservations();

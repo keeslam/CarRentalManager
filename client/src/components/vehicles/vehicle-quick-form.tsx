@@ -2,7 +2,7 @@ import { useState } from "react";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { Vehicle } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import z from "zod";
@@ -32,7 +32,7 @@ export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps)
       }
       return await response.json();
     },
-    onSuccess: (vehicleData) => {
+    onSuccess: async (vehicleData) => {
       console.log("Vehicle created successfully in quick form:", vehicleData);
       
       // Show success message
@@ -41,8 +41,8 @@ export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps)
         description: "The vehicle has been added to your fleet.",
       });
       
-      // Invalidate the vehicles query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      // Invalidate related vehicle queries using the unified system
+      await invalidateRelatedQueries('vehicles');
       
       // Call the parent's onSuccess with the vehicle data
       onSuccess(vehicleData);

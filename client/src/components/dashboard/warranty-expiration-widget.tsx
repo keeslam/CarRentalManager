@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-utils";
@@ -40,8 +41,8 @@ export function WarrantyExpirationWidget() {
   
   // Function to handle clicking on a vehicle to view its details
   const handleViewClick = (vehicle: Vehicle) => {
-    // Invalidate the specific vehicle query to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
+    // Use prefix-based invalidation to ensure fresh data
+    invalidateByPrefix(`/api/vehicles/${vehicle.id}`);
     // Navigate to the vehicle details page
     navigate(`/vehicles/${vehicle.id}`);
   };

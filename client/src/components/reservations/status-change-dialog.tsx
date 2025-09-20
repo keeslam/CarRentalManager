@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { z } from "zod";
@@ -248,34 +248,10 @@ export function StatusChangeDialog({
       }
     },
     onSuccess: async () => {
-      // Force refresh with immediate refetch after invalidation
-      // First, invalidate all relevant queries
-      await queryClient.invalidateQueries({ 
-        queryKey: ["/api/reservations"],
-        refetchType: 'all'
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: [`/api/reservations/${reservationId}`],
-        refetchType: 'all'
-      });
-      
-      if (vehicle?.id) {
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/vehicles/${vehicle.id}`],
-          refetchType: 'all'
-        });
-        
-        await queryClient.invalidateQueries({ 
-          queryKey: ["/api/vehicles"],
-          refetchType: 'all'
-        });
-      }
-      
-      // Force an immediate refetch of the data
-      await queryClient.refetchQueries({ 
-        queryKey: ["/api/reservations"],
-        type: 'all' 
+      // Use unified invalidation system for comprehensive cache updates
+      await invalidateRelatedQueries('reservations', { 
+        id: reservationId,
+        vehicleId: vehicle?.id 
       });
       
       toast({

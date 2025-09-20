@@ -25,7 +25,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,9 +79,8 @@ export default function VehiclesIndex() {
         description: `Vehicle ${formatLicensePlate(vehicleToDelete?.licensePlate || '')} has been successfully deleted.`,
       });
       
-      // Force a refresh of the data
-      await refetch();
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      // Use unified invalidation system to update all vehicle-related data
+      await invalidateRelatedQueries('vehicles');
       setVehicleToDelete(null);
     },
     onError: (error) => {

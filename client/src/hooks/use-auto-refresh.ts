@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateByPrefix } from '@/lib/queryClient';
 
 /**
  * Hook that provides a utility to refresh entity data on demand
@@ -13,7 +14,7 @@ export function useDataRefresh() {
    * @param entityType The type of entity to refresh (vehicles, customers, reservations, etc.)
    */
   const refreshEntityData = useCallback((entityType: string) => {
-    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}`] });
+    invalidateByPrefix(`/api/${entityType}`);
   }, [queryClient]);
 
   /**
@@ -22,7 +23,7 @@ export function useDataRefresh() {
    * @param id The ID of the entity
    */
   const refreshEntityById = useCallback((entityType: string, id: number) => {
-    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}/${id}`] });
+    invalidateByPrefix(`/api/${entityType}/${id}`);
   }, [queryClient]);
 
   /**
@@ -30,28 +31,30 @@ export function useDataRefresh() {
    * @param vehicleId The ID of the vehicle
    */
   const refreshVehicleData = useCallback((vehicleId: number) => {
-    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-    queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${vehicleId}`] });
-    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-    queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
+    // Use prefix-based invalidation to catch all vehicle-related queries
+    invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+    invalidateByPrefix(`/api/reservations/vehicle/${vehicleId}`);
+    invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
+    invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
   }, [queryClient]);
 
   /**
    * Refresh dashboard data (available vehicles, expiring warranties/APKs, upcoming reservations)
    */
   const refreshDashboard = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
+    // Use prefix-based invalidation for dashboard queries
+    invalidateByPrefix('/api/vehicles/available');
+    invalidateByPrefix('/api/vehicles/apk-expiring');
+    invalidateByPrefix('/api/vehicles/warranty-expiring');
+    invalidateByPrefix('/api/reservations/upcoming');
+    invalidateByPrefix('/api/expenses/recent');
   }, [queryClient]);
 
   /**
    * Refresh calendar data
    */
   const refreshCalendar = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+    invalidateByPrefix('/api/reservations/range');
   }, [queryClient]);
 
   return {

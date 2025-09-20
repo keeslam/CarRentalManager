@@ -7,7 +7,7 @@ import { Link, useLocation } from "wouter";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,26 +33,20 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
   const customerQueryKey = [`/api/customers/${customerId}`];
   const customerReservationsQueryKey = [`/api/reservations/customer/${customerId}`];
   
-  // Fetch customer details with refetchOnMount to ensure fresh data
+  // Fetch customer details with proper caching
   const { 
     data: customer, 
-    isLoading: isLoadingCustomer,
-    refetch: refetchCustomer
+    isLoading: isLoadingCustomer
   } = useQuery<Customer>({
-    queryKey: customerQueryKey,
-    refetchOnMount: true,
-    staleTime: 0 // Consider the data immediately stale to force a refetch
+    queryKey: customerQueryKey
   });
   
-  // Fetch customer reservations with refetch options
+  // Fetch customer reservations with proper caching
   const { 
     data: reservations, 
-    isLoading: isLoadingReservations,
-    refetch: refetchReservations
+    isLoading: isLoadingReservations
   } = useQuery<Reservation[]>({
-    queryKey: customerReservationsQueryKey,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+    queryKey: customerReservationsQueryKey
   });
   
   // Delete reservation mutation
@@ -66,14 +60,8 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
       return await response.json();
     },
     onSuccess: async () => {
-      // Wait for the invalidation to complete
-      await queryClient.invalidateQueries({ queryKey: customerReservationsQueryKey });
-      
-      // Explicitly force a refetch to ensure the UI updates
-      await refetchReservations();
-      
-      // Also update the general reservations list
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      // Use the unified invalidation system to update all related data
+      await invalidateRelatedQueries('reservations', { customerId });
       
       toast({
         title: "Reservation deleted",
@@ -481,7 +469,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                             <StatusBadge status={reservation.status} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(reservation.totalPrice)}
+                            {formatCurrency(Number(reservation.totalPrice || 0))}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
