@@ -1103,6 +1103,25 @@ export function VehicleForm({
                     )}
                   />
                   
+                  {form.watch('gps') && (
+                    <FormField
+                      control={form.control}
+                      name="imei"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IMEI Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            IMEI number for GPS device tracking
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
                   <FormField
                     control={form.control}
                     name="roadsideAssistance"
