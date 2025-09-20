@@ -839,7 +839,7 @@ export function VehicleForm({
                     name="registeredToDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Registered To Date</FormLabel>
+                        <FormLabel>Production Build Date</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={handleFieldValue(field.value)} />
                         </FormControl>
