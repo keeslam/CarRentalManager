@@ -849,34 +849,6 @@ export function VehicleForm({
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="dateIn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date In</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="dateOut"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date Out</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
 
                 </div>
               </TabsContent>
