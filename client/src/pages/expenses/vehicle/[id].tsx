@@ -16,7 +16,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Expense, Vehicle } from "@shared/schema";
-import { PlusCircle, ArrowLeft, Eye, Trash2 } from "lucide-react";
+import { PlusCircle, ArrowLeft, Eye, Trash2, Wrench, CircleDot, AlertTriangle, Hammer, Fuel, Shield, FileText, Sparkles, Package, MoreHorizontal, Disc } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -29,6 +29,34 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+// Function to get expense icon based on category
+function getExpenseIcon(category: string) {
+  switch (category.toLowerCase()) {
+    case "maintenance":
+      return <Wrench className="h-4 w-4 text-blue-600" />;
+    case "tires":
+      return <CircleDot className="h-4 w-4 text-green-600" />;
+    case "brakes":
+      return <Disc className="h-4 w-4 text-red-600" />;
+    case "damage":
+      return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+    case "repair":
+      return <Hammer className="h-4 w-4 text-orange-600" />;
+    case "fuel":
+      return <Fuel className="h-4 w-4 text-purple-600" />;
+    case "insurance":
+      return <Shield className="h-4 w-4 text-cyan-600" />;
+    case "registration":
+      return <FileText className="h-4 w-4 text-indigo-600" />;
+    case "cleaning":
+      return <Sparkles className="h-4 w-4 text-pink-600" />;
+    case "accessories":
+      return <Package className="h-4 w-4 text-amber-600" />;
+    default:
+      return <MoreHorizontal className="h-4 w-4 text-gray-600" />;
+  }
+}
 
 export default function VehicleExpensesPage() {
   // Get vehicle ID from route parameter using pathname directly
@@ -145,7 +173,12 @@ export default function VehicleExpensesPage() {
       header: "Category",
       cell: ({ row }) => {
         const category = row.getValue("category") as string;
-        return <Badge variant="outline">{category}</Badge>;
+        return (
+          <div className="flex items-center gap-2">
+            {getExpenseIcon(category)}
+            <Badge variant="outline">{category}</Badge>
+          </div>
+        );
       },
     },
     {
