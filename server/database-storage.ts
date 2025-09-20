@@ -1134,4 +1134,25 @@ export class DatabaseStorage implements IStorage {
     
     return result.rowCount ? result.rowCount > 0 : false;
   }
+  
+  // Backup Settings methods
+  async getBackupSettings(): Promise<BackupSettings | undefined> {
+    const [settings] = await db.select().from(backupSettings);
+    return settings || undefined;
+  }
+  
+  async createBackupSettings(settings: InsertBackupSettings): Promise<BackupSettings> {
+    const [newSettings] = await db.insert(backupSettings).values(settings).returning();
+    return newSettings;
+  }
+  
+  async updateBackupSettings(id: number, settingsData: Partial<InsertBackupSettings>): Promise<BackupSettings | undefined> {
+    const [updatedSettings] = await db
+      .update(backupSettings)
+      .set(settingsData)
+      .where(eq(backupSettings.id, id))
+      .returning();
+    
+    return updatedSettings || undefined;
+  }
 }
