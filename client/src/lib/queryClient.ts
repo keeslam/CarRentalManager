@@ -65,7 +65,7 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false, // Don't auto-refresh on a timer
       refetchOnWindowFocus: true, // Refetch when window gets focus
-      staleTime: Infinity, // Keep data fresh until explicitly invalidated
+      staleTime: 60000, // Data becomes stale after 60 seconds (allows automatic refetching)
       retry: false,
     },
     mutations: {
@@ -75,71 +75,89 @@ export const queryClient = new QueryClient({
 });
 
 /**
- * Helper function to invalidate related queries after a mutation
- * Call this after any data modification to ensure all related views are updated
+ * Prefix-based invalidation utility to invalidate all queries with a matching prefix
  */
-export function invalidateRelatedQueries(entityType: string, id?: number) {
-  // Always invalidate the list query
-  queryClient.invalidateQueries({ queryKey: [`/api/${entityType}`] });
+export function invalidateByPrefix(prefix: string) {
+  return queryClient.invalidateQueries({
+    predicate: (query) => {
+      const queryKey = query.queryKey;
+      return typeof queryKey?.[0] === 'string' && queryKey[0].startsWith(prefix);
+    }
+  });
+}
+
+/**
+ * Comprehensive invalidation system for all entity types and their relationships
+ * This ensures changes propagate across all related pages and components
+ */
+export function invalidateRelatedQueries(entityType: string, entityData?: { id?: number; vehicleId?: number; customerId?: number }) {
+  const id = entityData?.id;
+  const vehicleId = entityData?.vehicleId;
+  const customerId = entityData?.customerId;
   
-  // If we have an ID, invalidate the specific entity query
-  if (id !== undefined) {
-    queryClient.invalidateQueries({ queryKey: [`/api/${entityType}/${id}`] });
-  }
-  
-  // Invalidate related entities based on type
+  // Core invalidation patterns based on entity type
   switch (entityType) {
     case 'vehicles':
-      // When a vehicle changes, invalidate related data
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      // Invalidate all vehicle-related queries
+      invalidateByPrefix('/api/vehicles');
+      // Also invalidate related entities that depend on vehicle data
       if (id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${id}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${id}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${id}`] });
+        invalidateByPrefix(`/api/reservations/vehicle/${id}`);
+        invalidateByPrefix(`/api/expenses/vehicle/${id}`);
+        invalidateByPrefix(`/api/documents/vehicle/${id}`);
       }
       break;
+      
     case 'reservations':
-      // When a reservation changes, invalidate calendar & upcoming
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
-      if (id) {
-        const reservation = queryClient.getQueryData<any>([`/api/reservations/${id}`]);
-        if (reservation?.vehicleId) {
-          queryClient.invalidateQueries({ 
-            queryKey: [`/api/reservations/vehicle/${reservation.vehicleId}`] 
-          });
-        }
-        if (reservation?.customerId) {
-          queryClient.invalidateQueries({ 
-            queryKey: [`/api/reservations/customer/${reservation.customerId}`] 
-          });
-        }
+      // Invalidate all reservation-related queries
+      invalidateByPrefix('/api/reservations');
+      // Also affect vehicle availability
+      invalidateByPrefix('/api/vehicles/available');
+      // Invalidate related vehicle and customer data if available
+      if (vehicleId) {
+        invalidateByPrefix(`/api/reservations/vehicle/${vehicleId}`);
+        invalidateByPrefix('/api/vehicles'); // Might affect availability
+      }
+      if (customerId) {
+        invalidateByPrefix(`/api/reservations/customer/${customerId}`);
       }
       break;
-    case 'documents':
-      // When a document changes, invalidate vehicle documents
-      if (id) {
-        const document = queryClient.getQueryData<any>([`/api/documents/${id}`]);
-        if (document?.vehicleId) {
-          queryClient.invalidateQueries({ 
-            queryKey: [`/api/documents/vehicle/${document.vehicleId}`] 
-          });
-        }
-      }
-      break;
+      
     case 'expenses':
-      // When an expense changes, invalidate recent expenses
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
-      if (id) {
-        const expense = queryClient.getQueryData<any>([`/api/expenses/${id}`]);
-        if (expense?.vehicleId) {
-          queryClient.invalidateQueries({ 
-            queryKey: [`/api/expenses/vehicle/${expense.vehicleId}`] 
-          });
-        }
+      // Invalidate all expense-related queries including recent expenses and parameterized queries
+      invalidateByPrefix('/api/expenses');
+      // Invalidate related vehicle data if available
+      if (vehicleId) {
+        invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
       }
+      break;
+      
+    case 'documents':
+      // Invalidate all document-related queries
+      invalidateByPrefix('/api/documents');
+      // Invalidate related vehicle data if available
+      if (vehicleId) {
+        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
+      }
+      break;
+      
+    case 'customers':
+      // Invalidate all customer-related queries
+      invalidateByPrefix('/api/customers');
+      // Also invalidate reservations that might display customer data
+      invalidateByPrefix('/api/reservations');
+      if (id) {
+        invalidateByPrefix(`/api/reservations/customer/${id}`);
+      }
+      break;
+      
+    case 'notifications':
+      // Invalidate all notification-related queries
+      invalidateByPrefix('/api/custom-notifications');
+      break;
+      
+    default:
+      console.warn(`Unknown entity type for invalidation: ${entityType}`);
       break;
   }
 }
