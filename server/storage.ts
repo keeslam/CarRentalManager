@@ -847,7 +847,7 @@ export class MemStorage implements IStorage {
 
   async getRecentExpenses(limit: number): Promise<Expense[]> {
     const expenses = Array.from(this.expenses.values())
-      .sort((a, b) => b.date.localeCompare(a.date)) // Sort by date, newest first
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()) // Sort by creation date, newest first
       .slice(0, limit);
     
     // Populate vehicle data

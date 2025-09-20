@@ -774,7 +774,7 @@ export class DatabaseStorage implements IStorage {
     const expensesData = await db
       .select()
       .from(expenses)
-      .orderBy(desc(expenses.date))
+      .orderBy(desc(expenses.createdAt))
       .limit(limit);
     
     const result: Expense[] = [];
