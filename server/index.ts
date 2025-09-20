@@ -6,6 +6,7 @@ import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 import { BackupScheduler } from "./backupScheduler";
+import { initializeDefaultAdmin, displayDeploymentInfo } from "./initAdmin";
 
 // ESM __dirname fix
 const __filename = fileURLToPath(import.meta.url);
@@ -197,7 +198,7 @@ const backupScheduler = new BackupScheduler();
 backupScheduler.start();
 
 // Main startup
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, '0.0.0.0', async () => {
   console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
   console.log(`🌐 API Server:    http://0.0.0.0:${port}`);
   console.log(`📱 Frontend:     http://localhost:${port}/`);
@@ -205,4 +206,10 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`🐳 Docker mode:  ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
   console.log(`💾 Backup Scheduler: ✅ (Nightly at 2:00 AM)`);
   console.log('=======================================\n');
+  
+  // Initialize default admin user for deployment
+  await initializeDefaultAdmin();
+  
+  // Display deployment information
+  displayDeploymentInfo();
 });
