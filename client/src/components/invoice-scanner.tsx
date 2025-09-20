@@ -1,0 +1,566 @@
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Upload, 
+  FileText, 
+  Eye, 
+  CheckCircle, 
+  AlertCircle,
+  Loader2,
+  Trash2,
+  Edit3
+} from "lucide-react";
+import { formatCurrency } from "@/lib/format-utils";
+import { Vehicle } from "@shared/schema";
+
+interface ParsedInvoiceLineItem {
+  description: string;
+  amount: number;
+  category: string;
+  subcategory?: string;
+}
+
+interface ParsedInvoice {
+  vendor: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  currency: string;
+  totalAmount: number;
+  lineItems: ParsedInvoiceLineItem[];
+  vehicleInfo?: {
+    licensePlate?: string;
+    chassisNumber?: string;
+  };
+}
+
+interface InvoiceScannerProps {
+  selectedVehicleId?: number;
+  onExpensesCreated?: (expenses: any[]) => void;
+}
+
+const EXPENSE_CATEGORIES = [
+  'Maintenance',
+  'Tires',
+  'Damage',
+  'Fuel',
+  'Insurance',
+  'Registration',
+  'Cleaning',
+  'Accessories',
+  'Other'
+];
+
+export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: InvoiceScannerProps) {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [vehicleId, setVehicleId] = useState<string>(selectedVehicleId?.toString() || '');
+  const [scannedInvoice, setScannedInvoice] = useState<{
+    invoice: ParsedInvoice;
+    invoiceHash: string;
+    filePath: string;
+    suggestedVehicleId?: number;
+  } | null>(null);
+  const [editableLineItems, setEditableLineItems] = useState<ParsedInvoiceLineItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+
+  // Fetch vehicles for selection
+  const { data: vehicles, isLoading: loadingVehicles } = useQuery<Vehicle[]>({
+    queryKey: ['/api/vehicles'],
+    enabled: isOpen
+  });
+
+  // Scan invoice mutation
+  const scanInvoiceMutation = useMutation({
+    mutationFn: async ({ file, vehicleId }: { file: File; vehicleId?: string }) => {
+      const formData = new FormData();
+      formData.append('invoice', file);
+      if (vehicleId) {
+        formData.append('vehicleId', vehicleId);
+      }
+
+      const response = await fetch('/api/expenses/scan', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to scan invoice');
+      }
+
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setScannedInvoice(data);
+      setEditableLineItems(data.invoice.lineItems || []);
+      // Select all items by default
+      const allItemIndices = new Set(data.invoice.lineItems?.map((_: any, index: number) => index) || []);
+      setSelectedItems(allItemIndices);
+      
+      toast({
+        title: "Invoice scanned successfully",
+        description: `Found ${data.invoice.lineItems?.length || 0} line items from ${data.invoice.vendor}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to scan invoice",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create expenses mutation
+  const createExpensesMutation = useMutation({
+    mutationFn: async (data: {
+      invoice: ParsedInvoice;
+      vehicleId: string;
+      filePath: string;
+      invoiceHash: string;
+      lineItems: ParsedInvoiceLineItem[];
+    }) => {
+      const response = await apiRequest("POST", "/api/expenses/from-invoice", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create expenses");
+      }
+      return await response.json();
+    },
+    onSuccess: async (data) => {
+      toast({
+        title: "Expenses created successfully",
+        description: `Created ${data.expenses?.length || 0} expense records`,
+      });
+      
+      // Invalidate queries to refresh expense lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      
+      // Call callback if provided
+      if (onExpensesCreated) {
+        onExpensesCreated(data.expenses || []);
+      }
+      
+      // Reset and close dialog
+      handleReset();
+      setIsOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create expenses",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.type !== 'application/pdf') {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a PDF file",
+          variant: "destructive",
+        });
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const handleScan = () => {
+    if (!file) {
+      toast({
+        title: "No file selected",
+        description: "Please select a PDF invoice to scan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    scanInvoiceMutation.mutate({ file, vehicleId });
+  };
+
+  const handleCreateExpenses = () => {
+    if (!scannedInvoice || !vehicleId) {
+      return;
+    }
+
+    // Get selected line items
+    const selectedLineItems = editableLineItems.filter((_, index) => selectedItems.has(index));
+    
+    if (selectedLineItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one line item to create expenses",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createExpensesMutation.mutate({
+      invoice: scannedInvoice.invoice,
+      vehicleId,
+      filePath: scannedInvoice.filePath,
+      invoiceHash: scannedInvoice.invoiceHash,
+      lineItems: selectedLineItems
+    });
+  };
+
+  const handleReset = () => {
+    setFile(null);
+    setScannedInvoice(null);
+    setEditableLineItems([]);
+    setSelectedItems(new Set());
+  };
+
+  const updateLineItem = (index: number, field: keyof ParsedInvoiceLineItem, value: string | number) => {
+    const updated = [...editableLineItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditableLineItems(updated);
+  };
+
+  const toggleItemSelection = (index: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const removeLineItem = (index: number) => {
+    const updated = editableLineItems.filter((_, i) => i !== index);
+    setEditableLineItems(updated);
+    
+    // Update selected items indices
+    const newSelected = new Set<number>();
+    selectedItems.forEach(selectedIndex => {
+      if (selectedIndex < index) {
+        newSelected.add(selectedIndex);
+      } else if (selectedIndex > index) {
+        newSelected.add(selectedIndex - 1);
+      }
+    });
+    setSelectedItems(newSelected);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          className="gap-2" 
+          data-testid="button-scan-invoice"
+        >
+          <Upload className="h-4 w-4" />
+          Scan Invoice
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Scan Invoice</DialogTitle>
+          <DialogDescription>
+            Upload a PDF invoice to automatically extract and categorize expenses
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Step 1: File Upload and Vehicle Selection */}
+          {!scannedInvoice && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="vehicle-select">Select Vehicle</Label>
+                <Select value={vehicleId} onValueChange={setVehicleId} disabled={loadingVehicles}>
+                  <SelectTrigger data-testid="select-vehicle">
+                    <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select a vehicle"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicles?.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                        {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="invoice-file">Invoice PDF</Label>
+                <Input
+                  id="invoice-file"
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileSelect}
+                  data-testid="input-invoice-file"
+                />
+                {file && (
+                  <div className="text-sm text-muted-foreground">
+                    Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                onClick={handleScan} 
+                disabled={!file || !vehicleId || scanInvoiceMutation.isPending}
+                className="w-full"
+                data-testid="button-start-scan"
+              >
+                {scanInvoiceMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scanning Invoice...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Scan Invoice
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Step 2: Review Scanned Data */}
+          {scannedInvoice && (
+            <div className="space-y-6">
+              {/* Invoice Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Invoice Information
+                  </CardTitle>
+                  <CardDescription>
+                    Review the extracted invoice details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Vendor</Label>
+                      <p className="font-medium">{scannedInvoice.invoice.vendor}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
+                      <p className="font-medium">{scannedInvoice.invoice.invoiceNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Date</Label>
+                      <p className="font-medium">{scannedInvoice.invoice.invoiceDate}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Total</Label>
+                      <p className="font-medium text-lg">{formatCurrency(scannedInvoice.invoice.totalAmount)}</p>
+                    </div>
+                  </div>
+
+                  {scannedInvoice.invoice.vehicleInfo && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                      <Label className="text-sm font-medium text-blue-800">Detected Vehicle Info</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {scannedInvoice.invoice.vehicleInfo.licensePlate && (
+                          <div>
+                            <Label className="text-xs text-blue-600">License Plate</Label>
+                            <p className="text-sm font-medium">{scannedInvoice.invoice.vehicleInfo.licensePlate}</p>
+                          </div>
+                        )}
+                        {scannedInvoice.invoice.vehicleInfo.chassisNumber && (
+                          <div>
+                            <Label className="text-xs text-blue-600">Chassis Number</Label>
+                            <p className="text-sm font-medium">{scannedInvoice.invoice.vehicleInfo.chassisNumber}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Line Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Expense Line Items</CardTitle>
+                  <CardDescription>
+                    Review and edit the extracted expense items. Select which items to create as expenses.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {editableLineItems.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="select-all"
+                          checked={selectedItems.size === editableLineItems.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedItems(new Set(editableLineItems.map((_, i) => i)));
+                            } else {
+                              setSelectedItems(new Set());
+                            }
+                          }}
+                        />
+                        <Label htmlFor="select-all" className="text-sm font-medium">
+                          Select All ({selectedItems.size}/{editableLineItems.length})
+                        </Label>
+                      </div>
+
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12"></TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {editableLineItems.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedItems.has(index)}
+                                    onCheckedChange={() => toggleItemSelection(index)}
+                                    data-testid={`checkbox-item-${index}`}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                                    className="min-w-[200px]"
+                                    data-testid={`input-description-${index}`}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.amount}
+                                    onChange={(e) => updateLineItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                                    className="w-24"
+                                    data-testid={`input-amount-${index}`}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={item.category}
+                                    onValueChange={(value) => updateLineItem(index, 'category', value)}
+                                  >
+                                    <SelectTrigger className="w-32" data-testid={`select-category-${index}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {EXPENSE_CATEGORIES.map(category => (
+                                        <SelectItem key={category} value={category}>
+                                          {category}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeLineItem(index)}
+                                    data-testid={`button-remove-${index}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-4 border-t">
+                        <div className="text-sm text-muted-foreground">
+                          Total selected: {formatCurrency(
+                            editableLineItems
+                              .filter((_, index) => selectedItems.has(index))
+                              .reduce((sum, item) => sum + item.amount, 0)
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={handleReset}>
+                            Start Over
+                          </Button>
+                          <Button 
+                            onClick={handleCreateExpenses}
+                            disabled={selectedItems.size === 0 || createExpensesMutation.isPending}
+                            data-testid="button-create-expenses"
+                          >
+                            {createExpensesMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Creating...
+                              </>
+                            ) : (
+                              <>Create {selectedItems.size} Expense(s)</>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p>No line items found in the invoice</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

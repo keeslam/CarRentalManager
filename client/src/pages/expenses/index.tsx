@@ -14,6 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { InvoiceScanner } from "@/components/invoice-scanner";
 import {
   Table,
   TableBody,
@@ -207,15 +208,24 @@ export default function ExpensesIndex() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Expense Management</h1>
-        <Link href="/expenses/add">
-          <Button>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
-              <line x1="12" x2="12" y1="5" y2="19" />
-              <line x1="5" x2="19" y1="12" y2="12" />
-            </svg>
-            Record Expense
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <InvoiceScanner
+            onExpensesCreated={(expenses) => {
+              console.log('Expenses created from invoice:', expenses);
+              // Refresh the expenses list
+              queryClient.invalidateQueries({ queryKey: expensesQueryKey });
+            }}
+          />
+          <Link href="/expenses/add">
+            <Button>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
+                <line x1="12" x2="12" y1="5" y2="19" />
+                <line x1="5" x2="19" y1="12" y2="12" />
+              </svg>
+              Record Expense
+            </Button>
+          </Link>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
