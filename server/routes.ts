@@ -3161,6 +3161,117 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== BACKUP RESTORE ROUTES ====================
+  
+  // Restore database from backup
+  app.post("/api/backups/restore/database", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { filename } = req.body;
+      
+      if (!filename) {
+        return res.status(400).json({ error: "Backup filename is required" });
+      }
+
+      // Validation: check if backup exists
+      const backups = await backupService.listBackups('database');
+      const backupExists = backups.some(backup => backup.filename === filename);
+      
+      if (!backupExists) {
+        return res.status(404).json({ error: "Backup file not found" });
+      }
+
+      // Run restore
+      await backupService.restoreDatabase(filename);
+      
+      res.json({
+        success: true,
+        message: "Database restore completed successfully",
+        warning: "Please restart the application for changes to take full effect"
+      });
+    } catch (error) {
+      console.error("Error restoring database:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to restore database" 
+      });
+    }
+  });
+
+  // Restore files from backup
+  app.post("/api/backups/restore/files", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { filename, targetPath } = req.body;
+      
+      if (!filename) {
+        return res.status(400).json({ error: "Backup filename is required" });
+      }
+
+      // Validation: check if backup exists
+      const backups = await backupService.listBackups('files');
+      const backupExists = backups.some(backup => backup.filename === filename);
+      
+      if (!backupExists) {
+        return res.status(404).json({ error: "Backup file not found" });
+      }
+
+      // Run restore
+      await backupService.restoreFiles(filename, targetPath);
+      
+      res.json({
+        success: true,
+        message: "Files restore completed successfully"
+      });
+    } catch (error) {
+      console.error("Error restoring files:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to restore files" 
+      });
+    }
+  });
+
+  // Complete system restore (database + files)
+  app.post("/api/backups/restore/complete", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { databaseBackup, filesBackup } = req.body;
+      
+      if (!databaseBackup || !filesBackup) {
+        return res.status(400).json({ 
+          error: "Both database and files backup filenames are required" 
+        });
+      }
+
+      // Validation: check if both backups exist
+      const [databaseBackups, filesBackups] = await Promise.all([
+        backupService.listBackups('database'),
+        backupService.listBackups('files')
+      ]);
+      
+      const dbBackupExists = databaseBackups.some(backup => backup.filename === databaseBackup);
+      const filesBackupExists = filesBackups.some(backup => backup.filename === filesBackup);
+      
+      if (!dbBackupExists) {
+        return res.status(404).json({ error: "Database backup file not found" });
+      }
+      
+      if (!filesBackupExists) {
+        return res.status(404).json({ error: "Files backup file not found" });
+      }
+
+      // Run complete restore
+      await backupService.restoreComplete(databaseBackup, filesBackup);
+      
+      res.json({
+        success: true,
+        message: "Complete system restore finished successfully!",
+        warning: "IMPORTANT: Please restart the application to ensure all changes take effect"
+      });
+    } catch (error) {
+      console.error("Error performing complete restore:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to perform complete restore" 
+      });
+    }
+  });
+
   // Setup static file serving for uploads
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(process.cwd(), 'uploads', req.path);
