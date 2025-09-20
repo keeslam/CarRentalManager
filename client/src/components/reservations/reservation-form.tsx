@@ -632,18 +632,30 @@ export function ReservationForm({
                                       editMode={true}
                                       initialData={selectedVehicle}
                                       redirectToList={false}
-                                      onSuccess={async (updatedVehicle) => {
-                                        // Refresh vehicles list to show updated data
-                                        await refetchVehicles();
-                                        
-                                        // Close the dialog
-                                        setVehicleEditDialogOpen(false);
-                                        
-                                        // Show success message
-                                        toast({
-                                          title: "Vehicle Updated",
-                                          description: `${updatedVehicle.brand} ${updatedVehicle.model} has been successfully updated.`,
-                                        });
+                                      onSubmitOverride={async (data) => {
+                                        try {
+                                          // Update the vehicle using API
+                                          const updatedVehicle = await apiRequest(`/api/vehicles/${selectedVehicle.id}`, "PATCH", data);
+                                          
+                                          // Refresh vehicles list to show updated data
+                                          await refetchVehicles();
+                                          
+                                          // Close the dialog
+                                          setVehicleEditDialogOpen(false);
+                                          
+                                          // Show success message
+                                          toast({
+                                            title: "Vehicle Updated",
+                                            description: `${updatedVehicle.brand} ${updatedVehicle.model} has been successfully updated.`,
+                                          });
+                                        } catch (error) {
+                                          console.error("Failed to update vehicle:", error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to update vehicle. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       }}
                                     />
                                   )}
