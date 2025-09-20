@@ -180,7 +180,8 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
       chassisNumber: rdwVehicle.chassis || null,
       fuel: rdwVehicle.brandstof_omschrijving ? mapFuelType(rdwVehicle.brandstof_omschrijving) : null,
       euroZone: rdwVehicle.emissiecode_omschrijving ? mapEuroZone(rdwVehicle.emissiecode_omschrijving) : null,
-      apkDate: formatDate(rdwVehicle.vervaldatum_apk) || null
+      apkDate: formatDate(rdwVehicle.vervaldatum_apk) || null,
+      registeredToDate: formatDate(rdwVehicle.datum_eerste_toelating) || null
     };
     
     return mappedVehicle;
