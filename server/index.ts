@@ -112,6 +112,9 @@ app.get('/api', (_req, res) => {
   });
 });
 
+// Register API routes FIRST (before production static files)
+await registerRoutes(app);
+
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const publicPath = path.join(__dirname, 'public'); // server/dist/public
@@ -153,8 +156,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Register API routes BEFORE Vite middleware to prevent routing conflicts
-await registerRoutes(app);
+// API routes already registered above - no need to register again here
 
 // 404 for API
 app.use('/api/*', (_req, res) => {
