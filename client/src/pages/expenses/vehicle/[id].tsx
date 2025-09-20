@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
-import { ColumnDef } from "@tanstack/react-table";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Expense, Vehicle } from "@shared/schema";
@@ -67,6 +88,10 @@ export default function VehicleExpensesPage() {
   const pathSegments = location.split('/');
   const vehicleIdStr = pathSegments[pathSegments.length - 1];
   const vehicleId = !isNaN(parseInt(vehicleIdStr)) ? parseInt(vehicleIdStr) : null;
+  
+  // State for filtering
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   
   console.log("VehicleExpensesPage - current location:", location);
   console.log("VehicleExpensesPage - path segments:", pathSegments);
@@ -136,85 +161,51 @@ export default function VehicleExpensesPage() {
   console.log("VehicleExpensesPage - expenses data:", expenses);
   console.log("VehicleExpensesPage - errors:", { vehicleError, expensesError });
   
+  // Get unique categories from expenses
+  const allCategories = [...new Set(expenses?.map(expense => expense.category) || [])];
+  const categories = ["all", ...allCategories];
+  
+  // Filter expenses based on search and category
+  const filteredExpenses = expenses?.filter((expense) => {
+    const searchLower = searchQuery.toLowerCase();
+    const description = expense.description || '';
+    const category = expense.category || '';
+    
+    const matchesSearch = 
+      description.toLowerCase().includes(searchLower) ||
+      category.toLowerCase().includes(searchLower);
+    
+    const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
+
   // Calculate totals
-  const totalExpenses = expenses?.reduce((sum, expense) => 
+  const totalExpenses = filteredExpenses?.reduce((sum, expense) => 
     sum + Number(expense.amount || 0), 0
   ) || 0;
   
-  // Group expenses by category
-  const expensesByCategory = expenses?.reduce((grouped, expense) => {
-    const category = expense.category || "Other";
-    if (!grouped[category]) {
-      grouped[category] = [];
+  // Group filtered expenses by category for summary
+  const totalByCategory = filteredExpenses?.reduce((acc, expense) => {
+    const category = expense.category || 'Other';
+    const existing = acc.find(item => item.category === category);
+    if (existing) {
+      existing.amount += Number(expense.amount || 0);
+      existing.count += 1;
+    } else {
+      acc.push({
+        category,
+        amount: Number(expense.amount || 0),
+        count: 1
+      });
     }
-    grouped[category].push(expense);
-    return grouped;
-  }, {} as Record<string, Expense[]>) || {};
+    return acc;
+  }, [] as { category: string; amount: number; count: number }[]) || [];
   
-  // Calculate total amount by category
-  const totalByCategory = Object.entries(expensesByCategory).map(([category, expenses]) => ({
-    category,
-    amount: expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
-    count: expenses.length
-  })).sort((a, b) => b.amount - a.amount);
+  // Sort categories by total amount (descending)
+  const sortedTotalByCategory = totalByCategory.sort((a, b) => b.amount - a.amount);
+  const sortedCategories = sortedTotalByCategory.map(item => item.category);
   
-  // Define table columns - consistent with main expenses page format
-  const columns: ColumnDef<Expense>[] = [
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => {
-        const date = row.getValue("date") as string;
-        return formatDate(date);
-      },
-    },
-    {
-      accessorKey: "category",
-      header: "Category",
-      cell: ({ row }) => {
-        const category = row.getValue("category") as string;
-        return (
-          <div className="flex items-center gap-2">
-            {getExpenseIcon(category)}
-            <Badge variant="outline">{category}</Badge>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "description",
-      header: "Description",
-      cell: ({ row }) => {
-        const description = row.getValue("description") as string;
-        return description || "—";
-      },
-    },
-    {
-      accessorKey: "amount",
-      header: "Amount",
-      cell: ({ row }) => {
-        const amount = row.getValue("amount") as number;
-        return <span className="font-medium">{formatCurrency(amount)}</span>;
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const expense = row.original;
-        
-        return (
-          <div className="flex justify-end">
-            <Link href={`/expenses/${expense.id}`}>
-              <Button variant="ghost" size="sm">
-                View
-              </Button>
-            </Link>
-          </div>
-        );
-      },
-    },
-  ];
   
   if (isLoadingVehicle || !vehicleId) {
     return (
@@ -306,19 +297,160 @@ export default function VehicleExpensesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <Input
+                placeholder="Search by category or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
+              
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category === "all" ? "All Categories" : category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             {isLoadingExpenses ? (
-              <div className="flex justify-center p-6">
-                <svg className="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div className="flex justify-center items-center h-64">
+                <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               </div>
-            ) : expenses?.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                No expenses recorded for this vehicle yet
-              </div>
             ) : (
-              <DataTable columns={columns} data={expenses || []} searchColumn="description" />
+              <>
+                {!filteredExpenses?.length ? (
+                  <div className="text-center p-10 border rounded-md bg-gray-50">
+                    <p className="text-gray-500">No expenses found matching your search criteria.</p>
+                  </div>
+                ) : (
+                  <Accordion type="multiple" defaultValue={sortedCategories} className="w-full">
+                    {sortedCategories.map(category => {
+                      // Filter expenses for this category
+                      const categoryExpenses = filteredExpenses.filter(
+                        expense => expense.category === category
+                      );
+                      
+                      // Skip if no expenses in this category after filtering
+                      if (categoryExpenses.length === 0) return null;
+                      
+                      // Calculate total for this category
+                      const categoryTotal = categoryExpenses.reduce(
+                        (sum, expense) => sum + Number(expense.amount || 0), 0
+                      );
+                      
+                      return (
+                        <AccordionItem key={category} value={category}>
+                          <AccordionTrigger className="hover:bg-gray-50 px-4 py-3 rounded-md">
+                            <div className="flex justify-between items-center w-full">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  {getExpenseIcon(category)}
+                                  <Badge variant="outline" className="text-sm font-medium">
+                                    {category}
+                                  </Badge>
+                                </div>
+                                <span className="text-gray-500 text-sm">
+                                  ({categoryExpenses.length} {categoryExpenses.length === 1 ? 'expense' : 'expenses'})
+                                </span>
+                              </div>
+                              <div className="font-semibold text-right">
+                                {formatCurrency(categoryTotal)}
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="pt-2 pb-4">
+                              <div className="space-y-4">
+                                <Input 
+                                  placeholder="Filter by description..." 
+                                  className="max-w-sm"
+                                  onChange={(e) => {
+                                    // Store the filter value locally
+                                    const filterValue = e.target.value.toLowerCase();
+                                    
+                                    // Get all tables in this accordion content
+                                    const tableRows = document.querySelectorAll(`[data-category="${category}"] tbody tr`);
+                                    
+                                    tableRows.forEach((row) => {
+                                      const descriptionEl = row.querySelector('[data-description]');
+                                      
+                                      const description = descriptionEl?.textContent?.toLowerCase() || '';
+                                      
+                                      // Check if description matches
+                                      const matches = description.includes(filterValue);
+                                      
+                                      // Show/hide based on match
+                                      if (row instanceof HTMLElement) {
+                                        row.style.display = matches || filterValue === '' ? '' : 'none';
+                                      }
+                                    });
+                                  }}
+                                />
+                                
+                                <div className="rounded-md border" data-category={category}>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead></TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {categoryExpenses.length === 0 ? (
+                                        <TableRow>
+                                          <TableCell colSpan={4} className="h-24 text-center">
+                                            No expenses in this category.
+                                          </TableCell>
+                                        </TableRow>
+                                      ) : (
+                                        categoryExpenses.map((expense) => (
+                                          <TableRow key={expense.id}>
+                                            <TableCell>{formatDate(expense.date)}</TableCell>
+                                            <TableCell data-description>{expense.description || "—"}</TableCell>
+                                            <TableCell className="font-medium">{formatCurrency(Number(expense.amount))}</TableCell>
+                                            <TableCell className="text-right">
+                                              <Link href={`/expenses/${expense.id}`}>
+                                                <Button variant="ghost" size="sm">
+                                                  View
+                                                </Button>
+                                              </Link>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                                
+                                <div className="flex justify-center pt-2">
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/expenses/add?vehicleId=${vehicleId}&category=${category}`}>
+                                      <PlusCircle className="h-4 w-4 mr-2" />
+                                      Add {category} Expense
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -339,9 +471,12 @@ export default function VehicleExpensesPage() {
               <div className="space-y-4">
                 {totalByCategory.map(({ category, amount, count }) => (
                   <div key={category} className="flex justify-between items-center">
-                    <div>
-                      <Badge variant="outline" className="mr-2">{category}</Badge>
-                      <span className="text-xs text-muted-foreground">({count} items)</span>
+                    <div className="flex items-center gap-2">
+                      {getExpenseIcon(category)}
+                      <div>
+                        <Badge variant="outline">{category}</Badge>
+                        <span className="text-xs text-muted-foreground ml-2">({count} items)</span>
+                      </div>
                     </div>
                     <span className="font-medium">{formatCurrency(amount)}</span>
                   </div>
