@@ -91,26 +91,22 @@ Please respond ONLY with the JSON object, no additional text.
           }
         }
       },
-      content: {
-        parts: [
-          {
-            text: prompt
-          },
-          {
-            file: {
-              mimeType: documentPath.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
-              data: base64Document
-            }
+      contents: [
+        {
+          inlineData: {
+            data: base64Document,
+            mimeType: documentPath.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
           }
-        ]
-      }
+        },
+        prompt
+      ]
     });
 
-    if (!response.response?.text()) {
+    if (!response.text) {
       throw new Error('No response from AI service');
     }
 
-    const parsedData = JSON.parse(response.response.text());
+    const parsedData = JSON.parse(response.text);
     
     // Clean and validate the extracted data
     const cleanedData: ExtractedVehicleData = {
