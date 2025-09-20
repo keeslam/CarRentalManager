@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
@@ -75,7 +76,7 @@ export default function VehiclesIndex() {
     onSuccess: async () => {
       toast({
         title: "Vehicle deleted",
-        description: `Vehicle ${vehicleToDelete?.licensePlate} has been successfully deleted.`,
+        description: `Vehicle ${displayLicensePlate(vehicleToDelete?.licensePlate || '')} has been successfully deleted.`,
       });
       
       // Force a refresh of the data
@@ -254,10 +255,10 @@ export default function VehiclesIndex() {
       header: "License Plate",
       cell: ({ row }) => {
         const licensePlate = row.getValue("licensePlate") as string;
-        // Display without hyphens using formatLicensePlate utility and ensure it stays on a single line
+        // Display formatted license plate consistently across the app
         return (
           <div className="font-medium whitespace-nowrap bg-primary-50 text-primary-700 px-2 py-1 rounded inline-block">
-            {formatLicensePlate(licensePlate)}
+            {displayLicensePlate(licensePlate)}
           </div>
         );
       },
@@ -396,7 +397,7 @@ export default function VehiclesIndex() {
             <AlertDialogDescription>
               {vehicleToDelete && (
                 <>
-                  This will permanently delete the vehicle <strong>{vehicleToDelete.brand} {vehicleToDelete.model}</strong> with license plate <strong>{formatLicensePlate(vehicleToDelete.licensePlate)}</strong> and all associated data.
+                  This will permanently delete the vehicle <strong>{vehicleToDelete.brand} {vehicleToDelete.model}</strong> with license plate <strong>{displayLicensePlate(vehicleToDelete.licensePlate)}</strong> and all associated data.
                   <br /><br />
                   This action cannot be undone.
                 </>
