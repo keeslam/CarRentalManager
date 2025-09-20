@@ -170,6 +170,15 @@ function categorizeLineItem(description: string): string {
  */
 export async function processInvoiceWithAI(pdfPath: string): Promise<ParsedInvoice> {
   try {
+    // Check if API key is configured
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY environment variable is not set. Please configure your Google Gemini API key.');
+    }
+
+    if (process.env.GEMINI_API_KEY.trim() === '') {
+      throw new Error('GEMINI_API_KEY is empty. Please provide a valid Google Gemini API key.');
+    }
+
     // Read PDF file as base64
     const pdfBytes = fs.readFileSync(pdfPath);
     const base64Pdf = Buffer.from(pdfBytes).toString('base64');
