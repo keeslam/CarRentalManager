@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +9,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Expense } from "@shared/schema";
-import { MoreVertical, Eye, Pencil, Printer } from "lucide-react";
+import { MoreVertical, Eye, Pencil, Printer, Calendar, Tag, Truck, FileText, FileCheck } from "lucide-react";
+import { ExpenseForm } from "@/components/expenses/expense-form";
 
 // Function to get expense icon based on category
 function getExpenseIcon(category: string) {
@@ -63,9 +72,32 @@ function getExpenseIcon(category: string) {
 }
 
 export function RecentExpenses() {
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const queryClient = useQueryClient();
+  
   const { data: expenses, isLoading } = useQuery<Expense[]>({
     queryKey: ["/api/expenses/recent", { limit: 10 }],
   });
+  
+  const handleViewExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setViewDialogOpen(true);
+  };
+  
+  const handleEditExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setEditDialogOpen(true);
+  };
+  
+  const handleEditComplete = () => {
+    setEditDialogOpen(false);
+    setSelectedExpense(null);
+    // Refresh the expenses list
+    queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+  };
   
   return (
     <Card>
@@ -110,17 +142,13 @@ export function RecentExpenses() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/expenses/${expense.id}`} className="flex items-center cursor-pointer">
-                            <Eye className="h-3 w-3 mr-2" />
-                            View
-                          </Link>
+                        <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
+                          <Eye className="h-3 w-3 mr-2" />
+                          View
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/expenses/edit/${expense.id}`} className="flex items-center cursor-pointer">
-                            <Pencil className="h-3 w-3 mr-2" />
-                            Edit
-                          </Link>
+                        <DropdownMenuItem onClick={() => handleEditExpense(expense)}>
+                          <Pencil className="h-3 w-3 mr-2" />
+                          Edit
                         </DropdownMenuItem>
                         {expense.receiptFilePath && (
                           <DropdownMenuItem asChild>
@@ -144,6 +172,104 @@ export function RecentExpenses() {
           </div>
         )}
       </CardContent>
+      
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+          </DialogHeader>
+          {selectedExpense && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Date</h3>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2 text-primary" />
+                      <span>{formatDate(selectedExpense.date)}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Category</h3>
+                    <div className="flex items-center">
+                      <Tag className="h-4 w-4 mr-2 text-primary" />
+                      <Badge>{selectedExpense.category}</Badge>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
+                    <div className="text-xl font-bold">
+                      {formatCurrency(Number(selectedExpense.amount || 0))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Vehicle</h3>
+                    <div className="flex items-center">
+                      <Truck className="h-4 w-4 mr-2 text-primary" />
+                      <span>
+                        {selectedExpense.vehicle ? (
+                          `${selectedExpense.vehicle.brand} ${selectedExpense.vehicle.model} (${formatLicensePlate(selectedExpense.vehicle.licensePlate)})`
+                        ) : (
+                          'Vehicle not found'
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
+                    <div className="flex items-start">
+                      <FileText className="h-4 w-4 mr-2 mt-1 text-primary" />
+                      <p className="text-sm">
+                        {selectedExpense.description || "No description provided"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {selectedExpense.receiptFilePath && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Receipt</h3>
+                      <div className="flex items-center">
+                        <FileCheck className="h-4 w-4 mr-2 text-primary" />
+                        <a
+                          href={`/api/expenses/${selectedExpense.id}/receipt`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm"
+                        >
+                          View Receipt
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+          </DialogHeader>
+          {selectedExpense && (
+            <ExpenseForm
+              editMode={true}
+              initialData={selectedExpense}
+              onSuccess={handleEditComplete}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

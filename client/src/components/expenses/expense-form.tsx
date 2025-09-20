@@ -97,13 +97,15 @@ interface ExpenseFormProps {
   initialData?: any;
   preselectedVehicleId?: number | null;
   preselectedCategory?: string | null;
+  onSuccess?: () => void;
 }
 
 export function ExpenseForm({ 
   editMode = false, 
   initialData, 
   preselectedVehicleId,
-  preselectedCategory
+  preselectedCategory,
+  onSuccess
 }: ExpenseFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -278,6 +280,14 @@ export function ExpenseForm({
         title: `Expense ${editMode ? "updated" : "recorded"} successfully`,
         description: `The expense has been ${editMode ? "updated" : "added"} to the system.`,
       });
+      
+      // Call custom onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      } else if (!editMode) {
+        // Navigate back to expenses page only if not in dialog mode (no onSuccess callback)
+        navigate("/expenses");
+      }
       
       console.log("Created expense with response:", result);
       
