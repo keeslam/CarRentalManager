@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLocation } from "wouter";
-import { DocumentScanner } from "./document-scanner";
 
 // Utility function to handle null values for form inputs
 const handleFieldValue = (value: any): string => {
@@ -571,39 +570,6 @@ export function VehicleForm({
     lookupVehicleMutation.mutate(licensePlate);
   };
 
-  // Handle scanned document data
-  const handleScanComplete = (scannedData: any) => {
-    // Fill the form with scanned data
-    if (scannedData.licensePlate) {
-      form.setValue("licensePlate", scannedData.licensePlate);
-    }
-    if (scannedData.brand) {
-      form.setValue("brand", scannedData.brand);
-    }
-    if (scannedData.model) {
-      form.setValue("model", scannedData.model);
-    }
-    if (scannedData.chassisNumber) {
-      form.setValue("chassisNumber", scannedData.chassisNumber);
-    }
-    if (scannedData.fuel) {
-      form.setValue("fuel", scannedData.fuel);
-    }
-    if (scannedData.apkDate) {
-      form.setValue("apkDate", scannedData.apkDate);
-    }
-
-    // Automatically lookup additional RDW data if we have a license plate
-    if (scannedData.licensePlate) {
-      toast({
-        title: "Document Scanned Successfully",
-        description: "Now fetching additional vehicle data from RDW...",
-      });
-      
-      setIsLookingUp(true);
-      lookupVehicleMutation.mutate(scannedData.licensePlate);
-    }
-  };
   
   return (
     <Card>
@@ -650,7 +616,7 @@ export function VehicleForm({
                         />
                       </div>
                       <FormDescription>
-                        Enter the license plate manually and click "Lookup", or click "Scan Document" to automatically extract vehicle information from your registration card.
+                        Enter the license plate and click "Lookup" to automatically fill vehicle information from the Dutch RDW database.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
