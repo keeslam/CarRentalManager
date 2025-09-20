@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { 
   Select,
   SelectContent,
@@ -102,6 +103,24 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
   const [editableLineItems, setEditableLineItems] = useState<ParsedInvoiceLineItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
+  // Auto-match vehicle based on license plate when invoice is scanned
+  const autoSelectVehicleFromInvoice = (invoice: ParsedInvoice, vehicles: Vehicle[]) => {
+    if (invoice.vehicleInfo?.licensePlate && vehicles) {
+      const detectedPlate = invoice.vehicleInfo.licensePlate.replace(/[-\s]/g, '').toUpperCase();
+      const matchingVehicle = vehicles.find(vehicle => 
+        vehicle.licensePlate.replace(/[-\s]/g, '').toUpperCase() === detectedPlate
+      );
+      
+      if (matchingVehicle && !vehicleId) {
+        setVehicleId(matchingVehicle.id.toString());
+        toast({
+          title: "Vehicle Auto-Selected",
+          description: `Found matching vehicle: ${matchingVehicle.brand} ${matchingVehicle.model} (${matchingVehicle.licensePlate})`,
+        });
+      }
+    }
+  };
+
   // Fetch vehicles for selection
   const { data: vehicles, isLoading: loadingVehicles } = useQuery<Vehicle[]>({
     queryKey: ['/api/vehicles'],
@@ -134,8 +153,13 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       setScannedInvoice(data);
       setEditableLineItems(data.invoice.lineItems || []);
       // Select all items by default
-      const allItemIndices = new Set(data.invoice.lineItems?.map((_: any, index: number) => index) || []);
+      const allItemIndices = new Set<number>(data.invoice.lineItems?.map((_: any, index: number) => index) || []);
       setSelectedItems(allItemIndices);
+      
+      // Auto-select vehicle if license plate detected and no vehicle selected yet
+      if (vehicles && data.invoice) {
+        autoSelectVehicleFromInvoice(data.invoice, vehicles);
+      }
       
       toast({
         title: "Invoice scanned successfully",
@@ -313,18 +337,19 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="vehicle-select">Select Vehicle</Label>
-                <Select value={vehicleId} onValueChange={setVehicleId} disabled={loadingVehicles}>
-                  <SelectTrigger data-testid="select-vehicle">
-                    <SelectValue placeholder={loadingVehicles ? "Loading vehicles..." : "Select a vehicle"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicles?.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                        {vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <VehicleSelector
+                  vehicles={vehicles || []}
+                  value={vehicleId}
+                  onChange={setVehicleId}
+                  placeholder={loadingVehicles ? "Loading vehicles..." : "Select a vehicle..."}
+                  disabled={loadingVehicles}
+                  className="w-full"
+                />
+                {selectedVehicleId && vehicleId === selectedVehicleId.toString() && (
+                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                    <span className="font-medium">Pre-selected vehicle</span> - You can change this if needed
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
