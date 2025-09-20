@@ -2,8 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Expense } from "@shared/schema";
+import { MoreVertical, Eye, Pencil, Printer } from "lucide-react";
 
 // Function to get expense icon based on category
 function getExpenseIcon(category: string) {
@@ -94,7 +101,43 @@ export function RecentExpenses() {
                       <div className="text-xs text-gray-500">{formatDate(expense.date)} • {expense.category}</div>
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-gray-900">{formatCurrency(expense.amount)}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-gray-900">{formatCurrency(expense.amount)}</div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/expenses/${expense.id}`} className="flex items-center cursor-pointer">
+                            <Eye className="h-3 w-3 mr-2" />
+                            View
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/expenses/edit/${expense.id}`} className="flex items-center cursor-pointer">
+                            <Pencil className="h-3 w-3 mr-2" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        {expense.receiptFilePath && (
+                          <DropdownMenuItem asChild>
+                            <a
+                              href={`/api/expenses/${expense.id}/receipt`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center cursor-pointer"
+                            >
+                              <Printer className="h-3 w-3 mr-2" />
+                              View Receipt
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             ))}
