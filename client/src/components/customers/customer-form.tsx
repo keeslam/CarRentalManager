@@ -189,7 +189,13 @@ export function CustomerForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form 
+            onSubmit={(e) => {
+              e.stopPropagation();
+              form.handleSubmit(onSubmit)(e);
+            }} 
+            className="space-y-6"
+          >
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
