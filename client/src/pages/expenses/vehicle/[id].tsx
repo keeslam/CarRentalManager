@@ -130,7 +130,7 @@ export default function VehicleExpensesPage() {
     count: expenses.length
   })).sort((a, b) => b.amount - a.amount);
   
-  // Define table columns
+  // Define table columns - consistent with main expenses page format
   const columns: ColumnDef<Expense>[] = [
     {
       accessorKey: "date",
@@ -165,86 +165,18 @@ export default function VehicleExpensesPage() {
       },
     },
     {
-      id: "receiptFile",
-      header: "Receipt",
-      cell: ({ row }) => {
-        const expense = row.original;
-        if (expense.receiptFilePath) {
-          return (
-            <a
-              href={`/api/expenses/${expense.id}/receipt`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              View Receipt
-            </a>
-          );
-        }
-        return "—";
-      },
-    },
-    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
         const expense = row.original;
+        
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex justify-end">
             <Link href={`/expenses/${expense.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View details">
-                <Eye className="h-4 w-4 text-blue-600" />
+              <Button variant="ghost" size="sm">
+                View
               </Button>
             </Link>
-            
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 p-0" 
-                  disabled={deleteExpenseMutation.isPending}
-                  title="Delete expense"
-                >
-                  {deleteExpenseMutation.isPending && deleteExpenseMutation.variables === expense.id ? (
-                    <svg className="animate-spin h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete this expense record for {vehicle.brand} {vehicle.model} ({displayLicensePlate(vehicle.licensePlate)}).
-                    <p className="mt-2 font-medium">
-                      {formatCurrency(Number(expense.amount))} - {expense.category} - {formatDate(expense.date)}
-                    </p>
-                    {expense.description && (
-                      <p className="mt-1 text-sm text-gray-500">
-                        Description: {expense.description}
-                      </p>
-                    )}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteExpenseMutation.mutate(expense.id);
-                    }}
-                    className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         );
       },
