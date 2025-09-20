@@ -635,7 +635,8 @@ export function ReservationForm({
                                       onSubmitOverride={async (data) => {
                                         try {
                                           // Update the vehicle using API
-                                          const updatedVehicle = await apiRequest(`/api/vehicles/${selectedVehicle.id}`, "PATCH", data);
+                                          const response = await apiRequest("PATCH", `/api/vehicles/${selectedVehicle.id}`, data);
+                                          const updatedVehicle = await response.json();
                                           
                                           // Refresh vehicles list to show updated data
                                           await refetchVehicles();
