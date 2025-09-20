@@ -936,6 +936,25 @@ export function VehicleForm({
                     )}
                   />
                   
+                  {form.watch('registeredTo') && (
+                    <FormField
+                      control={form.control}
+                      name="registeredToDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Registration Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            Date when the vehicle was registered to a person
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
                   <FormField
                     control={form.control}
                     name="company"
