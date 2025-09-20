@@ -39,6 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { 
   Upload, 
   FileText, 
@@ -102,6 +103,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
   } | null>(null);
   const [editableLineItems, setEditableLineItems] = useState<ParsedInvoiceLineItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [groupByCategory, setGroupByCategory] = useState<boolean>(true);
 
   // Auto-match vehicle based on license plate when invoice is scanned
   const autoSelectVehicleFromInvoice = (invoice: ParsedInvoice, vehicles: Vehicle[]) => {
@@ -119,6 +121,51 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
         });
       }
     }
+  };
+
+  // Group line items by category
+  const groupLineItemsByCategory = (items: ParsedInvoiceLineItem[]): ParsedInvoiceLineItem[] => {
+    const grouped = items.reduce((acc, item) => {
+      const category = item.category;
+      
+      if (!acc[category]) {
+        acc[category] = {
+          description: '',
+          amount: 0,
+          category: category,
+          descriptions: []
+        };
+      }
+      
+      acc[category].amount += item.amount;
+      acc[category].descriptions.push(item.description);
+      
+      return acc;
+    }, {} as Record<string, { description: string; amount: number; category: string; descriptions: string[] }>);
+
+    // Convert back to array and create combined descriptions
+    return Object.values(grouped).map(group => ({
+      description: group.descriptions.join(' • '),
+      amount: group.amount,
+      category: group.category
+    }));
+  };
+
+  // Toggle grouping and reprocess items
+  const toggleGrouping = () => {
+    if (!scannedInvoice) return;
+    
+    const newGrouping = !groupByCategory;
+    setGroupByCategory(newGrouping);
+    
+    const processedItems = newGrouping 
+      ? groupLineItemsByCategory(scannedInvoice.invoice.lineItems || [])
+      : scannedInvoice.invoice.lineItems || [];
+    
+    setEditableLineItems(processedItems);
+    // Select all items by default when toggling
+    const allItemIndices = new Set<number>(processedItems.map((_: any, index: number) => index));
+    setSelectedItems(allItemIndices);
   };
 
   // Fetch vehicles for selection
@@ -151,9 +198,15 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
     },
     onSuccess: (data) => {
       setScannedInvoice(data);
-      setEditableLineItems(data.invoice.lineItems || []);
+      
+      // Group by category if enabled
+      const processedItems = groupByCategory 
+        ? groupLineItemsByCategory(data.invoice.lineItems || [])
+        : data.invoice.lineItems || [];
+      
+      setEditableLineItems(processedItems);
       // Select all items by default
-      const allItemIndices = new Set<number>(data.invoice.lineItems?.map((_: any, index: number) => index) || []);
+      const allItemIndices = new Set<number>(processedItems.map((_: any, index: number) => index));
       setSelectedItems(allItemIndices);
       
       // Auto-select vehicle if license plate detected and no vehicle selected yet
@@ -163,7 +216,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       
       toast({
         title: "Invoice scanned successfully",
-        description: `Found ${data.invoice.lineItems?.length || 0} line items from ${data.invoice.vendor}`,
+        description: `Found ${processedItems.length} ${groupByCategory ? 'category groups' : 'line items'} from ${data.invoice.vendor}`,
       });
     },
     onError: (error: Error) => {
@@ -466,10 +519,24 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
               {/* Line Items */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Expense Line Items</CardTitle>
-                  <CardDescription>
-                    Review and edit the extracted expense items. Select which items to create as expenses.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Expense Line Items</CardTitle>
+                      <CardDescription>
+                        Review and edit the extracted expense items. Select which items to create as expenses.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="group-toggle" className="text-sm font-medium">
+                        Group by category
+                      </Label>
+                      <Switch
+                        id="group-toggle"
+                        checked={groupByCategory}
+                        onCheckedChange={toggleGrouping}
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {editableLineItems.length > 0 ? (
