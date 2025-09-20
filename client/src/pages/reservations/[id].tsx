@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UploadContractButton } from "@/components/documents/contract-upload-button";
 
@@ -47,10 +47,12 @@ export default function ReservationDetails() {
       return true;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] })
-      ]);
+      // Use comprehensive cache invalidation for reservations
+      invalidateRelatedQueries('reservations', {
+        id: parseInt(id as string),
+        vehicleId: reservation?.vehicleId,
+        customerId: reservation?.customerId
+      });
       
       toast({
         title: "Reservation deleted",
