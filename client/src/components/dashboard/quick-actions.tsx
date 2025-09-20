@@ -27,7 +27,8 @@ import React, { useState } from "react";
 import { Reservation, Vehicle } from "@shared/schema";
 import { Check, RotateCw, Search, CalendarClock } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { displayLicensePlate, isTrueValue } from "@/lib/utils";
+import { isTrueValue } from "@/lib/utils";
+import { formatLicensePlate } from "@/lib/format-utils";
 import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
@@ -941,7 +942,7 @@ export function QuickActions() {
                         {selectedUploadVehicle && (
                           <div className="mt-2 p-3 bg-muted/30 border rounded-md">
                             <div className="flex items-center gap-2">
-                              <div className="font-medium">{displayLicensePlate(selectedUploadVehicle.licensePlate)}</div>
+                              <div className="font-medium">{formatLicensePlate(selectedUploadVehicle.licensePlate)}</div>
                               <div className="text-sm text-muted-foreground">
                                 {selectedUploadVehicle.brand} {selectedUploadVehicle.model}
                               </div>
@@ -1110,7 +1111,7 @@ export function QuickActions() {
                             {selectedDamageVehicle && (
                               <div className="mt-2 p-3 bg-muted/30 border rounded-md">
                                 <div className="flex items-center gap-2">
-                                  <div className="font-medium">{displayLicensePlate(selectedDamageVehicle.licensePlate)}</div>
+                                  <div className="font-medium">{formatLicensePlate(selectedDamageVehicle.licensePlate)}</div>
                                   <div className="text-sm text-muted-foreground">
                                     {selectedDamageVehicle.brand} {selectedDamageVehicle.model}
                                   </div>
@@ -1298,7 +1299,7 @@ export function QuickActions() {
                         {selectedApkVehicle && (
                           <div className="mt-2 p-3 bg-muted/30 border rounded-md">
                             <div className="flex items-center gap-2">
-                              <div className="font-medium">{displayLicensePlate(selectedApkVehicle.licensePlate)}</div>
+                              <div className="font-medium">{formatLicensePlate(selectedApkVehicle.licensePlate)}</div>
                               <div className="text-sm text-muted-foreground">
                                 {selectedApkVehicle.brand} {selectedApkVehicle.model}
                               </div>
@@ -1535,7 +1536,7 @@ export function QuickActions() {
                                                 htmlFor={`vehicle-${vehicle.id}`}
                                                 className="flex items-center cursor-pointer flex-1"
                                               >
-                                                <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
+                                                <span className="font-medium">{formatLicensePlate(vehicle.licensePlate)}</span>
                                                 <span className="ml-1 text-muted-foreground">
                                                   {vehicle.brand} {vehicle.model}
                                                 </span>

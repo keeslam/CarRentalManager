@@ -76,7 +76,7 @@ export default function VehiclesIndex() {
     onSuccess: async () => {
       toast({
         title: "Vehicle deleted",
-        description: `Vehicle ${displayLicensePlate(vehicleToDelete?.licensePlate || '')} has been successfully deleted.`,
+        description: `Vehicle ${formatLicensePlate(vehicleToDelete?.licensePlate || '')} has been successfully deleted.`,
       });
       
       // Force a refresh of the data
@@ -258,7 +258,7 @@ export default function VehiclesIndex() {
         // Display formatted license plate consistently across the app
         return (
           <div className="font-medium whitespace-nowrap bg-primary-50 text-primary-700 px-2 py-1 rounded inline-block">
-            {displayLicensePlate(licensePlate)}
+            {formatLicensePlate(licensePlate)}
           </div>
         );
       },
@@ -397,7 +397,7 @@ export default function VehiclesIndex() {
             <AlertDialogDescription>
               {vehicleToDelete && (
                 <>
-                  This will permanently delete the vehicle <strong>{vehicleToDelete.brand} {vehicleToDelete.model}</strong> with license plate <strong>{displayLicensePlate(vehicleToDelete.licensePlate)}</strong> and all associated data.
+                  This will permanently delete the vehicle <strong>{vehicleToDelete.brand} {vehicleToDelete.model}</strong> with license plate <strong>{formatLicensePlate(vehicleToDelete.licensePlate)}</strong> and all associated data.
                   <br /><br />
                   This action cannot be undone.
                 </>
