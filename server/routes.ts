@@ -1601,6 +1601,37 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(expense);
   });
   
+  // Get expense receipt
+  app.get("/api/expenses/:id/receipt", async (req: Request, res: Response) => {
+    try {
+      const expense = await storage.getExpense(parseInt(req.params.id));
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+
+      if (!expense.receiptFilePath) {
+        return res.status(404).json({ error: "No receipt file found for this expense" });
+      }
+
+      // Check if file exists
+      const filePath = path.resolve(expense.receiptFilePath);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "Receipt file not found on disk" });
+      }
+
+      // Serve the file
+      res.sendFile(filePath, (err) => {
+        if (err) {
+          console.error("Error serving receipt file:", err);
+          res.status(500).json({ error: "Failed to serve receipt file" });
+        }
+      });
+    } catch (error) {
+      console.error("Error retrieving expense receipt:", error);
+      res.status(500).json({ error: "Failed to retrieve expense receipt" });
+    }
+  });
+
   // Delete expense
   app.delete("/api/expenses/:id", requireAuth, async (req: Request, res: Response) => {
     try {
