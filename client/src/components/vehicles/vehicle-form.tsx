@@ -610,10 +610,6 @@ export function VehicleForm({
                             "Lookup"
                           )}
                         </Button>
-                        <DocumentScanner 
-                          onScanComplete={handleScanComplete}
-                          isLoading={isLookingUp || lookupVehicleMutation.isPending}
-                        />
                       </div>
                       <FormDescription>
                         Enter the license plate and click "Lookup" to automatically fill vehicle information from the Dutch RDW database.
