@@ -259,12 +259,24 @@ Please respond ONLY with the JSON object, no additional text.
       invoiceDate: result.invoiceDate || new Date().toISOString().split('T')[0],
       currency: result.currency || 'EUR',
       totalAmount: Number(result.totalAmount) || 0,
-      lineItems: (result.lineItems || []).map((item: any) => ({
-        description: item.description || '',
-        amount: Number(item.amount) || 0,
-        category: item.category || categorizeLineItem(item.description || ''),
-        subcategory: item.subcategory || undefined
-      })),
+      lineItems: (result.lineItems || []).map((item: any) => {
+        // Parse amount more carefully, handling different formats
+        let amount = 0;
+        if (typeof item.amount === 'number') {
+          amount = item.amount;
+        } else if (typeof item.amount === 'string') {
+          // Remove currency symbols and parse
+          const cleanAmount = item.amount.replace(/[€$£,\s]/g, '').replace(',', '.');
+          amount = parseFloat(cleanAmount) || 0;
+        }
+        
+        return {
+          description: item.description || '',
+          amount: Math.abs(amount), // Ensure positive amounts
+          category: item.category || categorizeLineItem(item.description || ''),
+          subcategory: item.subcategory || undefined
+        };
+      }).filter((item: any) => item.amount > 0), // Filter out zero amounts
       vehicleInfo: result.vehicleInfo ? {
         licensePlate: result.vehicleInfo.licensePlate || undefined,
         chassisNumber: result.vehicleInfo.chassisNumber || undefined
@@ -318,13 +330,13 @@ export function validateParsedInvoice(invoice: ParsedInvoice): { valid: boolean;
     errors.push('At least one line item is required');
   }
   
-  // Validate line items
+  // Validate line items (more lenient)
   invoice.lineItems.forEach((item, index) => {
     if (!item.description || item.description.trim() === '') {
       errors.push(`Line item ${index + 1}: Description is required`);
     }
-    if (!item.amount || item.amount <= 0) {
-      errors.push(`Line item ${index + 1}: Amount must be greater than 0`);
+    if (!item.amount || isNaN(item.amount) || item.amount < 0) {
+      errors.push(`Line item ${index + 1}: Amount must be a valid positive number`);
     }
     if (!item.category || item.category.trim() === '') {
       errors.push(`Line item ${index + 1}: Category is required`);
