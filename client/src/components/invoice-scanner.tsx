@@ -51,6 +51,7 @@ import {
   Edit3
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { Vehicle } from "@shared/schema";
 
 interface ParsedInvoiceLineItem {
@@ -438,7 +439,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                   </CardTitle>
                   <CardDescription>
                     {scannedInvoice.invoice.vehicleInfo?.licensePlate 
-                      ? `Found license plate "${scannedInvoice.invoice.vehicleInfo.licensePlate}" in invoice. Auto-selected matching vehicle if found.`
+                      ? `Found license plate "${displayLicensePlate(scannedInvoice.invoice.vehicleInfo.licensePlate)}" in invoice. Auto-selected matching vehicle if found.`
                       : "Choose which vehicle these expenses belong to."
                     }
                   </CardDescription>
@@ -455,7 +456,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                     />
                     {scannedInvoice.invoice.vehicleInfo?.licensePlate && !vehicleId && (
                       <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">
-                        <span className="font-medium">License plate detected:</span> {scannedInvoice.invoice.vehicleInfo.licensePlate}
+                        <span className="font-medium">License plate detected:</span> {displayLicensePlate(scannedInvoice.invoice.vehicleInfo.licensePlate)}
                         <br />
                         <span className="text-xs">No matching vehicle found in your system. Please select manually.</span>
                       </div>
@@ -502,7 +503,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                         {scannedInvoice.invoice.vehicleInfo.licensePlate && (
                           <div>
                             <Label className="text-xs text-blue-600">License Plate</Label>
-                            <p className="text-sm font-medium">{scannedInvoice.invoice.vehicleInfo.licensePlate}</p>
+                            <p className="text-sm font-medium">{displayLicensePlate(scannedInvoice.invoice.vehicleInfo.licensePlate)}</p>
                           </div>
                         )}
                         {scannedInvoice.invoice.vehicleInfo.chassisNumber && (
