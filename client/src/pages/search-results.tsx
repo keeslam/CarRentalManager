@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, formatLicensePlate } from '@/lib/format-utils';
+import { displayLicensePlate } from '@/lib/utils';
 import { Vehicle } from '@shared/schema';
 import type { Customer } from '@shared/schema';
 import type { Reservation } from '@shared/schema';
@@ -206,7 +207,7 @@ const SearchResults: FC = () => {
                       <Card key={vehicle.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleVehicleClick(vehicle)}>
                         <CardHeader className="pb-2">
                           <CardTitle className="flex justify-between items-center">
-                            <span className="font-mono">{formatLicensePlate(vehicle.licensePlate)}</span>
+                            <span className="font-mono">{displayLicensePlate(vehicle.licensePlate)}</span>
                             <Badge>{vehicle.vehicleType || 'Unknown'}</Badge>
                           </CardTitle>
                           <CardDescription>
@@ -288,7 +289,7 @@ const SearchResults: FC = () => {
                         <CardHeader className="pb-2">
                           <CardTitle className="flex justify-between items-center">
                             <span>
-                              {reservation.vehicle?.licensePlate ? formatLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
+                              {reservation.vehicle?.licensePlate ? displayLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
                             </span>
                             <Badge variant={reservation.status === 'booked' ? 'default' : reservation.status === 'cancelled' ? 'destructive' : 'secondary'}>
                               {reservation.status}
@@ -328,7 +329,7 @@ const SearchResults: FC = () => {
                   <Card key={vehicle.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleVehicleClick(vehicle)}>
                     <CardHeader className="pb-2">
                       <CardTitle className="flex justify-between items-center">
-                        <span className="font-mono">{formatLicensePlate(vehicle.licensePlate)}</span>
+                        <span className="font-mono">{displayLicensePlate(vehicle.licensePlate)}</span>
                         <Badge>{vehicle.vehicleType || 'Unknown'}</Badge>
                       </CardTitle>
                       <CardDescription>
@@ -410,7 +411,7 @@ const SearchResults: FC = () => {
                     <CardHeader className="pb-2">
                       <CardTitle className="flex justify-between items-center">
                         <span>
-                          {reservation.vehicle?.licensePlate ? formatLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
+                          {reservation.vehicle?.licensePlate ? displayLicensePlate(reservation.vehicle.licensePlate) : 'Unknown vehicle'}
                         </span>
                         <Badge variant={reservation.status === 'booked' ? 'default' : reservation.status === 'cancelled' ? 'destructive' : 'secondary'}>
                           {reservation.status}
