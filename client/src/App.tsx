@@ -32,6 +32,7 @@ import UserEdit from "@/pages/users/[id]/edit";
 import ProfilePage from "@/pages/profile";
 import ProfileEditPage from "@/pages/profile/edit";
 import ChangePasswordPage from "@/pages/profile/change-password";
+import BackupPage from "@/pages/admin/backup";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
@@ -83,6 +84,7 @@ function AppRoutes() {
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
         <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
+        <ProtectedRoute path="/admin/backup" component={BackupPage} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>

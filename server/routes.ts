@@ -22,6 +22,8 @@ import {
 } from "../shared/schema";
 import multer from "multer";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
+import { BackupService } from "./backupService";
+import { ObjectStorageService } from "./objectStorage";
 
 // Helper function to convert absolute paths to relative paths
 function getRelativePath(absolutePath: string): string {
@@ -65,6 +67,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   // Set up authentication routes and middleware
   const { requireAuth } = setupAuth(app);
+
+  // Initialize backup service
+  const backupService = new BackupService();
+  const objectStorage = new ObjectStorageService();
 
   // ==================== USER MANAGEMENT ROUTES ====================
   // A middleware to check for admin permissions
@@ -3010,6 +3016,93 @@ export async function registerRoutes(app: Express): Promise<void> {
         message: "Failed to create expenses from invoice",
         error: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // ==================== BACKUP ROUTES ====================
+  
+  // Get backup status
+  app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const status = backupService.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting backup status:", error);
+      res.status(500).json({ error: "Failed to get backup status" });
+    }
+  });
+
+  // List available backups
+  app.get("/api/backups", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const type = req.query.type as 'database' | 'files' | undefined;
+      const backups = await backupService.listBackups(type);
+      res.json(backups);
+    } catch (error) {
+      console.error("Error listing backups:", error);
+      res.status(500).json({ error: "Failed to list backups" });
+    }
+  });
+
+  // Run backup manually
+  app.post("/api/backups/run", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const result = await backupService.runBackup();
+      res.json({
+        success: true,
+        message: "Backup completed successfully",
+        backups: result
+      });
+    } catch (error) {
+      console.error("Error running backup:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to run backup" 
+      });
+    }
+  });
+
+  // Download backup file
+  app.get("/api/backups/download/:type/:filename", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { type, filename } = req.params;
+      
+      if (!['database', 'files'].includes(type)) {
+        return res.status(400).json({ error: "Invalid backup type" });
+      }
+
+      // Find the backup file in object storage
+      const privatePath = objectStorage.getPrivateObjectDir();
+      const files = await objectStorage.listFiles(`${privatePath}/backups/${type}/`);
+      
+      const backupFile = files.find(file => file.name.includes(filename));
+      if (!backupFile) {
+        return res.status(404).json({ error: "Backup file not found" });
+      }
+
+      // Set download headers
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/gzip');
+      
+      // Stream the file
+      await objectStorage.downloadObject(backupFile, res);
+      
+    } catch (error) {
+      console.error("Error downloading backup:", error);
+      res.status(500).json({ error: "Failed to download backup" });
+    }
+  });
+
+  // Cleanup old backups
+  app.post("/api/backups/cleanup", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await backupService.cleanupOldBackups();
+      res.json({
+        success: true,
+        message: "Old backups cleaned up successfully"
+      });
+    } catch (error) {
+      console.error("Error cleaning up backups:", error);
+      res.status(500).json({ error: "Failed to cleanup old backups" });
     }
   });
 

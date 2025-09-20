@@ -7,6 +7,7 @@ import {
   Settings,
   UserCog,
   ChevronDown,
+  Database,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@shared/schema";
@@ -105,6 +106,14 @@ export function UserMenu() {
                 >
                   <UserCog className="mr-2 h-4 w-4" />
                   User Management
+                </Link>
+                <Link
+                  href="/admin/backup"
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                >
+                  <Database className="mr-2 h-4 w-4" />
+                  Backup Management
                 </Link>
               </>
             )}

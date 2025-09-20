@@ -5,6 +5,7 @@ import fs from 'fs';
 import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
+import { BackupScheduler } from "./backupScheduler";
 
 // ESM __dirname fix
 const __filename = fileURLToPath(import.meta.url);
@@ -191,6 +192,10 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
+// Initialize backup scheduler
+const backupScheduler = new BackupScheduler();
+backupScheduler.start();
+
 // Main startup
 app.listen(port, '0.0.0.0', () => {
   console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
@@ -198,5 +203,6 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`📱 Frontend:     http://localhost:${port}/`);
   console.log(`🔍 Health check: http://localhost:${port}/health`);
   console.log(`🐳 Docker mode:  ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
+  console.log(`💾 Backup Scheduler: ✅ (Nightly at 2:00 AM)`);
   console.log('=======================================\n');
 });
