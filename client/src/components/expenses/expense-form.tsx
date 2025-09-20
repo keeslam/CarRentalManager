@@ -39,9 +39,13 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 const expenseCategories = [
   "Maintenance",
   "Tires",
-  "Front window",
+  "Brakes",
   "Damage",
-  "Repair",
+  "Fuel",
+  "Insurance",
+  "Registration",
+  "Cleaning",
+  "Accessories",
   "Other"
 ];
 

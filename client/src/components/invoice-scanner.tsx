@@ -81,6 +81,7 @@ interface InvoiceScannerProps {
 const EXPENSE_CATEGORIES = [
   'Maintenance',
   'Tires',
+  'Brakes',
   'Damage',
   'Fuel',
   'Insurance',

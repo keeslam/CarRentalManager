@@ -45,8 +45,13 @@ const CATEGORY_MAPPINGS = {
   'olie': 'Maintenance',
   'oil': 'Maintenance',
   'filter': 'Maintenance',
-  'remmen': 'Maintenance',
-  'brakes': 'Maintenance',
+  'remmen': 'Brakes',
+  'brakes': 'Brakes',
+  'brake': 'Brakes',
+  'remblok': 'Brakes',
+  'brake pad': 'Brakes',
+  'brake disc': 'Brakes',
+  'remschijf': 'Brakes',
   
   // Tires
   'banden': 'Tires',
@@ -182,7 +187,7 @@ You are an expert invoice processor for a car rental company. Analyze this PDF i
     {
       "description": "Service or item description",
       "amount": 12.34,
-      "category": "One of: Maintenance, Tires, Damage, Fuel, Insurance, Registration, Cleaning, Accessories, Other"
+      "category": "One of: Maintenance, Tires, Brakes, Damage, Fuel, Insurance, Registration, Cleaning, Accessories, Other"
     }
   ],
   "vehicleInfo": {
