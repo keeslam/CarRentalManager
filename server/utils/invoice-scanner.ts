@@ -1,15 +1,16 @@
 /**
- * Invoice scanning utility using OpenAI Vision API
+ * Invoice scanning utility using Google Gemini Vision API
  * Processes PDF invoices and extracts expense data for car rental management
  */
 
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 import { PDFDocument } from 'pdf-lib';
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Using Google Gemini for invoice processing - javascript_gemini integration
+// The newest Gemini model series is "gemini-2.5-flash" or "gemini-2.5-pro"
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export interface ParsedInvoiceLineItem {
   description: string;
@@ -160,7 +161,7 @@ function categorizeLineItem(description: string): string {
 }
 
 /**
- * Process invoice with OpenAI Vision API
+ * Process invoice with Google Gemini Vision API
  */
 export async function processInvoiceWithAI(pdfPath: string): Promise<ParsedInvoice> {
   try {
@@ -202,30 +203,54 @@ IMPORTANT INSTRUCTIONS:
 Please respond ONLY with the JSON object, no additional text.
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: prompt
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            vendor: { type: "string" },
+            invoiceNumber: { type: "string" },
+            invoiceDate: { type: "string" },
+            currency: { type: "string" },
+            totalAmount: { type: "number" },
+            lineItems: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  description: { type: "string" },
+                  amount: { type: "number" },
+                  category: { type: "string" },
+                  subcategory: { type: "string" }
+                },
+                required: ["description", "amount", "category"]
+              }
             },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:application/pdf;base64,${base64Pdf}`
+            vehicleInfo: {
+              type: "object",
+              properties: {
+                licensePlate: { type: "string" },
+                chassisNumber: { type: "string" }
               }
             }
-          ]
+          },
+          required: ["vendor", "invoiceNumber", "invoiceDate", "currency", "totalAmount", "lineItems"]
         }
+      },
+      contents: [
+        {
+          inlineData: {
+            data: base64Pdf,
+            mimeType: "application/pdf",
+          },
+        },
+        prompt
       ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 2048
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    const result = JSON.parse(response.text || '{}');
     
     // Validate and clean up the result
     const parsedInvoice: ParsedInvoice = {
