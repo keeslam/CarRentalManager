@@ -94,9 +94,7 @@ export function RecentExpenses() {
   const handleEditComplete = () => {
     setEditDialogOpen(false);
     setSelectedExpense(null);
-    // Refresh the expenses list
-    queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    // The new unified invalidation system in the expense form will handle cache updates automatically
   };
   
   return (
@@ -134,7 +132,7 @@ export function RecentExpenses() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">{formatCurrency(expense.amount)}</div>
+                    <div className="text-sm font-medium text-gray-900">{formatCurrency(Number(expense.amount || 0))}</div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">

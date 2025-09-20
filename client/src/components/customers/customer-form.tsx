@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { insertCustomerSchema } from "@shared/schema";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { invalidateRelatedQueries } from "@/lib/invalidateRelatedQueries";
+import { invalidateRelatedQueries } from "@/lib/queryClient";
 import { 
   Form, 
   FormControl, 

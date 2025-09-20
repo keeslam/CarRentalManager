@@ -264,16 +264,12 @@ export function ExpenseForm({
       // Extract vehicle ID from result or use current vehicleId state
       const expenseVehicleId = result?.vehicleId || vehicleId || (result && 'id' in result ? result.id : null);
       
-      // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent"] });
-      
-      // If we have a vehicle ID, also invalidate vehicle-specific expenses
-      if (expenseVehicleId) {
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/expenses/vehicle/${expenseVehicleId}`] 
-        });
-      }
+      // Use the new unified invalidation system
+      const { invalidateRelatedQueries } = await import("@/lib/queryClient");
+      invalidateRelatedQueries('expenses', { 
+        id: result?.id,
+        vehicleId: expenseVehicleId || vehicleId 
+      });
       
       // Show success message
       toast({
@@ -427,7 +423,8 @@ export function ExpenseForm({
                       <Textarea 
                         placeholder="Describe the expense (e.g. Oil change, New tires, etc.)" 
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
+                        value={field.value || ''}
                       />
                     </FormControl>
                     <FormMessage />
@@ -450,7 +447,7 @@ export function ExpenseForm({
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="URL to receipt image or document" {...field} />
+                            <Input placeholder="URL to receipt image or document" {...field} value={field.value || ''} />
                           </FormControl>
                           <FormDescription>
                             Enter a URL to an online receipt or invoice
