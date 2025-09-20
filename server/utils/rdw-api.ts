@@ -171,14 +171,6 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     // Extract the vehicle data from the API response
     const rdwVehicle = data[0];
     
-    // Debug logging to see what data we're getting
-    console.log('RDW API Response for', licensePlate, ':', {
-      datum_eerste_toelating: rdwVehicle.datum_eerste_toelating,
-      vervaldatum_apk: rdwVehicle.vervaldatum_apk,
-      merk: rdwVehicle.merk,
-      handelsbenaming: rdwVehicle.handelsbenaming
-    });
-    
     // Map the RDW data to our vehicle structure - only taking what we can reliably get
     const mappedVehicle: Partial<InsertVehicle> = {
       licensePlate: formatLicensePlate(normalized),
@@ -191,8 +183,6 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
       apkDate: formatDate(rdwVehicle.vervaldatum_apk) || null,
       productionDate: formatDate(rdwVehicle.datum_eerste_toelating) || null
     };
-    
-    console.log('Mapped vehicle data:', mappedVehicle);
     
     return mappedVehicle;
   } catch (fetchError: any) {
