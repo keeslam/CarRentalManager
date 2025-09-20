@@ -47,7 +47,7 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation } from "@shared/schema";
-import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
+import { PlusCircle, FileCheck, Upload, Check, X, Edit } from "lucide-react";
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
@@ -121,6 +121,7 @@ export function ReservationForm({
   );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || "pending");
@@ -344,7 +345,7 @@ export function ReservationForm({
       if (data && data.id) {
         console.log("Setting customer ID to:", data.id);
         // Set the value and trigger form update
-        form.setValue("customerId", String(data.id), { 
+        form.setValue("customerId", data.id, { 
           shouldDirty: true,
           shouldTouch: true,
           shouldValidate: true
@@ -531,7 +532,7 @@ export function ReservationForm({
     // Process data for open-ended rentals
     const submissionData = {
       ...data,
-      endDate: data.isOpenEnded ? null : data.endDate,
+      endDate: data.isOpenEnded ? undefined : data.endDate,
     };
     
     // Remove the isOpenEnded field as it's not part of the backend schema
@@ -630,7 +631,7 @@ export function ReservationForm({
                                       await refetchVehicles();
                                       
                                       // Set the new vehicle in the form
-                                      form.setValue("vehicleId", vehicle.id.toString());
+                                      form.setValue("vehicleId", vehicle.id);
                                       
                                       // Close the dialog
                                       setVehicleDialogOpen(false);
@@ -702,13 +703,55 @@ export function ReservationForm({
                     <FormItem className="flex flex-col">
                       <div className="flex justify-between items-center">
                         <FormLabel>Customer</FormLabel>
-                        <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                              Add New
-                            </Button>
-                          </DialogTrigger>
+                        <div className="flex gap-2">
+                          {/* Edit Customer Button - only show if customer is selected */}
+                          {customerIdWatch && (
+                            <Dialog open={customerEditDialogOpen} onOpenChange={setCustomerEditDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Edit className="h-3.5 w-3.5 mr-1" />
+                                  Edit
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Edit Customer</DialogTitle>
+                                  <DialogDescription>
+                                    Edit the details of the selected customer
+                                  </DialogDescription>
+                                </DialogHeader>
+                                {selectedCustomer && (
+                                  <CustomerForm 
+                                    initialData={selectedCustomer}
+                                    editMode={true}
+                                    onSuccess={async (updatedCustomer) => {
+                                      // Refresh customers list to show updated data
+                                      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+                                      await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+                                      
+                                      // Close the dialog
+                                      setCustomerEditDialogOpen(false);
+                                      
+                                      // Show success message
+                                      toast({
+                                        title: "Customer Updated",
+                                        description: `${updatedCustomer.name} has been successfully updated.`,
+                                      });
+                                    }}
+                                    redirectToList={false}
+                                  />
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                          
+                          <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                                Add New
+                              </Button>
+                            </DialogTrigger>
                           <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Add New Customer</DialogTitle>
@@ -722,6 +765,7 @@ export function ReservationForm({
                             />
                           </DialogContent>
                         </Dialog>
+                        </div>
                       </div>
                       <FormControl>
                         <SearchableCombobox
@@ -730,7 +774,7 @@ export function ReservationForm({
                           onChange={(value) => {
                             console.log("Customer selected:", value);
                             // Force form update with the new customer ID
-                            form.setValue("customerId", value, {
+                            form.setValue("customerId", parseInt(value), {
                               shouldDirty: true,
                               shouldTouch: true,
                               shouldValidate: true
