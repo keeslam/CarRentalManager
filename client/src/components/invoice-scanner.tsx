@@ -254,6 +254,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       
       // Invalidate queries to refresh expense lists
       await queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent?limit=10"] });
       
       // Call callback if provided
       if (onExpensesCreated) {

@@ -264,6 +264,7 @@ export function ExpenseForm({
       
       // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent?limit=10"] });
       
       // If we have a vehicle ID, also invalidate vehicle-specific expenses
       if (expenseVehicleId) {
