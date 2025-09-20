@@ -752,6 +752,203 @@ export function VehicleForm({
                     )}
                   />
                   
+                  <FormField
+                    control={form.control}
+                    name="adBlue"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>AdBlue</FormLabel>
+                          <FormDescription>
+                            Vehicle uses AdBlue
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="gps"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>GPS</FormLabel>
+                          <FormDescription>
+                            Vehicle has GPS tracking
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch('gps') && (
+                    <FormField
+                      control={form.control}
+                      name="imei"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IMEI Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            IMEI number for GPS device tracking
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="roadsideAssistance"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Roadside Assistance</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="spareKey"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Spare Key</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="winterTires"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Winter Tires</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="wokNotification"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>WOK Notification</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="seatcovers"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Seat Covers</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="backupbeepers"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Backup Beepers</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                
+                  <FormField
+                    control={form.control}
+                    name="tireSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tire Size</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Tire size" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="radioCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Radio Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Radio code" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
                 </div>
               </TabsContent>
               
@@ -1036,203 +1233,6 @@ export function VehicleForm({
               
               <TabsContent value="additional" className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="adBlue"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>AdBlue</FormLabel>
-                          <FormDescription>
-                            Vehicle uses AdBlue
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="gps"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>GPS</FormLabel>
-                          <FormDescription>
-                            Vehicle has GPS tracking
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {form.watch('gps') && (
-                    <FormField
-                      control={form.control}
-                      name="imei"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IMEI Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
-                          </FormControl>
-                          <FormDescription>
-                            IMEI number for GPS device tracking
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  
-                  <FormField
-                    control={form.control}
-                    name="roadsideAssistance"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>Roadside Assistance</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="spareKey"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>Spare Key</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="winterTires"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>Winter Tires</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="wokNotification"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>WOK Notification</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="seatcovers"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>Seat Covers</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="backupbeepers"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>Backup Beepers</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                
-                  <FormField
-                    control={form.control}
-                    name="tireSize"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tire Size</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Tire size" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="radioCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Radio Code</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Radio code" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                
                   <div className="col-span-2">
                     <FormField
                       control={form.control}
