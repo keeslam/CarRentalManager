@@ -602,24 +602,27 @@ export function ReservationForm({
                   name="vehicleId"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Vehicle</FormLabel>
-                      
                       {actualVehicleId ? (
-                        // If vehicle is pre-selected, show as read-only
-                        <ReadonlyVehicleDisplay vehicleId={actualVehicleId} />
-                      ) : (
-                        // Otherwise, show selection UI
+                        // If vehicle is pre-selected, show as read-only with simple label
                         <>
-                          <div className="flex justify-end mb-2 gap-2">
-                            {/* Edit Vehicle Button - only show if vehicle is selected */}
-                            {vehicleIdWatch && (
-                              <Dialog open={vehicleEditDialogOpen} onOpenChange={setVehicleEditDialogOpen}>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    <Edit className="h-3.5 w-3.5 mr-1" />
-                                    Edit
-                                  </Button>
-                                </DialogTrigger>
+                          <FormLabel>Vehicle</FormLabel>
+                          <ReadonlyVehicleDisplay vehicleId={actualVehicleId} />
+                        </>
+                      ) : (
+                        // Otherwise, show selection UI with buttons inline
+                        <>
+                          <div className="flex justify-between items-center">
+                            <FormLabel>Vehicle</FormLabel>
+                            <div className="flex gap-2">
+                              {/* Edit Vehicle Button - only show if vehicle is selected */}
+                              {vehicleIdWatch && (
+                                <Dialog open={vehicleEditDialogOpen} onOpenChange={setVehicleEditDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      <Edit className="h-3.5 w-3.5 mr-1" />
+                                      Edit
+                                    </Button>
+                                  </DialogTrigger>
                                 <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
                                   <DialogHeader>
                                     <DialogTitle>Edit Vehicle</DialogTitle>
@@ -704,6 +707,7 @@ export function ReservationForm({
                                 </div>
                               </DialogContent>
                             </Dialog>
+                            </div>
                           </div>
                           
                           <FormControl>
