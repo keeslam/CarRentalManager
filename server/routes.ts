@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
 import { generateRentalContract, generateRentalContractFromTemplate, prepareContractData } from "./utils/pdf-generator";
 import { processInvoiceWithAI, generateInvoiceHash, validateParsedInvoice, type ParsedInvoice } from "./utils/invoice-scanner";
+import { processVehicleDocumentWithAI, validateExtractedVehicleData, type ExtractedVehicleData } from "./utils/vehicle-document-scanner";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
@@ -2939,6 +2940,74 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       res.status(500).json({
         message: "Failed to scan invoice",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Vehicle document scanning endpoint
+  app.post("/api/vehicles/scan-document", requireAuth, upload.single('document'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No document file provided" });
+      }
+
+      const file = req.file;
+
+      // Validate file type (PDF and images)
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        // Clean up uploaded file
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ message: "Only PDF, JPG, and PNG files are supported" });
+      }
+
+      try {
+        // Process document with AI
+        console.log('Processing vehicle document:', file.originalname);
+        const extractedData = await processVehicleDocumentWithAI(file.path);
+
+        // Validate the extracted result
+        const validation = validateExtractedVehicleData(extractedData);
+        if (!validation.valid) {
+          // Clean up file but still return the parsed data for manual correction
+          fs.unlinkSync(file.path);
+          return res.status(400).json({
+            message: "Document validation failed",
+            errors: validation.errors,
+            parsedData: extractedData
+          });
+        }
+
+        // Clean up temporary file
+        fs.unlinkSync(file.path);
+
+        // Return extracted vehicle data
+        res.json({
+          success: true,
+          data: extractedData
+        });
+
+      } catch (processingError) {
+        // Clean up file on processing error
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+        console.error('Vehicle document processing error:', processingError);
+        res.status(500).json({
+          message: "Failed to process vehicle document",
+          error: processingError instanceof Error ? processingError.message : "Unknown processing error"
+        });
+      }
+
+    } catch (error) {
+      console.error("Error scanning vehicle document:", error);
+      // Clean up file if it exists
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({
+        message: "Failed to scan vehicle document",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
