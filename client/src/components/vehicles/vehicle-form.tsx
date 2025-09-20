@@ -261,12 +261,24 @@ export function VehicleForm({
       return response.json();
     },
     onSuccess: (vehicleData) => {
+      console.log("Received vehicle data from API:", vehicleData);
+      
       // Fill form with retrieved data, converting null values to empty strings
       Object.keys(vehicleData).forEach((key) => {
-        if (form.getValues(key as any) !== undefined) {
+        const currentValue = form.getValues(key as any);
+        console.log(`Processing field ${key}:`, {
+          apiValue: vehicleData[key],
+          currentFormValue: currentValue,
+          fieldExists: currentValue !== undefined
+        });
+        
+        if (currentValue !== undefined) {
           // Convert null values to empty strings for form compatibility
           const value = vehicleData[key] === null ? "" : vehicleData[key];
           form.setValue(key as any, value);
+          console.log(`Set ${key} to:`, value);
+        } else {
+          console.log(`Skipped ${key} - field doesn't exist in form`);
         }
       });
       
