@@ -27,7 +27,8 @@ import {
   formatISO
 } from "date-fns";
 import { Vehicle, Reservation, Customer } from "@shared/schema";
-import { displayLicensePlate, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { formatLicensePlate } from "@/lib/format-utils";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { PlusCircle, Edit, Eye, Calendar, User, Car, CreditCard, Clock, MapPin } from "lucide-react";
 import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
@@ -269,7 +270,7 @@ export function ReservationCalendar() {
                                 >
                                   <div className="flex justify-between items-center">
                                     <div className="truncate">
-                                      {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                      {formatLicensePlate(res.vehicle?.licensePlate || '')}
                                       {isPickupDay && 
                                         <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
                                       }
@@ -322,7 +323,7 @@ export function ReservationCalendar() {
                                     <Car className="h-4 w-4 text-gray-500 mt-0.5" />
                                     <div>
                                       <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
-                                      <div className="text-xs text-gray-600">{displayLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                      <div className="text-xs text-gray-600">{formatLicensePlate(res.vehicle?.licensePlate || '')}</div>
                                     </div>
                                   </div>
                                   
