@@ -849,54 +849,6 @@ export function VehicleForm({
                     )}
                   />
                   
-
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="contract" className="space-y-4 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="monthlyPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Price (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="dailyPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Daily Price (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="contractNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contract Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contract number" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
                   <div className="col-span-2 mb-4">
                     <h3 className="text-sm font-medium mb-2">Registration Status (select one or none)</h3>
                   </div>
@@ -1000,6 +952,54 @@ export function VehicleForm({
                         <FormDescription>
                           Date when the vehicle was registered to the company
                         </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="contract" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="monthlyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Price (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dailyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Daily Price (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="contractNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contract Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contract number" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
