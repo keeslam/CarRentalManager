@@ -1007,32 +1007,6 @@ export function VehicleForm({
                   
                   <FormField
                     control={form.control}
-                    name="departureMileage"
-                    render={({ field: { onChange, ...restField } }) => (
-                      <FormItem>
-                        <FormLabel>Departure Mileage (km) <span className="text-sm font-normal text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0" 
-                            {...restField}
-                            value={restField.value ?? ''} 
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? '' : e.target.value;
-                              onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Enter the current mileage if known
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
                     name="returnMileage"
                     render={({ field: { onChange, ...restField } }) => (
                       <FormItem>
