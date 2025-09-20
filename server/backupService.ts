@@ -362,6 +362,221 @@ export class BackupService {
     }
   }
 
+  // Restore database from backup
+  async restoreDatabase(backupFilename: string): Promise<void> {
+    console.log(`Starting database restore from: ${backupFilename}`);
+    
+    // Download backup file
+    const privatePath = this.objectStorage.getPrivateObjectDir();
+    const backupPath = await this.findBackupPath(backupFilename, 'database');
+    
+    if (!backupPath) {
+      throw new Error(`Backup file not found: ${backupFilename}`);
+    }
+
+    // Download to temp file
+    const tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
+    const files = await this.objectStorage.listFiles(backupPath);
+    const backupFile = files.find(f => f.name.endsWith(backupFilename));
+    
+    if (!backupFile) {
+      throw new Error(`Could not download backup: ${backupFilename}`);
+    }
+
+    const [buffer] = await backupFile.download();
+    writeFileSync(tempFile, buffer);
+
+    try {
+      // Verify backup integrity
+      const manifest = await this.getBackupManifest(backupFilename, 'database');
+      const actualChecksum = await this.calculateChecksum(tempFile);
+      
+      if (manifest?.checksum && actualChecksum !== manifest.checksum) {
+        throw new Error('Backup file integrity check failed - checksum mismatch');
+      }
+
+      // Stop application connections (in production, you'd want more sophisticated handling)
+      console.log('WARNING: Database restore will disconnect all users');
+      
+      // Import database
+      const psqlProcess = spawn('psql', [
+        process.env.DATABASE_URL!,
+        '-f', tempFile
+      ]);
+
+      let stderr = '';
+      psqlProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.log(`psql restore: ${data}`);
+      });
+
+      psqlProcess.stdout.on('data', (data) => {
+        console.log(`psql restore: ${data}`);
+      });
+
+      // Wait for completion
+      await new Promise<void>((resolve, reject) => {
+        psqlProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log('Database restore completed successfully');
+            resolve();
+          } else {
+            reject(new Error(`Database restore failed with code ${code}. Error: ${stderr}`));
+          }
+        });
+      });
+
+    } finally {
+      // Cleanup temp file
+      if (existsSync(tempFile)) {
+        try {
+          require('fs').unlinkSync(tempFile);
+        } catch (error) {
+          console.error('Error cleaning up temp restore file:', error);
+        }
+      }
+    }
+  }
+
+  // Restore files from backup
+  async restoreFiles(backupFilename: string, targetPath?: string): Promise<void> {
+    console.log(`Starting files restore from: ${backupFilename}`);
+    
+    // Download backup file
+    const backupPath = await this.findBackupPath(backupFilename, 'files');
+    
+    if (!backupPath) {
+      throw new Error(`Backup file not found: ${backupFilename}`);
+    }
+
+    // Download to temp file
+    const tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
+    const files = await this.objectStorage.listFiles(backupPath);
+    const backupFile = files.find(f => f.name.endsWith(backupFilename));
+    
+    if (!backupFile) {
+      throw new Error(`Could not download backup: ${backupFilename}`);
+    }
+
+    const [buffer] = await backupFile.download();
+    writeFileSync(tempFile, buffer);
+
+    try {
+      // Verify backup integrity
+      const manifest = await this.getBackupManifest(backupFilename, 'files');
+      const actualChecksum = await this.calculateChecksum(tempFile);
+      
+      if (manifest?.checksum && actualChecksum !== manifest.checksum) {
+        throw new Error('Backup file integrity check failed - checksum mismatch');
+      }
+
+      // Extract files
+      const extractPath = targetPath || process.cwd();
+      console.log(`Extracting files to: ${extractPath}`);
+      
+      const tarProcess = spawn('tar', [
+        '-xzf', tempFile,
+        '-C', extractPath,
+        '--overwrite'
+      ]);
+
+      let stderr = '';
+      tarProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.log(`tar restore: ${data}`);
+      });
+
+      tarProcess.stdout.on('data', (data) => {
+        console.log(`tar restore: ${data}`);
+      });
+
+      // Wait for completion
+      await new Promise<void>((resolve, reject) => {
+        tarProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log('Files restore completed successfully');
+            resolve();
+          } else {
+            reject(new Error(`Files restore failed with code ${code}. Error: ${stderr}`));
+          }
+        });
+      });
+
+    } finally {
+      // Cleanup temp file
+      if (existsSync(tempFile)) {
+        try {
+          require('fs').unlinkSync(tempFile);
+        } catch (error) {
+          console.error('Error cleaning up temp restore file:', error);
+        }
+      }
+    }
+  }
+
+  // Complete system restore (database + files)
+  async restoreComplete(databaseBackup: string, filesBackup: string): Promise<void> {
+    console.log('Starting complete system restore...');
+    console.log(`Database backup: ${databaseBackup}`);
+    console.log(`Files backup: ${filesBackup}`);
+    
+    try {
+      // Restore database first
+      await this.restoreDatabase(databaseBackup);
+      
+      // Then restore files
+      await this.restoreFiles(filesBackup);
+      
+      console.log('Complete system restore finished successfully!');
+      console.log('IMPORTANT: Please restart the application to ensure all changes take effect.');
+      
+    } catch (error) {
+      console.error('Complete restore failed:', error);
+      throw new Error(`Complete restore failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Helper method to find backup path in object storage
+  private async findBackupPath(filename: string, type: 'database' | 'files'): Promise<string | null> {
+    try {
+      const privatePath = this.objectStorage.getPrivateObjectDir();
+      const basePrefix = `${privatePath}/backups/${type}/`;
+      
+      // Search through year/month/day structure
+      const files = await this.objectStorage.listFiles(basePrefix);
+      
+      for (const file of files) {
+        if (file.name.endsWith(filename)) {
+          return file.name.substring(0, file.name.lastIndexOf('/') + 1);
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error finding backup path:', error);
+      return null;
+    }
+  }
+
+  // Helper method to get backup manifest
+  private async getBackupManifest(filename: string, type: 'database' | 'files'): Promise<BackupManifest | null> {
+    try {
+      const backupPath = await this.findBackupPath(filename, type);
+      if (!backupPath) return null;
+
+      const manifestPath = `${backupPath}${filename}.manifest.json`;
+      const files = await this.objectStorage.listFiles(manifestPath);
+      
+      if (files.length === 0) return null;
+      
+      const [buffer] = await files[0].download();
+      return JSON.parse(buffer.toString('utf8'));
+    } catch (error) {
+      console.error('Error getting backup manifest:', error);
+      return null;
+    }
+  }
+
   // Cleanup old backups based on retention policy
   async cleanupOldBackups(): Promise<void> {
     console.log('Cleaning up old backups...');
