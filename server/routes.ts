@@ -3019,6 +3019,61 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== BACKUP SETTINGS ROUTES ====================
+  
+  // Get backup settings
+  app.get("/api/backup-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getBackupSettings();
+      if (!settings) {
+        return res.status(404).json({ error: "No backup settings found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error getting backup settings:", error);
+      res.status(500).json({ error: "Failed to get backup settings" });
+    }
+  });
+
+  // Create or update backup settings
+  app.post("/api/backup-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const currentUser = req.user as any;
+      const settingsData = {
+        ...req.body,
+        createdBy: currentUser?.username || 'system',
+        updatedBy: currentUser?.username || 'system'
+      };
+
+      const settings = await storage.createBackupSettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error creating backup settings:", error);
+      res.status(500).json({ error: "Failed to create backup settings" });
+    }
+  });
+
+  // Update backup settings
+  app.put("/api/backup-settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const currentUser = req.user as any;
+      const settingsData = {
+        ...req.body,
+        updatedBy: currentUser?.username || 'system'
+      };
+
+      const settings = await storage.updateBackupSettings(id, settingsData);
+      if (!settings) {
+        return res.status(404).json({ error: "Backup settings not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating backup settings:", error);
+      res.status(500).json({ error: "Failed to update backup settings" });
+    }
+  });
+
   // ==================== BACKUP ROUTES ====================
   
   // Get backup status

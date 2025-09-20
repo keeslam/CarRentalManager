@@ -26,6 +26,7 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
+import { BackupSettingsPanel } from "./backup-settings";
 import { Download, Play, Trash2, Database, FolderArchive, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 
 interface BackupManifest {
@@ -137,9 +138,7 @@ export function BackupManagement() {
     window.open(url, '_blank');
   };
 
-  const formatBackupSize = (size: number): string => {
-    return formatFileSize(size);
-  };
+  // Removed duplicate function - use formatFileSize directly
 
   const databaseBackups = backups?.filter(b => b.type === 'database') || [];
   const fileBackups = backups?.filter(b => b.type === 'files') || [];
@@ -150,6 +149,12 @@ export function BackupManagement() {
         <h1 className="text-2xl font-semibold">Backup Management</h1>
         {getStatusBadge()}
       </div>
+
+      {/* Settings Section */}
+      <BackupSettingsPanel onSettingsChange={() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
+      }} />
 
       {/* Status Overview */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -355,7 +360,7 @@ function BackupTable({ backups, onDownload, isLoading }: BackupTableProps) {
               {formatDate(backup.timestamp)}
             </TableCell>
             <TableCell>
-              {formatBackupSize(backup.size)}
+              {formatFileSize(backup.size)}
             </TableCell>
             <TableCell>
               <div className="text-sm text-muted-foreground">
@@ -363,7 +368,7 @@ function BackupTable({ backups, onDownload, isLoading }: BackupTableProps) {
                   <div>{backup.metadata.fileCount} files</div>
                 )}
                 {backup.metadata?.compressedSize && (
-                  <div>Compressed: {formatBackupSize(backup.metadata.compressedSize)}</div>
+                  <div>Compressed: {formatFileSize(backup.metadata.compressedSize)}</div>
                 )}
               </div>
             </TableCell>

@@ -6,7 +6,8 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
-  customNotifications, type CustomNotification, type InsertCustomNotification
+  customNotifications, type CustomNotification, type InsertCustomNotification,
+  backupSettings, type BackupSettings, type InsertBackupSettings
 } from "../shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -83,6 +84,11 @@ export interface IStorage {
   updateCustomNotification(id: number, notificationData: Partial<InsertCustomNotification>): Promise<CustomNotification | undefined>;
   markCustomNotificationAsRead(id: number): Promise<boolean>;
   deleteCustomNotification(id: number): Promise<boolean>;
+  
+  // Backup Settings methods
+  getBackupSettings(): Promise<BackupSettings | undefined>;
+  createBackupSettings(settings: InsertBackupSettings): Promise<BackupSettings>;
+  updateBackupSettings(id: number, settingsData: Partial<InsertBackupSettings>): Promise<BackupSettings | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -103,6 +109,8 @@ export class MemStorage implements IStorage {
   private documentId: number;
   private pdfTemplateId: number;
   private customNotificationId: number;
+  private backupSettings: Map<number, BackupSettings>;
+  private backupSettingsId: number;
 
   constructor() {
     this.users = new Map();
@@ -113,6 +121,7 @@ export class MemStorage implements IStorage {
     this.documents = new Map();
     this.pdfTemplates = new Map();
     this.customNotifications = new Map();
+    this.backupSettings = new Map();
     
     this.userId = 1;
     this.vehicleId = 1;
@@ -122,6 +131,7 @@ export class MemStorage implements IStorage {
     this.documentId = 1;
     this.pdfTemplateId = 1;
     this.customNotificationId = 1;
+    this.backupSettingsId = 1;
     
     // Initialize with sample data for demo
     this.initializeSampleData();
@@ -1072,6 +1082,41 @@ export class MemStorage implements IStorage {
   
   async deleteCustomNotification(id: number): Promise<boolean> {
     return this.customNotifications.delete(id);
+  }
+
+  // Backup Settings methods
+  async getBackupSettings(): Promise<BackupSettings | undefined> {
+    // Return the first (and should be only) backup settings record
+    const settings = Array.from(this.backupSettings.values())[0];
+    return settings;
+  }
+
+  async createBackupSettings(settings: InsertBackupSettings): Promise<BackupSettings> {
+    const newSettings: BackupSettings = {
+      id: this.backupSettingsId++,
+      ...settings,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.backupSettings.set(newSettings.id, newSettings);
+    return newSettings;
+  }
+
+  async updateBackupSettings(id: number, settingsData: Partial<InsertBackupSettings>): Promise<BackupSettings | undefined> {
+    const existingSettings = this.backupSettings.get(id);
+    if (!existingSettings) {
+      return undefined;
+    }
+
+    const updatedSettings: BackupSettings = {
+      ...existingSettings,
+      ...settingsData,
+      updatedAt: new Date()
+    };
+
+    this.backupSettings.set(id, updatedSettings);
+    return updatedSettings;
   }
 }
 
