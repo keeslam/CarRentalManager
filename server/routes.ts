@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { format } from "date-fns";
 import { storage } from "./storage";
-import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
+import { fetchVehicleInfoByLicensePlate, RDWNotFoundError, RDWTimeoutError, RDWUpstreamError } from "./utils/rdw-api";
 import { generateRentalContract, generateRentalContractFromTemplate, prepareContractData } from "./utils/pdf-generator";
 import { processInvoiceWithAI, generateInvoiceHash, validateParsedInvoice, type ParsedInvoice } from "./utils/invoice-scanner";
 import path from "path";
@@ -903,6 +903,30 @@ export async function registerRoutes(app: Express): Promise<void> {
       const vehicleInfo = await fetchVehicleInfoByLicensePlate(licensePlate);
       res.json(vehicleInfo);
     } catch (error) {
+      console.error("RDW API lookup error:", error);
+      
+      if (error instanceof RDWNotFoundError) {
+        return res.status(404).json({ 
+          message: "Vehicle not found", 
+          error: error.message 
+        });
+      }
+      
+      if (error instanceof RDWTimeoutError) {
+        return res.status(504).json({ 
+          message: "RDW service timeout", 
+          error: error.message 
+        });
+      }
+      
+      if (error instanceof RDWUpstreamError) {
+        return res.status(502).json({ 
+          message: "RDW service error", 
+          error: error.message 
+        });
+      }
+      
+      // Fallback for unexpected errors
       res.status(500).json({ 
         message: "Failed to fetch vehicle information from RDW", 
         error: error instanceof Error ? error.message : "Unknown error" 
