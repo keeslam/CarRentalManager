@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document, Vehicle } from "@shared/schema";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import PDFTemplateEditor from "./template-editor";
 import { FileEdit, Star } from "lucide-react";
 
@@ -95,7 +96,7 @@ export default function DocumentsIndex() {
   const getVehicleName = (vehicleId: number) => {
     const vehicle = vehicles?.find(v => v.id === vehicleId);
     return vehicle 
-      ? `${vehicle.licensePlate} - ${vehicle.brand} ${vehicle.model}`
+      ? `${displayLicensePlate(vehicle.licensePlate)} - ${vehicle.brand} ${vehicle.model}`
       : `Vehicle #${vehicleId}`;
   };
   
@@ -149,7 +150,7 @@ export default function DocumentsIndex() {
                       <SelectItem value="all">All Vehicles</SelectItem>
                       {vehicles?.map((vehicle) => (
                         <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                          {vehicle.licensePlate}
+                          {displayLicensePlate(vehicle.licensePlate)}
                         </SelectItem>
                       ))}
                     </SelectContent>
