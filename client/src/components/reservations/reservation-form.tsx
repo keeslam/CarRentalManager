@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,8 @@ const formSchema = insertReservationSchema.extend({
     z.string().min(1, "Please select a customer").transform(val => parseInt(val)),
   ]),
   startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
+  endDate: z.string().optional(),
+  isOpenEnded: z.boolean().optional(),
   totalPrice: z.union([
     z.number().optional(),
     z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
@@ -74,6 +76,15 @@ const formSchema = insertReservationSchema.extend({
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
   ]).optional(),
+}).refine((data) => {
+  // If not open-ended, end date is required
+  if (!data.isOpenEnded && (!data.endDate || data.endDate === "")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "End date is required for non-open-ended rentals",
+  path: ["endDate"],
 });
 
 interface ReservationFormProps {
@@ -104,6 +115,9 @@ export function ReservationForm({
   // Form states
   const [selectedStartDate, setSelectedStartDate] = useState<string>(
     initialStartDate || preSelectedStartDate || format(new Date(), "yyyy-MM-dd")
+  );
+  const [isOpenEnded, setIsOpenEnded] = useState<boolean>(
+    initialData?.endDate === null || initialData?.endDate === undefined || false
   );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -177,8 +191,8 @@ export function ReservationForm({
   
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
-  // Default end date is 3 days from today
-  const defaultEndDate = format(addDays(parseISO(selectedStartDate), 3), "yyyy-MM-dd");
+  // Default end date is 3 days from start date (unless open-ended)
+  const defaultEndDate = !isOpenEnded ? format(addDays(parseISO(selectedStartDate), 3), "yyyy-MM-dd") : "";
   
   // Setup form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
@@ -188,6 +202,7 @@ export function ReservationForm({
       customerId: initialCustomerId || preSelectedCustomerId || "", 
       startDate: selectedStartDate,
       endDate: defaultEndDate,
+      isOpenEnded: isOpenEnded,
       status: "pending",
       totalPrice: 0,
       notes: ""
@@ -197,6 +212,7 @@ export function ReservationForm({
   // Watch for changes to calculate duration
   const startDateWatch = form.watch("startDate");
   const endDateWatch = form.watch("endDate");
+  const isOpenEndedWatch = form.watch("isOpenEnded");
   const vehicleIdWatch = form.watch("vehicleId");
   const customerIdWatch = form.watch("customerId");
   const statusWatch = form.watch("status");
@@ -214,12 +230,14 @@ export function ReservationForm({
   
   // Calculate rental duration
   const rentalDuration = useMemo(() => {
-    if (!startDateWatch || !endDateWatch) return 1;
+    if (!startDateWatch) return 1;
+    if (isOpenEndedWatch) return "Open-ended";
+    if (!endDateWatch) return 1;
     const start = parseISO(startDateWatch);
     const end = parseISO(endDateWatch);
     const days = differenceInDays(end, start) + 1; // Include the start day
     return days > 0 ? days : 1;
-  }, [startDateWatch, endDateWatch]);
+  }, [startDateWatch, endDateWatch, isOpenEndedWatch]);
   
   // Check for reservation conflicts
   const [hasOverlap, setHasOverlap] = useState(false);
@@ -231,9 +249,34 @@ export function ReservationForm({
       setCurrentStatus(statusWatch);
     }
   }, [statusWatch]);
+
+  // Sync isOpenEnded state with form watch
+  useEffect(() => {
+    if (isOpenEndedWatch !== isOpenEnded) {
+      setIsOpenEnded(!!isOpenEndedWatch);
+    }
+  }, [isOpenEndedWatch]);
+
+  // Update end date when open-ended status changes
+  useEffect(() => {
+    if (isOpenEndedWatch) {
+      form.setValue("endDate", "");
+    } else if (!form.getValues("endDate")) {
+      // Set default end date if not open-ended and no end date set
+      form.setValue("endDate", format(addDays(parseISO(startDateWatch || selectedStartDate), 3), "yyyy-MM-dd"));
+    }
+  }, [isOpenEndedWatch, form, startDateWatch, selectedStartDate]);
   
   useEffect(() => {
-    if (vehicleIdWatch && startDateWatch && endDateWatch && !editMode) {
+    if (vehicleIdWatch && startDateWatch && !editMode) {
+      // Skip conflict checking for open-ended rentals
+      if (isOpenEndedWatch) {
+        setHasOverlap(false);
+        return;
+      }
+      
+      if (!endDateWatch) return;
+      
       const checkConflicts = async () => {
         try {
           const response = await fetch(
@@ -250,7 +293,7 @@ export function ReservationForm({
       
       checkConflicts();
     }
-  }, [vehicleIdWatch, startDateWatch, endDateWatch, editMode, initialData?.id]);
+  }, [vehicleIdWatch, startDateWatch, endDateWatch, isOpenEndedWatch, editMode, initialData?.id]);
   
   // Format customer options for searchable combobox
   const customerOptions = useMemo(() => {
@@ -475,8 +518,8 @@ export function ReservationForm({
 
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    // Check for overlapping reservations
-    if (hasOverlap) {
+    // Check for overlapping reservations (skip for open-ended rentals)
+    if (hasOverlap && !data.isOpenEnded) {
       toast({
         title: "Booking Conflict",
         description: "This vehicle is already reserved for the selected dates. Please choose different dates or another vehicle.",
@@ -484,6 +527,15 @@ export function ReservationForm({
       });
       return;
     }
+    
+    // Process data for open-ended rentals
+    const submissionData = {
+      ...data,
+      endDate: data.isOpenEnded ? null : data.endDate,
+    };
+    
+    // Remove the isOpenEnded field as it's not part of the backend schema
+    delete submissionData.isOpenEnded;
     
     try {
       // Update vehicle mileage based on status
@@ -493,17 +545,17 @@ export function ReservationForm({
         };
         
         // If status is confirmed and we have start mileage, update current mileage
-        if (data.status === "confirmed" && data.startMileage) {
-          vehicleUpdateData.currentMileage = Number(data.startMileage);
+        if (submissionData.status === "confirmed" && submissionData.startMileage) {
+          vehicleUpdateData.currentMileage = Number(submissionData.startMileage);
         }
         
         // If status is completed and we have departure mileage, update departure mileage
-        if (data.status === "completed" && data.departureMileage) {
-          vehicleUpdateData.departureMileage = Number(data.departureMileage);
+        if (submissionData.status === "completed" && submissionData.departureMileage) {
+          vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
         }
         
         // First create/update the reservation
-        const reservationResult = await createReservationMutation.mutateAsync(data);
+        const reservationResult = await createReservationMutation.mutateAsync(submissionData);
         
         // Then update the vehicle mileage if we have any mileage data
         if (vehicleUpdateData.currentMileage !== undefined || vehicleUpdateData.departureMileage !== undefined) {
@@ -513,7 +565,7 @@ export function ReservationForm({
         return reservationResult;
       } else {
         // No vehicle ID, just create/update the reservation
-        return await createReservationMutation.mutateAsync(data);
+        return await createReservationMutation.mutateAsync(submissionData);
       }
     } catch (error) {
       console.error("Error submitting reservation:", error);
@@ -783,29 +835,63 @@ export function ReservationForm({
                   )}
                 />
                 
-                {/* End Date */}
+                {/* Open-ended rental checkbox */}
                 <FormField
                   control={form.control}
-                  name="endDate"
+                  name="isOpenEnded"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                       <FormControl>
-                        <Input type="date" min={startDateWatch} {...field} />
+                        <Checkbox
+                          data-testid="checkbox-open-ended-rental"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Open-ended rental
+                        </FormLabel>
+                        <FormDescription>
+                          Check this if the return date is not yet known
+                        </FormDescription>
+                      </div>
                     </FormItem>
                   )}
                 />
+
+                {/* End Date - only show if not open-ended */}
+                {!isOpenEndedWatch && (
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            data-testid="input-end-date"
+                            type="date" 
+                            min={startDateWatch} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 {/* Duration Indicator */}
                 <div className="flex flex-col justify-end">
                   <FormLabel className="mb-2 opacity-0">Duration</FormLabel>
                   <div className="border rounded-md h-10 flex items-center px-3 bg-muted">
                     <span className="font-medium">{rentalDuration}</span>
-                    <span className="ml-1 text-muted-foreground">
-                      {rentalDuration === 1 ? "day" : "days"}
-                    </span>
+                    {typeof rentalDuration === 'number' && (
+                      <span className="ml-1 text-muted-foreground">
+                        {rentalDuration === 1 ? "day" : "days"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -925,7 +1011,9 @@ export function ReservationForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Enter the total price for the {rentalDuration}-day rental
+                        {typeof rentalDuration === 'number' 
+                          ? `Enter the total price for the ${rentalDuration}-day rental`
+                          : "Enter the total price for this open-ended rental"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -171,7 +171,7 @@ export const reservations = pgTable("reservations", {
   vehicleId: integer("vehicle_id").notNull(),
   customerId: integer("customer_id").notNull(),
   startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
+  endDate: text("end_date"), // Allow null for open-ended rentals
   status: text("status").default("pending").notNull(),
   totalPrice: numeric("total_price"),
   notes: text("notes"),
@@ -205,7 +205,8 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
       // Check if the result is NaN and return undefined instead
       return isNaN(num) ? undefined : num;
     })
-  )
+  ),
+  endDate: z.string().optional().or(z.null()) // Make end date optional for open-ended rentals
 });
 
 // Expenses table
