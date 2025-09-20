@@ -779,6 +779,7 @@ export function ReservationForm({
                                   <CustomerForm 
                                     initialData={selectedCustomer}
                                     editMode={true}
+                                    redirectToList={false}
                                     onSuccess={async (updatedCustomer) => {
                                       // Refresh customers list to show updated data
                                       await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
@@ -793,7 +794,6 @@ export function ReservationForm({
                                         description: `${updatedCustomer.name} has been successfully updated.`,
                                       });
                                     }}
-                                    redirectToList={false}
                                   />
                                 )}
                               </DialogContent>
