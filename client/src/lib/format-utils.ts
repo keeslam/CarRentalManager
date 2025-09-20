@@ -1,13 +1,19 @@
 import { format, parseISO } from 'date-fns';
 
 /**
- * Format a date string into a readable format: 'MMM dd, yyyy'
+ * Format a date string or Date object into a readable format: 'MMM dd, yyyy'
  */
-export function formatDate(dateString: string): string {
+export function formatDate(date: string | Date): string {
   try {
-    return format(parseISO(dateString), 'MMM dd, yyyy');
+    // If it's already a Date object, use it directly
+    if (date instanceof Date) {
+      return format(date, 'MMM dd, yyyy');
+    }
+    // If it's a string, parse it first
+    return format(parseISO(date), 'MMM dd, yyyy');
   } catch (e) {
-    return dateString;
+    // If all else fails, return a safe fallback
+    return 'Invalid date';
   }
 }
 
