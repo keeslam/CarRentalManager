@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatCurrency } from "@/lib/format-utils";
+import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Expense } from "@shared/schema";
 
 // Function to get expense icon based on category
@@ -90,7 +90,7 @@ export function RecentExpenses() {
                       {getExpenseIcon(expense.category)}
                     </div>
                     <div>
-                      <div className="text-sm font-medium">{expense.vehicle?.licensePlate} - {expense.description}</div>
+                      <div className="text-sm font-medium">{formatLicensePlate(expense.vehicle?.licensePlate || '')} - {expense.description}</div>
                       <div className="text-xs text-gray-500">{formatDate(expense.date)} • {expense.category}</div>
                     </div>
                   </div>

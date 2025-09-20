@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Expense } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
-import { displayLicensePlate } from "@/lib/utils";
+import { formatLicensePlate } from "@/lib/format-utils";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -156,7 +156,7 @@ export default function ExpensesIndex() {
         const vehicle = row.original.vehicle;
         return vehicle ? (
           <div>
-            <div className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</div>
+            <div className="font-medium">{formatLicensePlate(vehicle.licensePlate)}</div>
             <div className="text-sm text-gray-500">{vehicle.brand} {vehicle.model}</div>
           </div>
         ) : "—";
@@ -372,7 +372,7 @@ export default function ExpensesIndex() {
                                             <TableCell>
                                               {expense.vehicle ? (
                                                 <div data-license-plate={expense.vehicle.licensePlate}>
-                                                  <div className="font-medium">{displayLicensePlate(expense.vehicle.licensePlate)}</div>
+                                                  <div className="font-medium">{formatLicensePlate(expense.vehicle.licensePlate)}</div>
                                                   <div className="text-sm text-gray-500">{expense.vehicle.brand} {expense.vehicle.model}</div>
                                                 </div>
                                               ) : "—"}
