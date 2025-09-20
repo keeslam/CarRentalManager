@@ -243,7 +243,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       return;
     }
 
-    scanInvoiceMutation.mutate({ file, vehicleId });
+    scanInvoiceMutation.mutate({ file });
   };
 
   const handleCreateExpenses = () => {
@@ -332,28 +332,11 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Step 1: File Upload and Vehicle Selection */}
+          {/* Step 1: File Upload */}
           {!scannedInvoice && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicle-select">Select Vehicle</Label>
-                <VehicleSelector
-                  vehicles={vehicles || []}
-                  value={vehicleId}
-                  onChange={setVehicleId}
-                  placeholder={loadingVehicles ? "Loading vehicles..." : "Select a vehicle..."}
-                  disabled={loadingVehicles}
-                  className="w-full"
-                />
-                {selectedVehicleId && vehicleId === selectedVehicleId.toString() && (
-                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                    <span className="font-medium">Pre-selected vehicle</span> - You can change this if needed
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoice-file">Invoice PDF</Label>
+                <Label htmlFor="invoice-file">Upload Invoice PDF</Label>
                 <Input
                   id="invoice-file"
                   type="file"
@@ -370,7 +353,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
 
               <Button 
                 onClick={handleScan} 
-                disabled={!file || !vehicleId || scanInvoiceMutation.isPending}
+                disabled={!file || scanInvoiceMutation.isPending}
                 className="w-full"
                 data-testid="button-start-scan"
               >
@@ -389,9 +372,44 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
             </div>
           )}
 
-          {/* Step 2: Review Scanned Data */}
+          {/* Step 2: Vehicle Selection & Review Scanned Data */}
           {scannedInvoice && (
             <div className="space-y-6">
+              {/* Vehicle Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Select Vehicle for Expenses
+                  </CardTitle>
+                  <CardDescription>
+                    {scannedInvoice.invoice.vehicleInfo?.licensePlate 
+                      ? `Found license plate "${scannedInvoice.invoice.vehicleInfo.licensePlate}" in invoice. Auto-selected matching vehicle if found.`
+                      : "Choose which vehicle these expenses belong to."
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <VehicleSelector
+                      vehicles={vehicles || []}
+                      value={vehicleId}
+                      onChange={setVehicleId}
+                      placeholder="Select a vehicle..."
+                      disabled={loadingVehicles}
+                      className="w-full"
+                    />
+                    {scannedInvoice.invoice.vehicleInfo?.licensePlate && !vehicleId && (
+                      <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">
+                        <span className="font-medium">License plate detected:</span> {scannedInvoice.invoice.vehicleInfo.licensePlate}
+                        <br />
+                        <span className="text-xs">No matching vehicle found in your system. Please select manually.</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Invoice Info */}
               <Card>
                 <CardHeader>
