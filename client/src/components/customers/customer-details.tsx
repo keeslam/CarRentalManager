@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -466,7 +467,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                         <tr key={reservation.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="text-sm font-medium text-gray-900">{reservation.vehicle?.licensePlate}</div>
+                              <div className="text-sm font-medium text-gray-900">{displayLicensePlate(reservation.vehicle?.licensePlate || '')}</div>
                               <div className="ml-2 text-xs text-gray-500">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
                             </div>
                           </td>
