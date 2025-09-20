@@ -57,7 +57,7 @@ function getExpenseIcon(category: string) {
 
 export function RecentExpenses() {
   const { data: expenses, isLoading } = useQuery<Expense[]>({
-    queryKey: ["/api/expenses/recent?limit=10"],
+    queryKey: ["/api/expenses/recent", { limit: 10 }],
   });
   
   return (
