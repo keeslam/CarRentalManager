@@ -245,11 +245,22 @@ export function VehicleForm({
   
   const lookupVehicleMutation = useMutation({
     mutationFn: async (licensePlate: string) => {
-      return await apiRequest("GET", `/api/rdw/vehicle/${licensePlate}`, undefined);
-    },
-    onSuccess: async (response) => {
-      const vehicleData = await response.json();
+      const response = await fetch(`/api/rdw/vehicle/${licensePlate}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      });
       
+      // Check if the response is OK before parsing
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        const error = new Error(errorData.message || "Failed to lookup vehicle");
+        (error as any).status = response.status;
+        throw error;
+      }
+      
+      return response.json();
+    },
+    onSuccess: (vehicleData) => {
       // Fill form with retrieved data, converting null values to empty strings
       Object.keys(vehicleData).forEach((key) => {
         if (form.getValues(key as any) !== undefined) {
@@ -259,24 +270,34 @@ export function VehicleForm({
         }
       });
       
-      // Check if data was actually found or if we're showing simulated data
-      if (vehicleData.brand && vehicleData.model) {
-        toast({
-          title: "Information retrieved",
-          description: "Vehicle information has been retrieved successfully.",
-        });
-      } else {
-        toast({
-          title: "Simulated data loaded",
-          description: "No real data found for this license plate. Using simulated data instead.",
-          variant: "default"
-        });
-      }
-    },
-    onError: (error) => {
       toast({
-        title: "Lookup failed",
-        description: `Could not retrieve vehicle information: ${error.message}`,
+        title: "Vehicle information found",
+        description: "Successfully retrieved vehicle information from RDW database.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("RDW lookup error:", error);
+      
+      // Handle specific error types based on status code
+      let title = "Lookup failed";
+      let description = "Could not retrieve vehicle information";
+      
+      if (error.status === 404) {
+        title = "Vehicle not found";
+        description = "No vehicle found with this license plate in the RDW database. Please check the plate number and try again.";
+      } else if (error.status === 504) {
+        title = "Service timeout";
+        description = "The RDW service is taking too long to respond. Please try again later.";
+      } else if (error.status === 502) {
+        title = "Service unavailable";
+        description = "The RDW service is currently unavailable. Please try again later.";
+      } else {
+        description = error.message || description;
+      }
+      
+      toast({
+        title,
+        description,
         variant: "destructive",
       });
     },
