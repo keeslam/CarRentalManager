@@ -68,6 +68,7 @@ export const vehicles = pgTable("vehicles", {
   registeredTo: text("registered_to"),
   registeredToDate: text("registered_to_date"),
   registeredToBy: text("registered_to_by"), // Track who changed the registeredTo status
+  productionDate: text("production_date"), // Production/build date from RDW API
   gps: boolean("gps"),
   monthlyPrice: numeric("monthly_price"),
   dailyPrice: numeric("daily_price"),
