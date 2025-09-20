@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Tesseract from "tesseract.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Scan, Loader2, X, RotateCcw } from "lucide-react";
+import { Camera, Scan, Loader2, X, RotateCcw, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PDFDocument } from "pdf-lib";
 
 interface DocumentScannerProps {
   onScanComplete: (extractedData: VehicleData) => void;
@@ -27,11 +28,33 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
   const [isProcessing, setIsProcessing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>("");
+  const [isMobile, setIsMobile] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Detect if device is mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const mobileKeywords = ['mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+      const isMobileDevice = mobileKeywords.some(keyword => userAgent.includes(keyword));
+      const hasTouch = 'ontouchstart' in window;
+      const smallScreen = window.innerWidth <= 768;
+      
+      return isMobileDevice || (hasTouch && smallScreen);
+    };
+
+    setIsMobile(checkIsMobile());
+    
+    // Re-check on resize
+    const handleResize = () => setIsMobile(checkIsMobile());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -91,10 +114,112 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
     }
   }, [stopCamera]);
 
-  // Process captured image with OCR
-  const processImage = useCallback(async () => {
-    if (!capturedImage) return;
+  // Handle file upload (desktop)
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a JPG, PNG, or PDF file.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 10MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      let imageDataUrl: string;
+
+      if (file.type === 'application/pdf') {
+        // Handle PDF files
+        imageDataUrl = await extractImageFromPDF(file);
+      } else {
+        // Handle image files
+        imageDataUrl = await fileToDataURL(file);
+      }
+
+      setCapturedImage(imageDataUrl);
+      setIsProcessing(false);
+
+      // Auto-process the uploaded file
+      await processImageFromDataURL(imageDataUrl);
+
+    } catch (error) {
+      console.error('File processing error:', error);
+      toast({
+        title: "File Processing Failed",
+        description: "Could not process the uploaded file. Please try again.",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+    }
+  }, [toast]);
+
+  // Convert file to data URL
+  const fileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Extract image from PDF
+  const extractImageFromPDF = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    const pages = pdfDoc.getPages();
     
+    if (pages.length === 0) {
+      throw new Error('PDF contains no pages');
+    }
+
+    // For now, we'll create a canvas from the first page
+    // This is a simplified approach - for better PDF processing,
+    // we might want to use pdf.js or similar
+    const firstPage = pages[0];
+    const { width, height } = firstPage.getSize();
+
+    // Create a canvas to render the PDF page
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      throw new Error('Could not get canvas context');
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // For simplicity, we'll show a message that PDFs need to be converted to images
+    // In a production app, you'd want to properly render the PDF page
+    throw new Error('PDF processing not fully implemented. Please convert your PDF to an image first.');
+  };
+
+  // Trigger file upload
+  const triggerFileUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // Process image from data URL with OCR
+  const processImageFromDataURL = useCallback(async (imageDataUrl: string) => {
     setIsProcessing(true);
     
     try {
@@ -109,7 +234,7 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
       });
       
       // Perform OCR
-      const { data: { text } } = await worker.recognize(capturedImage);
+      const { data: { text } } = await worker.recognize(imageDataUrl);
       
       // Clean up worker
       await worker.terminate();
@@ -123,13 +248,13 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
         onScanComplete(vehicleData);
         setIsDialogOpen(false);
         toast({
-          title: "Document Scanned Successfully",
+          title: "Document Processed Successfully",
           description: `Found license plate: ${vehicleData.licensePlate}`,
         });
       } else {
         toast({
           title: "No License Plate Found",
-          description: "Please try capturing the document again or enter the information manually.",
+          description: "Please try uploading a different image or enter the information manually.",
           variant: "destructive"
         });
       }
@@ -137,14 +262,20 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
     } catch (error) {
       console.error('OCR Error:', error);
       toast({
-        title: "Scanning Failed",
+        title: "Processing Failed",
         description: "Failed to process the document. Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [capturedImage, onScanComplete, toast]);
+  }, [onScanComplete, toast]);
+
+  // Process captured image with OCR (mobile camera)
+  const processImage = useCallback(async () => {
+    if (!capturedImage) return;
+    await processImageFromDataURL(capturedImage);
+  }, [capturedImage, processImageFromDataURL]);
 
   // Parse OCR text to extract vehicle information
   const parseVehicleDocument = (text: string): VehicleData => {
@@ -258,14 +389,17 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
         <DialogHeader>
           <DialogTitle>Scan Vehicle Registration Document</DialogTitle>
           <DialogDescription>
-            Position your vehicle registration card (kentekenbewijs) in front of the camera and capture it to automatically extract vehicle information.
+            {isMobile
+              ? "Position your vehicle registration card (kentekenbewijs) in front of the camera and capture it to automatically extract vehicle information."
+              : "Upload a photo or scan of your vehicle registration card (kentekenbewijs) to automatically extract vehicle information."
+            }
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           {!capturedImage && (
             <div className="space-y-4">
-              {!isCameraActive && (
+              {isMobile && !isCameraActive && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -285,7 +419,35 @@ export function DocumentScanner({ onScanComplete, isLoading = false }: DocumentS
                 </Card>
               )}
               
-              {isCameraActive && (
+              {!isMobile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="w-5 h-5" />
+                      Upload Document
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload a photo or scan of your vehicle registration document. Supported formats: JPG, PNG.
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                      data-testid="input-file-upload"
+                    />
+                    <Button onClick={triggerFileUpload} data-testid="button-upload-file">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose File
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {isMobile && isCameraActive && (
                 <div className="space-y-4">
                   <video
                     ref={videoRef}
