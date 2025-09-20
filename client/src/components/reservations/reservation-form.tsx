@@ -10,6 +10,7 @@ import { insertReservationSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { VehicleQuickForm } from "@/components/vehicles/vehicle-quick-form";
+import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { 
   Form, 
   FormControl, 
@@ -121,6 +122,7 @@ export function ReservationForm({
   );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [vehicleEditDialogOpen, setVehicleEditDialogOpen] = useState(false);
   const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -608,7 +610,47 @@ export function ReservationForm({
                       ) : (
                         // Otherwise, show selection UI
                         <>
-                          <div className="flex justify-end mb-2">
+                          <div className="flex justify-end mb-2 gap-2">
+                            {/* Edit Vehicle Button - only show if vehicle is selected */}
+                            {vehicleIdWatch && (
+                              <Dialog open={vehicleEditDialogOpen} onOpenChange={setVehicleEditDialogOpen}>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Edit className="h-3.5 w-3.5 mr-1" />
+                                    Edit
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Vehicle</DialogTitle>
+                                    <DialogDescription>
+                                      Edit the details of the selected vehicle
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  {selectedVehicle && (
+                                    <VehicleForm 
+                                      editMode={true}
+                                      initialData={selectedVehicle}
+                                      redirectToList={false}
+                                      onSuccess={async (updatedVehicle) => {
+                                        // Refresh vehicles list to show updated data
+                                        await refetchVehicles();
+                                        
+                                        // Close the dialog
+                                        setVehicleEditDialogOpen(false);
+                                        
+                                        // Show success message
+                                        toast({
+                                          title: "Vehicle Updated",
+                                          description: `${updatedVehicle.brand} ${updatedVehicle.model} has been successfully updated.`,
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                            
                             <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
