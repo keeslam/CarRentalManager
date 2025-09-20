@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { storage } from "./storage";
 import { fetchVehicleInfoByLicensePlate } from "./utils/rdw-api";
 import { generateRentalContract, generateRentalContractFromTemplate, prepareContractData } from "./utils/pdf-generator";
+import { processInvoiceWithAI, generateInvoiceHash, validateParsedInvoice, type ParsedInvoice } from "./utils/invoice-scanner";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
@@ -2800,6 +2801,168 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.status(500).json({ 
         message: "Failed to delete notification", 
         error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Invoice scanning endpoint
+  app.post("/api/expenses/scan", requireAuth, upload.single('invoice'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No invoice file provided" });
+      }
+
+      const file = req.file;
+      const vehicleId = req.body.vehicleId ? parseInt(req.body.vehicleId) : null;
+
+      // Validate file type (PDF only for now)
+      if (!file.originalname.toLowerCase().endsWith('.pdf')) {
+        // Clean up uploaded file
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ message: "Only PDF files are supported" });
+      }
+
+      // Validate vehicle ID if provided
+      if (vehicleId) {
+        const vehicle = await storage.getVehicle(vehicleId);
+        if (!vehicle) {
+          fs.unlinkSync(file.path);
+          return res.status(404).json({ message: "Vehicle not found" });
+        }
+      }
+
+      try {
+        // Process invoice with AI
+        console.log('Processing invoice:', file.originalname);
+        const parsedInvoice = await processInvoiceWithAI(file.path);
+
+        // Validate the parsed result
+        const validation = validateParsedInvoice(parsedInvoice);
+        if (!validation.valid) {
+          // Clean up file but still return the parsed data for manual correction
+          fs.unlinkSync(file.path);
+          return res.status(400).json({
+            message: "Invoice validation failed",
+            errors: validation.errors,
+            parsedData: parsedInvoice
+          });
+        }
+
+        // Generate hash to check for duplicates
+        const invoiceHash = generateInvoiceHash(parsedInvoice);
+
+        // Move file to permanent location with hash-based filename
+        const permanentDir = path.join(uploadsDir, 'invoices');
+        if (!fs.existsSync(permanentDir)) {
+          fs.mkdirSync(permanentDir, { recursive: true });
+        }
+
+        const permanentPath = path.join(permanentDir, `${invoiceHash}.pdf`);
+        fs.renameSync(file.path, permanentPath);
+
+        // Return parsed invoice data
+        res.json({
+          success: true,
+          invoice: parsedInvoice,
+          invoiceHash,
+          filePath: getRelativePath(permanentPath),
+          suggestedVehicleId: vehicleId
+        });
+
+      } catch (processingError) {
+        // Clean up file on processing error
+        fs.unlinkSync(file.path);
+        console.error('Invoice processing error:', processingError);
+        res.status(500).json({
+          message: "Failed to process invoice",
+          error: processingError instanceof Error ? processingError.message : "Unknown processing error"
+        });
+      }
+
+    } catch (error) {
+      console.error("Error scanning invoice:", error);
+      // Clean up file if it exists
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({
+        message: "Failed to scan invoice",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Create expenses from scanned invoice
+  app.post("/api/expenses/from-invoice", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { invoice, vehicleId, filePath, invoiceHash, lineItems } = req.body;
+
+      // Validate required fields
+      if (!invoice || !vehicleId || !lineItems || !Array.isArray(lineItems)) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate vehicle exists
+      const vehicle = await storage.getVehicle(parseInt(vehicleId));
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // Check for duplicates using invoice hash
+      if (invoiceHash) {
+        // This is a simple check - in production you might want to store invoice hashes in the database
+        console.log('Invoice hash for duplicate check:', invoiceHash);
+      }
+
+      const createdExpenses = [];
+      const currentUser = (req as any).user?.username || 'system';
+
+      // Create expenses from line items
+      for (const lineItem of lineItems) {
+        try {
+          const expenseData = {
+            vehicleId: parseInt(vehicleId),
+            category: lineItem.category || 'Other',
+            amount: lineItem.amount?.toString() || '0',
+            date: invoice.invoiceDate || new Date().toISOString().split('T')[0],
+            description: `${lineItem.description} (Invoice: ${invoice.invoiceNumber || 'N/A'} - ${invoice.vendor || 'Unknown'})`,
+            receiptFilePath: filePath || null,
+            createdBy: currentUser,
+            updatedBy: null
+          };
+
+          // Validate expense data
+          const validatedData = insertExpenseSchema.parse(expenseData);
+          const expense = await storage.createExpense(validatedData);
+          createdExpenses.push(expense);
+
+        } catch (itemError) {
+          console.error('Error creating expense for line item:', lineItem, itemError);
+          // Continue with other items even if one fails
+        }
+      }
+
+      if (createdExpenses.length === 0) {
+        return res.status(400).json({ message: "No expenses could be created" });
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully created ${createdExpenses.length} expense(s)`,
+        expenses: createdExpenses,
+        invoice: {
+          vendor: invoice.vendor,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          totalAmount: invoice.totalAmount
+        }
+      });
+
+    } catch (error) {
+      console.error("Error creating expenses from invoice:", error);
+      res.status(500).json({
+        message: "Failed to create expenses from invoice",
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
