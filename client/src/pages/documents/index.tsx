@@ -224,14 +224,17 @@ export default function DocumentsIndex() {
     return matchesSearch && matchesVehicle && matchesType;
   });
   
-  // Group documents by vehicle
+  // Group documents by vehicle, then by category
   const documentsByVehicle = filteredDocuments?.reduce((acc, doc) => {
     if (!acc[doc.vehicleId]) {
-      acc[doc.vehicleId] = [];
+      acc[doc.vehicleId] = {};
     }
-    acc[doc.vehicleId].push(doc);
+    if (!acc[doc.vehicleId][doc.documentType]) {
+      acc[doc.vehicleId][doc.documentType] = [];
+    }
+    acc[doc.vehicleId][doc.documentType].push(doc);
     return acc;
-  }, {} as Record<number, Document[]>) || {};
+  }, {} as Record<number, Record<string, Document[]>>) || {};
   
   // Helper function to get document icon based on content type
   const getDocumentIcon = (contentType: string) => {
@@ -355,66 +358,146 @@ export default function DocumentsIndex() {
                 </div>
               ) : (
                 <div className="space-y-8">
-                  {Object.entries(documentsByVehicle).map(([vehicleId, docs]) => (
-                    <div key={vehicleId} className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">
-                        {getVehicleName(parseInt(vehicleId))}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {docs.map((doc) => (
-                          <Card key={doc.id} className="overflow-hidden">
-                            <div className="bg-gray-100 p-8 flex items-center justify-center">
-                              {getDocumentIcon(doc.contentType)}
+                  {Object.entries(documentsByVehicle).map(([vehicleId, categoriesByType]) => {
+                    const totalDocs = Object.values(categoriesByType).reduce((sum, docs) => sum + docs.length, 0);
+                    return (
+                      <div key={vehicleId} className="space-y-6">
+                        <div className="flex items-center justify-between border-b pb-3">
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            {getVehicleName(parseInt(vehicleId))}
+                          </h3>
+                          <Badge variant="secondary" className="text-sm">
+                            {totalDocs} document{totalDocs !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                        
+                        <div className="space-y-6">
+                          {Object.entries(categoriesByType).map(([documentType, docs]) => (
+                            <div key={`${vehicleId}-${documentType}`} className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  {/* Category-specific icon */}
+                                  {documentType.toLowerCase().includes('damage') && (
+                                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+                                        <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {documentType.toLowerCase().includes('apk') && (
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {documentType.toLowerCase().includes('maintenance') && (
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {documentType.toLowerCase().includes('insurance') && (
+                                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {!['damage', 'apk', 'maintenance', 'insurance'].some(keyword => 
+                                    documentType.toLowerCase().includes(keyword)) && (
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                  
+                                  <h4 className="text-lg font-medium text-gray-800">
+                                    {documentType}
+                                  </h4>
+                                  <Badge variant="outline" className="ml-2">
+                                    {docs.length}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-11">
+                                {docs.map((doc) => (
+                                  <Card key={doc.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center">
+                                      {getDocumentIcon(doc.contentType)}
+                                    </div>
+                                    <CardContent className="p-4">
+                                      <h5 className="font-medium mb-2 truncate" title={doc.fileName}>
+                                        {doc.fileName}
+                                      </h5>
+                                      
+                                      <div className="flex items-center text-sm text-gray-500 mb-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                          <path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+                                        </svg>
+                                        <span>{formatDate(doc.uploadDate?.toString() || "")}</span>
+                                      </div>
+                                      
+                                      {doc.notes && (
+                                        <p className="text-sm text-gray-600 mb-3 line-clamp-2" title={doc.notes}>
+                                          {doc.notes}
+                                        </p>
+                                      )}
+                                      
+                                      <div className="flex items-center text-xs text-gray-500 mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        </svg>
+                                        {formatFileSize(doc.fileSize)}
+                                      </div>
+                                      
+                                      <div className="flex justify-between items-center gap-2">
+                                        <a 
+                                          href={`/api/documents/download/${doc.id}`} 
+                                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          data-testid={`link-download-document-${doc.id}`}
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="7 10 12 15 17 10"/>
+                                            <line x1="12" x2="12" y1="15" y2="3"/>
+                                          </svg>
+                                          Download
+                                        </a>
+                                        <button 
+                                          onClick={() => handlePrintDocument(doc)}
+                                          className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 transition-colors"
+                                          data-testid={`button-print-document-${doc.id}`}
+                                        >
+                                          <Printer className="h-3.5 w-3.5" />
+                                          Print
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteDocument(doc)}
+                                          className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 transition-colors"
+                                          data-testid={`button-delete-document-${doc.id}`}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </div>
-                            <CardContent className="p-4">
-                              <h4 className="font-medium mb-1 truncate" title={doc.fileName}>
-                                {doc.fileName}
-                              </h4>
-                              <div className="flex items-center text-sm text-gray-500 mb-2">
-                                <Badge variant="outline" className="mr-2">{doc.documentType}</Badge>
-                                <span>{formatDate(doc.uploadDate?.toString() || "")}</span>
-                              </div>
-                              {doc.notes && (
-                                <p className="text-sm text-gray-600 my-2 truncate" title={doc.notes}>
-                                  {doc.notes}
-                                </p>
-                              )}
-                              <div className="text-xs text-gray-500 mb-2">
-                                {formatFileSize(doc.fileSize)}
-                              </div>
-                              <div className="flex justify-between items-center mt-2 gap-2">
-                                <a 
-                                  href={`/api/documents/download/${doc.id}`} 
-                                  className="text-primary-600 hover:text-primary-800 text-sm flex items-center gap-1"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  data-testid={`link-download-document-${doc.id}`}
-                                >
-                                  Download
-                                </a>
-                                <button 
-                                  onClick={() => handlePrintDocument(doc)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
-                                  data-testid={`button-print-document-${doc.id}`}
-                                >
-                                  <Printer className="h-3 w-3" />
-                                  Print
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteDocument(doc)}
-                                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
-                                  data-testid={`button-delete-document-${doc.id}`}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                  Delete
-                                </button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
