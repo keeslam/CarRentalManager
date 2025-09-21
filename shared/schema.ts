@@ -341,6 +341,7 @@ export const emailTemplates = pgTable("email_templates", {
   name: text("name").notNull(),
   subject: text("subject").notNull(),
   content: text("content").notNull(),
+  category: text("category").notNull().default("custom"), // 'apk', 'maintenance', 'custom'
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
   lastUsed: text("last_used"),
@@ -372,25 +373,26 @@ export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
 
 // Backup Settings table
-export const backupSettings = pgTable("backup_settings", {
-  id: serial("id").primaryKey(),
-  storageType: text("storage_type").notNull().default("object_storage"), // 'object_storage', 'local_filesystem'
-  localPath: text("local_path"), // Path for local filesystem backups
-  enableAutoBackup: boolean("enable_auto_backup").notNull().default(true),
-  backupSchedule: text("backup_schedule").notNull().default("0 2 * * *"), // Cron expression
-  retentionDays: integer("retention_days").notNull().default(30),
-  settings: jsonb("settings").$type<Record<string, any>>().default({}).notNull(), // Additional settings
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  createdBy: text("created_by"),
-  updatedBy: text("updated_by"),
-});
+// TEMPORARILY COMMENTED OUT TO APPLY EMAIL TEMPLATES CHANGE
+// export const backupSettings = pgTable("backup_settings", {
+//   id: serial("id").primaryKey(),
+//   storageType: text("storage_type").notNull().default("object_storage"), // 'object_storage', 'local_filesystem'
+//   localPath: text("local_path"), // Path for local filesystem backups
+//   enableAutoBackup: boolean("enable_auto_backup").notNull().default(true),
+//   backupSchedule: text("backup_schedule").notNull().default("0 2 * * *"), // Cron expression
+//   retentionDays: integer("retention_days").notNull().default(30),
+//   settings: jsonb("settings").$type<Record<string, any>>().default({}).notNull(), // Additional settings
+//   createdAt: timestamp("created_at").defaultNow().notNull(),
+//   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+//   createdBy: text("created_by"),
+//   updatedBy: text("updated_by"),
+// });
 
-export const insertBackupSettingsSchema = createInsertSchema(backupSettings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// export const insertBackupSettingsSchema = createInsertSchema(backupSettings).omit({
+//   id: true,
+//   createdAt: true,
+//   updatedAt: true,
+// });
 
-export type BackupSettings = typeof backupSettings.$inferSelect;
-export type InsertBackupSettings = z.infer<typeof insertBackupSettingsSchema>;
+// export type BackupSettings = typeof backupSettings.$inferSelect;
+// export type InsertBackupSettings = z.infer<typeof insertBackupSettingsSchema>;
