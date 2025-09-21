@@ -34,6 +34,11 @@ export default function DocumentsIndex() {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [documentToPrint, setDocumentToPrint] = useState<Document | null>(null);
   const [iframeError, setIframeError] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [documentToEmail, setDocumentToEmail] = useState<Document | null>(null);
+  const [emailRecipients, setEmailRecipients] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,6 +81,32 @@ export default function DocumentsIndex() {
       });
     },
   });
+
+  // Email document mutation
+  const emailDocumentMutation = useMutation({
+    mutationFn: async (emailData: { documentId: number; recipients: string; subject: string; message: string }) => {
+      const response = await apiRequest('POST', `/api/documents/${emailData.documentId}/email`, emailData);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent",
+        description: "The document has been successfully emailed.",
+      });
+      setEmailDialogOpen(false);
+      setDocumentToEmail(null);
+      setEmailRecipients('');
+      setEmailSubject('');
+      setEmailMessage('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Handle delete document
   const handleDeleteDocument = (document: Document) => {
@@ -88,6 +119,32 @@ export default function DocumentsIndex() {
     if (documentToDelete) {
       deleteDocumentMutation.mutate(documentToDelete.id);
     }
+  };
+
+  // Handle email document
+  const handleEmailDocument = (document: Document) => {
+    setDocumentToEmail(document);
+    setEmailSubject(`Document: ${document.fileName}`);
+    setEmailMessage(`Please find the attached document: ${document.fileName}\n\nDocument Type: ${document.documentType}\nUpload Date: ${new Date(document.uploadDate || '').toLocaleDateString()}`);
+    setEmailDialogOpen(true);
+  };
+
+  // Confirm send email
+  const confirmSendEmail = () => {
+    if (documentToEmail && emailRecipients.trim()) {
+      emailDocumentMutation.mutate({
+        documentId: documentToEmail.id,
+        recipients: emailRecipients,
+        subject: emailSubject,
+        message: emailMessage,
+      });
+    }
+  };
+
+  // Check if document can be emailed (only damage and contract documents)
+  const canEmailDocument = (documentType: string) => {
+    const emailableTypes = ['damage', 'contract'];
+    return emailableTypes.some(type => documentType.toLowerCase().includes(type));
   };
   
   // Handle print document
@@ -471,6 +528,21 @@ export default function DocumentsIndex() {
                                           </svg>
                                           Download
                                         </a>
+                                        
+                                        {canEmailDocument(doc.documentType) && (
+                                          <button 
+                                            onClick={() => handleEmailDocument(doc)}
+                                            className="text-purple-600 hover:text-purple-800 text-sm flex items-center gap-1 transition-colors"
+                                            data-testid={`button-email-document-${doc.id}`}
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                              <polyline points="22,6 12,13 2,6"/>
+                                            </svg>
+                                            Email
+                                          </button>
+                                        )}
+                                        
                                         <button 
                                           onClick={() => handlePrintDocument(doc)}
                                           className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 transition-colors"
