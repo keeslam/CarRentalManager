@@ -108,52 +108,46 @@ export default function DocumentsIndex() {
   // Print the document directly without new tabs
   const printDocument = () => {
     if (documentToPrint) {
+      console.log('Attempting to print document:', documentToPrint.fileName);
+      
       // First try to print from the visible iframe if it's working
       if (!iframeError) {
         const iframe = document.getElementById('print-preview-iframe') as HTMLIFrameElement;
         if (iframe && iframe.contentWindow) {
           try {
+            console.log('Trying to print from visible iframe...');
             iframe.contentWindow.print();
+            console.log('Print from visible iframe succeeded');
             return; // Success, exit function
           } catch (error) {
-            console.log('Failed to print from preview iframe, using hidden iframe');
+            console.log('Failed to print from preview iframe:', error);
+            console.log('Falling back to alternative method...');
           }
         }
       }
       
-      // Create a hidden iframe specifically for printing
-      const hiddenIframe = document.createElement('iframe');
-      hiddenIframe.style.position = 'absolute';
-      hiddenIframe.style.left = '-9999px';
-      hiddenIframe.style.width = '1px';
-      hiddenIframe.style.height = '1px';
-      hiddenIframe.src = `/api/documents/view/${documentToPrint.id}`;
+      // Alternative approach: Direct download with print instruction
+      console.log('Using direct download approach...');
       
-      hiddenIframe.onload = () => {
-        setTimeout(() => {
-          try {
-            if (hiddenIframe.contentWindow) {
-              hiddenIframe.contentWindow.print();
-            }
-            // Clean up after printing
-            setTimeout(() => {
-              document.body.removeChild(hiddenIframe);
-            }, 1000);
-          } catch (error) {
-            console.error('Failed to print from hidden iframe:', error);
-            // Clean up even if print fails
-            document.body.removeChild(hiddenIframe);
-            // Show user a message to download instead
-            toast({
-              title: "Print blocked",
-              description: "Your browser blocked printing. Please use the download button instead.",
-              variant: "destructive",
-            });
-          }
-        }, 2000);
-      };
+      // Create a temporary link to trigger download and print instruction
+      const downloadUrl = `/api/documents/download/${documentToPrint.id}`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = documentToPrint.fileName;
+      link.style.display = 'none';
       
-      document.body.appendChild(hiddenIframe);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Show user instruction to print the downloaded file
+      toast({
+        title: "Document Downloaded",
+        description: `${documentToPrint.fileName} has been downloaded. Please open the file and use Ctrl+P (or Cmd+P) to print.`,
+        duration: 5000,
+      });
+      
+      console.log('Download triggered for printing');
     }
   };
   
