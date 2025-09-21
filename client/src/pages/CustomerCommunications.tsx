@@ -250,35 +250,17 @@ export default function CustomerCommunications() {
         return;
       }
     } else {
-      // When no template is selected, use default templates for APK/Maintenance or require custom content
-      if (communicationMode === 'apk') {
-        // Default APK reminder template
-        emailSubject = "APK Inspection Reminder - {vehiclePlate}";
-        emailContent = `Dear {customerName},
-
-This is a friendly reminder that your vehicle {vehicleBrand} {vehicleModel} with license plate {vehiclePlate} has an upcoming APK inspection.
-
-Please ensure you schedule your APK inspection in time to avoid any inconvenience.
-
-If you have any questions, please contact us.
-
-Best regards,
-{companyName}`;
-      } else if (communicationMode === 'maintenance') {
-        // Default maintenance reminder template
-        emailSubject = "Maintenance Reminder - {vehiclePlate}";
-        emailContent = `Dear {customerName},
-
-This is a reminder that your vehicle {vehicleBrand} {vehicleModel} with license plate {vehiclePlate} is due for scheduled maintenance.
-
-Regular maintenance helps ensure the safety and reliability of your vehicle.
-
-Please contact us to schedule your maintenance appointment.
-
-Best regards,
-{companyName}`;
+      // When no template is selected
+      if (communicationMode === 'apk' || communicationMode === 'maintenance') {
+        // APK and Maintenance modes require template selection
+        toast({
+          title: "Template Required",
+          description: `Please select a template for ${communicationMode} reminders`,
+          variant: "destructive",
+        });
+        return;
       } else {
-        // Custom mode - require custom message and subject
+        // Custom mode - require custom message and subject when no template is selected
         if (!customMessage.trim() || !customSubject.trim()) {
           toast({
             title: "Missing Information",
