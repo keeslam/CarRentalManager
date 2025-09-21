@@ -60,6 +60,10 @@ export default function ReservationCalendarPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
+  // Day reservations dialog
+  const [dayDialogOpen, setDayDialogOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
     console.log('handleViewReservation called with:', reservation);
@@ -80,6 +84,59 @@ export default function ReservationCalendarPage() {
     setViewDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedReservation(null);
+  };
+  
+  // Day dialog handlers
+  const openDayDialog = (day: Date) => {
+    console.log('Opening day dialog for:', day);
+    setSelectedDay(day);
+    setDayDialogOpen(true);
+  };
+  
+  const closeDayDialog = () => {
+    console.log('Closing day dialog');
+    setDayDialogOpen(false);
+    setSelectedDay(null);
+  };
+  
+  // Helper function to get all reservations for a specific day
+  const getReservationsForDate = (day: Date): Reservation[] => {
+    if (!reservations?.data) return [];
+    
+    return reservations.data.filter((reservation: Reservation) => {
+      const startDate = safeParseDateISO(reservation.startDate);
+      const endDate = safeParseDateISO(reservation.endDate);
+      
+      if (!startDate) return false;
+      
+      // Check if this day falls within the reservation period
+      if (endDate) {
+        return (isSameDay(day, startDate) || isSameDay(day, endDate) || 
+                (day >= startDate && day <= endDate));
+      } else {
+        // Open-ended reservation - check if day is on or after start date
+        return isSameDay(day, startDate) || day >= startDate;
+      }
+    }).filter((reservation: Reservation) => {
+      // Apply current vehicle filters
+      const vehicle = vehicles?.data?.find((v: Vehicle) => v.id === reservation.vehicleId);
+      if (!vehicle) return false;
+      
+      // Search filter
+      if (vehicleFilters.search && 
+          !vehicle.licensePlate?.toLowerCase().includes(vehicleFilters.search.toLowerCase()) &&
+          !vehicle.brand?.toLowerCase().includes(vehicleFilters.search.toLowerCase()) &&
+          !vehicle.model?.toLowerCase().includes(vehicleFilters.search.toLowerCase())) {
+        return false;
+      }
+      
+      // Type filter
+      if (vehicleFilters.type !== "all" && vehicle.vehicleType !== vehicleFilters.type) {
+        return false;
+      }
+      
+      return true;
+    });
   };
   
   // Calculate date ranges for month view
@@ -665,9 +722,19 @@ export default function ReservationCalendarPage() {
                           })}
                           
                           {dayReservations.length > 3 && (
-                            <div className="text-xs text-gray-500">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('More button clicked for day:', format(day, 'yyyy-MM-dd'));
+                                openDayDialog(day);
+                              }}
+                              data-testid={`button-more-${format(day, 'yyyy-MM-dd')}`}
+                            >
                               +{dayReservations.length - 3} more
-                            </div>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -764,6 +831,115 @@ export default function ReservationCalendarPage() {
               editMode={true} 
               initialData={selectedReservation}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Day Reservations Dialog */}
+      <Dialog open={dayDialogOpen} onOpenChange={(open) => {
+          console.log('Day dialog open change:', open);
+          if (!open) {
+            closeDayDialog();
+          }
+        }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Reservations for {selectedDay ? format(selectedDay, 'EEEE, MMMM d, yyyy') : ''}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDay ? 
+                `${getReservationsForDate(selectedDay).length} reservations scheduled for this day.` :
+                'View all reservations for the selected day.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDay && (
+            <div className="space-y-3" data-testid="dialog-day-reservations">
+              {getReservationsForDate(selectedDay).map((reservation) => {
+                const startDate = safeParseDateISO(reservation.startDate);
+                const endDate = safeParseDateISO(reservation.endDate);
+                const vehicle = vehicles?.data?.find((v: Vehicle) => v.id === reservation.vehicleId);
+                const customer = reservation.customer;
+                
+                return (
+                  <div 
+                    key={reservation.id} 
+                    className="border rounded-lg p-4 space-y-3 bg-white hover:bg-gray-50"
+                    data-testid={`list-row-${reservation.id}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="font-medium">
+                          {displayLicensePlate(vehicle?.licensePlate || '')}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {vehicle?.brand} {vehicle?.model}
+                        </div>
+                        <Badge 
+                          className={`text-xs ${
+                            reservation.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' : 
+                            reservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            reservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                            reservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {formatReservationStatus(reservation.status)}
+                        </Badge>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            handleViewReservation(reservation);
+                            closeDayDialog();
+                          }}
+                          data-testid={`button-view-${reservation.id}`}
+                        >
+                          <Eye className="mr-1 h-3 w-3" />
+                          View
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            handleEditReservation(reservation);
+                            closeDayDialog();
+                          }}
+                          data-testid={`button-edit-${reservation.id}`}
+                        >
+                          <Edit className="mr-1 h-3 w-3" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+                      <div>
+                        <span className="font-medium">Customer:</span> {customer?.name || 'Not specified'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Period:</span> {startDate ? format(startDate, 'MMM d') : 'Invalid'} → {endDate ? format(endDate, 'MMM d') : 'Open'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Price:</span> {reservation.totalPrice ? formatCurrency(Number(reservation.totalPrice)) : 'Not set'}
+                      </div>
+                    </div>
+                    {reservation.notes && (
+                      <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                        <span className="font-medium">Notes:</span> {reservation.notes}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {getReservationsForDate(selectedDay).length === 0 && (
+                <div className="text-center text-gray-500 py-8">
+                  No reservations found for this day.
+                </div>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>
