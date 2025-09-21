@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle, Edit, Trash2, Eye } from "lucide-react";
+import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle, Edit, Trash2, Eye, Copy } from "lucide-react";
 import type { Vehicle, Customer } from "@shared/schema";
 
 interface NotificationHistory {
@@ -75,6 +75,11 @@ export default function CustomerCommunications() {
   const [templatePreviewDialog, setTemplatePreviewDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<any>(null);
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<any>(null);
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  
+  // Refs for textarea
+  const templateSubjectRef = useRef<HTMLInputElement | null>(null);
+  const templateContentRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { toast } = useToast();
 
@@ -467,6 +472,80 @@ export default function CustomerCommunications() {
       });
     }
   };
+
+  // Placeholder insertion functions
+  const insertPlaceholder = (placeholder: string, isSubject: boolean = false) => {
+    const targetRef = isSubject ? templateSubjectRef.current : templateContentRef.current;
+    const setValue = isSubject ? setTemplateSubject : setTemplateContent;
+    const currentValue = isSubject ? templateSubject : templateContent;
+    
+    if (targetRef) {
+      const start = targetRef.selectionStart || 0;
+      const end = targetRef.selectionEnd || 0;
+      const newValue = currentValue.substring(0, start) + placeholder + currentValue.substring(end);
+      setValue(newValue);
+      
+      // Restore cursor position after the inserted placeholder
+      setTimeout(() => {
+        const newCursorPos = start + placeholder.length;
+        targetRef.setSelectionRange(newCursorPos, newCursorPos);
+        targetRef.focus();
+      }, 0);
+    } else {
+      // Fallback: append to end if no ref available
+      setValue(currentValue + placeholder);
+    }
+  };
+
+  const duplicateTemplate = async (template: any) => {
+    setEditingTemplate(null);
+    setTemplateName(`${template.name} (Copy)`);
+    setTemplateSubject(template.subject);
+    setTemplateContent(template.content);
+    setTemplateCategory(template.category || "custom");
+    
+    toast({
+      title: "Template Duplicated",
+      description: "Template content has been copied to the editor. Modify and save as new template.",
+    });
+  };
+
+  const getPreviewContent = () => {
+    const sampleData = {
+      customerName: "John Doe",
+      vehiclePlate: "AB-123-CD",
+      vehicleBrand: "Toyota",
+      vehicleModel: "Camry",
+      apkDate: "2024-06-15",
+      companyName: "Car Rental Company"
+    };
+
+    let previewSubject = templateSubject;
+    let previewContent = templateContent;
+
+    Object.entries(sampleData).forEach(([key, value]) => {
+      const placeholder = `{${key}}`;
+      previewSubject = previewSubject.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+      previewContent = previewContent.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+    });
+
+    return { subject: previewSubject, content: previewContent };
+  };
+
+  // Available placeholders
+  const placeholders = [
+    { key: 'customerName', label: 'Customer Name', description: "Customer's full name" },
+    { key: 'vehiclePlate', label: 'License Plate', description: "Vehicle license plate" },
+    { key: 'vehicleBrand', label: 'Vehicle Brand', description: "Vehicle brand/make" },
+    { key: 'vehicleModel', label: 'Vehicle Model', description: "Vehicle model" },
+    { key: 'apkDate', label: 'APK Date', description: "APK expiry date" },
+    { key: 'companyName', label: 'Company Name', description: "Your company name" },
+    { key: 'maintenanceDate', label: 'Maintenance Date', description: "Last maintenance date" },
+    { key: 'customerEmail', label: 'Customer Email', description: "Customer's email address" },
+    { key: 'customerPhone', label: 'Customer Phone', description: "Customer's phone number" },
+    { key: 'reservationStart', label: 'Reservation Start', description: "Reservation start date" },
+    { key: 'reservationEnd', label: 'Reservation End', description: "Reservation end date" }
+  ];
 
   // Function to handle email selection changes in preview dialog
   const handleEmailSelection = (recipientIndex: number, selectedEmailField: string) => {
@@ -1314,6 +1393,7 @@ export default function CustomerCommunications() {
                 <div className="space-y-2">
                   <Label htmlFor="template-subject">Email Subject</Label>
                   <Input
+                    ref={templateSubjectRef}
                     id="template-subject"
                     placeholder="e.g., Service Reminder for {vehiclePlate}"
                     value={templateSubject}
@@ -1338,25 +1418,82 @@ export default function CustomerCommunications() {
                 <div className="space-y-2">
                   <Label htmlFor="template-content">Email Content</Label>
                   <textarea
+                    ref={templateContentRef}
                     id="template-content"
-                    placeholder="Write your email content here... Use placeholders like {customerName}, {vehiclePlate}, {vehicleBrand}, {vehicleModel}"
+                    placeholder="Write your email content here... Click the placeholder buttons below to insert dynamic content"
                     value={templateContent}
                     onChange={(e) => setTemplateContent(e.target.value)}
                     className="w-full min-h-[200px] p-3 border rounded-md resize-vertical font-mono text-sm"
                   />
                 </div>
                 
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
-                    <div><code>{"{customerName}"}</code> - Customer's name</div>
-                    <div><code>{"{vehiclePlate}"}</code> - License plate</div>
-                    <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
-                    <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
-                    <div><code>{"{apkDate}"}</code> - APK expiry date</div>
-                    <div><code>{"{companyName}"}</code> - Your company name</div>
+                {/* Placeholder Buttons */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 text-sm">Insert Placeholders:</h4>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowLivePreview(!showLivePreview)}
+                        className="text-xs"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        {showLivePreview ? 'Hide' : 'Show'} Preview
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Placeholder buttons grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {placeholders.map((placeholder) => (
+                      <Button
+                        key={placeholder.key}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => insertPlaceholder(`{${placeholder.key}}`)}
+                        className="text-xs justify-start h-8 px-2"
+                        title={placeholder.description}
+                        data-testid={`button-placeholder-${placeholder.key}`}
+                      >
+                        <span className="font-mono text-blue-600">{`{${placeholder.key}}`}</span>
+                        <span className="ml-2 text-gray-600 truncate">{placeholder.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    💡 Tip: Click on any field above, position your cursor, then click a placeholder button to insert it at that position.
                   </div>
                 </div>
+
+                {/* Live Preview */}
+                {showLivePreview && (templateSubject || templateContent) && (
+                  <div className="border rounded-lg bg-gray-50 p-4 space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Eye className="h-4 w-4 text-blue-600" />
+                      <h5 className="font-medium text-sm">Live Preview (with sample data)</h5>
+                    </div>
+                    
+                    <div className="bg-white border rounded p-3 space-y-2">
+                      {templateSubject && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
+                          <div className="font-medium text-sm">{getPreviewContent().subject}</div>
+                        </div>
+                      )}
+                      
+                      {templateContent && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 mb-1">Content:</div>
+                          <div className="text-sm whitespace-pre-wrap">{getPreviewContent().content}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex space-x-2">
                   <Button
@@ -1524,8 +1661,18 @@ export default function CustomerCommunications() {
                               variant="outline"
                               onClick={() => handlePreviewTemplate(template)}
                               data-testid={`button-preview-${template.id}`}
+                              title="Preview template"
                             >
                               <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => duplicateTemplate(template)}
+                              data-testid={`button-duplicate-${template.id}`}
+                              title="Duplicate template"
+                            >
+                              <Copy className="h-3 w-3" />
                             </Button>
                             <Button
                               size="sm"
@@ -1538,6 +1685,7 @@ export default function CustomerCommunications() {
                                 setTemplateCategory(template.category || "custom");
                               }}
                               data-testid={`button-edit-${template.id}`}
+                              title="Edit template"
                             >
                               <Edit className="h-3 w-3" />
                             </Button>
@@ -1547,6 +1695,7 @@ export default function CustomerCommunications() {
                               className="text-red-600 hover:text-red-700"
                               onClick={() => handleDeleteTemplate(template)}
                               data-testid={`button-delete-${template.id}`}
+                              title="Delete template"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
