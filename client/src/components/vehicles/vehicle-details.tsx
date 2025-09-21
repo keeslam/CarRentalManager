@@ -40,7 +40,27 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, User, Eye, Edit } from "lucide-react";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { insertReservationSchema } from "@shared/schema";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format, addDays } from "date-fns";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -54,6 +74,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [templateSubject, setTemplateSubject] = useState("");
   const [templateContent, setTemplateContent] = useState("");
   const [editableEmails, setEditableEmails] = useState<{ [customerId: number]: string }>({});
+  const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -226,6 +247,102 @@ Autolease Lam`;
       setEditableEmails(emailsMap);
     }
   }, [isApkReminderOpen, vehicle, customersWithReservations, apkTemplate]);
+
+  // New reservation form schema
+  const newReservationSchema = insertReservationSchema.extend({
+    vehicleId: z.number().min(1, "Vehicle is required"),
+    customerId: z.union([
+      z.number().min(1, "Please select a customer"),
+      z.string().min(1, "Please select a customer").transform(val => parseInt(val)),
+    ]),
+    startDate: z.string().min(1, "Start date is required"),
+    endDate: z.string().optional(),
+    isOpenEnded: z.boolean().optional(),
+    totalPrice: z.union([
+      z.number().optional(),
+      z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
+    ]).optional(),
+  }).refine((data) => {
+    // If not open-ended, end date is required
+    if (!data.isOpenEnded && (!data.endDate || data.endDate === "")) {
+      return false;
+    }
+    return true;
+  }, {
+    message: "End date is required for non-open-ended rentals",
+    path: ["endDate"],
+  });
+
+  // Fetch customers for the form
+  const { data: customers } = useQuery({
+    queryKey: ["/api/customers"],
+    enabled: isNewReservationOpen,
+  });
+
+  // Get today's date for form defaults
+  const today = format(new Date(), "yyyy-MM-dd");
+  const defaultEndDate = format(addDays(new Date(), 3), "yyyy-MM-dd");
+
+  // New reservation form
+  const newReservationForm = useForm<z.infer<typeof newReservationSchema>>({
+    resolver: zodResolver(newReservationSchema),
+    defaultValues: {
+      vehicleId: vehicleId,
+      customerId: "",
+      startDate: today,
+      endDate: defaultEndDate,
+      isOpenEnded: false,
+      status: "pending",
+      totalPrice: 0,
+      notes: ""
+    },
+  });
+
+  // Create reservation mutation
+  const createReservationMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof newReservationSchema>) => {
+      const response = await apiRequest("POST", "/api/reservations", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create reservation');
+      }
+      return await response.json();
+    },
+    onSuccess: async (data) => {
+      toast({
+        title: "Reservation created successfully",
+        description: `Reservation for ${vehicle?.brand} ${vehicle?.model} has been created.`
+      });
+      
+      // Refresh related data
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${vehicleId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      
+      // Close dialog and reset form
+      setIsNewReservationOpen(false);
+      newReservationForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error creating reservation",
+        description: error.message || "Failed to create reservation. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Watch form values for validation
+  const isOpenEndedWatch = newReservationForm.watch("isOpenEnded");
+
+  // Update end date when open-ended status changes
+  React.useEffect(() => {
+    if (isOpenEndedWatch) {
+      newReservationForm.setValue("endDate", "");
+    } else if (!newReservationForm.getValues("endDate")) {
+      newReservationForm.setValue("endDate", defaultEndDate);
+    }
+  }, [isOpenEndedWatch, newReservationForm, defaultEndDate]);
   
   // Fetch vehicle expenses
   const { data: expenses, isLoading: isLoadingExpenses } = useQuery<Expense[]>({
@@ -404,19 +521,192 @@ Autolease Lam`;
             </AlertDialogContent>
           </AlertDialog>
 
-          <Link href={`/reservations/add?vehicleId=${vehicleId}`}>
-            <Button>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
-                <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
-                <line x1="16" x2="16" y1="2" y2="6" />
-                <line x1="8" x2="8" y1="2" y2="6" />
-                <line x1="3" x2="21" y1="10" y2="10" />
-                <line x1="19" x2="19" y1="16" y2="22" />
-                <line x1="16" x2="22" y1="19" y2="19" />
-              </svg>
-              New Reservation
-            </Button>
-          </Link>
+          <Dialog open={isNewReservationOpen} onOpenChange={setIsNewReservationOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-new-reservation">
+                <Calendar className="h-4 w-4 mr-2" />
+                New Reservation
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Create New Reservation</DialogTitle>
+                <DialogDescription>
+                  Create a new reservation for {vehicle?.brand} {vehicle?.model} ({formatLicensePlate(vehicle?.licensePlate || "")})
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...newReservationForm}>
+                <form onSubmit={newReservationForm.handleSubmit((data) => createReservationMutation.mutate(data))} className="space-y-4">
+                  {/* Customer Selection */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="customerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a customer..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {customers?.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id.toString()}>
+                                {customer.name} {customer.email && `(${customer.email})`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={newReservationForm.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date *</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={newReservationForm.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date {!isOpenEndedWatch && "*"}</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field} 
+                              disabled={isOpenEndedWatch}
+                              placeholder={isOpenEndedWatch ? "Open-ended" : ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Open-ended checkbox */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="isOpenEnded"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="mt-2"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Open-ended rental</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            No specific end date (can be extended later)
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Status */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Total Price */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="totalPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Price (€)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Notes */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional notes for this reservation..." 
+                            className="h-20"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsNewReservationOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={createReservationMutation.isPending}
+                    >
+                      {createReservationMutation.isPending ? "Creating..." : "Create Reservation"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
           
           {/* Quick Status Change Button for Active Reservation */}
           <QuickStatusChangeButton vehicleId={vehicleId} />
