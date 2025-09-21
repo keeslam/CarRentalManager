@@ -2705,6 +2705,76 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Generate contract preview with form data
+  app.post("/api/contracts/preview", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { vehicleId, customerId, startDate, endDate, notes } = req.body;
+      
+      if (!vehicleId || !customerId) {
+        return res.status(400).json({ message: "Vehicle ID and Customer ID are required" });
+      }
+
+      // Get vehicle and customer data
+      const vehicle = await storage.getVehicle(vehicleId);
+      const customer = await storage.getCustomer(customerId);
+      
+      if (!vehicle || !customer) {
+        return res.status(404).json({ message: "Vehicle or customer not found" });
+      }
+
+      // Get the default PDF template
+      const defaultTemplate = await storage.getDefaultPdfTemplate();
+      
+      if (!defaultTemplate) {
+        return res.status(404).json({ message: "Default PDF template not found" });
+      }
+
+      // Create preview contract data
+      const previewData = {
+        id: 0, // Preview - no actual reservation ID
+        vehicleId,
+        customerId,
+        startDate,
+        endDate,
+        notes: notes || "",
+        status: "pending",
+        totalPrice: 0,
+        vehicle,
+        customer
+      };
+
+      console.log("Generating contract preview with data:", previewData);
+
+      // Make sure the template fields are properly formatted
+      if (defaultTemplate.fields && typeof defaultTemplate.fields === 'string') {
+        try {
+          const parsedFields = JSON.parse(defaultTemplate.fields);
+          defaultTemplate.fields = parsedFields;
+        } catch (e) {
+          console.error('Error parsing default template fields:', e);
+        }
+      }
+
+      // Use the imported function from pdf-generator.ts
+      const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+      const pdfBuffer = await generateRentalContractFromTemplate(previewData, defaultTemplate);
+      
+      // Set response headers for PDF preview (inline instead of attachment)
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="contract_preview.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating contract preview:", error);
+      res.status(500).json({ 
+        message: "Failed to generate contract preview", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   // Generate contract using default template
   app.get("/api/contracts/generate-default/:reservationId", requireAuth, async (req: Request, res: Response) => {
     try {

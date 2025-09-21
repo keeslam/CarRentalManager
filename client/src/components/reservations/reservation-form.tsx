@@ -48,7 +48,7 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation } from "@shared/schema";
-import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText } from "lucide-react";
+import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye } from "lucide-react";
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
@@ -549,27 +549,94 @@ export function ReservationForm({
     }
   });
 
-  // Generate contract mutation
-  const generateContractMutation = useMutation({
-    mutationFn: async (reservationId: number) => {
-      const response = await fetch(`/api/contracts/generate-default/${reservationId}`, {
-        method: 'GET',
+  // Generate contract preview mutation
+  const previewContractMutation = useMutation({
+    mutationFn: async () => {
+      const formData = form.getValues();
+      const response = await fetch('/api/contracts/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
+        body: JSON.stringify({
+          vehicleId: formData.vehicleId,
+          customerId: formData.customerId,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          notes: formData.notes
+        }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to generate contract');
+        throw new Error('Failed to generate contract preview');
       }
       
       return response.blob();
     },
-    onSuccess: (blob, reservationId) => {
+    onSuccess: (blob) => {
+      // Open PDF in new tab for viewing
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Don't revoke URL immediately to allow viewing
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000); // Clean up after 1 minute
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to preview contract: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Generate contract mutation
+  const generateContractMutation = useMutation({
+    mutationFn: async (reservationId?: number) => {
+      if (reservationId) {
+        // Generate from saved reservation
+        const response = await fetch(`/api/contracts/generate-default/${reservationId}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to generate contract');
+        }
+        
+        return { blob: await response.blob(), filename: `contract_${reservationId}.pdf` };
+      } else {
+        // Generate from form data
+        const formData = form.getValues();
+        const response = await fetch('/api/contracts/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            vehicleId: formData.vehicleId,
+            customerId: formData.customerId,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            notes: formData.notes
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to generate contract');
+        }
+        
+        return { blob: await response.blob(), filename: 'contract_preview.pdf' };
+      }
+    },
+    onSuccess: ({ blob, filename }) => {
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `contract_${reservationId}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -589,10 +656,17 @@ export function ReservationForm({
     }
   });
 
+  // Handle contract preview
+  const handleViewContract = () => {
+    previewContractMutation.mutate();
+  };
+
   // Handle contract generation
   const handleGenerateContract = () => {
     if (createdReservationId) {
       generateContractMutation.mutate(createdReservationId);
+    } else {
+      generateContractMutation.mutate();
     }
   };
 
@@ -1320,30 +1394,54 @@ export function ReservationForm({
                   : editMode ? "Update Reservation" : "Create Reservation"
                 }
               </Button>
-              {/* Generate Contract Button - only show if reservation exists */}
-              {createdReservationId && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleGenerateContract}
-                  disabled={generateContractMutation.isPending}
-                  data-testid="button-generate-contract"
-                >
-                  {generateContractMutation.isPending ? (
-                    <>
-                      <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Generate Contract
-                    </>
-                  )}
-                </Button>
+              {/* Contract buttons - show when vehicle and customer are selected */}
+              {selectedVehicle && selectedCustomer && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleViewContract}
+                    disabled={previewContractMutation.isPending}
+                    data-testid="button-view-contract"
+                  >
+                    {previewContractMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Contract
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleGenerateContract}
+                    disabled={generateContractMutation.isPending}
+                    data-testid="button-generate-contract"
+                  >
+                    {generateContractMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Contract
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
             
