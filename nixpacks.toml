@@ -19,4 +19,4 @@ cmds = [
 ]
 
 [start]
-cmd = "npm run db:push && npm start"
+cmd = "npm run db:push --force && npm start"
