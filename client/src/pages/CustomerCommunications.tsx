@@ -35,7 +35,6 @@ interface EmailTemplate {
 
 export default function CustomerCommunications() {
   const [activeTab, setActiveTab] = useState("send");
-  const [notificationTemplate, setNotificationTemplate] = useState<string>("maintenance");
   const [selectedVehicles, setSelectedVehicles] = useState<Vehicle[]>([]);
   const [customMessage, setCustomMessage] = useState<string>("");
   const [customSubject, setCustomSubject] = useState<string>("");
@@ -43,13 +42,11 @@ export default function CustomerCommunications() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
-  const [emailFieldSelection, setEmailFieldSelection] = useState<string>("auto"); // auto, email, emailForMOT, emailForInvoices, emailGeneral
   const [emailPreview, setEmailPreview] = useState<{
     subject: string;
     content: string;
     recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string, customer?: any, vehicleId?: number}>;
   } | null>(null);
-  const [individualEmailSelections, setIndividualEmailSelections] = useState<Record<string, string>>({});
   const [vehicleFilter, setVehicleFilter] = useState<string>("all"); // all, apk, maintenance
   
   // Template builder state
@@ -144,10 +141,10 @@ export default function CustomerCommunications() {
       return;
     }
 
-    if (notificationTemplate === "custom" && (!customMessage.trim() || !customSubject.trim())) {
+    if (!customMessage.trim() || !customSubject.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please enter both subject and message for custom notifications",
+        description: "Please enter both subject and message for the notification",
         variant: "destructive",
       });
       return;
@@ -164,11 +161,11 @@ export default function CustomerCommunications() {
         credentials: 'include',
         body: JSON.stringify({
           vehicleIds: selectedVehicles.map(v => v.id),
-          template: notificationTemplate,
-          customMessage: customMessage.trim() || undefined,
-          customSubject: customSubject.trim() || undefined,
-          emailFieldSelection: emailFieldSelection,
-          individualEmailSelections: individualEmailSelections,
+          template: "custom",
+          customMessage: customMessage.trim(),
+          customSubject: customSubject.trim(),
+          emailFieldSelection: "auto",
+          individualEmailSelections: {},
         }),
       });
 
@@ -211,72 +208,42 @@ export default function CustomerCommunications() {
       return;
     }
 
-    if (notificationTemplate === "custom" && (!customMessage.trim() || !customSubject.trim())) {
+    if (!customMessage.trim() || !customSubject.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please enter both subject and message for custom notifications",
+        description: "Please enter both subject and message for the notification",
         variant: "destructive",
       });
       return;
     }
 
-    // Generate preview data
-    let subject = "";
-    let content = "";
-
-    if (notificationTemplate === "custom") {
-      subject = customSubject.trim();
-      content = customMessage.trim();
-    } else if (notificationTemplate === "apk") {
-      subject = "APK Inspection Reminder - Action Required";
-      content = "Dear {{customer_name}},\n\nWe hope this message finds you well. This is a friendly reminder that your vehicle {{vehicle_license}} ({{vehicle_brand}} {{vehicle_model}}) is due for its APK inspection.\n\nAPK Date: {{apk_date}}\n\nPlease schedule your APK inspection as soon as possible to ensure your vehicle remains road-legal. You can contact us to arrange a convenient appointment.\n\nThank you for choosing our services.\n\nBest regards,\nYour Car Rental Team";
-    } else if (notificationTemplate === "maintenance") {
-      subject = "Scheduled Maintenance Reminder";
-      content = "Dear {{customer_name}},\n\nWe hope you're enjoying your rental experience with vehicle {{vehicle_license}} ({{vehicle_brand}} {{vehicle_model}}).\n\nThis is a reminder that your vehicle is due for scheduled maintenance. Regular maintenance ensures optimal performance and your safety.\n\nPlease contact us to schedule a convenient time for the maintenance service.\n\nThank you for your attention to this matter.\n\nBest regards,\nYour Car Rental Team";
-    }
+    // Use custom message and subject
+    const subject = customSubject.trim();
+    const content = customMessage.trim();
 
     // Generate recipients list with actual customer data
     const recipients = selectedVehicles.map(vehicle => {
       const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
       const customer = reservation?.customer;
       
-      // Determine which email to use based on selection
+      // Use primary email (simplify email selection)
       let selectedEmail = "No email";
       let emailField = "none";
       
       if (customer) {
-        if (emailFieldSelection === "auto") {
-          // Auto-select based on notification type
-          if (notificationTemplate === "apk" && customer.emailForMOT) {
-            selectedEmail = customer.emailForMOT;
-            emailField = "emailForMOT";
-          } else if (customer.email) {
-            selectedEmail = customer.email;
-            emailField = "email";
-          } else if (customer.emailGeneral) {
-            selectedEmail = customer.emailGeneral;
-            emailField = "emailGeneral";
-          }
-        } else {
-          // Use specifically selected email field
-          switch (emailFieldSelection) {
-            case "email":
-              selectedEmail = customer.email || "No email";
-              emailField = customer.email ? "email" : "none";
-              break;
-            case "emailForMOT":
-              selectedEmail = customer.emailForMOT || "No email";
-              emailField = customer.emailForMOT ? "emailForMOT" : "none";
-              break;
-            case "emailForInvoices":
-              selectedEmail = customer.emailForInvoices || "No email";
-              emailField = customer.emailForInvoices ? "emailForInvoices" : "none";
-              break;
-            case "emailGeneral":
-              selectedEmail = customer.emailGeneral || "No email";
-              emailField = customer.emailGeneral ? "emailGeneral" : "none";
-              break;
-          }
+        // Prioritize primary email, then fall back to other available emails
+        if (customer.email) {
+          selectedEmail = customer.email;
+          emailField = "email";
+        } else if (customer.emailForMOT) {
+          selectedEmail = customer.emailForMOT;
+          emailField = "emailForMOT";
+        } else if (customer.emailGeneral) {
+          selectedEmail = customer.emailGeneral;
+          emailField = "emailGeneral";
+        } else if (customer.emailForInvoices) {
+          selectedEmail = customer.emailForInvoices;
+          emailField = "emailForInvoices";
         }
       }
       
@@ -296,11 +263,11 @@ export default function CustomerCommunications() {
     const sampleCustomer = sampleReservation?.customer;
 
     const processedContent = content
-      .replace(/\{\{customer_name\}\}/g, sampleCustomer?.name || "[Customer Name]")
-      .replace(/\{\{vehicle_license\}\}/g, sampleVehicle.licensePlate || "[License Plate]")
-      .replace(/\{\{vehicle_brand\}\}/g, sampleVehicle.brand || "[Brand]")
-      .replace(/\{\{vehicle_model\}\}/g, sampleVehicle.model || "[Model]")
-      .replace(/\{\{apk_date\}\}/g, sampleVehicle.apkDate || "[APK Date]");
+      .replace(/\{customerName\}/g, sampleCustomer?.name || "[Customer Name]")
+      .replace(/\{vehiclePlate\}/g, sampleVehicle.licensePlate || "[License Plate]")
+      .replace(/\{vehicleBrand\}/g, sampleVehicle.brand || "[Brand]")
+      .replace(/\{vehicleModel\}/g, sampleVehicle.model || "[Model]")
+      .replace(/\{companyName\}/g, "Autolease Lam");
 
     setEmailPreview({
       subject,
@@ -316,65 +283,7 @@ export default function CustomerCommunications() {
     await handleSendNotifications();
   };
 
-  // Get available email options for a customer
-  const getCustomerEmailOptions = (customer: any) => {
-    const options = [];
-    if (customer?.email) {
-      options.push({ value: 'email', label: 'Primary Email', email: customer.email });
-    }
-    if (customer?.emailForMOT) {
-      options.push({ value: 'emailForMOT', label: 'APK/MOT Email', email: customer.emailForMOT });
-    }
-    if (customer?.emailForInvoices) {
-      options.push({ value: 'emailForInvoices', label: 'Invoice Email', email: customer.emailForInvoices });
-    }
-    if (customer?.emailGeneral) {
-      options.push({ value: 'emailGeneral', label: 'General Email', email: customer.emailGeneral });
-    }
-    return options;
-  };
 
-  // Handle individual email selection change
-  const handleIndividualEmailChange = (vehicleId: string, emailField: string, customer: any) => {
-    setIndividualEmailSelections(prev => ({
-      ...prev,
-      [vehicleId]: emailField
-    }));
-
-    // Update the email preview to reflect the new selection
-    if (emailPreview) {
-      const updatedRecipients = emailPreview.recipients.map(recipient => {
-        if (recipient.vehicleId?.toString() === vehicleId) {
-          let newEmail = "No email";
-          switch (emailField) {
-            case "email":
-              newEmail = customer?.email || "No email";
-              break;
-            case "emailForMOT":
-              newEmail = customer?.emailForMOT || "No email";
-              break;
-            case "emailForInvoices":
-              newEmail = customer?.emailForInvoices || "No email";
-              break;
-            case "emailGeneral":
-              newEmail = customer?.emailGeneral || "No email";
-              break;
-          }
-          return {
-            ...recipient,
-            email: newEmail,
-            emailField: emailField
-          };
-        }
-        return recipient;
-      });
-
-      setEmailPreview({
-        ...emailPreview,
-        recipients: updatedRecipients
-      });
-    }
-  };
 
   const getTemplateInfo = (template: string) => {
     switch (template) {
@@ -447,118 +356,12 @@ export default function CustomerCommunications() {
         </TabsList>
 
         <TabsContent value="send" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Notification Type Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Type</CardTitle>
-                <CardDescription>Choose the type of notification to send</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {["apk", "maintenance", "custom"].map((template) => {
-                  const info = getTemplateInfo(template);
-                  const Icon = info.icon;
-                  return (
-                    <div
-                      key={template}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                        notificationTemplate === template 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200'
-                      }`}
-                      onClick={() => setNotificationTemplate(template)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Icon className={`h-5 w-5 ${info.color}`} />
-                        <div>
-                          <div className="font-medium">{info.title}</div>
-                          <div className="text-xs text-muted-foreground">{info.description}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
 
-            {/* Email Selection Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Address Selection</CardTitle>
-                <CardDescription>Choose which email address to use for each customer</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div>
-                  <Label htmlFor="emailField">Email Field</Label>
-                  <Select value={emailFieldSelection} onValueChange={setEmailFieldSelection}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select email field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto (Smart Selection)</SelectItem>
-                      <SelectItem value="email">Primary Email</SelectItem>
-                      <SelectItem value="emailForMOT">APK/MOT Email</SelectItem>
-                      <SelectItem value="emailForInvoices">Invoice Email</SelectItem>
-                      <SelectItem value="emailGeneral">General Email</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {emailFieldSelection === "auto" && (
-                      <p>✨ <strong>Auto:</strong> Uses APK email for APK notifications, otherwise uses primary email</p>
-                    )}
-                    {emailFieldSelection === "email" && (
-                      <p>📧 <strong>Primary Email:</strong> Uses the main email address for each customer</p>
-                    )}
-                    {emailFieldSelection === "emailForMOT" && (
-                      <p>🔧 <strong>APK/MOT Email:</strong> Uses the specific email address for APK inspections</p>
-                    )}
-                    {emailFieldSelection === "emailForInvoices" && (
-                      <p>📄 <strong>Invoice Email:</strong> Uses the email address for billing and invoices</p>
-                    )}
-                    {emailFieldSelection === "emailGeneral" && (
-                      <p>📬 <strong>General Email:</strong> Uses the general communication email address</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Custom Message Fields */}
-            {notificationTemplate === "custom" && (
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Custom Message</CardTitle>
-                  <CardDescription>Create your custom notification</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-subject">Subject</Label>
-                    <Input
-                      id="custom-subject"
-                      placeholder="Enter email subject..."
-                      value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-message">Message</Label>
-                    <textarea
-                      id="custom-message"
-                      placeholder="Enter your message to customers..."
-                      value={customMessage}
-                      onChange={(e) => setCustomMessage(e.target.value)}
-                      className="w-full min-h-[120px] p-3 border rounded-md resize-vertical"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
+          {/* Vehicle Selection - Main Focus */}
           <Card>
             <CardHeader>
-              <CardTitle>Vehicle Selection</CardTitle>
-              <CardDescription>Choose which vehicles/customers to notify</CardDescription>
+              <CardTitle>Select Vehicles & Customers</CardTitle>
+              <CardDescription>Choose which vehicles and customers to send notifications to</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4 mb-4">
@@ -667,59 +470,29 @@ export default function CustomerCommunications() {
                         </Label>
                         <div className="mt-2 max-h-48 overflow-y-auto border rounded">
                           <div className="divide-y">
-                            {emailPreview.recipients.map((recipient, index) => {
-                              const emailOptions = getCustomerEmailOptions(recipient.customer);
-                              const currentSelection = individualEmailSelections[recipient.vehicleId?.toString() || ''] || recipient.emailField;
-                              
-                              return (
-                                <div key={index} className="p-3 space-y-3">
-                                  <div className="flex justify-between items-start">
-                                    <div className="space-y-1 flex-1">
-                                      <div className="font-medium text-sm">{recipient.name}</div>
-                                      <div className="text-xs text-blue-600 font-mono">
-                                        {recipient.vehicleLicense}
-                                      </div>
+                            {emailPreview.recipients.map((recipient, index) => (
+                              <div key={index} className="p-3 space-y-2">
+                                <div className="flex justify-between items-start">
+                                  <div className="space-y-1 flex-1">
+                                    <div className="font-medium text-sm">{recipient.name}</div>
+                                    <div className="text-xs text-blue-600 font-mono">
+                                      {recipient.vehicleLicense}
                                     </div>
                                   </div>
-                                  
-                                  {/* Email Selection for this recipient */}
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-medium">Email Address:</Label>
-                                    <div className="flex items-center space-x-2">
-                                      <Select 
-                                        value={currentSelection}
-                                        onValueChange={(value) => handleIndividualEmailChange(recipient.vehicleId?.toString() || '', value, recipient.customer)}
-                                      >
-                                        <SelectTrigger className="text-xs h-8 flex-1">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {emailOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value} className="text-xs">
-                                              <div className="flex flex-col">
-                                                <span className="font-medium">{option.label}</span>
-                                                <span className="text-muted-foreground">{option.email}</span>
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      {recipient.emailField !== "none" && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {recipient.emailField === "email" && "Primary"}
-                                          {recipient.emailField === "emailForMOT" && "APK/MOT"}
-                                          {recipient.emailField === "emailForInvoices" && "Invoice"}
-                                          {recipient.emailField === "emailGeneral" && "General"}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      <span className="font-medium">Selected:</span> {recipient.email}
-                                    </div>
-                                  </div>
+                                  {recipient.emailField !== "none" && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {recipient.emailField === "email" && "Primary"}
+                                      {recipient.emailField === "emailForMOT" && "APK/MOT"}
+                                      {recipient.emailField === "emailForInvoices" && "Invoice"}
+                                      {recipient.emailField === "emailGeneral" && "General"}
+                                    </Badge>
+                                  )}
                                 </div>
-                              );
-                            })}
+                                <div className="text-xs text-muted-foreground">
+                                  <span className="font-medium">Email:</span> {recipient.email}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -733,7 +506,7 @@ export default function CustomerCommunications() {
                           </span>
                         </div>
                         <p className="text-xs text-blue-700 mt-1">
-                          Each recipient will receive a personalized version of this email with their specific vehicle and customer information.
+                          Each recipient will receive a personalized version of this email with their specific vehicle and customer information. Email addresses are automatically selected (primary email preferred).
                         </p>
                       </div>
                     </div>
@@ -856,6 +629,47 @@ export default function CustomerCommunications() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Custom Message Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Compose Message</CardTitle>
+              <CardDescription>Write your custom notification message for the selected vehicles</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-subject">Email Subject</Label>
+                <Input
+                  id="custom-subject"
+                  placeholder="Enter email subject..."
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  data-testid="input-subject"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custom-message">Message</Label>
+                <textarea
+                  id="custom-message"
+                  placeholder="Enter your message to customers..."
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  className="w-full min-h-[120px] p-3 border rounded-md resize-vertical"
+                  data-testid="textarea-message"
+                />
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
+                  <div><code>{"{customerName}"}</code> - Customer's name</div>
+                  <div><code>{"{vehiclePlate}"}</code> - License plate</div>
+                  <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
+                  <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
+                  <div><code>{"{companyName}"}</code> - Your company name</div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
