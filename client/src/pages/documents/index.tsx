@@ -23,7 +23,7 @@ import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import { FileEdit, Star, Trash2 } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,9 +53,7 @@ export default function DocumentsIndex() {
   // Delete document mutation
   const deleteDocumentMutation = useMutation({
     mutationFn: async (documentId: number) => {
-      const response = await apiRequest(`/api/documents/${documentId}`, {
-        method: 'DELETE',
-      });
+      const response = await apiRequest('DELETE', `/api/documents/${documentId}`);
       return response;
     },
     onSuccess: () => {
@@ -86,6 +84,17 @@ export default function DocumentsIndex() {
   const confirmDeleteDocument = () => {
     if (documentToDelete) {
       deleteDocumentMutation.mutate(documentToDelete.id);
+    }
+  };
+  
+  // Handle print document
+  const handlePrintDocument = (document: Document) => {
+    const printUrl = `/api/documents/download/${document.id}`;
+    const printWindow = window.open(printUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
     }
   };
   
@@ -267,15 +276,24 @@ export default function DocumentsIndex() {
                               <div className="text-xs text-gray-500 mb-2">
                                 {formatFileSize(doc.fileSize)}
                               </div>
-                              <div className="flex justify-between mt-2">
+                              <div className="flex justify-between items-center mt-2 gap-2">
                                 <a 
                                   href={`/api/documents/download/${doc.id}`} 
-                                  className="text-primary-600 hover:text-primary-800 text-sm"
+                                  className="text-primary-600 hover:text-primary-800 text-sm flex items-center gap-1"
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  data-testid={`link-download-document-${doc.id}`}
                                 >
                                   Download
                                 </a>
+                                <button 
+                                  onClick={() => handlePrintDocument(doc)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                                  data-testid={`button-print-document-${doc.id}`}
+                                >
+                                  <Printer className="h-3 w-3" />
+                                  Print
+                                </button>
                                 <button 
                                   onClick={() => handleDeleteDocument(doc)}
                                   className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
