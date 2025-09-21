@@ -8,6 +8,7 @@ import { setupAuth } from "./auth";
 import { BackupScheduler } from "./backupScheduler";
 import { initializeDefaultAdmin, displayDeploymentInfo } from "./initAdmin";
 import notificationRoutes from "./routes/notifications.js";
+import vehiclesWithReservationsRoutes from "./routes/vehicles-with-reservations.js";
 
 // ESM __dirname fix
 const __filename = fileURLToPath(import.meta.url);
@@ -117,6 +118,7 @@ app.get('/api', (_req, res) => {
 
 // Register API routes FIRST (before production static files)  
 app.use('/api/notifications', requireAuth, notificationRoutes);
+app.use('/api/vehicles/with-reservations', requireAuth, vehiclesWithReservationsRoutes);
 await registerRoutes(app);
 
 // Serve frontend in production

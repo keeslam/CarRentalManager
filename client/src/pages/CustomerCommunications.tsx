@@ -32,9 +32,14 @@ export default function CustomerCommunications() {
 
   const { toast } = useToast();
 
-  // Fetch all vehicles
-  const { data: vehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ['/api/vehicles']
+  // Fetch vehicles with active reservations only
+  const { data: vehiclesWithReservations = [] } = useQuery({
+    queryKey: ['/api/vehicles/with-reservations'],
+    queryFn: async () => {
+      const response = await fetch('/api/vehicles/with-reservations');
+      if (!response.ok) throw new Error('Failed to fetch vehicles with reservations');
+      return response.json();
+    }
   });
 
   // Fetch customers 
@@ -70,7 +75,8 @@ export default function CustomerCommunications() {
     }
   ];
 
-  const filteredVehicles = vehicles.filter(vehicle => {
+  const filteredVehicles = vehiclesWithReservations.filter((item: any) => {
+    const vehicle = item.vehicle;
     const query = searchQuery.toLowerCase();
     return !query ||
       vehicle.licensePlate?.toLowerCase().includes(query) ||
@@ -188,24 +194,28 @@ export default function CustomerCommunications() {
         <div className="flex items-center space-x-2">
           <Users className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
-            {customers.length} customers • {vehicles.length} vehicles
+            {customers.length} customers • {vehiclesWithReservations.length} vehicles with reservations
           </span>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="send" className="flex items-center space-x-2">
             <Send className="h-4 w-4" />
             <span>Send Notifications</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center space-x-2">
-            <Clock className="h-4 w-4" />
-            <span>History</span>
-          </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center space-x-2">
             <Mail className="h-4 w-4" />
-            <span>Templates</span>
+            <span>Template Builder</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center space-x-2">
+            <Clock className="h-4 w-4" />
+            <span>Email Log</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center space-x-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Analytics</span>
           </TabsTrigger>
         </TabsList>
 
@@ -335,7 +345,10 @@ export default function CustomerCommunications() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {filteredVehicles.slice(0, 50).map((vehicle) => {
+                {filteredVehicles.slice(0, 50).map((item: any) => {
+                  const vehicle = item.vehicle;
+                  const customer = item.customer;
+                  const reservation = item.reservation;
                   const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
                   return (
                     <div
@@ -356,6 +369,9 @@ export default function CustomerCommunications() {
                           <div className="font-medium text-sm">{vehicle.licensePlate}</div>
                           <div className="text-xs text-muted-foreground">
                             {vehicle.brand} {vehicle.model}
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            Customer: {customer.name}
                           </div>
                           {notificationTemplate === "apk" && vehicle.apkDate && (
                             <div className="text-xs text-orange-600 mt-1">
