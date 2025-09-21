@@ -613,7 +613,7 @@ Autolease Lam`;
                 New Reservation
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[450px] max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Reservation</DialogTitle>
                 <DialogDescription>
@@ -622,7 +622,7 @@ Autolease Lam`;
               </DialogHeader>
               
               <Form {...newReservationForm}>
-                <form onSubmit={newReservationForm.handleSubmit((data) => createReservationMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={newReservationForm.handleSubmit((data) => createReservationMutation.mutate(data))} className="space-y-3">
                   {/* Customer Selection */}
                   <FormField
                     control={newReservationForm.control}
@@ -651,16 +651,16 @@ Autolease Lam`;
                     )}
                   />
 
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Dates and Status Row */}
+                  <div className="grid grid-cols-3 gap-3">
                     <FormField
                       control={newReservationForm.control}
                       name="startDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Start Date *</FormLabel>
+                          <FormLabel className="text-xs">Start Date *</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input type="date" {...field} className="h-8" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -672,15 +672,39 @@ Autolease Lam`;
                       name="endDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>End Date {!isOpenEndedWatch && "*"}</FormLabel>
+                          <FormLabel className="text-xs">End Date {!isOpenEndedWatch && "*"}</FormLabel>
                           <FormControl>
                             <Input 
                               type="date" 
                               {...field} 
                               disabled={isOpenEndedWatch}
                               placeholder={isOpenEndedWatch ? "Open-ended" : ""}
+                              className="h-8"
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={newReservationForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Status..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="confirmed">Confirmed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -692,84 +716,61 @@ Autolease Lam`;
                     control={newReservationForm.control}
                     name="isOpenEnded"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 -mt-1">
                         <FormControl>
                           <input
                             type="checkbox"
                             checked={field.value}
                             onChange={field.onChange}
-                            className="mt-2"
+                            className="mt-1"
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel>Open-ended rental</FormLabel>
+                          <FormLabel className="text-xs">Open-ended rental</FormLabel>
                           <p className="text-xs text-muted-foreground">
-                            No specific end date (can be extended later)
+                            No specific end date
                           </p>
                         </div>
                       </FormItem>
                     )}
                   />
 
-                  {/* Status */}
-                  <FormField
-                    control={newReservationForm.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  {/* Price and Mileage Row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField
+                      control={newReservationForm.control}
+                      name="totalPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Price (€)</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status..." />
-                            </SelectTrigger>
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="h-8"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Total Price */}
-                  <FormField
-                    control={newReservationForm.control}
-                    name="totalPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total Price (€)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            placeholder="0.00"
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Mileage Fields */}
-                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={newReservationForm.control}
                       name="departureMileage"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Departure Mileage</FormLabel>
+                          <FormLabel className="text-xs">Departure KM</FormLabel>
                           <FormControl>
                             <Input 
                               type="number"
-                              placeholder="Enter mileage..."
+                              placeholder="Mileage..."
                               {...field}
                               onChange={(e) => field.onChange(e.target.value)}
+                              className="h-8"
                             />
                           </FormControl>
                           <FormMessage />
@@ -782,13 +783,14 @@ Autolease Lam`;
                       name="startMileage"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Start Mileage</FormLabel>
+                          <FormLabel className="text-xs">Start KM</FormLabel>
                           <FormControl>
                             <Input 
                               type="number"
-                              placeholder="Enter mileage..."
+                              placeholder="Mileage..."
                               {...field}
                               onChange={(e) => field.onChange(e.target.value)}
+                              className="h-8"
                             />
                           </FormControl>
                           <FormMessage />
@@ -803,16 +805,16 @@ Autolease Lam`;
                     name="damageCheckFile"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Damage Check Photo</FormLabel>
+                        <FormLabel className="text-xs">Damage Check Photo</FormLabel>
                         <FormControl>
-                          <div className="space-y-4">
+                          <div className="space-y-2">
                             {/* File upload area */}
                             <div
                               onDrop={handleDrop}
                               onDragOver={handleDragOver}
                               onDragLeave={handleDragLeave}
                               className={`
-                                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+                                border-2 border-dashed rounded-lg p-4 text-center cursor-pointer
                                 transition-colors duration-200
                                 ${isDragActive 
                                   ? 'border-primary bg-primary/10' 
@@ -828,14 +830,14 @@ Autolease Lam`;
                                 id="damage-file-upload"
                               />
                               <label htmlFor="damage-file-upload" className="cursor-pointer">
-                                <div className="flex flex-col items-center space-y-2">
-                                  <Upload className="h-8 w-8 text-muted-foreground" />
+                                <div className="flex flex-col items-center space-y-1">
+                                  <Upload className="h-6 w-6 text-muted-foreground" />
                                   <div>
-                                    <p className="text-sm">
+                                    <p className="text-xs">
                                       <span className="font-medium">Click to upload</span> or drag and drop
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      PNG, JPG, PDF up to 25MB
+                                      Images/PDF up to 25MB
                                     </p>
                                   </div>
                                 </div>
@@ -844,12 +846,12 @@ Autolease Lam`;
                             
                             {/* Selected file display */}
                             {damageFile && (
-                              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
                                 <div className="flex items-center space-x-2">
-                                  <FileCheck className="h-4 w-4 text-green-600" />
-                                  <span className="text-sm font-medium">{damageFile.name}</span>
+                                  <FileCheck className="h-3 w-3 text-green-600" />
+                                  <span className="text-xs font-medium truncate">{damageFile.name}</span>
                                   <span className="text-xs text-muted-foreground">
-                                    ({(damageFile.size / 1024 / 1024).toFixed(2)} MB)
+                                    ({(damageFile.size / 1024 / 1024).toFixed(1)}MB)
                                   </span>
                                 </div>
                                 <Button
@@ -857,8 +859,9 @@ Autolease Lam`;
                                   variant="ghost"
                                   size="sm"
                                   onClick={removeDamageFile}
+                                  className="h-6 w-6 p-0"
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="h-3 w-3" />
                                 </Button>
                               </div>
                             )}
@@ -875,11 +878,11 @@ Autolease Lam`;
                     name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notes</FormLabel>
+                        <FormLabel className="text-xs">Notes</FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="Additional notes for this reservation..." 
-                            className="h-20"
+                            className="h-16 text-sm"
                             {...field} 
                           />
                         </FormControl>
@@ -888,19 +891,21 @@ Autolease Lam`;
                     )}
                   />
 
-                  <DialogFooter>
+                  <DialogFooter className="gap-2 pt-4">
                     <Button 
                       type="button" 
                       variant="outline" 
                       onClick={() => setIsNewReservationOpen(false)}
+                      className="h-8"
                     >
                       Cancel
                     </Button>
                     <Button 
                       type="submit" 
                       disabled={createReservationMutation.isPending}
+                      className="h-8"
                     >
-                      {createReservationMutation.isPending ? "Creating..." : "Create Reservation"}
+                      {createReservationMutation.isPending ? "Creating..." : "Create"}
                     </Button>
                   </DialogFooter>
                 </form>
