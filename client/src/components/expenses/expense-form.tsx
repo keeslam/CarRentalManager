@@ -133,7 +133,7 @@ export function ExpenseForm({
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const [receiptTab, setReceiptTab] = useState<string>("scan");
+  const [receiptTab, setReceiptTab] = useState<string>("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formInitialized, setFormInitialized] = useState(false);
   const [recentVehicles, setRecentVehicles] = useState<string[]>([]);
@@ -432,6 +432,124 @@ export function ExpenseForm({
         <CardTitle>{editMode ? "Edit Expense" : "Record New Expense"}</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Invoice Scanner Section */}
+        {!editMode && (
+          <div className="mb-8 p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center gap-2 mb-4">
+              <Scan className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-blue-900">Scan Invoice with AI</h3>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Upload PDF for scanning */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-center w-full">
+                  <label 
+                    htmlFor="scan-file-upload" 
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Scan className="w-8 h-8 mb-3 text-blue-600" />
+                      <p className="mb-2 text-sm text-blue-700">
+                        <span className="font-semibold">Click to upload PDF invoice</span>
+                      </p>
+                      <p className="text-xs text-blue-600">PDF files only (max. 25MB)</p>
+                    </div>
+                    <input 
+                      id="scan-file-upload" 
+                      type="file" 
+                      className="hidden" 
+                      accept=".pdf"
+                      onChange={handleScanFileChange}
+                    />
+                  </label>
+                </div>
+                
+                {scanFile && (
+                  <div className="p-3 bg-white rounded-lg flex items-center justify-between border">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                      <div className="text-sm">
+                        <div className="font-medium truncate max-w-[150px] sm:max-w-[300px]">{scanFile.name}</div>
+                        <div className="text-muted-foreground text-xs">{formatFileSize(scanFile.size)}</div>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="default"
+                      size="sm"
+                      onClick={scanInvoice}
+                      disabled={isScanning}
+                      className="ml-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Scan className="w-4 h-4 mr-2" />
+                          Scan
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Display scanned results */}
+              {scannedInvoice && (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <h4 className="font-medium text-green-800">Invoice Scanned Successfully</h4>
+                  </div>
+                  
+                  <div className="p-4 bg-white rounded-lg border">
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                      <div><strong>Vendor:</strong> {scannedInvoice.vendor}</div>
+                      <div><strong>Date:</strong> {scannedInvoice.invoiceDate}</div>
+                      <div><strong>Invoice #:</strong> {scannedInvoice.invoiceNumber}</div>
+                      <div><strong>Total:</strong> €{scannedInvoice.totalAmount}</div>
+                    </div>
+                    
+                    {scannedInvoice.lineItems && scannedInvoice.lineItems.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="font-medium text-sm">Line Items - Click to apply to form:</h5>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {scannedInvoice.lineItems.map((item, index) => (
+                            <div 
+                              key={index}
+                              className="p-3 bg-gray-50 rounded border cursor-pointer hover:bg-gray-100 transition-colors"
+                              onClick={() => applyScannedData(item)}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{item.description}</div>
+                                  <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                                    <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                                    <span>€{item.amount}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded border border-blue-200">
+                💡 Upload a PDF invoice and our AI will automatically extract expense details. 
+                Click on any line item to apply it to the form below.
+              </div>
+            </div>
+          </div>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -543,14 +661,10 @@ export function ExpenseForm({
               
               <div className="md:col-span-2">
                 <FormLabel className="mb-2 block">Receipt</FormLabel>
-                <Tabs defaultValue="scan" value={receiptTab} onValueChange={setReceiptTab}>
+                <Tabs defaultValue="url" value={receiptTab} onValueChange={setReceiptTab}>
                   <TabsList className="mb-4">
-                    <TabsTrigger value="scan" className="flex items-center gap-2 bg-primary/10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      <Scan className="w-4 h-4" />
-                      Scan Invoice (AI)
-                    </TabsTrigger>
-                    <TabsTrigger value="upload">Upload File</TabsTrigger>
                     <TabsTrigger value="url">URL</TabsTrigger>
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="url">
@@ -630,116 +744,6 @@ export function ExpenseForm({
                           {form.formState.errors.receiptFile.message}
                         </p>
                       )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="scan">
-                    <div className="space-y-4">
-                      {/* Upload PDF for scanning */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-center w-full">
-                          <label 
-                            htmlFor="scan-file-upload" 
-                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80"
-                          >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Scan className="w-8 h-8 mb-3 text-muted-foreground" />
-                              <p className="mb-2 text-sm text-muted-foreground">
-                                <span className="font-semibold">Click to upload PDF invoice</span>
-                              </p>
-                              <p className="text-xs text-muted-foreground">PDF files only (max. 25MB)</p>
-                            </div>
-                            <input 
-                              id="scan-file-upload" 
-                              type="file" 
-                              className="hidden" 
-                              accept=".pdf"
-                              onChange={handleScanFileChange}
-                            />
-                          </label>
-                        </div>
-                        
-                        {scanFile && (
-                          <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <FileText className="w-6 h-6 text-muted-foreground" />
-                              <div className="text-sm">
-                                <div className="font-medium truncate max-w-[150px] sm:max-w-[300px]">{scanFile.name}</div>
-                                <div className="text-muted-foreground text-xs">{formatFileSize(scanFile.size)}</div>
-                              </div>
-                            </div>
-                            <Button 
-                              type="button" 
-                              variant="default"
-                              size="sm"
-                              onClick={scanInvoice}
-                              disabled={isScanning}
-                              className="ml-2"
-                            >
-                              {isScanning ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Scanning...
-                                </>
-                              ) : (
-                                <>
-                                  <Scan className="w-4 h-4 mr-2" />
-                                  Scan
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Display scanned results */}
-                      {scannedInvoice && (
-                        <div className="mt-6 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-500" />
-                            <h4 className="font-medium">Invoice Scanned Successfully</h4>
-                          </div>
-                          
-                          <div className="p-4 bg-muted/30 rounded-lg">
-                            <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                              <div><strong>Vendor:</strong> {scannedInvoice.vendor}</div>
-                              <div><strong>Date:</strong> {scannedInvoice.invoiceDate}</div>
-                              <div><strong>Invoice #:</strong> {scannedInvoice.invoiceNumber}</div>
-                              <div><strong>Total:</strong> €{scannedInvoice.totalAmount}</div>
-                            </div>
-                            
-                            {scannedInvoice.lineItems && scannedInvoice.lineItems.length > 0 && (
-                              <div className="space-y-2">
-                                <h5 className="font-medium text-sm">Line Items - Click to apply to form:</h5>
-                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                  {scannedInvoice.lineItems.map((item, index) => (
-                                    <div 
-                                      key={index}
-                                      className="p-3 bg-white rounded border cursor-pointer hover:bg-gray-50 transition-colors"
-                                      onClick={() => applyScannedData(item)}
-                                    >
-                                      <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                          <div className="font-medium text-sm">{item.description}</div>
-                                          <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-                                            <Badge variant="secondary" className="text-xs">{item.category}</Badge>
-                                            <span>€{item.amount}</span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="text-sm text-muted-foreground">
-                        Upload a PDF invoice and our AI will automatically extract expense details. 
-                        Click on any line item to apply it to the form above.
-                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
