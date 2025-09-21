@@ -171,18 +171,15 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     // Extract the vehicle data from the API response
     const rdwVehicle = data[0];
     
-    // Debug: Log the full RDW response to see available fields
-    console.log('🔍 RDW API Response for debugging:', JSON.stringify(rdwVehicle, null, 2));
-    
     // Check if vehicle is registered to a person using datum_tenaamstelling
     const registrationDate = formatDate(rdwVehicle.datum_tenaamstelling);
     const isRegisteredToPerson = !!registrationDate;
 
     // Check WOK (Wacht op Keuren) notification status
     const wokStatus = rdwVehicle.wacht_op_keuren;
-    console.log('🔍 WOK Status from RDW:', wokStatus);
-    const hasWokNotification = wokStatus === "ja" || wokStatus === "Ja" || wokStatus === "JA" || wokStatus === true;
-    console.log('🔍 Has WOK Notification:', hasWokNotification);
+    // Only set to true if RDW explicitly says "ja" (yes)
+    // "Geen verstrekking in Open Data" means WOK status is not publicly available
+    const hasWokNotification = wokStatus === "ja" || wokStatus === "Ja" || wokStatus === "JA";
 
     // Map the RDW data to our vehicle structure - only taking what we can reliably get
     const mappedVehicle: Partial<InsertVehicle> = {
