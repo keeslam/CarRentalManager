@@ -145,14 +145,37 @@ export default function ReservationCalendarPage() {
     setCurrentDate(new Date());
   };
   
+  // Safe date parsing function to prevent invalid date errors
+  const safeParseDateISO = (dateString: string | null | undefined): Date | null => {
+    if (!dateString || dateString === 'undefined' || dateString === 'null') {
+      return null;
+    }
+    try {
+      const parsed = parseISO(dateString);
+      // Check if the parsed date is valid
+      if (isNaN(parsed.getTime())) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
   // Function to get reservations for a specific day and vehicle
   const getReservationsForDay = (vehicleId: number, day: Date) => {
     if (!reservations) return [];
     
-    return reservations.filter(res => 
-      res.vehicleId === vehicleId && 
-      isDateInRange(day, parseISO(res.startDate), parseISO(res.endDate))
-    );
+    return reservations.filter(res => {
+      const startDate = safeParseDateISO(res.startDate);
+      const endDate = safeParseDateISO(res.endDate);
+      
+      if (!startDate) return false;
+      // For open-ended reservations, endDate might be null
+      const actualEndDate = endDate || startDate;
+      
+      return res.vehicleId === vehicleId && isDateInRange(day, startDate, actualEndDate);
+    });
   };
   
   // This function is no longer used since we only display pickup and return days
@@ -360,13 +383,25 @@ export default function ReservationCalendarPage() {
                     
                     // Only get reservations starting or ending on this day
                     // Filter reservations based on selected vehicles
-                    const dayReservations = reservations?.filter(res => 
+                    const dayReservations = reservations?.filter(res => {
+                      const startDate = safeParseDateISO(res.startDate);
+                      const endDate = safeParseDateISO(res.endDate);
+                      
+                      if (!startDate) return false;
+                      
+                      // Check if this day is a pickup or return day (only if endDate is valid)
+                      const isPickupDay = isSameDay(day, startDate);
+                      const isReturnDay = endDate ? isSameDay(day, endDate) : false;
+                      
                       // First filter by date (pickup or return day)
-                      (isSameDay(day, parseISO(res.startDate)) || isSameDay(day, parseISO(res.endDate))) &&
+                      const matchesDate = isPickupDay || isReturnDay;
+                      
                       // Then check if the vehicle is in the filtered vehicles list
-                      (vehicleFilters.search === "" && vehicleFilters.type === "all" && vehicleFilters.availability === "all" || 
-                       filteredVehicles.some(v => v.id === res.vehicleId))
-                    ) || [];
+                      const matchesFilter = vehicleFilters.search === "" && vehicleFilters.type === "all" && vehicleFilters.availability === "all" || 
+                                           filteredVehicles.some(v => v.id === res.vehicleId);
+                                           
+                      return matchesDate && matchesFilter;
+                    }) || [];
                     
                     return (
                       <div
@@ -413,13 +448,17 @@ export default function ReservationCalendarPage() {
                         {/* Show up to 3 reservations in month view */}
                         <div className="space-y-1">
                           {dayReservations.slice(0, 3).map(res => {
-                            const isPickupDay = isSameDay(day, parseISO(res.startDate));
-                            const isReturnDay = isSameDay(day, parseISO(res.endDate));
-                            
-                            const rentalDuration = differenceInDays(
-                              parseISO(res.endDate),
-                              parseISO(res.startDate)
-                            ) + 1;
+                            try {
+                              const startDate = safeParseDateISO(res.startDate);
+                              const endDate = safeParseDateISO(res.endDate);
+                              
+                              if (!startDate) return null;
+                              
+                              const isPickupDay = isSameDay(day, startDate);
+                              const isReturnDay = endDate ? isSameDay(day, endDate) : false;
+                              
+                              // Calculate rental duration only if both dates are valid
+                              const rentalDuration = endDate ? differenceInDays(endDate, startDate) + 1 : 1;
                             
                             return (
                               <HoverCard key={res.id} openDelay={300} closeDelay={200}>
@@ -506,10 +545,10 @@ export default function ReservationCalendarPage() {
                                       <div>
                                         <div className="grid grid-cols-2 gap-2 text-xs">
                                           <div>
-                                            <span className="text-gray-500">Start:</span> {format(parseISO(res.startDate), 'MMM d, yyyy')}
+                                            <span className="text-gray-500">Start:</span> {startDate ? format(startDate, 'MMM d, yyyy') : 'Invalid date'}
                                           </div>
                                           <div>
-                                            <span className="text-gray-500">End:</span> {format(parseISO(res.endDate), 'MMM d, yyyy')}
+                                            <span className="text-gray-500">End:</span> {endDate ? format(endDate, 'MMM d, yyyy') : 'Open-ended'}
                                           </div>
                                           <div className="col-span-2">
                                             <span className="text-gray-500">Duration:</span> {rentalDuration} {rentalDuration === 1 ? 'day' : 'days'}
@@ -573,7 +612,15 @@ export default function ReservationCalendarPage() {
                                   </div>
                                 </HoverCardContent>
                               </HoverCard>
-                            );
+                              );
+                            } catch (error) {
+                              console.error('Error rendering reservation:', error, res);
+                              return (
+                                <div key={res.id} className="text-xs text-red-500 p-1 border border-red-200 rounded">
+                                  Error displaying reservation
+                                </div>
+                              );
+                            }
                           })}
                           
                           {dayReservations.length > 3 && (
