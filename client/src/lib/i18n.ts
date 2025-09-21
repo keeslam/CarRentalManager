@@ -38,6 +38,8 @@ const resources = {
       view: "View",
       download: "Download",
       upload: "Upload",
+      viewContract: "View Contract",
+      generateContract: "Generate Contract",
       
       // Form fields
       name: "Name",
@@ -122,6 +124,8 @@ const resources = {
       view: "Bekijken",
       download: "Downloaden",
       upload: "Uploaden",
+      viewContract: "Contract Bekijken",
+      generateContract: "Contract Genereren",
       
       // Form fields
       name: "Naam",

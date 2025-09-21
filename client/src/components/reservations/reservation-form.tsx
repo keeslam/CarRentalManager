@@ -107,6 +107,7 @@ export function ReservationForm({
   onSuccess
 }: ReservationFormProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   
@@ -1416,7 +1417,7 @@ export function ReservationForm({
                     ) : (
                       <>
                         <Eye className="mr-2 h-4 w-4" />
-                        View Contract
+                        {t('viewContract')}
                       </>
                     )}
                   </Button>
@@ -1438,7 +1439,7 @@ export function ReservationForm({
                     ) : (
                       <>
                         <FileText className="mr-2 h-4 w-4" />
-                        Generate Contract
+                        {t('generateContract')}
                       </>
                     )}
                   </Button>
