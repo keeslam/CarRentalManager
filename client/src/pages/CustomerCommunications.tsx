@@ -41,6 +41,12 @@ export default function CustomerCommunications() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<{
+    subject: string;
+    content: string;
+    recipients: Array<{name: string, email: string, vehicleLicense: string}>;
+  } | null>(null);
   
   // Template builder state
   const [templateName, setTemplateName] = useState<string>("");
@@ -184,6 +190,78 @@ export default function CustomerCommunications() {
     } finally {
       setIsLoadingNotifications(false);
     }
+  };
+
+  const generateEmailPreview = async () => {
+    if (selectedVehicles.length === 0) {
+      toast({
+        title: "No Vehicles Selected",
+        description: "Please select at least one vehicle",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (notificationTemplate === "custom" && (!customMessage.trim() || !customSubject.trim())) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both subject and message for custom notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate preview data
+    let subject = "";
+    let content = "";
+
+    if (notificationTemplate === "custom") {
+      subject = customSubject.trim();
+      content = customMessage.trim();
+    } else if (notificationTemplate === "apk") {
+      subject = "APK Inspection Reminder - Action Required";
+      content = "Dear {{customer_name}},\n\nWe hope this message finds you well. This is a friendly reminder that your vehicle {{vehicle_license}} ({{vehicle_brand}} {{vehicle_model}}) is due for its APK inspection.\n\nAPK Date: {{apk_date}}\n\nPlease schedule your APK inspection as soon as possible to ensure your vehicle remains road-legal. You can contact us to arrange a convenient appointment.\n\nThank you for choosing our services.\n\nBest regards,\nYour Car Rental Team";
+    } else if (notificationTemplate === "maintenance") {
+      subject = "Scheduled Maintenance Reminder";
+      content = "Dear {{customer_name}},\n\nWe hope you're enjoying your rental experience with vehicle {{vehicle_license}} ({{vehicle_brand}} {{vehicle_model}}).\n\nThis is a reminder that your vehicle is due for scheduled maintenance. Regular maintenance ensures optimal performance and your safety.\n\nPlease contact us to schedule a convenient time for the maintenance service.\n\nThank you for your attention to this matter.\n\nBest regards,\nYour Car Rental Team";
+    }
+
+    // Generate recipients list with actual customer data
+    const recipients = selectedVehicles.map(vehicle => {
+      const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
+      const customer = reservation?.customer;
+      
+      return {
+        name: customer?.name || "Customer",
+        email: customer?.email || "No email",
+        vehicleLicense: vehicle.licensePlate
+      };
+    });
+
+    // Process content with sample data for preview
+    const sampleVehicle = selectedVehicles[0];
+    const sampleReservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === sampleVehicle.id);
+    const sampleCustomer = sampleReservation?.customer;
+
+    const processedContent = content
+      .replace(/\{\{customer_name\}\}/g, sampleCustomer?.name || "[Customer Name]")
+      .replace(/\{\{vehicle_license\}\}/g, sampleVehicle.licensePlate || "[License Plate]")
+      .replace(/\{\{vehicle_brand\}\}/g, sampleVehicle.brand || "[Brand]")
+      .replace(/\{\{vehicle_model\}\}/g, sampleVehicle.model || "[Model]")
+      .replace(/\{\{apk_date\}\}/g, sampleVehicle.apkDate || "[APK Date]");
+
+    setEmailPreview({
+      subject,
+      content: processedContent,
+      recipients
+    });
+
+    setPreviewDialogOpen(true);
+  };
+
+  const confirmSendNotifications = async () => {
+    setPreviewDialogOpen(false);
+    await handleSendNotifications();
   };
 
   const getTemplateInfo = (template: string) => {
@@ -336,50 +414,99 @@ export default function CustomerCommunications() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1"
                 />
-                <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      disabled={selectedVehicles.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send to {selectedVehicles.length} vehicles
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirm Send Notifications</DialogTitle>
-                      <DialogDescription>
-                        You are about to send {getTemplateInfo(notificationTemplate).title.toLowerCase()} notifications to {selectedVehicles.length} vehicle(s).
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <div className="space-y-2">
-                        <Label>Selected Vehicles:</Label>
-                        <div className="max-h-32 overflow-y-auto border rounded p-2 space-y-1">
-                          {selectedVehicles.map((vehicle) => (
-                            <div key={vehicle.id} className="text-sm">
-                              {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
-                            </div>
-                          ))}
+                <Button 
+                  disabled={selectedVehicles.length === 0}
+                  onClick={generateEmailPreview}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-preview-send"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Preview & Send to {selectedVehicles.length} vehicles
+                </Button>
+              </div>
+
+              {/* Email Preview Dialog */}
+              <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Email Preview</DialogTitle>
+                    <DialogDescription>
+                      Review your email before sending to {emailPreview?.recipients.length || 0} recipients
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {emailPreview && (
+                    <div className="space-y-6">
+                      {/* Email Content Preview */}
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Subject:</Label>
+                          <div className="mt-1 p-3 bg-gray-50 rounded border">
+                            <p className="font-medium">{emailPreview.subject}</p>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Email Content:</Label>
+                          <div className="mt-1 p-4 bg-gray-50 rounded border">
+                            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+                              {emailPreview.content}
+                            </pre>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Recipients List */}
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Recipients ({emailPreview.recipients.length}):
+                        </Label>
+                        <div className="mt-2 max-h-48 overflow-y-auto border rounded">
+                          <div className="divide-y">
+                            {emailPreview.recipients.map((recipient, index) => (
+                              <div key={index} className="p-3 flex justify-between items-center">
+                                <div className="space-y-1">
+                                  <div className="font-medium text-sm">{recipient.name}</div>
+                                  <div className="text-xs text-muted-foreground">{recipient.email}</div>
+                                </div>
+                                <div className="text-xs text-blue-600 font-mono">
+                                  {recipient.vehicleLicense}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-900">
+                            Ready to send {emailPreview.recipients.length} emails
+                          </span>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-1">
+                          Each recipient will receive a personalized version of this email with their specific vehicle and customer information.
+                        </p>
+                      </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={handleSendNotifications}
-                        disabled={isLoadingNotifications}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {isLoadingNotifications ? "Sending..." : "Send Notifications"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={confirmSendNotifications}
+                      disabled={isLoadingNotifications}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isLoadingNotifications ? "Sending..." : "Confirm & Send Emails"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                 {filteredVehicles.slice(0, 50).map((item: any) => {
