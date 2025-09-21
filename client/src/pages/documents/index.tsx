@@ -431,25 +431,25 @@ export default function DocumentsIndex() {
       
       {/* Print Preview Dialog */}
       <AlertDialog open={printDialogOpen} onOpenChange={setPrintDialogOpen}>
-        <AlertDialogContent className="max-w-4xl max-h-[80vh]">
-          <AlertDialogHeader>
+        <AlertDialogContent className="max-w-6xl w-[90vw] h-[85vh] flex flex-col">
+          <AlertDialogHeader className="flex-shrink-0">
             <AlertDialogTitle>Print Preview - {documentToPrint?.fileName}</AlertDialogTitle>
             <AlertDialogDescription>
               Preview the document before printing
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex-1 min-h-[500px] border rounded">
+          <div className="flex-1 overflow-hidden border rounded mb-4">
             {documentToPrint && (
               <iframe
                 id="print-preview-iframe"
                 src={`/api/documents/view/${documentToPrint.id}`}
-                className="w-full h-[500px] border-0"
+                className="w-full h-full border-0"
                 title="Document Preview"
               />
             )}
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
+          <AlertDialogFooter className="flex-shrink-0">
+            <AlertDialogCancel onClick={() => setPrintDialogOpen(false)}>Close</AlertDialogCancel>
             <AlertDialogAction
               onClick={printDocument}
               className="bg-blue-600 hover:bg-blue-700"
