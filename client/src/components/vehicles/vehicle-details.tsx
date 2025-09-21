@@ -171,10 +171,10 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
     const expiryDate = vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : 'Not set';
     
     // Default APK template
-    const defaultSubject = `APK Reminder - ${vehicle.licensePlate} expires soon`;
+    const defaultSubject = `APK Reminder - ${formatLicensePlate(vehicle.licensePlate)} expires soon`;
     const defaultContent = `Dear ${customerName},
 
-This is a friendly reminder that your vehicle ${vehicle.licensePlate} requires an APK inspection.
+This is a friendly reminder that your vehicle ${formatLicensePlate(vehicle.licensePlate)} requires an APK inspection.
 
 APK Expiry Date: ${expiryDate}
 
@@ -193,11 +193,11 @@ Autolease Lam`;
     const replacePlaceholders = (text: string) => {
       return text
         .replace(/\{customerName\}/g, customerName)
-        .replace(/\{vehiclePlate\}/g, vehicle.licensePlate || 'N/A')
+        .replace(/\{vehiclePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
         .replace(/\{vehicleBrand\}/g, vehicle.brand || 'N/A')
         .replace(/\{vehicleModel\}/g, vehicle.model || 'N/A')
         .replace(/\{apkDate\}/g, expiryDate)
-        .replace(/\{licensePlate\}/g, vehicle.licensePlate || 'N/A')
+        .replace(/\{licensePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
         .replace(/\{firstName\}/g, customer.firstName || 'Customer')
         .replace(/\{lastName\}/g, customer.lastName || '')
         .replace(/\{email\}/g, customer.email || 'N/A');
