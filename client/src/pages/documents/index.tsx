@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { Document, Vehicle } from "@shared/schema";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import { FileEdit, Star } from "lucide-react";
+import { FileEdit, Star, Trash2 } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [vehicleFilter, setVehicleFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch documents
   const { data: documents, isLoading: isLoadingDocuments } = useQuery<Document[]>({
@@ -32,6 +49,45 @@ export default function DocumentsIndex() {
   const { data: templates, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ['/api/pdf-templates'],
   });
+  
+  // Delete document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (documentId: number) => {
+      const response = await apiRequest(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete document. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle delete document
+  const handleDeleteDocument = (document: Document) => {
+    setDocumentToDelete(document);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Confirm delete document
+  const confirmDeleteDocument = () => {
+    if (documentToDelete) {
+      deleteDocumentMutation.mutate(documentToDelete.id);
+    }
+  };
   
   // Get unique document types
   const documentTypes = documents 
@@ -220,7 +276,12 @@ export default function DocumentsIndex() {
                                 >
                                   Download
                                 </a>
-                                <button className="text-red-600 hover:text-red-800 text-sm">
+                                <button 
+                                  onClick={() => handleDeleteDocument(doc)}
+                                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+                                  data-testid={`button-delete-document-${doc.id}`}
+                                >
+                                  <Trash2 className="h-3 w-3" />
                                   Delete
                                 </button>
                               </div>
@@ -320,6 +381,28 @@ export default function DocumentsIndex() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{documentToDelete?.fileName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteDocument}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteDocumentMutation.isPending}
+            >
+              {deleteDocumentMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
