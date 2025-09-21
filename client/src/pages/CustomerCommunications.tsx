@@ -47,8 +47,9 @@ export default function CustomerCommunications() {
   const [emailPreview, setEmailPreview] = useState<{
     subject: string;
     content: string;
-    recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string}>;
+    recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string, customer?: any, vehicleId?: number}>;
   } | null>(null);
+  const [individualEmailSelections, setIndividualEmailSelections] = useState<Record<string, string>>({});
   
   // Template builder state
   const [templateName, setTemplateName] = useState<string>("");
@@ -278,7 +279,9 @@ export default function CustomerCommunications() {
         name: customer?.name || "Customer",
         email: selectedEmail,
         vehicleLicense: vehicle.licensePlate,
-        emailField: emailField
+        emailField: emailField,
+        customer: customer,
+        vehicleId: vehicle.id
       };
     });
 
@@ -306,6 +309,66 @@ export default function CustomerCommunications() {
   const confirmSendNotifications = async () => {
     setPreviewDialogOpen(false);
     await handleSendNotifications();
+  };
+
+  // Get available email options for a customer
+  const getCustomerEmailOptions = (customer: any) => {
+    const options = [];
+    if (customer?.email) {
+      options.push({ value: 'email', label: 'Primary Email', email: customer.email });
+    }
+    if (customer?.emailForMOT) {
+      options.push({ value: 'emailForMOT', label: 'APK/MOT Email', email: customer.emailForMOT });
+    }
+    if (customer?.emailForInvoices) {
+      options.push({ value: 'emailForInvoices', label: 'Invoice Email', email: customer.emailForInvoices });
+    }
+    if (customer?.emailGeneral) {
+      options.push({ value: 'emailGeneral', label: 'General Email', email: customer.emailGeneral });
+    }
+    return options;
+  };
+
+  // Handle individual email selection change
+  const handleIndividualEmailChange = (vehicleId: string, emailField: string, customer: any) => {
+    setIndividualEmailSelections(prev => ({
+      ...prev,
+      [vehicleId]: emailField
+    }));
+
+    // Update the email preview to reflect the new selection
+    if (emailPreview) {
+      const updatedRecipients = emailPreview.recipients.map(recipient => {
+        if (recipient.vehicleId?.toString() === vehicleId) {
+          let newEmail = "No email";
+          switch (emailField) {
+            case "email":
+              newEmail = customer?.email || "No email";
+              break;
+            case "emailForMOT":
+              newEmail = customer?.emailForMOT || "No email";
+              break;
+            case "emailForInvoices":
+              newEmail = customer?.emailForInvoices || "No email";
+              break;
+            case "emailGeneral":
+              newEmail = customer?.emailGeneral || "No email";
+              break;
+          }
+          return {
+            ...recipient,
+            email: newEmail,
+            emailField: emailField
+          };
+        }
+        return recipient;
+      });
+
+      setEmailPreview({
+        ...emailPreview,
+        recipients: updatedRecipients
+      });
+    }
   };
 
   const getTemplateInfo = (template: string) => {
@@ -549,27 +612,59 @@ export default function CustomerCommunications() {
                         </Label>
                         <div className="mt-2 max-h-48 overflow-y-auto border rounded">
                           <div className="divide-y">
-                            {emailPreview.recipients.map((recipient, index) => (
-                              <div key={index} className="p-3 flex justify-between items-center">
-                                <div className="space-y-1">
-                                  <div className="font-medium text-sm">{recipient.name}</div>
-                                  <div className="text-xs text-muted-foreground flex items-center space-x-2">
-                                  <span>{recipient.email}</span>
-                                  {recipient.emailField !== "none" && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {recipient.emailField === "email" && "Primary"}
-                                      {recipient.emailField === "emailForMOT" && "APK/MOT"}
-                                      {recipient.emailField === "emailForInvoices" && "Invoice"}
-                                      {recipient.emailField === "emailGeneral" && "General"}
-                                    </Badge>
-                                  )}
+                            {emailPreview.recipients.map((recipient, index) => {
+                              const emailOptions = getCustomerEmailOptions(recipient.customer);
+                              const currentSelection = individualEmailSelections[recipient.vehicleId?.toString() || ''] || recipient.emailField;
+                              
+                              return (
+                                <div key={index} className="p-3 space-y-3">
+                                  <div className="flex justify-between items-start">
+                                    <div className="space-y-1 flex-1">
+                                      <div className="font-medium text-sm">{recipient.name}</div>
+                                      <div className="text-xs text-blue-600 font-mono">
+                                        {recipient.vehicleLicense}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Email Selection for this recipient */}
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-medium">Email Address:</Label>
+                                    <div className="flex items-center space-x-2">
+                                      <Select 
+                                        value={currentSelection}
+                                        onValueChange={(value) => handleIndividualEmailChange(recipient.vehicleId?.toString() || '', value, recipient.customer)}
+                                      >
+                                        <SelectTrigger className="text-xs h-8 flex-1">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {emailOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="text-xs">
+                                              <div className="flex flex-col">
+                                                <span className="font-medium">{option.label}</span>
+                                                <span className="text-muted-foreground">{option.email}</span>
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {recipient.emailField !== "none" && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {recipient.emailField === "email" && "Primary"}
+                                          {recipient.emailField === "emailForMOT" && "APK/MOT"}
+                                          {recipient.emailField === "emailForInvoices" && "Invoice"}
+                                          {recipient.emailField === "emailGeneral" && "General"}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      <span className="font-medium">Selected:</span> {recipient.email}
+                                    </div>
+                                  </div>
                                 </div>
-                                </div>
-                                <div className="text-xs text-blue-600 font-mono">
-                                  {recipient.vehicleLicense}
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
