@@ -19,4 +19,4 @@ cmds = [
 ]
 
 [start]
-cmd = "npm run db:push --force && npm start"
+cmd = "node migrate-production.js && npm start"
