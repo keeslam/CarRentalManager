@@ -266,6 +266,20 @@ export default function ReservationCalendarPage() {
     }
   };
 
+  // Safe format function to prevent format errors with invalid dates
+  const safeFormat = (date: Date | null | undefined, formatString: string, fallback: string = ''): string => {
+    if (!date) return fallback;
+    try {
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return fallback;
+      }
+      return format(date, formatString);
+    } catch {
+      return fallback;
+    }
+  };
+
   // Function to get reservations for a specific day and vehicle
   const getReservationsForDay = (vehicleId: number, day: Date) => {
     if (!reservations) return [];
@@ -509,11 +523,11 @@ export default function ReservationCalendarPage() {
                             const allDayReservations = getReservationsForDate(day);
                             if (allDayReservations.length > 0) {
                               // If there are reservations, show them in dialog
-                              console.log('Date box clicked - opening day dialog for:', format(day, 'yyyy-MM-dd'));
+                              console.log('Date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
                               openDayDialog(day);
                             } else {
                               // If no reservations, navigate to add page
-                              const formattedDate = format(day, "yyyy-MM-dd");
+                              const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
                               console.log('Date box clicked - no reservations, navigating to add');
                               window.location.href = `/reservations/add?date=${formattedDate}`;
                             }
@@ -529,7 +543,7 @@ export default function ReservationCalendarPage() {
                               className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const formattedDate = format(day, "yyyy-MM-dd");
+                                const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
                                 window.location.href = `/reservations/add?date=${formattedDate}`;
                               }}
                             >
@@ -543,10 +557,10 @@ export default function ReservationCalendarPage() {
                         <div className="flex justify-between items-center mb-3">
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-gray-500 font-medium">
-                              {format(day, "EEE")}
+                              {safeFormat(day, "EEE", "???")}
                             </span>
                             <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
-                              {format(day, "d")}
+                              {safeFormat(day, "d", "?")}
                             </span>
                           </div>
                           {dayReservations.length > 0 && (
@@ -768,10 +782,10 @@ export default function ReservationCalendarPage() {
                               className="h-auto p-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log('More button clicked for day:', format(day, 'yyyy-MM-dd'));
+                                console.log('More button clicked for day:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
                                 openDayDialog(day);
                               }}
-                              data-testid={`button-more-${format(day, 'yyyy-MM-dd')}`}
+                              data-testid={`button-more-${safeFormat(day, 'yyyy-MM-dd', 'invalid-date')}`}
                             >
                               +{dayReservations.length - 5} more
                             </Button>
