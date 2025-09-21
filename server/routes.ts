@@ -2178,6 +2178,54 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Download document
+  app.get("/api/documents/download/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid document ID" });
+      }
+
+      // Get document details
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      if (!document.filePath) {
+        return res.status(404).json({ message: "No file path found for this document" });
+      }
+
+      // Convert relative path to absolute path
+      const absolutePath = path.join(process.cwd(), document.filePath);
+      
+      // Check if file exists
+      if (!fs.existsSync(absolutePath)) {
+        return res.status(404).json({ message: "Document file not found on disk" });
+      }
+
+      // Set appropriate headers for download
+      res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
+      res.setHeader('Content-Type', document.contentType || 'application/octet-stream');
+
+      // Serve the file
+      res.sendFile(absolutePath, (err) => {
+        if (err) {
+          console.error("Error serving document file:", err);
+          if (!res.headersSent) {
+            res.status(500).json({ message: "Failed to serve document file" });
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      res.status(500).json({ 
+        message: "Failed to download document", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Delete document
   app.delete("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
     try {
