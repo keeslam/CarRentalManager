@@ -967,6 +967,35 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get customers with reservation status
+  app.get("/api/customers/with-reservations", async (req, res) => {
+    try {
+      const customers = await storage.getAllCustomers();
+      const reservations = await storage.getAllReservations();
+      
+      const today = new Date();
+      
+      // Add hasActiveReservation property to each customer
+      const customersWithReservations = customers.map(customer => {
+        const hasActiveReservation = reservations.some(reservation => 
+          reservation.customerId === customer.id &&
+          new Date(reservation.startDate) <= today &&
+          new Date(reservation.endDate) >= today
+        );
+        
+        return {
+          ...customer,
+          hasActiveReservation
+        };
+      });
+      
+      res.json(customersWithReservations);
+    } catch (error) {
+      console.error("Error fetching customers with reservations:", error);
+      res.status(500).json({ message: "Failed to fetch customers with reservations", error });
+    }
+  });
+
   // Get single customer
   app.get("/api/customers/:id", async (req, res) => {
     const id = parseInt(req.params.id);
