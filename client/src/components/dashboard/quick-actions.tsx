@@ -35,6 +35,10 @@ import { StatusChangeDialog } from "@/components/reservations/status-change-dial
 import { VehicleReservationsStatusDialog } from "@/components/reservations/vehicle-reservations-status-dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
+import { ReservationForm } from "@/components/reservations/reservation-form";
+import { VehicleForm } from "@/components/vehicles/vehicle-form";
+import { CustomerForm } from "@/components/customers/customer-form";
+import { ExpenseForm } from "@/components/expenses/expense-form";
 
 interface ActionIconProps {
   name: string;
@@ -239,19 +243,19 @@ interface QuickAction {
 const quickActions: QuickAction[] = [
   {
     label: "New Reservation",
-    href: "/reservations/add",
+    dialog: "new-reservation",
     icon: "calendar-plus",
     primary: false,
   },
   {
     label: "Add Vehicle",
-    href: "/vehicles/add",
+    dialog: "add-vehicle",
     icon: "car",
     primary: false,
   },
   {
     label: "Add Customer",
-    href: "/customers/add",
+    dialog: "add-customer",
     icon: "user-plus",
     primary: false,
   },
@@ -263,7 +267,7 @@ const quickActions: QuickAction[] = [
   },
   {
     label: "Log Expense",
-    href: "/expenses/add",
+    dialog: "log-expense",
     icon: "receipt",
     primary: false,
   },
@@ -324,6 +328,12 @@ export function QuickActions() {
   const [apkDate, setApkDate] = useState<string>("");
   const [apkNotes, setApkNotes] = useState<string>("");
   const [isApkUploading, setIsApkUploading] = useState(false);
+  
+  // State for new form dialogs
+  const [reservationDialogOpen, setReservationDialogOpen] = useState(false);
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   
   const { toast } = useToast();
   
@@ -890,6 +900,147 @@ export function QuickActions() {
                   <ActionIcon name={action.icon || "car"} className="mr-1 h-4 w-4" />
                   {action.label}
                 </Button>
+              );
+            }
+            
+            // For new reservation dialog
+            if (action.dialog === "new-reservation") {
+              return (
+                <Dialog key={action.label} open={reservationDialogOpen} onOpenChange={setReservationDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>New Reservation</DialogTitle>
+                      <DialogDescription>
+                        Create a new reservation by selecting a vehicle and customer.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <ReservationForm 
+                        onSuccess={() => {
+                          setReservationDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+                          toast({ title: "Success", description: "Reservation created successfully" });
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For add vehicle dialog
+            if (action.dialog === "add-vehicle") {
+              return (
+                <Dialog key={action.label} open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Vehicle</DialogTitle>
+                      <DialogDescription>
+                        Add a new vehicle to your fleet.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <VehicleForm 
+                        onSuccess={() => {
+                          setVehicleDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+                          toast({ title: "Success", description: "Vehicle added successfully" });
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For add customer dialog
+            if (action.dialog === "add-customer") {
+              return (
+                <Dialog key={action.label} open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Customer</DialogTitle>
+                      <DialogDescription>
+                        Add a new customer to your system.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <CustomerForm 
+                        onSuccess={() => {
+                          setCustomerDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+                          toast({ title: "Success", description: "Customer added successfully" });
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For log expense dialog
+            if (action.dialog === "log-expense") {
+              return (
+                <Dialog key={action.label} open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Log New Expense</DialogTitle>
+                      <DialogDescription>
+                        Record a new expense for a vehicle.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <ExpenseForm 
+                        onSuccess={() => {
+                          setExpenseDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+                          toast({ title: "Success", description: "Expense logged successfully" });
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               );
             }
             
