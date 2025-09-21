@@ -47,6 +47,43 @@ export function UserMenu() {
     };
   }, [menuRef]);
 
+  // Initialize Google Translate when menu opens
+  useEffect(() => {
+    if (isOpen) {
+      const initializeGoogleTranslate = () => {
+        const element = document.getElementById('google_translate_element');
+        if (element && element.innerHTML === '' && (window as any).google?.translate) {
+          new (window as any).google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,nl,de,fr,es,it,pt,ru,ja,ko,zh-CN,ar,hi',
+            layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false,
+            gaTrack: false
+          }, 'google_translate_element');
+        }
+      };
+
+      // Check if Google Translate is already loaded
+      if ((window as any).google?.translate) {
+        initializeGoogleTranslate();
+      } else {
+        // Wait for Google Translate to load
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          if ((window as any).google?.translate || attempts > 50) {
+            clearInterval(checkInterval);
+            if ((window as any).google?.translate) {
+              initializeGoogleTranslate();
+            }
+          }
+          attempts++;
+        }, 100);
+
+        return () => clearInterval(checkInterval);
+      }
+    }
+  }, [isOpen]);
+
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -97,26 +134,7 @@ export function UserMenu() {
 
             <div className="px-4 py-2 border-b border-gray-100">
               <div className="text-xs font-medium text-gray-500 mb-1">Translate Page</div>
-              <div className="flex flex-col space-y-1">
-                <button
-                  onClick={() => window.open(`https://translate.google.com/translate?sl=en&tl=nl&u=${encodeURIComponent(window.location.href)}`, '_blank')}
-                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                >
-                  🇳🇱 Translate to Dutch
-                </button>
-                <button
-                  onClick={() => window.open(`https://translate.google.com/translate?sl=en&tl=de&u=${encodeURIComponent(window.location.href)}`, '_blank')}
-                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                >
-                  🇩🇪 Translate to German
-                </button>
-                <button
-                  onClick={() => window.open(`https://translate.google.com/translate?sl=en&tl=fr&u=${encodeURIComponent(window.location.href)}`, '_blank')}
-                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                >
-                  🇫🇷 Translate to French
-                </button>
-              </div>
+              <div id="google_translate_element" className="google-translate-widget"></div>
             </div>
 
             {/* Admin-only menu items */}
