@@ -968,62 +968,51 @@ export class DatabaseStorage implements IStorage {
     try {
       // If setting as default, update all other templates to not be default
       if (templateData.isDefault) {
-        // Use SQL directly to avoid column name mismatches
         await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
       }
       
-      // Prepare set values with proper indexing
-      const setClause: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
-      
-      if (templateData.name !== undefined) {
-        setClause.push(`name = $${paramIndex++}`);
-        values.push(templateData.name);
+      // Process fields to ensure it's a string for storage
+      let processedFields = templateData.fields;
+      if (templateData.fields !== undefined && typeof templateData.fields === 'object') {
+        processedFields = JSON.stringify(templateData.fields);
       }
       
-      if (templateData.fields !== undefined) {
-        setClause.push(`fields = $${paramIndex++}`);
-        
-        // If fields is an object, convert to JSON string for storage
-        if (typeof templateData.fields === 'object') {
-          values.push(JSON.stringify(templateData.fields));
-        } else {
-          values.push(templateData.fields);
-        }
+      // Build update object, handling column name mapping
+      const updateData: any = {};
+      
+      if (templateData.name !== undefined) {
+        updateData.name = templateData.name;
+      }
+      
+      if (processedFields !== undefined) {
+        updateData.fields = processedFields;
       }
       
       if (templateData.isDefault !== undefined) {
-        setClause.push(`is_default = $${paramIndex++}`);
-        values.push(templateData.isDefault);
+        updateData.is_default = templateData.isDefault;
       }
       
-      // Always update the timestamp
-      setClause.push(`updated_at = $${paramIndex++}`);
-      values.push(new Date());
+      // Always update timestamp
+      updateData.updated_at = new Date();
       
-      if (setClause.length === 0) {
-        console.log('No fields to update');
-        const [currentTemplate] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.id, id));
-        return currentTemplate || undefined;
-      }
+      console.log('Updating template with processed data:', {
+        id,
+        name: templateData.name,
+        isDefault: templateData.isDefault,
+        fields: typeof processedFields === 'string' ? 'JSON string' : processedFields,
+        updatedBy: templateData.updatedBy
+      });
       
-      // Add ID parameter at the end
-      const idParam = `$${paramIndex}`;
-      values.push(id);
-      
-      // Create and execute SQL with proper parameter indexing
-      const queryString = `
+      // Use SQL template literals for proper parameter binding
+      const result = await db.execute(sql`
         UPDATE pdf_templates 
-        SET ${setClause.join(', ')}
-        WHERE id = ${idParam}
+        SET name = ${updateData.name || sql`name`}, 
+            fields = ${updateData.fields || sql`fields`}, 
+            is_default = ${updateData.is_default !== undefined ? updateData.is_default : sql`is_default`}, 
+            updated_at = ${updateData.updated_at}
+        WHERE id = ${id}
         RETURNING *
-      `;
-      
-      console.log('Executing query:', queryString);
-      console.log('With values:', values);
-      
-      const result = await db.execute(sql.raw(queryString, ...values));
+      `);
       
       if (result.length > 0) {
         console.log('Template updated successfully:', result[0]);
