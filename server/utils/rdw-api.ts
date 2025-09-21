@@ -181,7 +181,7 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     // Check WOK (Wacht op Keuren) notification status
     const wokStatus = rdwVehicle.wacht_op_keuren;
     console.log('🔍 WOK Status from RDW:', wokStatus);
-    const hasWokNotification = wokStatus === "Ja" || wokStatus === "J" || wokStatus === true;
+    const hasWokNotification = wokStatus === "ja" || wokStatus === "Ja" || wokStatus === "JA" || wokStatus === true;
     console.log('🔍 Has WOK Notification:', hasWokNotification);
 
     // Map the RDW data to our vehicle structure - only taking what we can reliably get
