@@ -25,9 +25,17 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
 
-// Helper function to convert absolute paths to relative paths
+// Helper function to get uploads directory - works in any environment
+function getUploadsDir(): string {
+  // Use environment variable if set, otherwise default to uploads in current directory
+  return process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
+}
+
+// Helper function to convert absolute paths to relative paths - works for any deployment
 function getRelativePath(absolutePath: string): string {
-  return absolutePath.replace(/^\/home\/runner\/workspace\//, '');
+  const uploadsDir = getUploadsDir();
+  // Make path relative to uploads directory for portability
+  return path.relative(process.cwd(), absolutePath);
 }
 
 // Helper function to format dates consistently
@@ -44,10 +52,27 @@ function formatDate(dateString: string): string {
 }
 
 export async function registerRoutes(app: Express): Promise<void> {
-  // Create uploads directory if it doesn't exist
-  const uploadsDir = path.join(process.cwd(), "uploads");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  // Create uploads directory if it doesn't exist - now works in any environment
+  const uploadsDir = getUploadsDir();
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      console.log(`✅ Created uploads directory: ${uploadsDir}`);
+    } else {
+      console.log(`✅ Uploads directory exists: ${uploadsDir}`);
+    }
+    
+    // Test write permissions
+    const testFile = path.join(uploadsDir, '.write-test');
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    console.log(`✅ Uploads directory has write permissions`);
+    
+  } catch (error) {
+    console.error(`❌ Upload directory setup failed:`, error);
+    console.error(`Current working directory: ${process.cwd()}`);
+    console.error(`Attempted uploads directory: ${uploadsDir}`);
+    throw new Error(`Upload directory setup failed. Please ensure the application has write permissions to: ${uploadsDir}`);
   }
 
   // Configure multer for file uploads
@@ -1196,7 +1221,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Always remove all special characters including dashes from license plates for folder names
       const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
-      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      const baseDir = path.join(getUploadsDir(), sanitizedPlate);
       const damageCheckDir = path.join(baseDir, 'damage_checks');
       
       if (!fs.existsSync(baseDir)) {
@@ -1514,7 +1539,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Always remove all special characters including dashes from license plates for folder names
       const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
-      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlate);
+      const baseDir = path.join(getUploadsDir(), sanitizedPlate);
       const receiptsDir = path.join(baseDir, 'receipts');
       
       if (!fs.existsSync(baseDir)) {
@@ -1955,23 +1980,28 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Special handling for Contract type documents - use the contracts folder structure
       if (req.body.documentType && req.body.documentType.toLowerCase() === 'contract') {
-        const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
+        const contractsBaseDir = path.join(getUploadsDir(), 'contracts');
         const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlateNoDashes);
         
-        if (!fs.existsSync(contractsBaseDir)) {
-          fs.mkdirSync(contractsBaseDir, { recursive: true });
+        try {
+          if (!fs.existsSync(contractsBaseDir)) {
+            fs.mkdirSync(contractsBaseDir, { recursive: true });
+          }
+          
+          if (!fs.existsSync(vehicleContractsDir)) {
+            fs.mkdirSync(vehicleContractsDir, { recursive: true });
+          }
+          
+          callback(null, vehicleContractsDir);
+          return;
+        } catch (error) {
+          console.error('Failed to create contract directory:', error);
+          return callback(new Error(`Failed to create upload directory: ${error.message}`), false);
         }
-        
-        if (!fs.existsSync(vehicleContractsDir)) {
-          fs.mkdirSync(vehicleContractsDir, { recursive: true });
-        }
-        
-        callback(null, vehicleContractsDir);
-        return;
       }
       
       // Standard handling for non-contract documents - use consistent folder naming
-      const baseDir = path.join(process.cwd(), 'uploads', sanitizedPlateNoDashes);
+      const baseDir = path.join(getUploadsDir(), sanitizedPlateNoDashes);
       let documentsDir = baseDir;
       
       // Organize by document type if provided
@@ -1980,17 +2010,22 @@ export async function registerRoutes(app: Express): Promise<void> {
         documentsDir = path.join(baseDir, sanitizedType);
       }
       
-      if (!fs.existsSync(baseDir)) {
-        fs.mkdirSync(baseDir, { recursive: true });
+      try {
+        if (!fs.existsSync(baseDir)) {
+          fs.mkdirSync(baseDir, { recursive: true });
+        }
+        if (!fs.existsSync(documentsDir)) {
+          fs.mkdirSync(documentsDir, { recursive: true });
+        }
+        
+        callback(null, documentsDir);
+      } catch (error) {
+        console.error('Failed to create document directory:', error);
+        return callback(new Error(`Failed to create upload directory: ${error.message}`), false);
       }
-      if (!fs.existsSync(documentsDir)) {
-        fs.mkdirSync(documentsDir, { recursive: true });
-      }
-      
-      callback(null, documentsDir);
     } catch (error) {
       console.error("Error with document upload:", error);
-      callback(error, false);
+      callback(new Error(`Document upload error: ${error.message}`), false);
     }
   };
 
@@ -2435,7 +2470,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         if (reservation.vehicle && reservation.vehicle.licensePlate) {
           // Ensure we remove ALL special characters including dashes for contract folders/filenames
           const sanitizedPlate = reservation.vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
-          const contractsBaseDir = path.join(process.cwd(), 'uploads', 'contracts');
+          const contractsBaseDir = path.join(getUploadsDir(), 'contracts');
           const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
           
           console.log(`Saving contract for vehicle with license plate: ${reservation.vehicle.licensePlate}`);
@@ -3084,7 +3119,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         const invoiceHash = generateInvoiceHash(parsedInvoice);
 
         // Move file to permanent location with hash-based filename
-        const permanentDir = path.join(uploadsDir, 'invoices');
+        const permanentDir = path.join(getUploadsDir(), 'invoices');
         if (!fs.existsSync(permanentDir)) {
           fs.mkdirSync(permanentDir, { recursive: true });
         }
@@ -3453,11 +3488,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Setup static file serving for uploads
+  // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
-    const filePath = path.join(process.cwd(), 'uploads', req.path);
+    const filePath = path.join(getUploadsDir(), req.path);
     res.sendFile(filePath, (err) => {
       if (err) {
+        console.error(`File not found: ${filePath}`);
         // If file not found, continue to next handler
         next();
       }
