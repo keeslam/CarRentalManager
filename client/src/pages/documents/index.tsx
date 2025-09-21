@@ -95,6 +95,14 @@ export default function DocumentsIndex() {
     setDocumentToPrint(document);
     setPrintDialogOpen(true);
     setIframeError(false);
+    
+    // Auto-fallback after 5 seconds if iframe doesn't work
+    setTimeout(() => {
+      if (printDialogOpen && !iframeError) {
+        // If dialog is still open and no error detected yet, show fallback
+        setIframeError(true);
+      }
+    }, 5000);
   };
   
   // Print the document from the preview
@@ -482,16 +490,20 @@ export default function DocumentsIndex() {
                 sandbox="allow-same-origin allow-scripts allow-popups allow-top-navigation allow-downloads"
                 onError={handleIframeError}
                 onLoad={(e) => {
-                  // Check if iframe content is accessible
-                  try {
-                    const iframe = e.target as HTMLIFrameElement;
-                    if (!iframe.contentDocument && !iframe.contentWindow) {
+                  // Check if iframe content is accessible after a brief delay
+                  setTimeout(() => {
+                    try {
+                      const iframe = e.target as HTMLIFrameElement;
+                      // Check if we can access the iframe content
+                      if (!iframe.contentDocument || iframe.contentDocument.body.children.length === 0) {
+                        handleIframeError();
+                      }
+                    } catch (error) {
                       handleIframeError();
                     }
-                  } catch (error) {
-                    handleIframeError();
-                  }
+                  }, 2000); // Wait 2 seconds to allow content to load
                 }}
+                onError={handleIframeError}
               />
             )}
             {documentToPrint && iframeError && (
