@@ -6,17 +6,16 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatLicensePlate, formatReservationStatus } from "@/lib/format-utils";
 import { Reservation } from "@shared/schema";
 import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
-import { useTranslation } from 'react-i18next';
 
 // Function to calculate duration between two dates in days
-function getDuration(startDate: string, endDate: string, t: any): string {
+function getDuration(startDate: string, endDate: string): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
   const diffTime = Math.abs(end.getTime() - start.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  return t('duration', { count: diffDays });
+  return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
 }
 
 // Function to get status badge style
@@ -36,7 +35,6 @@ function getStatusBadge(status: string) {
 }
 
 export function UpcomingReservations() {
-  const { t } = useTranslation();
   const { data: reservations, isLoading } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/upcoming?limit=10"],
   });
@@ -111,7 +109,7 @@ export function UpcomingReservations() {
                         <span>{reservation.startDate ? formatDate(reservation.startDate) : ''}</span> - 
                         <span> {reservation.endDate ? formatDate(reservation.endDate) : ''}</span>
                       </div>
-                      <div className="text-xs text-gray-500">{getDuration(reservation.startDate, reservation.endDate, t)}</div>
+                      <div className="text-xs text-gray-500">{getDuration(reservation.startDate, reservation.endDate)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(reservation.status)}

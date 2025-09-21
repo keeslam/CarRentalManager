@@ -12,12 +12,9 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@shared/schema";
-import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
 
 export function UserMenu() {
   const { user, logoutMutation } = useAuth();
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +82,7 @@ export function UserMenu() {
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
             >
               <User className="mr-2 h-4 w-4" />
-              {t('profile')}
+              Profile
             </Link>
             
             <Link 
@@ -94,18 +91,19 @@ export function UserMenu() {
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
             >
               <Settings className="mr-2 h-4 w-4" />
-              {t('edit')} {t('profile')}
+              Edit Profile
             </Link>
 
-            <div className="px-4 py-2">
-              <LanguageSwitcher />
+            <div className="px-4 py-2 border-b border-gray-100">
+              <div className="text-xs font-medium text-gray-500 mb-1">Translate Page</div>
+              <div id="google_translate_element" className="google-translate-widget"></div>
             </div>
 
             {/* Admin-only menu items */}
             {user.role === UserRole.ADMIN && (
               <>
                 <div className="px-3 py-1 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-500">{t('administration')}</p>
+                  <p className="text-xs font-medium text-gray-500">Administration</p>
                 </div>
                 <Link
                   href="/users"
@@ -113,7 +111,7 @@ export function UserMenu() {
                   className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
                 >
                   <UserCog className="mr-2 h-4 w-4" />
-                  {t('users')}
+                  Users
                 </Link>
                 <Link
                   href="/admin/backup"
@@ -121,7 +119,7 @@ export function UserMenu() {
                   className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
                 >
                   <Database className="mr-2 h-4 w-4" />
-                  {t('backupManagement')}
+                  Backup Management
                 </Link>
               </>
             )}
