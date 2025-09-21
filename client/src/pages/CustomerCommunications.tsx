@@ -646,6 +646,294 @@ export default function CustomerCommunications() {
 
         </TabsContent>
 
+        {/* Maintenance Tab */}
+        <TabsContent value="maintenance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Reminder Notifications</CardTitle>
+              <CardDescription>Send maintenance reminders to customers with vehicles needing service</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-1">
+                  <Label htmlFor="search-maintenance" className="text-sm font-medium sr-only">Search</Label>
+                  <Input
+                    id="search-maintenance"
+                    placeholder="Search by license plate, brand, or model..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-search-maintenance"
+                  />
+                </div>
+                <Button 
+                  disabled={selectedVehicles.length === 0 || !customMessage.trim() || !customSubject.trim()}
+                  onClick={generateEmailPreview}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-preview-maintenance"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Preview & Send to {selectedVehicles.length} vehicles
+                </Button>
+              </div>
+
+              {/* Filter Information */}
+              {vehicleFilter !== "all" && (
+                <div className="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-r">
+                  {vehicleFilter === "maintenance" && (
+                    <div className="flex items-start space-x-2">
+                      <Wrench className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-blue-900">Maintenance Reminder Filter Active</p>
+                        <p className="text-sm text-blue-700">
+                          Showing vehicles that need maintenance (no maintenance recorded in the last year). 
+                          Vehicles never maintained are prioritized.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {filteredVehicles.slice(0, 50).map((item: any) => {
+                  const vehicle = item.vehicle;
+                  const customer = item.customer;
+                  const filterInfo = item.filterInfo;
+                  const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
+                  
+                  return (
+                    <div
+                      key={vehicle.id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+                        } else {
+                          setSelectedVehicles(prev => [...prev, vehicle]);
+                        }
+                      }}
+                      data-testid={`vehicle-card-${vehicle.id}`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">{vehicle.licensePlate}</div>
+                          {isSelected && (
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {vehicle.brand} {vehicle.model}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          Customer: {customer?.name || 'Unknown'}
+                        </div>
+                        {filterInfo && (
+                          <div className="text-xs text-muted-foreground">
+                            {filterInfo.lastMaintenanceDate ? 
+                              `Last: ${filterInfo.lastMaintenanceDate} (${filterInfo.daysSinceLastMaintenance} days ago)` :
+                              'No maintenance recorded'
+                            }
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="text-xs">
+                            {vehicle.vehicleType || 'Vehicle'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedVehicles.length > 0 && (
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-sm font-medium text-green-900">
+                    {selectedVehicles.length} vehicle(s) selected for notification
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Maintenance Message Composition */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Message</CardTitle>
+              <CardDescription>Compose your maintenance reminder message</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-subject">Email Subject</Label>
+                <Input
+                  id="maintenance-subject"
+                  placeholder="Enter email subject..."
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  data-testid="input-maintenance-subject"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-message">Message</Label>
+                <Textarea
+                  id="maintenance-message"
+                  placeholder="Enter your maintenance reminder message..."
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  className="min-h-[120px]"
+                  data-testid="textarea-maintenance-message"
+                />
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
+                  <div><code>{"{customerName}"}</code> - Customer's name</div>
+                  <div><code>{"{vehiclePlate}"}</code> - License plate</div>
+                  <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
+                  <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
+                  <div><code>{"{companyName}"}</code> - Your company name</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Custom Message Tab */}
+        <TabsContent value="custom" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Message Notifications</CardTitle>
+              <CardDescription>Send custom messages to all customers with active reservations</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-1">
+                  <Label htmlFor="search-custom" className="text-sm font-medium sr-only">Search</Label>
+                  <Input
+                    id="search-custom"
+                    placeholder="Search by license plate, brand, or model..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-search-custom"
+                  />
+                </div>
+                <Button 
+                  disabled={selectedVehicles.length === 0 || !customMessage.trim() || !customSubject.trim()}
+                  onClick={generateEmailPreview}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="button-preview-custom"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Preview & Send to {selectedVehicles.length} vehicles
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {filteredVehicles.slice(0, 50).map((item: any) => {
+                  const vehicle = item.vehicle;
+                  const customer = item.customer;
+                  const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
+                  
+                  return (
+                    <div
+                      key={vehicle.id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+                        } else {
+                          setSelectedVehicles(prev => [...prev, vehicle]);
+                        }
+                      }}
+                      data-testid={`vehicle-card-${vehicle.id}`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">{vehicle.licensePlate}</div>
+                          {isSelected && (
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {vehicle.brand} {vehicle.model}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          Customer: {customer?.name || 'Unknown'}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="text-xs">
+                            {vehicle.vehicleType || 'Vehicle'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedVehicles.length > 0 && (
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-sm font-medium text-green-900">
+                    {selectedVehicles.length} vehicle(s) selected for notification
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Custom Message Composition */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Message</CardTitle>
+              <CardDescription>Compose your custom message</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-subject">Email Subject</Label>
+                <Input
+                  id="custom-subject"
+                  placeholder="Enter email subject..."
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  data-testid="input-custom-subject"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custom-message">Message</Label>
+                <Textarea
+                  id="custom-message"
+                  placeholder="Enter your custom message to customers..."
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  className="min-h-[120px]"
+                  data-testid="textarea-custom-message"
+                />
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
+                  <div><code>{"{customerName}"}</code> - Customer's name</div>
+                  <div><code>{"{vehiclePlate}"}</code> - License plate</div>
+                  <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
+                  <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
+                  <div><code>{"{companyName}"}</code> - Your company name</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+          </Tabs>
+        </TabsContent>
+
         <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
