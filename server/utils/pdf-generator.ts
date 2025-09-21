@@ -23,8 +23,8 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     let pdfDoc;
     let page;
     
-    // Sample values for preview if needed
-    const previewMode = reservation.id === 0;
+    // Only use preview mode if explicitly requested (not just when id is 0)
+    const previewMode = false; // Disable preview mode - always use actual data
     if (previewMode) {
       console.log('Preview mode enabled - using sample data for fields');
     }
