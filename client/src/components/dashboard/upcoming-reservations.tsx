@@ -42,10 +42,10 @@ export function UpcomingReservations() {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader className="px-4 py-3 border-b flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-800">{t('upcomingReservations')}</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-800">Upcoming Reservations</CardTitle>
         <Link href="/reservations">
           <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
-            {t('viewAll')}
+            View All
           </Button>
         </Link>
       </CardHeader>

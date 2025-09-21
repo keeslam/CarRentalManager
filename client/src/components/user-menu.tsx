@@ -131,7 +131,7 @@ export function UserMenu() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              {t('logout')}
+              Logout
             </button>
           </div>
         </div>
