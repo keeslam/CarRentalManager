@@ -1368,31 +1368,33 @@ export default function CustomerCommunications() {
             </Button>
           </div>
 
-          <div className={`${showLivePreview ? 'grid grid-cols-1 xl:grid-cols-3 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}`}>
-            {/* Template Builder */}
-            <Card className={showLivePreview ? 'xl:col-span-2' : ''}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>
-                      {editingTemplate ? "Edit Template" : "Create New Template"}
-                    </CardTitle>
-                    <CardDescription>
-                      Design your email template with placeholders for dynamic content
-                    </CardDescription>
+          <div className="space-y-6">
+            {/* Template Builder and Live Preview Row */}
+            <div className={`${showLivePreview ? 'grid grid-cols-1 xl:grid-cols-3 gap-6' : ''}`}>
+              {/* Template Builder */}
+              <Card className={showLivePreview ? 'xl:col-span-2' : ''}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>
+                        {editingTemplate ? "Edit Template" : "Create New Template"}
+                      </CardTitle>
+                      <CardDescription>
+                        Design your email template with placeholders for dynamic content
+                      </CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowLivePreview(!showLivePreview)}
+                      className="text-xs shrink-0"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      {showLivePreview ? 'Hide' : 'Show'} Live Preview
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowLivePreview(!showLivePreview)}
-                    className="text-xs shrink-0"
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    {showLivePreview ? 'Hide' : 'Show'} Live Preview
-                  </Button>
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="template-name">Template Name</Label>
@@ -1557,65 +1559,66 @@ export default function CustomerCommunications() {
               </CardContent>
             </Card>
 
-            {/* Live Preview Panel - Only shown when preview is enabled */}
-            {showLivePreview && (
-              <Card className="xl:sticky xl:top-6 h-fit">
-                <CardHeader>
-                  <div className="flex items-center space-x-2">
-                    <Eye className="h-4 w-4 text-blue-600" />
-                    <CardTitle className="text-lg">Live Preview</CardTitle>
-                    <Badge variant="secondary" className="text-xs">Sample Data</Badge>
-                  </div>
-                  <CardDescription>
-                    See how your template will look with real data
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-                    <div className="bg-white border rounded-lg shadow-sm p-4 space-y-3">
-                      <div className="border-b pb-3">
-                        <div className="text-xs text-gray-500 mb-1">From: Car Rental System</div>
-                        <div className="text-xs text-gray-500 mb-2">To: john.doe@example.com</div>
-                        {templateSubject ? (
-                          <div className="font-semibold text-gray-900">
-                            {getPreviewContent().subject}
-                          </div>
-                        ) : (
-                          <div className="text-gray-400 italic text-sm">Subject will appear here...</div>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {templateContent ? (
-                          <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                            {getPreviewContent().content}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-400 italic">
-                            Your email content will appear here as you type...
-                          </div>
-                        )}
-                      </div>
-                      
-                      {(templateSubject || templateContent) && (
-                        <div className="pt-3 border-t text-xs text-gray-500 bg-gray-50 -mx-4 -mb-3 px-4 py-3 rounded-b-lg">
-                          <div className="space-y-1">
-                            <div><strong>Sample Data Used:</strong></div>
-                            <div>• Customer: John Doe</div>
-                            <div>• Vehicle: Toyota Camry (AB-123-CD)</div>
-                            <div>• APK Date: 2024-06-15</div>
-                            <div>• Company: Car Rental Company</div>
-                          </div>
-                        </div>
-                      )}
+              {/* Live Preview Panel - Only shown when preview is enabled */}
+              {showLivePreview && (
+                <Card className="xl:sticky xl:top-6 h-fit">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Eye className="h-4 w-4 text-blue-600" />
+                      <CardTitle className="text-lg">Live Preview</CardTitle>
+                      <Badge variant="secondary" className="text-xs">Sample Data</Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    <CardDescription>
+                      See how your template will look with real data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+                      <div className="bg-white border rounded-lg shadow-sm p-4 space-y-3">
+                        <div className="border-b pb-3">
+                          <div className="text-xs text-gray-500 mb-1">From: Car Rental System</div>
+                          <div className="text-xs text-gray-500 mb-2">To: john.doe@example.com</div>
+                          {templateSubject ? (
+                            <div className="font-semibold text-gray-900">
+                              {getPreviewContent().subject}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 italic text-sm">Subject will appear here...</div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {templateContent ? (
+                            <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                              {getPreviewContent().content}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">
+                              Your email content will appear here as you type...
+                            </div>
+                          )}
+                        </div>
+                        
+                        {(templateSubject || templateContent) && (
+                          <div className="pt-3 border-t text-xs text-gray-500 bg-gray-50 -mx-4 -mb-3 px-4 py-3 rounded-b-lg">
+                            <div className="space-y-1">
+                              <div><strong>Sample Data Used:</strong></div>
+                              <div>• Customer: John Doe</div>
+                              <div>• Vehicle: Toyota Camry (AB-123-CD)</div>
+                              <div>• APK Date: 2024-06-15</div>
+                              <div>• Company: Car Rental Company</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-            {/* Saved Templates */}
-            <Card className={showLivePreview ? '' : 'lg:col-span-1'}>
+            {/* Saved Templates - Full Width Section */}
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1667,35 +1670,40 @@ export default function CustomerCommunications() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                     {filteredTemplates.map((template: any) => (
-                      <div key={template.id} className="p-4 border rounded-lg hover:shadow-sm transition-shadow" data-testid={`template-card-${template.id}`}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <h4 className="font-medium text-sm truncate">{template.name}</h4>
-                              <Badge className={`text-xs ${getCategoryBadgeColor(template.category)}`}>
-                                {template.category?.toUpperCase() || 'CUSTOM'}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-2 truncate">{template.subject}</p>
-                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{template.content}</p>
-                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                              <span>Created: {new Date(template.createdAt).toLocaleDateString('nl-NL')}</span>
-                              {template.lastUsed && (
-                                <span>Last used: {new Date(template.lastUsed).toLocaleDateString('nl-NL')}</span>
-                              )}
+                      <div key={template.id} className="p-4 border rounded-lg hover:shadow-sm transition-shadow bg-white" data-testid={`template-card-${template.id}`}>
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <h4 className="font-medium text-sm truncate">{template.name}</h4>
+                                <Badge className={`text-xs ${getCategoryBadgeColor(template.category)}`}>
+                                  {template.category?.toUpperCase() || 'CUSTOM'}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-2 truncate">{template.subject}</p>
+                              <p className="text-xs text-gray-500 mb-2 line-clamp-3 leading-relaxed">{template.content}</p>
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <div>Created: {new Date(template.createdAt).toLocaleDateString('nl-NL')}</div>
+                                {template.lastUsed && (
+                                  <div>Last used: {new Date(template.lastUsed).toLocaleDateString('nl-NL')}</div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <div className="flex space-x-1 ml-4">
+                          
+                          <div className="flex flex-wrap gap-1 pt-2 border-t">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handlePreviewTemplate(template)}
                               data-testid={`button-preview-${template.id}`}
                               title="Preview template"
+                              className="h-8 px-2 text-xs"
                             >
-                              <Eye className="h-3 w-3" />
+                              <Eye className="h-3 w-3 mr-1" />
+                              Preview
                             </Button>
                             <Button
                               size="sm"
@@ -1703,8 +1711,10 @@ export default function CustomerCommunications() {
                               onClick={() => duplicateTemplate(template)}
                               data-testid={`button-duplicate-${template.id}`}
                               title="Duplicate template"
+                              className="h-8 px-2 text-xs"
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy
                             </Button>
                             <Button
                               size="sm"
@@ -1718,18 +1728,21 @@ export default function CustomerCommunications() {
                               }}
                               data-testid={`button-edit-${template.id}`}
                               title="Edit template"
+                              className="h-8 px-2 text-xs"
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 h-8 px-2 text-xs"
                               onClick={() => handleDeleteTemplate(template)}
                               data-testid={`button-delete-${template.id}`}
                               title="Delete template"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete
                             </Button>
                           </div>
                         </div>
