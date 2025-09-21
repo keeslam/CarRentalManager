@@ -120,6 +120,63 @@ const resources = {
       generateContracts: "Generate contracts and manage documents",
       monitorExpenses: "Monitor expenses and maintenance alerts",
       comprehensiveReporting: "Comprehensive reporting and analytics",
+      
+      // Form labels and fields (common)
+      firstName: "First Name",
+      lastName: "Last Name",
+      companyName: "Company Name",
+      contactPerson: "Contact Person",
+      driverName: "Driver Name",
+      streetName: "Street Name",
+      debtorNumber: "Debtor Number",
+      chamberOfCommerce: "Chamber of Commerce Number",
+      vatNumber: "VAT Number",
+      description: "Description",
+      amount: "Amount",
+      category: "Category",
+      required: "Required",
+      optional: "Optional",
+      
+      // Dashboard and widgets
+      quickActions: "Quick Actions",
+      availableVehicles: "Available Vehicles",
+      totalVehicles: "Total Vehicles",
+      activeReservations: "Active Reservations",
+      totalCustomers: "Total Customers",
+      upcomingReservations: "Upcoming Reservations",
+      recentExpenses: "Recent Expenses",
+      vehicleAvailability: "Vehicle Availability",
+      apkExpirations: "APK Expirations",
+      warrantyExpirations: "Warranty Expirations",
+      noDataAvailable: "No data available",
+      viewAll: "View All",
+      
+      // Actions and buttons
+      addNew: "Add New",
+      editItem: "Edit",
+      deleteItem: "Delete",
+      saveChanges: "Save Changes",
+      discardChanges: "Discard Changes",
+      confirmAction: "Confirm",
+      cancelAction: "Cancel",
+      
+      // Filters and placeholders
+      allTypes: "All Types",
+      allBrands: "All Brands",
+      noAvailableVehicles: "No available vehicles",
+      noDataFound: "No data found",
+      period: "Period",
+      administration: "Administration",
+      backupManagement: "Backup Management",
+      noEmailSet: "No email set",
+      
+      // Table headers (using existing vehicle key from main section)
+      
+      // Pluralization and duration
+      day: "day",
+      days: "days",
+      duration_one: "{{count}} day",
+      duration_other: "{{count}} days",
     }
   },
   nl: {
@@ -238,6 +295,63 @@ const resources = {
       generateContracts: "Genereer contracten en beheer documenten",
       monitorExpenses: "Monitor uitgaven en onderhoudswaarschuwingen",
       comprehensiveReporting: "Uitgebreide rapportage en analyses",
+      
+      // Form labels and fields (common)
+      firstName: "Voornaam",
+      lastName: "Achternaam",
+      companyName: "Bedrijfsnaam",
+      contactPerson: "Contactpersoon",
+      driverName: "Naam Bestuurder",
+      streetName: "Straatnaam",
+      debtorNumber: "Debiteurennummer",
+      chamberOfCommerce: "KvK Nummer",
+      vatNumber: "BTW Nummer",
+      description: "Beschrijving",
+      amount: "Bedrag",
+      category: "Categorie",
+      required: "Verplicht",
+      optional: "Optioneel",
+      
+      // Dashboard and widgets
+      quickActions: "Snelle Acties",
+      availableVehicles: "Beschikbare Voertuigen",
+      totalVehicles: "Totaal Voertuigen",
+      activeReservations: "Actieve Reserveringen",
+      totalCustomers: "Totaal Klanten",
+      upcomingReservations: "Aankomende Reserveringen",
+      recentExpenses: "Recente Uitgaven",
+      vehicleAvailability: "Voertuig Beschikbaarheid",
+      apkExpirations: "APK Verlopen",
+      warrantyExpirations: "Garantie Verlopen",
+      noDataAvailable: "Geen gegevens beschikbaar",
+      viewAll: "Bekijk Alles",
+      
+      // Actions and buttons
+      addNew: "Nieuwe Toevoegen",
+      editItem: "Bewerken",
+      deleteItem: "Verwijderen",
+      saveChanges: "Wijzigingen Opslaan",
+      discardChanges: "Wijzigingen Verwerpen",
+      confirmAction: "Bevestigen",
+      cancelAction: "Annuleren",
+      
+      // Filters and placeholders
+      allTypes: "Alle Types",
+      allBrands: "Alle Merken",
+      noAvailableVehicles: "Geen beschikbare voertuigen",
+      noDataFound: "Geen gegevens gevonden",
+      period: "Periode",
+      administration: "Administratie",
+      backupManagement: "Backup Beheer",
+      noEmailSet: "Geen e-mail ingesteld",
+      
+      // Table headers (using existing vehicle key from main section)
+      
+      // Pluralization and duration
+      day: "dag",
+      days: "dagen",
+      duration_one: "{{count}} dag",
+      duration_other: "{{count}} dagen",
     }
   }
 };
