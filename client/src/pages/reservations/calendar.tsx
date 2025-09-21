@@ -28,9 +28,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
+import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, Car, CreditCard, Edit, Eye } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit } from "lucide-react";
 
 // Calendar view options
 type CalendarView = "month";
@@ -61,6 +62,7 @@ export default function ReservationCalendarPage() {
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
   // Day reservations dialog
@@ -80,6 +82,13 @@ export default function ReservationCalendarPage() {
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
     console.log('Edit dialog should be open now');
+  };
+  
+  const handleStatusChange = (reservation: Reservation) => {
+    console.log('handleStatusChange called with:', reservation);
+    setSelectedReservation(reservation);
+    setStatusDialogOpen(true);
+    console.log('Status dialog should be open now');
   };
   
   const handleCloseDialogs = () => {
@@ -712,6 +721,20 @@ export default function ReservationCalendarPage() {
                                       <Button 
                                         size="sm" 
                                         variant="outline"
+                                        className="h-8 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('Status change clicked for reservation:', res.id);
+                                          handleStatusChange(res);
+                                        }}
+                                      >
+                                        <ClipboardEdit className="mr-1 h-3 w-3" />
+                                        Status
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
                                         className="h-8 text-xs"
                                         onClick={(e) => {
                                           e.preventDefault();
@@ -858,6 +881,36 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Status Change Dialog */}
+      {selectedReservation && (
+        <StatusChangeDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          reservationId={selectedReservation.id}
+          initialStatus={selectedReservation.status || "pending"}
+          vehicle={selectedReservation.vehicle ? {
+            ...selectedReservation.vehicle,
+            departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
+            returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
+          } : undefined}
+          customer={selectedReservation.customer ? {
+            ...selectedReservation.customer,
+            firstName: selectedReservation.customer.firstName ?? undefined,
+            lastName: selectedReservation.customer.lastName ?? undefined,
+            companyName: selectedReservation.customer.companyName ?? undefined,
+            phone: selectedReservation.customer.phone ?? undefined,
+            email: selectedReservation.customer.email ?? undefined
+          } : undefined}
+          onStatusChanged={async () => {
+            // Close the dialog and refresh calendar data
+            setStatusDialogOpen(false);
+            setSelectedReservation(null);
+            // Refresh calendar data
+            queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+          }}
+        />
+      )}
       
       {/* Day Reservations Dialog */}
       <Dialog open={dayDialogOpen} onOpenChange={(open) => {
