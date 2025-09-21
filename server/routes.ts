@@ -1960,6 +1960,58 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== VEHICLE-SPECIFIC CUSTOMER ROUTES ====================
+  // Get customers with active reservations for a specific vehicle
+  app.get('/api/vehicles/:vehicleId/customers-with-reservations', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ error: 'Invalid vehicle ID' });
+      }
+
+      const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+      
+      // Get customers with active reservations for this specific vehicle
+      // First, get all reservations for this vehicle
+      const vehicleReservations = await storage.getReservationsForVehicle(vehicleId);
+      
+      // Filter for active reservations and get customer details
+      const customersWithReservations = [];
+      
+      for (const reservation of vehicleReservations) {
+        // Check if reservation is currently active
+        const startDate = new Date(reservation.startDate);
+        const endDate = new Date(reservation.endDate);
+        const todayDate = new Date(today);
+        
+        if (startDate <= todayDate && endDate >= todayDate) {
+          // Get customer details
+          const customer = await storage.getCustomer(reservation.customerId);
+          const vehicle = await storage.getVehicle(vehicleId);
+          
+          if (customer && customer.email && vehicle) {
+            customersWithReservations.push({
+              vehicle,
+              customer,
+              reservation
+            });
+          }
+        }
+      }
+
+      console.log(`Found ${customersWithReservations.length} customers with active reservations for vehicle ${vehicleId}`);
+      
+      res.json(customersWithReservations);
+    } catch (error) {
+      console.error('Error fetching customers with reservations for vehicle:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch customers with reservations',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ==================== DOCUMENT ROUTES ====================
   // Setup storage for document uploads
   const createDocumentUploadStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {

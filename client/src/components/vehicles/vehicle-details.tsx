@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +37,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Bell, Mail } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bell, Mail, User, Eye, Edit } from "lucide-react";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -47,6 +51,9 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [activeTab, setActiveTab] = useState("general");
   const [isApkReminderOpen, setIsApkReminderOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
+  const [templateSubject, setTemplateSubject] = useState("");
+  const [templateContent, setTemplateContent] = useState("");
+  const [editableEmails, setEditableEmails] = useState<{ [customerId: number]: string }>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -84,13 +91,18 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
 
   // Send APK reminder mutation
   const sendApkReminderMutation = useMutation({
-    mutationFn: async ({ message }: { message: string }) => {
+    mutationFn: async ({ message, subject, customerEmails }: { 
+      message: string; 
+      subject: string; 
+      customerEmails: { [customerId: number]: string } 
+    }) => {
       const response = await apiRequest("POST", "/api/notifications/send", {
         vehicleIds: [vehicleId],
-        template: message.trim() ? "custom" : "apk",
-        customMessage: message.trim() || undefined,
-        customSubject: message.trim() ? "APK Inspection Reminder" : undefined,
-        emailFieldSelection: "auto"
+        template: "custom", // Always use custom since we're providing our own content
+        customMessage: message,
+        customSubject: subject,
+        emailFieldSelection: "auto",
+        customerEmails: customerEmails // Pass the updated email addresses
       });
       
       if (!response.ok) {
@@ -115,6 +127,76 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
       });
     }
   });
+
+  // Fetch customers with reservations for this vehicle
+  const { data: customersWithReservations = [] } = useQuery({
+    queryKey: [`/api/vehicles/${vehicleId}/customers-with-reservations`],
+    enabled: isApkReminderOpen, // Only fetch when dialog is open
+    queryFn: async () => {
+      const response = await fetch(`/api/vehicles/${vehicleId}/customers-with-reservations`);
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      return response.json();
+    }
+  });
+
+  // Fetch APK email template
+  const { data: apkTemplate } = useQuery({
+    queryKey: ['/api/email-templates', 'apk'],
+    enabled: isApkReminderOpen, // Only fetch when dialog is open
+    queryFn: async () => {
+      const response = await fetch('/api/email-templates?category=apk');
+      if (!response.ok) throw new Error('Failed to fetch template');
+      const templates = await response.json();
+      return templates[0] || null; // Get first APK template
+    }
+  });
+
+  // Generate template preview based on vehicle and customer data
+  const generateTemplatePreview = () => {
+    if (!vehicle || !customersWithReservations.length) return { subject: '', content: '' };
+    
+    const customer = customersWithReservations[0]?.customer || { firstName: 'Customer', lastName: '' };
+    const customerName = `${customer.firstName} ${customer.lastName}`.trim();
+    const expiryDate = vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : 'Not set';
+    
+    // Default APK template
+    const defaultSubject = `APK Reminder - ${vehicle.licensePlate} expires soon`;
+    const defaultContent = `Dear ${customerName},
+
+This is a friendly reminder that your vehicle ${vehicle.licensePlate} requires an APK inspection.
+
+APK Expiry Date: ${expiryDate}
+
+Please schedule your APK inspection as soon as possible to ensure your vehicle remains roadworthy and legal.
+
+Contact us to schedule your appointment.
+
+Best regards,
+Autolease Lam`;
+
+    return {
+      subject: apkTemplate?.subject || defaultSubject,
+      content: apkTemplate?.content || defaultContent
+    };
+  };
+
+  // Initialize template content when dialog opens
+  React.useEffect(() => {
+    if (isApkReminderOpen && vehicle) {
+      const preview = generateTemplatePreview();
+      setTemplateSubject(preview.subject);
+      setTemplateContent(preview.content);
+      
+      // Initialize editable emails
+      const emailsMap: { [customerId: number]: string } = {};
+      customersWithReservations.forEach((item: any) => {
+        if (item.customer) {
+          emailsMap[item.customer.id] = item.customer.email || '';
+        }
+      });
+      setEditableEmails(emailsMap);
+    }
+  }, [isApkReminderOpen, vehicle, customersWithReservations, apkTemplate]);
   
   // Fetch vehicle details
   const vehicleQueryKey = [`/api/vehicles/${vehicleId}`];
@@ -1304,50 +1386,161 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                           Send APK Reminder
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px]">
+                      <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
                             <Mail className="h-5 w-5" />
-                            Send APK Reminder
+                            Send APK Reminder - {vehicle?.licensePlate}
                           </DialogTitle>
                           <DialogDescription>
-                            Send an APK inspection reminder to customers who have reservations for {vehicle?.licensePlate}. 
-                            You can use the default APK template or add a custom message.
+                            Send an APK inspection reminder to customers with active reservations. 
+                            Review and edit customer emails, customize the message template, and send personalized reminders.
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="custom-message">Custom Message (Optional)</Label>
-                            <Textarea
-                              id="custom-message"
-                              placeholder="Leave empty to use the default APK reminder template, or add a custom message..."
-                              value={customMessage}
-                              onChange={(e) => setCustomMessage(e.target.value)}
-                              rows={4}
-                              data-testid="textarea-custom-message"
-                            />
-                            <p className="text-sm text-gray-500">
-                              {customMessage.trim() ? "Will send custom message" : "Will use default APK reminder template"}
-                            </p>
+                        
+                        <ScrollArea className="max-h-[60vh] overflow-y-auto">
+                          <div className="grid gap-6 py-4">
+                            
+                            {/* Customer Email Section */}
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <h3 className="text-lg font-medium">Customer Email Addresses</h3>
+                              </div>
+                              
+                              {customersWithReservations.length > 0 ? (
+                                <div className="space-y-3">
+                                  {customersWithReservations.map((item: any, index: number) => (
+                                    <div key={item.customer?.id || index} className="border rounded-lg p-4">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                          <Label className="text-sm font-medium">Customer Name</Label>
+                                          <p className="text-sm">
+                                            {item.customer ? `${item.customer.firstName} ${item.customer.lastName}` : 'Unknown Customer'}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            Customer ID: {item.customer?.id || 'N/A'}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <Label htmlFor={`email-${item.customer?.id}`} className="text-sm font-medium">
+                                            Email Address
+                                          </Label>
+                                          <Input
+                                            id={`email-${item.customer?.id}`}
+                                            type="email"
+                                            value={editableEmails[item.customer?.id] || ''}
+                                            onChange={(e) => 
+                                              setEditableEmails(prev => ({
+                                                ...prev,
+                                                [item.customer?.id]: e.target.value
+                                              }))
+                                            }
+                                            placeholder="Enter email address"
+                                            className="mt-1"
+                                            data-testid={`input-email-${item.customer?.id}`}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="mt-2 text-xs text-gray-500">
+                                        Reservation: {item.reservation?.startDate} to {item.reservation?.endDate}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="border rounded-lg p-6 text-center text-gray-500">
+                                  <User className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                  <p>No customers with active reservations found for this vehicle.</p>
+                                  <p className="text-sm">Only customers with current reservations can receive APK reminders.</p>
+                                </div>
+                              )}
+                            </div>
+
+                            <Separator />
+
+                            {/* Template Preview and Editing Section */}
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <Eye className="h-4 w-4" />
+                                <h3 className="text-lg font-medium">Email Template Preview & Editing</h3>
+                              </div>
+                              
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="template-subject" className="text-sm font-medium">
+                                    Email Subject
+                                  </Label>
+                                  <Input
+                                    id="template-subject"
+                                    value={templateSubject}
+                                    onChange={(e) => setTemplateSubject(e.target.value)}
+                                    placeholder="Email subject line"
+                                    className="mt-1"
+                                    data-testid="input-template-subject"
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <Label htmlFor="template-content" className="text-sm font-medium">
+                                    Email Content
+                                  </Label>
+                                  <Textarea
+                                    id="template-content"
+                                    value={templateContent}
+                                    onChange={(e) => setTemplateContent(e.target.value)}
+                                    rows={10}
+                                    placeholder="Email message content"
+                                    className="mt-1 font-mono text-sm"
+                                    data-testid="textarea-template-content"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    You can edit this template to customize the message for this vehicle's APK reminder.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Template Preview Box */}
+                              <div className="border rounded-lg p-4 bg-gray-50">
+                                <h4 className="font-medium mb-2 flex items-center gap-2">
+                                  <Mail className="h-4 w-4" />
+                                  Preview
+                                </h4>
+                                <div className="bg-white border rounded p-3 text-sm">
+                                  <div className="font-medium mb-2">Subject: {templateSubject}</div>
+                                  <Separator className="my-2" />
+                                  <div className="whitespace-pre-wrap">{templateContent}</div>
+                                </div>
+                              </div>
+                            </div>
+
                           </div>
-                        </div>
-                        <DialogFooter>
+                        </ScrollArea>
+                        
+                        <DialogFooter className="mt-4">
                           <Button 
                             variant="outline" 
                             onClick={() => {
                               setIsApkReminderOpen(false);
                               setCustomMessage("");
+                              setTemplateSubject("");
+                              setTemplateContent("");
+                              setEditableEmails({});
                             }}
                             data-testid="button-cancel-reminder"
                           >
                             Cancel
                           </Button>
                           <Button 
-                            onClick={() => sendApkReminderMutation.mutate({ message: customMessage })}
-                            disabled={sendApkReminderMutation.isPending}
+                            onClick={() => sendApkReminderMutation.mutate({ 
+                              message: templateContent,
+                              subject: templateSubject,
+                              customerEmails: editableEmails
+                            })}
+                            disabled={sendApkReminderMutation.isPending || customersWithReservations.length === 0}
                             data-testid="button-send-reminder"
                           >
-                            {sendApkReminderMutation.isPending ? "Sending..." : "Send Reminder"}
+                            {sendApkReminderMutation.isPending ? "Sending..." : `Send to ${customersWithReservations.length} Customer(s)`}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
