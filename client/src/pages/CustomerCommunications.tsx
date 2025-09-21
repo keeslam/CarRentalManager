@@ -834,46 +834,6 @@ export default function CustomerCommunications() {
             </CardContent>
           </Card>
 
-          {/* Maintenance Message Composition */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Maintenance Message</CardTitle>
-              <CardDescription>Compose your maintenance reminder message</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="maintenance-subject">Email Subject</Label>
-                <Input
-                  id="maintenance-subject"
-                  placeholder="Enter email subject..."
-                  value={customSubject}
-                  onChange={(e) => setCustomSubject(e.target.value)}
-                  data-testid="input-maintenance-subject"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maintenance-message">Message</Label>
-                <Textarea
-                  id="maintenance-message"
-                  placeholder="Enter your maintenance reminder message..."
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  className="min-h-[120px]"
-                  data-testid="textarea-maintenance-message"
-                />
-              </div>
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
-                  <div><code>{"{customerName}"}</code> - Customer's name</div>
-                  <div><code>{"{vehiclePlate}"}</code> - License plate</div>
-                  <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
-                  <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
-                  <div><code>{"{companyName}"}</code> - Your company name</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Custom Message Tab */}
