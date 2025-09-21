@@ -227,8 +227,8 @@ export default function CustomerCommunications() {
     let emailSubject = "";
     let emailContent = "";
 
-    if (communicationMode === 'apk' && selectedTemplateId) {
-      // Use saved template
+    if (selectedTemplateId) {
+      // Use saved template for any communication mode
       const savedTemplate = savedTemplates.find((t: any) => t.id.toString() === selectedTemplateId);
       if (savedTemplate) {
         emailSubject = savedTemplate.subject;
@@ -242,7 +242,7 @@ export default function CustomerCommunications() {
         return;
       }
     } else {
-      // For maintenance and custom modes, require custom message and subject
+      // When no template is selected, require custom message and subject
       if (!customMessage.trim() || !customSubject.trim()) {
         toast({
           title: "Missing Information",
@@ -719,6 +719,39 @@ export default function CustomerCommunications() {
               <CardDescription>Send maintenance reminders to customers with vehicles needing service</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Template Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-template-select" className="text-sm font-medium">
+                  Email Template (Optional)
+                </Label>
+                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                  <SelectTrigger className="w-full" data-testid="select-maintenance-template">
+                    <SelectValue placeholder="Select a template or compose custom message below" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No template - Use custom message</SelectItem>
+                    {savedTemplates.length > 0 ? (
+                      savedTemplates.map((template: any) => (
+                        <SelectItem key={template.id} value={template.id.toString()}>
+                          {template.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-muted-foreground">
+                        No templates available. Create templates in the "Templates" tab.
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedTemplateId && (
+                  <div className="text-xs text-muted-foreground">
+                    Template selected: {
+                      savedTemplates.find((t: any) => t.id.toString() === selectedTemplateId)?.name || selectedTemplateId
+                    }
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center space-x-4 mb-4">
                 <div className="flex-1">
                   <Label htmlFor="search-maintenance" className="text-sm font-medium sr-only">Search</Label>
@@ -731,7 +764,7 @@ export default function CustomerCommunications() {
                   />
                 </div>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || !customMessage.trim() || !customSubject.trim()}
+                  disabled={selectedVehicles.length === 0 || (!selectedTemplateId && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-blue-600 hover:bg-blue-700"
                   data-testid="button-preview-maintenance"
@@ -875,6 +908,39 @@ export default function CustomerCommunications() {
               <CardDescription>Send custom messages to all customers with active reservations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Template Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="custom-template-select" className="text-sm font-medium">
+                  Email Template (Optional)
+                </Label>
+                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                  <SelectTrigger className="w-full" data-testid="select-custom-template">
+                    <SelectValue placeholder="Select a template or compose custom message below" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No template - Use custom message</SelectItem>
+                    {savedTemplates.length > 0 ? (
+                      savedTemplates.map((template: any) => (
+                        <SelectItem key={template.id} value={template.id.toString()}>
+                          {template.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-muted-foreground">
+                        No templates available. Create templates in the "Templates" tab.
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedTemplateId && (
+                  <div className="text-xs text-muted-foreground">
+                    Template selected: {
+                      savedTemplates.find((t: any) => t.id.toString() === selectedTemplateId)?.name || selectedTemplateId
+                    }
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center space-x-4 mb-4">
                 <div className="flex-1">
                   <Label htmlFor="search-custom" className="text-sm font-medium sr-only">Search</Label>
@@ -887,7 +953,7 @@ export default function CustomerCommunications() {
                   />
                 </div>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || !customMessage.trim() || !customSubject.trim()}
+                  disabled={selectedVehicles.length === 0 || (!selectedTemplateId && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-green-600 hover:bg-green-700"
                   data-testid="button-preview-custom"
