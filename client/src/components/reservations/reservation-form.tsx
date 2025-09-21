@@ -140,6 +140,7 @@ export function ReservationForm({
   const [createdReservationId, setCreatedReservationId] = useState<number | null>(
     editMode && initialData ? initialData.id : null
   );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -185,6 +186,24 @@ export function ReservationForm({
   const { data: vehicles, isLoading: isLoadingVehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
+  
+  // Fetch PDF templates for contract generation
+  const { data: pdfTemplates = [] } = useQuery<any[]>({
+    queryKey: ["/api/pdf-templates"],
+  });
+
+  // Set default template when templates are loaded
+  useEffect(() => {
+    if (pdfTemplates && pdfTemplates.length > 0 && selectedTemplateId === null) {
+      const defaultTemplate = pdfTemplates.find((template: any) => template.isDefault);
+      if (defaultTemplate) {
+        setSelectedTemplateId(defaultTemplate.id);
+      } else {
+        // If no default, use the first template
+        setSelectedTemplateId(pdfTemplates[0].id);
+      }
+    }
+  }, [pdfTemplates, selectedTemplateId]);
   
   // Fetch selected vehicle details if vehicleId is provided
   const actualVehicleId = initialVehicleId || preSelectedVehicleId;
@@ -555,7 +574,8 @@ export function ReservationForm({
   const previewContractMutation = useMutation({
     mutationFn: async () => {
       const formData = form.getValues();
-      const response = await fetch('/api/contracts/preview', {
+      const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+      const response = await fetch(`/api/contracts/preview${templateParam}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -597,7 +617,8 @@ export function ReservationForm({
     mutationFn: async (reservationId?: number) => {
       if (reservationId) {
         // Generate from saved reservation
-        const response = await fetch(`/api/contracts/generate-default/${reservationId}`, {
+        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+        const response = await fetch(`/api/contracts/generate/${reservationId}${templateParam}`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -610,7 +631,8 @@ export function ReservationForm({
       } else {
         // Generate from form data
         const formData = form.getValues();
-        const response = await fetch('/api/contracts/preview', {
+        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+        const response = await fetch(`/api/contracts/preview${templateParam}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1398,52 +1420,78 @@ export function ReservationForm({
               </Button>
               {/* Contract buttons - show when vehicle and customer are selected */}
               {selectedVehicle && selectedCustomer && (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleViewContract}
-                    disabled={previewContractMutation.isPending}
-                    data-testid="button-view-contract"
-                  >
-                    {previewContractMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="mr-2 h-4 w-4" />
-                        {t('viewContract')}
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleGenerateContract}
-                    disabled={generateContractMutation.isPending}
-                    data-testid="button-generate-contract"
-                  >
-                    {generateContractMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        {t('generateContract')}
-                      </>
-                    )}
-                  </Button>
-                </>
+                <div className="flex flex-col gap-2">
+                  {/* Template Selector */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 min-w-fit">Contract Template:</label>
+                    <Select value={selectedTemplateId?.toString() || ""} onValueChange={(value) => setSelectedTemplateId(value ? parseInt(value) : null)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a template..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pdfTemplates.length === 0 ? (
+                          <SelectItem value="no-templates" disabled>
+                            No templates available - Create one in Documents
+                          </SelectItem>
+                        ) : (
+                          pdfTemplates.map((template: any) => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.name} {template.isDefault && "(Default)"}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Contract Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleViewContract}
+                      disabled={previewContractMutation.isPending || !selectedTemplateId}
+                      data-testid="button-view-contract"
+                    >
+                      {previewContractMutation.isPending ? (
+                        <>
+                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Contract
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleGenerateContract}
+                      disabled={generateContractMutation.isPending || !selectedTemplateId}
+                      data-testid="button-generate-contract"
+                    >
+                      {generateContractMutation.isPending ? (
+                        <>
+                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Generate Contract
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
             

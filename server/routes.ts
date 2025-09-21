@@ -2709,6 +2709,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/contracts/preview", requireAuth, async (req: Request, res: Response) => {
     try {
       const { vehicleId, customerId, startDate, endDate, notes } = req.body;
+      const templateId = req.query.templateId ? parseInt(req.query.templateId as string) : undefined;
       
       if (!vehicleId || !customerId) {
         return res.status(400).json({ message: "Vehicle ID and Customer ID are required" });
@@ -2722,11 +2723,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Vehicle or customer not found" });
       }
 
-      // Get the default PDF template
-      const defaultTemplate = await storage.getDefaultPdfTemplate();
+      // Get the specified template or default PDF template
+      let template;
+      if (templateId) {
+        template = await storage.getPdfTemplate(templateId);
+        if (!template) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+      } else {
+        template = await storage.getDefaultPdfTemplate();
+      }
       
-      if (!defaultTemplate) {
-        return res.status(404).json({ message: "Default PDF template not found" });
+      if (!template) {
+        return res.status(404).json({ message: "PDF template not found" });
       }
 
       // Create preview contract data
@@ -2746,18 +2755,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.log("Generating contract preview with data:", previewData);
 
       // Make sure the template fields are properly formatted
-      if (defaultTemplate.fields && typeof defaultTemplate.fields === 'string') {
+      if (template.fields && typeof template.fields === 'string') {
         try {
-          const parsedFields = JSON.parse(defaultTemplate.fields);
-          defaultTemplate.fields = parsedFields;
+          const parsedFields = JSON.parse(template.fields);
+          template.fields = parsedFields;
         } catch (e) {
-          console.error('Error parsing default template fields:', e);
+          console.error('Error parsing template fields:', e);
         }
       }
 
       // Use the imported function from pdf-generator.ts
       const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
-      const pdfBuffer = await generateRentalContractFromTemplate(previewData, defaultTemplate);
+      const pdfBuffer = await generateRentalContractFromTemplate(previewData, template);
       
       // Set response headers for PDF preview (inline instead of attachment)
       res.setHeader('Content-Type', 'application/pdf');
