@@ -1429,7 +1429,7 @@ export function QuickActions() {
                       {action.label}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                       <DialogTitle>Schedule Workshop Appointment</DialogTitle>
                       <DialogDescription>
@@ -1437,11 +1437,11 @@ export function QuickActions() {
                       </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="space-y-6">
-                      {/* Vehicle Selection */}
-                      <div className="space-y-3">
-                        <Label htmlFor="workshop-vehicle">Select Vehicle</Label>
+                    <div className="flex-1 overflow-y-auto px-1">
+                      <div className="space-y-4">
+                        {/* Vehicle Selection */}
                         <div className="space-y-3">
+                          <Label htmlFor="workshop-vehicle">Select Vehicle</Label>
                           <Input
                             id="workshop-vehicle-search"
                             placeholder="Search by license plate or brand..."
@@ -1450,7 +1450,7 @@ export function QuickActions() {
                             className="w-full"
                           />
                           
-                          <div className="max-h-48 overflow-y-auto border rounded-md">
+                          <div className="max-h-32 overflow-y-auto border rounded-md">
                             {vehicles
                               ?.filter(vehicle => 
                                 !workshopSearchQuery ||
@@ -1458,64 +1458,65 @@ export function QuickActions() {
                                 vehicle.brand?.toLowerCase().includes(workshopSearchQuery.toLowerCase()) ||
                                 vehicle.model?.toLowerCase().includes(workshopSearchQuery.toLowerCase())
                               )
+                              .slice(0, 10) // Limit to 10 vehicles for better performance
                               .map((vehicle) => (
                                 <div
                                   key={vehicle.id}
-                                  className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${
+                                  className={`p-2 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 transition-colors ${
                                     selectedWorkshopVehicle?.id === vehicle.id ? 'bg-blue-50 border-blue-200' : ''
                                   }`}
                                   onClick={() => setSelectedWorkshopVehicle(vehicle)}
                                 >
                                   <div className="flex justify-between items-center">
-                                    <div>
-                                      <div className="font-medium">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium text-sm truncate">
                                         {vehicle.licensePlate}
                                       </div>
-                                      <div className="text-sm text-muted-foreground">
+                                      <div className="text-xs text-muted-foreground truncate">
                                         {vehicle.brand} {vehicle.model} ({vehicle.productionDate || 'N/A'})
                                       </div>
                                     </div>
                                     {selectedWorkshopVehicle?.id === vehicle.id && (
-                                      <ActionIcon name="check" className="w-5 h-5 text-blue-600" />
+                                      <ActionIcon name="check" className="w-4 h-4 text-blue-600 ml-2 flex-shrink-0" />
                                     )}
                                   </div>
                                 </div>
                               ))}
                           </div>
                         </div>
+                        
+                        {/* Selected Vehicle Info */}
+                        {selectedWorkshopVehicle && (
+                          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-medium text-blue-900 mb-2 text-sm">Selected Vehicle</h4>
+                            <div className="space-y-1 text-xs">
+                              <div><strong>License:</strong> {selectedWorkshopVehicle.licensePlate}</div>
+                              <div><strong>Vehicle:</strong> {selectedWorkshopVehicle.brand} {selectedWorkshopVehicle.model}</div>
+                              {selectedWorkshopVehicle.chassisNumber && (
+                                <div><strong>Chassis:</strong> {selectedWorkshopVehicle.chassisNumber}</div>
+                              )}
+                              {selectedWorkshopVehicle.apkDate && (
+                                <div><strong>APK Date:</strong> {new Date(selectedWorkshopVehicle.apkDate).toLocaleDateString('nl-NL')}</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Available Services */}
+                        {selectedWorkshopVehicle && (
+                          <div className="space-y-2">
+                            <Label className="text-sm">Available Services</Label>
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ APK Inspection</div>
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ Major Service</div>
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ Minor Service</div>
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ Brake Service</div>
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ Tire Change</div>
+                              <div className="p-2 bg-gray-50 rounded border text-center">✓ A/C Check</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Selected Vehicle Info */}
-                      {selectedWorkshopVehicle && (
-                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <h4 className="font-medium text-blue-900 mb-2">Selected Vehicle</h4>
-                          <div className="space-y-1 text-sm">
-                            <div><strong>License Plate:</strong> {selectedWorkshopVehicle.licensePlate}</div>
-                            <div><strong>Vehicle:</strong> {selectedWorkshopVehicle.brand} {selectedWorkshopVehicle.model} ({selectedWorkshopVehicle.productionDate || 'N/A'})</div>
-                            {selectedWorkshopVehicle.chassisNumber && (
-                              <div><strong>Chassis:</strong> {selectedWorkshopVehicle.chassisNumber}</div>
-                            )}
-                            {selectedWorkshopVehicle.apkDate && (
-                              <div><strong>APK Date:</strong> {new Date(selectedWorkshopVehicle.apkDate).toLocaleDateString('nl-NL')}</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Available Services */}
-                      {selectedWorkshopVehicle && (
-                        <div className="space-y-3">
-                          <Label>Available Services</Label>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="p-2 bg-gray-50 rounded border">✓ APK Inspection</div>
-                            <div className="p-2 bg-gray-50 rounded border">✓ Major Service</div>
-                            <div className="p-2 bg-gray-50 rounded border">✓ Minor Service</div>
-                            <div className="p-2 bg-gray-50 rounded border">✓ Brake Service</div>
-                            <div className="p-2 bg-gray-50 rounded border">✓ Tire Change</div>
-                            <div className="p-2 bg-gray-50 rounded border">✓ A/C Check</div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
                     <DialogFooter className="flex justify-between">
