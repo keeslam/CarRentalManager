@@ -435,13 +435,20 @@ export function ReservationForm({
       
       if (!response.ok) {
         // Try to get the error message from the response
+        let errorMessage = "Failed to save reservation";
         try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to save reservation");
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } else {
+            errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+          }
         } catch (parseError) {
           // If we can't parse the error response, use the status text
-          throw new Error(`Failed to save reservation: ${response.status} ${response.statusText}`);
+          errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
         }
+        throw new Error(errorMessage);
       }
       
       return await response.json();
