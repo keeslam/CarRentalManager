@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import type { Vehicle, Customer } from "@shared/schema";
@@ -42,10 +43,11 @@ export default function CustomerCommunications() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [emailFieldSelection, setEmailFieldSelection] = useState<string>("auto"); // auto, email, emailForMOT, emailForInvoices, emailGeneral
   const [emailPreview, setEmailPreview] = useState<{
     subject: string;
     content: string;
-    recipients: Array<{name: string, email: string, vehicleLicense: string}>;
+    recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string}>;
   } | null>(null);
   
   // Template builder state
@@ -231,10 +233,51 @@ export default function CustomerCommunications() {
       const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
       const customer = reservation?.customer;
       
+      // Determine which email to use based on selection
+      let selectedEmail = "No email";
+      let emailField = "none";
+      
+      if (customer) {
+        if (emailFieldSelection === "auto") {
+          // Auto-select based on notification type
+          if (notificationTemplate === "apk" && customer.emailForMOT) {
+            selectedEmail = customer.emailForMOT;
+            emailField = "emailForMOT";
+          } else if (customer.email) {
+            selectedEmail = customer.email;
+            emailField = "email";
+          } else if (customer.emailGeneral) {
+            selectedEmail = customer.emailGeneral;
+            emailField = "emailGeneral";
+          }
+        } else {
+          // Use specifically selected email field
+          switch (emailFieldSelection) {
+            case "email":
+              selectedEmail = customer.email || "No email";
+              emailField = customer.email ? "email" : "none";
+              break;
+            case "emailForMOT":
+              selectedEmail = customer.emailForMOT || "No email";
+              emailField = customer.emailForMOT ? "emailForMOT" : "none";
+              break;
+            case "emailForInvoices":
+              selectedEmail = customer.emailForInvoices || "No email";
+              emailField = customer.emailForInvoices ? "emailForInvoices" : "none";
+              break;
+            case "emailGeneral":
+              selectedEmail = customer.emailGeneral || "No email";
+              emailField = customer.emailGeneral ? "emailGeneral" : "none";
+              break;
+          }
+        }
+      }
+      
       return {
         name: customer?.name || "Customer",
-        email: customer?.email || "No email",
-        vehicleLicense: vehicle.licensePlate
+        email: selectedEmail,
+        vehicleLicense: vehicle.licensePlate,
+        emailField: emailField
       };
     });
 
@@ -366,6 +409,48 @@ export default function CustomerCommunications() {
                     </div>
                   );
                 })}
+              </CardContent>
+            </Card>
+
+            {/* Email Selection Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Address Selection</CardTitle>
+                <CardDescription>Choose which email address to use for each customer</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label htmlFor="emailField">Email Field</Label>
+                  <Select value={emailFieldSelection} onValueChange={setEmailFieldSelection}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select email field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto (Smart Selection)</SelectItem>
+                      <SelectItem value="email">Primary Email</SelectItem>
+                      <SelectItem value="emailForMOT">APK/MOT Email</SelectItem>
+                      <SelectItem value="emailForInvoices">Invoice Email</SelectItem>
+                      <SelectItem value="emailGeneral">General Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    {emailFieldSelection === "auto" && (
+                      <p>✨ <strong>Auto:</strong> Uses APK email for APK notifications, otherwise uses primary email</p>
+                    )}
+                    {emailFieldSelection === "email" && (
+                      <p>📧 <strong>Primary Email:</strong> Uses the main email address for each customer</p>
+                    )}
+                    {emailFieldSelection === "emailForMOT" && (
+                      <p>🔧 <strong>APK/MOT Email:</strong> Uses the specific email address for APK inspections</p>
+                    )}
+                    {emailFieldSelection === "emailForInvoices" && (
+                      <p>📄 <strong>Invoice Email:</strong> Uses the email address for billing and invoices</p>
+                    )}
+                    {emailFieldSelection === "emailGeneral" && (
+                      <p>📬 <strong>General Email:</strong> Uses the general communication email address</p>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
