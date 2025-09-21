@@ -50,6 +50,7 @@ export default function CustomerCommunications() {
     recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string, customer?: any, vehicleId?: number}>;
   } | null>(null);
   const [individualEmailSelections, setIndividualEmailSelections] = useState<Record<string, string>>({});
+  const [vehicleFilter, setVehicleFilter] = useState<string>("all"); // all, apk, maintenance
   
   // Template builder state
   const [templateName, setTemplateName] = useState<string>("");
@@ -61,12 +62,15 @@ export default function CustomerCommunications() {
 
   const { toast } = useToast();
 
-  // Fetch vehicles with active reservations only
+  // Fetch vehicles with active reservations (filtered or all)
   const { data: vehiclesWithReservations = [] } = useQuery({
-    queryKey: ['/api/vehicles/with-reservations'],
+    queryKey: ['/api/vehicles', vehicleFilter === 'all' ? 'with-reservations' : 'filtered', vehicleFilter],
     queryFn: async () => {
-      const response = await fetch('/api/vehicles/with-reservations');
-      if (!response.ok) throw new Error('Failed to fetch vehicles with reservations');
+      const endpoint = vehicleFilter === 'all' 
+        ? '/api/vehicles/with-reservations'
+        : `/api/vehicles/filtered?filterType=${vehicleFilter}`;
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error('Failed to fetch vehicles');
       return response.json();
     }
   });
@@ -557,13 +561,33 @@ export default function CustomerCommunications() {
               <CardDescription>Choose which vehicles/customers to notify</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Input
-                  placeholder="Search by license plate, brand, or model..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="min-w-[200px]">
+                  <Label htmlFor="vehicle-filter" className="text-sm font-medium">Filter Vehicles</Label>
+                  <Select value={vehicleFilter} onValueChange={(value) => {
+                    setVehicleFilter(value);
+                    setSelectedVehicles([]);
+                  }}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Active Rentals</SelectItem>
+                      <SelectItem value="apk">APK Reminders</SelectItem>
+                      <SelectItem value="maintenance">Maintenance Reminders</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="search" className="text-sm font-medium sr-only">Search</Label>
+                  <Input
+                    id="search"
+                    placeholder="Search by license plate, brand, or model..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="mt-6"
+                  />
+                </div>
                 <Button 
                   disabled={selectedVehicles.length === 0}
                   onClick={generateEmailPreview}
@@ -574,6 +598,36 @@ export default function CustomerCommunications() {
                   Preview & Send to {selectedVehicles.length} vehicles
                 </Button>
               </div>
+
+              {/* Filter Information */}
+              {vehicleFilter !== "all" && (
+                <div className="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-r">
+                  {vehicleFilter === "apk" && (
+                    <div className="flex items-start space-x-2">
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-blue-900">APK Reminder Filter Active</p>
+                        <p className="text-sm text-blue-700">
+                          Showing vehicles with APK expiring within 2 months (60 days). 
+                          Vehicles are sorted by urgency: most urgent first.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {vehicleFilter === "maintenance" && (
+                    <div className="flex items-start space-x-2">
+                      <Wrench className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-blue-900">Maintenance Reminder Filter Active</p>
+                        <p className="text-sm text-blue-700">
+                          Showing vehicles that need maintenance (no maintenance recorded in the last year). 
+                          Vehicles never maintained are prioritized.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Email Preview Dialog */}
               <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
