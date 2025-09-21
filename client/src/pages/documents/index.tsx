@@ -105,7 +105,7 @@ export default function DocumentsIndex() {
     }, 5000);
   };
   
-  // Print the document directly without new tabs
+  // Print the document directly without downloads
   const printDocument = () => {
     if (documentToPrint) {
       console.log('Attempting to print document:', documentToPrint.fileName);
@@ -121,33 +121,81 @@ export default function DocumentsIndex() {
             return; // Success, exit function
           } catch (error) {
             console.log('Failed to print from preview iframe:', error);
-            console.log('Falling back to alternative method...');
+            console.log('Trying popup window approach...');
           }
         }
       }
       
-      // Alternative approach: Direct download with print instruction
-      console.log('Using direct download approach...');
+      // Alternative approach: Print-specific popup window
+      console.log('Using popup window for direct printing...');
       
-      // Create a temporary link to trigger download and print instruction
-      const downloadUrl = `/api/documents/download/${documentToPrint.id}`;
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = documentToPrint.fileName;
-      link.style.display = 'none';
+      const printUrl = `/api/documents/view/${documentToPrint.id}`;
       
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Create a small popup window specifically for printing
+      const printWindow = window.open(
+        printUrl, 
+        'printWindow',
+        'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
+      );
       
-      // Show user instruction to print the downloaded file
-      toast({
-        title: "Document Downloaded",
-        description: `${documentToPrint.fileName} has been downloaded. Please open the file and use Ctrl+P (or Cmd+P) to print.`,
-        duration: 5000,
-      });
-      
-      console.log('Download triggered for printing');
+      if (printWindow) {
+        // Wait for the document to load, then print and close
+        printWindow.onload = () => {
+          setTimeout(() => {
+            try {
+              console.log('Print window loaded, attempting to print...');
+              printWindow.print();
+              console.log('Print command sent successfully');
+              
+              // Close the popup after printing (with a delay)
+              setTimeout(() => {
+                if (!printWindow.closed) {
+                  printWindow.close();
+                  console.log('Print window closed');
+                }
+              }, 2000);
+              
+              // Show success message
+              toast({
+                title: "Printing Started",
+                description: "Print dialog should now be open. The popup will close automatically.",
+                duration: 3000,
+              });
+              
+            } catch (error) {
+              console.error('Failed to print from popup window:', error);
+              printWindow.close();
+              
+              // Last resort fallback message
+              toast({
+                title: "Print Failed",
+                description: "Your browser blocked printing. Please use the Download button and print manually.",
+                variant: "destructive",
+                duration: 5000,
+              });
+            }
+          }, 1500); // Give time for content to fully load
+        };
+        
+        // Handle case where popup is blocked
+        printWindow.onerror = () => {
+          console.error('Print popup window failed to load');
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups and try again, or use the Download button.",
+            variant: "destructive",
+            duration: 5000,
+          });
+        };
+      } else {
+        console.error('Failed to open print popup window');
+        toast({
+          title: "Popup Blocked",
+          description: "Please allow popups and try again, or use the Download button.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
     }
   };
   
