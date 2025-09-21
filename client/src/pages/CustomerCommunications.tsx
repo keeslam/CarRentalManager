@@ -48,7 +48,15 @@ export default function CustomerCommunications() {
   const [emailPreview, setEmailPreview] = useState<{
     subject: string;
     content: string;
-    recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string, customer?: any, vehicleId?: number}>;
+    recipients: Array<{
+      name: string, 
+      email: string, 
+      vehicleLicense: string, 
+      emailField: string, 
+      emailOptions: Array<{value: string, label: string, email: string}>,
+      customer?: any, 
+      vehicleId?: number
+    }>;
   } | null>(null);
   
   // Vehicle filter is now based on communication mode
@@ -259,37 +267,63 @@ export default function CustomerCommunications() {
     const subject = emailSubject.trim();
     const content = emailContent.trim();
 
-    // Generate recipients list with actual customer data
+    // Generate recipients list with actual customer data and all available email options
     const recipients = selectedVehicles.map(vehicle => {
       const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
       const customer = reservation?.customer;
       
-      // Use primary email (simplify email selection)
-      let selectedEmail = "No email";
-      let emailField = "none";
+      // Collect all available email options
+      const emailOptions: Array<{value: string, label: string, email: string}> = [];
       
       if (customer) {
-        // Prioritize primary email, then fall back to other available emails
         if (customer.email) {
-          selectedEmail = customer.email;
-          emailField = "email";
-        } else if (customer.emailForMOT) {
-          selectedEmail = customer.emailForMOT;
-          emailField = "emailForMOT";
-        } else if (customer.emailGeneral) {
-          selectedEmail = customer.emailGeneral;
-          emailField = "emailGeneral";
-        } else if (customer.emailForInvoices) {
-          selectedEmail = customer.emailForInvoices;
-          emailField = "emailForInvoices";
+          emailOptions.push({
+            value: "email",
+            label: "Primary",
+            email: customer.email
+          });
         }
+        if (customer.emailForMOT) {
+          emailOptions.push({
+            value: "emailForMOT",
+            label: "APK/MOT",
+            email: customer.emailForMOT
+          });
+        }
+        if (customer.emailForInvoices) {
+          emailOptions.push({
+            value: "emailForInvoices",
+            label: "Invoice",
+            email: customer.emailForInvoices
+          });
+        }
+        if (customer.emailGeneral) {
+          emailOptions.push({
+            value: "emailGeneral",
+            label: "General",
+            email: customer.emailGeneral
+          });
+        }
+      }
+      
+      // Select default email (prioritize primary email)
+      let selectedEmailField = "none";
+      let selectedEmail = "No email";
+      
+      if (emailOptions.length > 0) {
+        // Find primary email first, or use the first available
+        const primaryOption = emailOptions.find(opt => opt.value === "email");
+        const defaultOption = primaryOption || emailOptions[0];
+        selectedEmailField = defaultOption.value;
+        selectedEmail = defaultOption.email;
       }
       
       return {
         name: customer?.name || "Customer",
         email: selectedEmail,
         vehicleLicense: vehicle.licensePlate,
-        emailField: emailField,
+        emailField: selectedEmailField,
+        emailOptions: emailOptions,
         customer: customer,
         vehicleId: vehicle.id
       };
@@ -319,6 +353,32 @@ export default function CustomerCommunications() {
   const confirmSendNotifications = async () => {
     setPreviewDialogOpen(false);
     await handleSendNotifications();
+  };
+
+  // Function to handle email selection changes in preview dialog
+  const handleEmailSelection = (recipientIndex: number, selectedEmailField: string) => {
+    if (!emailPreview) return;
+
+    const updatedRecipients = [...emailPreview.recipients];
+    const recipient = updatedRecipients[recipientIndex];
+    
+    // Find the selected email option
+    const selectedOption = recipient.emailOptions.find(opt => opt.value === selectedEmailField);
+    
+    if (selectedOption) {
+      // Update the recipient's email and emailField
+      updatedRecipients[recipientIndex] = {
+        ...recipient,
+        email: selectedOption.email,
+        emailField: selectedEmailField
+      };
+      
+      // Update the email preview state
+      setEmailPreview({
+        ...emailPreview,
+        recipients: updatedRecipients
+      });
+    }
   };
 
 
@@ -1413,8 +1473,35 @@ export default function CustomerCommunications() {
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Email:</span> {recipient.email}
+                        {/* Email Selection */}
+                        <div className="space-y-2">
+                          {recipient.emailOptions.length > 1 ? (
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Select Email Address:</Label>
+                              <Select 
+                                value={recipient.emailField} 
+                                onValueChange={(value) => handleEmailSelection(index, value)}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {recipient.emailOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span className="font-medium">{option.label}</span>
+                                        <span className="text-muted-foreground ml-2">{option.email}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">Email:</span> {recipient.email}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1431,7 +1518,7 @@ export default function CustomerCommunications() {
                   </span>
                 </div>
                 <p className="text-xs text-blue-700 mt-1">
-                  Each recipient will receive a personalized version of this email with their specific vehicle and customer information. Email addresses are automatically selected (primary email preferred).
+                  Each recipient will receive a personalized version of this email with their specific vehicle and customer information. You can select which email address to use for each recipient above.
                 </p>
               </div>
             </div>
