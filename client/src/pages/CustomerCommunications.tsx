@@ -164,6 +164,7 @@ export default function CustomerCommunications() {
           customMessage: customMessage.trim() || undefined,
           customSubject: customSubject.trim() || undefined,
           emailFieldSelection: emailFieldSelection,
+          individualEmailSelections: individualEmailSelections,
         }),
       });
 

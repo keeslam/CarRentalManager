@@ -9,7 +9,7 @@ const router = Router();
 // Send notifications to customers
 router.post('/send', async (req, res) => {
   try {
-    const { vehicleIds, template, customMessage, customSubject, emailFieldSelection } = req.body;
+    const { vehicleIds, template, customMessage, customSubject, emailFieldSelection, individualEmailSelections } = req.body;
     
     if (!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) {
       return res.status(400).json({ error: 'Vehicle IDs are required' });
@@ -58,7 +58,26 @@ router.post('/send', async (req, res) => {
       let selectedEmail = null;
       const emailField = emailFieldSelection || 'auto';
       
-      if (emailField === 'auto') {
+      // Check if there's an individual email selection for this vehicle
+      const individualSelection = individualEmailSelections && individualEmailSelections[vehicle.id.toString()];
+      
+      if (individualSelection) {
+        // Use individual selection if available
+        switch (individualSelection) {
+          case 'email':
+            selectedEmail = customer?.email;
+            break;
+          case 'emailForMOT':
+            selectedEmail = customer?.emailForMOT;
+            break;
+          case 'emailForInvoices':
+            selectedEmail = customer?.emailForInvoices;
+            break;
+          case 'emailGeneral':
+            selectedEmail = customer?.emailGeneral;
+            break;
+        }
+      } else if (emailField === 'auto') {
         // Auto-select based on notification type
         if (template === 'apk' && customer?.emailForMOT) {
           selectedEmail = customer.emailForMOT;
