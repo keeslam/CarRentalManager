@@ -20,6 +20,13 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ReservationForm } from "@/components/reservations/reservation-form";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { Calendar, User, Car, CreditCard, Edit, Eye } from "lucide-react";
@@ -46,6 +53,28 @@ export default function ReservationCalendarPage() {
     availability: "all"
   });
   const [displayLimit, setDisplayLimit] = useState(20);
+  
+  // Dialog states
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  
+  // Dialog handlers
+  const handleViewReservation = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setViewDialogOpen(true);
+  };
+  
+  const handleEditReservation = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setEditDialogOpen(true);
+  };
+  
+  const handleCloseDialogs = () => {
+    setViewDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedReservation(null);
+  };
   
   // Calculate date ranges for month view
   const dateRanges = useMemo(() => {
@@ -561,21 +590,15 @@ export default function ReservationCalendarPage() {
                                     <div className="px-3 py-1 flex items-start space-x-2">
                                       <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
                                       <div className="grid grid-cols-2 gap-2 text-xs">
-                                        {res.price && (
+                                        {res.totalPrice && (
                                           <div>
-                                            <span className="text-gray-500">Price:</span> {formatCurrency(res.price)}
+                                            <span className="text-gray-500">Price:</span> {formatCurrency(Number(res.totalPrice))}
                                           </div>
                                         )}
-                                        {res.startMileage && (
-                                          <div>
-                                            <span className="text-gray-500">Start Mileage:</span> {res.startMileage} km
-                                          </div>
-                                        )}
-                                        {res.returnMileage && (
-                                          <div>
-                                            <span className="text-gray-500">Return Mileage:</span> {res.returnMileage} km
-                                          </div>
-                                        )}
+                                        <div>
+                                          <span className="text-gray-500">Status:</span>
+                                          <Badge className="ml-1 text-xs">{formatReservationStatus(res.status)}</Badge>
+                                        </div>
                                       </div>
                                     </div>
                                     
@@ -594,7 +617,7 @@ export default function ReservationCalendarPage() {
                                         size="sm" 
                                         variant="outline"
                                         className="h-8 text-xs"
-                                        onClick={() => window.location.href = `/reservations/${res.id}`}
+                                        onClick={() => handleViewReservation(res)}
                                       >
                                         <Eye className="mr-1 h-3 w-3" />
                                         View
@@ -603,7 +626,7 @@ export default function ReservationCalendarPage() {
                                         size="sm" 
                                         variant="outline"
                                         className="h-8 text-xs"
-                                        onClick={() => window.location.href = `/reservations/${res.id}/edit`}
+                                        onClick={() => handleEditReservation(res)}
                                       >
                                         <Edit className="mr-1 h-3 w-3" />
                                         Edit
@@ -648,6 +671,66 @@ export default function ReservationCalendarPage() {
           )}
         </CardContent>
       </Card>
+      
+      {/* View Reservation Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reservation Details</DialogTitle>
+          </DialogHeader>
+          {selectedReservation && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Customer</label>
+                  <p className="text-sm">{selectedReservation.customer?.name || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Vehicle</label>
+                  <p className="text-sm">{selectedReservation.vehicle?.licensePlate || 'N/A'} - {selectedReservation.vehicle?.brand || ''} {selectedReservation.vehicle?.model || ''}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Start Date</label>
+                  <p className="text-sm">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">End Date</label>
+                  <p className="text-sm">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <Badge className="text-xs">{formatReservationStatus(selectedReservation.status)}</Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Total Price</label>
+                  <p className="text-sm">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+                </div>
+              </div>
+              {selectedReservation.notes && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Notes</label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedReservation.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Reservation Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation</DialogTitle>
+          </DialogHeader>
+          {selectedReservation && (
+            <ReservationForm 
+              editMode={true} 
+              initialData={selectedReservation}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
