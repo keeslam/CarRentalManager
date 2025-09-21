@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays } from "date-fns";
+import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +35,8 @@ import { Calendar, User, Car, CreditCard, Edit, Eye } from "lucide-react";
 // Calendar view options
 type CalendarView = "month";
 
-// Days of the week abbreviations
-const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Calendar configuration
+const COLUMNS = 5;
 
 // Type for vehicle filters
 type VehicleFilters = {
@@ -348,15 +348,15 @@ export default function ReservationCalendarPage() {
   
   // Generate calendar grid for month view
   const calendarGrid = useMemo(() => {
-    const weeks = [];
+    const rows: Date[][] = [];
     const days = dateRanges.days;
     
-    // Group days into weeks
-    for (let i = 0; i < days.length; i += 7) {
-      weeks.push(days.slice(i, i + 7));
+    // Group days into rows of 5 columns
+    for (let i = 0; i < days.length; i += COLUMNS) {
+      rows.push(days.slice(i, i + COLUMNS));
     }
     
-    return weeks;
+    return rows;
   }, [dateRanges.days]);
   
   return (
@@ -456,19 +456,12 @@ export default function ReservationCalendarPage() {
           
           {/* Month View */}
           <div className="mb-6">
-            {/* Calendar Header - Days of Week */}
-            <div className="grid grid-cols-7 mb-2">
-              {daysOfWeek.map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
+            {/* Calendar Header - Hidden in 5-column mode for better alignment */}
             
             {/* Calendar Grid */}
             <div className="border rounded-lg overflow-hidden">
               {calendarGrid.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 divide-x border-b last:border-b-0">
+                <div key={weekIndex} className="grid grid-cols-5 divide-x border-b last:border-b-0">
                   {week.map((day, dayIndex) => {
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
@@ -536,9 +529,14 @@ export default function ReservationCalendarPage() {
                           </div>
                         )}
                         <div className="flex justify-between items-center mb-3">
-                          <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
-                            {format(day, "d")}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-500 font-medium">
+                              {format(day, "EEE")}
+                            </span>
+                            <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
+                              {format(day, "d")}
+                            </span>
+                          </div>
                           {dayReservations.length > 0 && (
                             <Badge variant="outline" className="text-sm font-medium">
                               {dayReservations.length}
