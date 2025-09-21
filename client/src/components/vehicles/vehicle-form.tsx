@@ -1051,9 +1051,16 @@ export function VehicleForm({
                               if (checked) {
                                 // If registeredTo is turned on, turn off company (as boolean for UI)
                                 form.setValue('company', false);
-                                // Clear company date and set registration date to today
+                                // Clear company date and set registration date
                                 form.setValue('companyDate', '');
-                                form.setValue('registeredToDate', new Date().toISOString().split('T')[0]);
+                                
+                                // Use RDW registration date if available, otherwise use today's date
+                                const currentRegistrationDate = form.getValues('registeredToDate');
+                                if (!currentRegistrationDate) {
+                                  // Only set today's date if no RDW date is available
+                                  form.setValue('registeredToDate', new Date().toISOString().split('T')[0]);
+                                }
+                                // If currentRegistrationDate exists (from RDW), keep it as is
                               }
                             }}
                           />
