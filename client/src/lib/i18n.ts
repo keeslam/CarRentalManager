@@ -74,8 +74,6 @@ const resources = {
       
       // Contract related
       contract: "Contract",
-      generateContract: "Generate Contract",
-      viewContract: "View Contract",
       
       // Status messages
       success: "Success",
@@ -160,8 +158,6 @@ const resources = {
       
       // Contract related
       contract: "Contract",
-      generateContract: "Contract Genereren",
-      viewContract: "Contract Bekijken",
       
       // Status messages
       success: "Gelukt",
