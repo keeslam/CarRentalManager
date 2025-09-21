@@ -1014,52 +1014,43 @@ export class DatabaseStorage implements IStorage {
         updatedBy: templateData.updatedBy
       });
       
-      // Build dynamic SQL based on what fields are being updated
+      // Build dynamic SQL using Drizzle's sql template
       const setClauses = [];
-      const values = [];
       
       if (updateData.name !== undefined) {
-        setClauses.push('name = ?');
-        values.push(updateData.name);
+        setClauses.push(sql`name = ${updateData.name}`);
       }
       
       if (updateData.fields !== undefined) {
-        setClauses.push('fields = ?');
-        values.push(updateData.fields);
+        setClauses.push(sql`fields = ${updateData.fields}`);
       }
       
       if (updateData.is_default !== undefined) {
-        setClauses.push('is_default = ?');
-        values.push(updateData.is_default);
+        setClauses.push(sql`is_default = ${updateData.is_default}`);
       }
       
       // Always update timestamp
-      setClauses.push('updated_at = ?');
-      values.push(updateData.updated_at);
+      setClauses.push(sql`updated_at = ${updateData.updated_at}`);
       
       if (setClauses.length === 0) {
         console.log('No fields to update');
         return undefined;
       }
       
-      // Add the ID for WHERE clause
-      values.push(id);
+      console.log('Updating template with ID:', id);
+      console.log('Update data:', updateData);
       
-      const queryText = `
+      // Use proper Drizzle SQL template syntax
+      const result = await db.execute(sql`
         UPDATE pdf_templates 
-        SET ${setClauses.join(', ')}
-        WHERE id = ?
+        SET ${sql.join(setClauses, sql`, `)}
+        WHERE id = ${id}
         RETURNING *
-      `;
+      `);
       
-      console.log('SQL Query:', queryText);
-      console.log('SQL Values:', values);
-      
-      const result = await db.execute(sql.raw(queryText, ...values));
-      
-      if (result.length > 0) {
-        console.log('Template updated successfully:', result[0]);
-        return result[0] as PdfTemplate;
+      if (result.rows.length > 0) {
+        console.log('Template updated successfully:', result.rows[0]);
+        return result.rows[0] as PdfTemplate;
       }
       
       console.log('Template not found for update');
