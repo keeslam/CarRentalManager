@@ -977,11 +977,22 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Add hasActiveReservation property to each customer
       const customersWithReservations = customers.map(customer => {
-        const hasActiveReservation = reservations.some(reservation => 
-          reservation.customerId === customer.id &&
-          new Date(reservation.startDate) <= today &&
-          new Date(reservation.endDate) >= today
+        const customerReservations = reservations.filter(reservation => 
+          reservation.customerId === customer.id
         );
+        
+        const hasActiveReservation = customerReservations.some(reservation => {
+          // Handle undefined or invalid endDate
+          if (!reservation.endDate || reservation.endDate === "undefined") {
+            return false;
+          }
+          
+          const startDate = new Date(reservation.startDate);
+          const endDate = new Date(reservation.endDate);
+          
+          // Check if reservation is active (started but not ended)
+          return startDate <= today && endDate >= today;
+        });
         
         return {
           ...customer,
