@@ -171,6 +171,10 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     // Extract the vehicle data from the API response
     const rdwVehicle = data[0];
     
+    // Check if vehicle is registered to a person using datum_tenaamstelling
+    const registrationDate = formatDate(rdwVehicle.datum_tenaamstelling);
+    const isRegisteredToPerson = !!registrationDate;
+
     // Map the RDW data to our vehicle structure - only taking what we can reliably get
     const mappedVehicle: Partial<InsertVehicle> = {
       licensePlate: formatLicensePlate(normalized),
@@ -181,7 +185,10 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
       fuel: rdwVehicle.brandstof_omschrijving ? mapFuelType(rdwVehicle.brandstof_omschrijving) : null,
       euroZone: rdwVehicle.emissiecode_omschrijving ? mapEuroZone(rdwVehicle.emissiecode_omschrijving) : null,
       apkDate: formatDate(rdwVehicle.vervaldatum_apk) || null,
-      productionDate: formatDate(rdwVehicle.datum_eerste_toelating) || null
+      productionDate: formatDate(rdwVehicle.datum_eerste_toelating) || null,
+      // Automatically detect registration status from RDW data
+      registeredTo: isRegisteredToPerson ? "true" : "false",
+      registeredToDate: registrationDate || null
     };
     
     return mappedVehicle;
