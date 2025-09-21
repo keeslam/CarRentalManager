@@ -425,18 +425,26 @@ export function ReservationForm({
       }
       
       // Use FormData for the request
-      return await fetch(
+      const response = await fetch(
         editMode ? `/api/reservations/${initialData?.id}` : "/api/reservations", 
         {
           method: editMode ? "PATCH" : "POST",
           body: formData,
         }
-      ).then(res => {
-        if (!res.ok) {
-          throw new Error("Failed to save reservation");
+      );
+      
+      if (!response.ok) {
+        // Try to get the error message from the response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to save reservation");
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          throw new Error(`Failed to save reservation: ${response.status} ${response.statusText}`);
         }
-        return res.json();
-      });
+      }
+      
+      return await response.json();
     },
     onSuccess: async (data) => {
       // Save selections to recent items
