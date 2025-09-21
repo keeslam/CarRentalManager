@@ -509,100 +509,6 @@ export default function CustomerCommunications() {
                 </div>
               )}
 
-              {/* Email Preview Dialog */}
-              <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Email Preview</DialogTitle>
-                    <DialogDescription>
-                      Review your email before sending to {emailPreview?.recipients.length || 0} recipients
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  {emailPreview && (
-                    <div className="space-y-6">
-                      {/* Email Content Preview */}
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-sm font-medium">Subject:</Label>
-                          <div className="mt-1 p-3 bg-gray-50 rounded border">
-                            <p className="font-medium">{emailPreview.subject}</p>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-sm font-medium">Email Content:</Label>
-                          <div className="mt-1 p-4 bg-gray-50 rounded border">
-                            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
-                              {emailPreview.content}
-                            </pre>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recipients List */}
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Recipients ({emailPreview.recipients.length}):
-                        </Label>
-                        <div className="mt-2 max-h-48 overflow-y-auto border rounded">
-                          <div className="divide-y">
-                            {emailPreview.recipients.map((recipient, index) => (
-                              <div key={index} className="p-3 space-y-2">
-                                <div className="flex justify-between items-start">
-                                  <div className="space-y-1 flex-1">
-                                    <div className="font-medium text-sm">{recipient.name}</div>
-                                    <div className="text-xs text-blue-600 font-mono">
-                                      {recipient.vehicleLicense}
-                                    </div>
-                                  </div>
-                                  {recipient.emailField !== "none" && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {recipient.emailField === "email" && "Primary"}
-                                      {recipient.emailField === "emailForMOT" && "APK/MOT"}
-                                      {recipient.emailField === "emailForInvoices" && "Invoice"}
-                                      {recipient.emailField === "emailGeneral" && "General"}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  <span className="font-medium">Email:</span> {recipient.email}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Summary */}
-                      <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">
-                            Ready to send {emailPreview.recipients.length} emails
-                          </span>
-                        </div>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Each recipient will receive a personalized version of this email with their specific vehicle and customer information. Email addresses are automatically selected (primary email preferred).
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={confirmSendNotifications}
-                      disabled={isLoadingNotifications}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {isLoadingNotifications ? "Sending..." : "Confirm & Send Emails"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                 {filteredVehicles.slice(0, 50).map((item: any) => {
@@ -1450,6 +1356,101 @@ export default function CustomerCommunications() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Email Preview Dialog - Moved outside tabs to be accessible from all tabs */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email Preview</DialogTitle>
+            <DialogDescription>
+              Review your email before sending to {emailPreview?.recipients.length || 0} recipients
+            </DialogDescription>
+          </DialogHeader>
+          
+          {emailPreview && (
+            <div className="space-y-6">
+              {/* Email Content Preview */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Subject:</Label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded border">
+                    <p className="font-medium">{emailPreview.subject}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Email Content:</Label>
+                  <div className="mt-1 p-4 bg-gray-50 rounded border">
+                    <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+                      {emailPreview.content}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recipients List */}
+              <div>
+                <Label className="text-sm font-medium">
+                  Recipients ({emailPreview.recipients.length}):
+                </Label>
+                <div className="mt-2 max-h-48 overflow-y-auto border rounded">
+                  <div className="divide-y">
+                    {emailPreview.recipients.map((recipient, index) => (
+                      <div key={index} className="p-3 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1 flex-1">
+                            <div className="font-medium text-sm">{recipient.name}</div>
+                            <div className="text-xs text-blue-600 font-mono">
+                              {recipient.vehicleLicense}
+                            </div>
+                          </div>
+                          {recipient.emailField !== "none" && (
+                            <Badge variant="outline" className="text-xs">
+                              {recipient.emailField === "email" && "Primary"}
+                              {recipient.emailField === "emailForMOT" && "APK/MOT"}
+                              {recipient.emailField === "emailForInvoices" && "Invoice"}
+                              {recipient.emailField === "emailGeneral" && "General"}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium">Email:</span> {recipient.email}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">
+                    Ready to send {emailPreview.recipients.length} emails
+                  </span>
+                </div>
+                <p className="text-xs text-blue-700 mt-1">
+                  Each recipient will receive a personalized version of this email with their specific vehicle and customer information. Email addresses are automatically selected (primary email preferred).
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmSendNotifications}
+              disabled={isLoadingNotifications}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isLoadingNotifications ? "Sending..." : "Confirm & Send Emails"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
