@@ -1061,22 +1061,24 @@ export function VehicleForm({
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="registeredToDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Registration Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormDescription>
-                          Date when the vehicle was registered to a person
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {form.watch('registeredTo') && (
+                    <FormField
+                      control={form.control}
+                      name="registeredToDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Registration Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            Date when the vehicle was registered to a person
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   
                   <FormField
                     control={form.control}
@@ -1113,22 +1115,24 @@ export function VehicleForm({
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="companyDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Registration Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormDescription>
-                          Date when the vehicle was registered to the company
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {form.watch('company') && (
+                    <FormField
+                      control={form.control}
+                      name="companyDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Registration Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            Date when the vehicle was registered to the company
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   
                   <FormField
                     control={form.control}
@@ -1158,22 +1162,24 @@ export function VehicleForm({
                     }}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="euroZoneEndDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Euro Zone End Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormDescription>
-                          Date when the Euro Zone classification expires
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {form.watch('euroZone') && (
+                    <FormField
+                      control={form.control}
+                      name="euroZoneEndDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Euro Zone End Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                          </FormControl>
+                          <FormDescription>
+                            Date when the Euro Zone classification expires
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   
 
                 </div>
