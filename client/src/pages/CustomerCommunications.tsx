@@ -250,17 +250,46 @@ export default function CustomerCommunications() {
         return;
       }
     } else {
-      // When no template is selected or "none" is selected, require custom message and subject
-      if (!customMessage.trim() || !customSubject.trim()) {
-        toast({
-          title: "Missing Information",
-          description: "Please enter both subject and message for the notification",
-          variant: "destructive",
-        });
-        return;
+      // When no template is selected, use default templates for APK/Maintenance or require custom content
+      if (communicationMode === 'apk') {
+        // Default APK reminder template
+        emailSubject = "APK Inspection Reminder - {vehiclePlate}";
+        emailContent = `Dear {customerName},
+
+This is a friendly reminder that your vehicle {vehicleBrand} {vehicleModel} with license plate {vehiclePlate} has an upcoming APK inspection.
+
+Please ensure you schedule your APK inspection in time to avoid any inconvenience.
+
+If you have any questions, please contact us.
+
+Best regards,
+{companyName}`;
+      } else if (communicationMode === 'maintenance') {
+        // Default maintenance reminder template
+        emailSubject = "Maintenance Reminder - {vehiclePlate}";
+        emailContent = `Dear {customerName},
+
+This is a reminder that your vehicle {vehicleBrand} {vehicleModel} with license plate {vehiclePlate} is due for scheduled maintenance.
+
+Regular maintenance helps ensure the safety and reliability of your vehicle.
+
+Please contact us to schedule your maintenance appointment.
+
+Best regards,
+{companyName}`;
+      } else {
+        // Custom mode - require custom message and subject
+        if (!customMessage.trim() || !customSubject.trim()) {
+          toast({
+            title: "Missing Information",
+            description: "Please enter both subject and message for the notification",
+            variant: "destructive",
+          });
+          return;
+        }
+        emailSubject = customSubject;
+        emailContent = customMessage;
       }
-      emailSubject = customSubject;
-      emailContent = customMessage;
     }
 
     // Use determined email content (template or custom)
