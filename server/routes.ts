@@ -3518,6 +3518,88 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Upload backup file
+  app.post("/api/backups/upload", requireAuth, requireAdmin, upload.single('backup'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No backup file provided" });
+      }
+
+      const file = req.file;
+      const backupType = req.body.type; // 'database' or 'files'
+
+      // Validate backup type
+      if (!backupType || !['database', 'files'].includes(backupType)) {
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ error: "Invalid or missing backup type. Must be 'database' or 'files'" });
+      }
+
+      // Validate file extension based on type
+      const validExtensions = {
+        database: ['.sql', '.sql.gz'],
+        files: ['.tar.gz', '.tgz']
+      };
+
+      const fileExtension = file.originalname.toLowerCase();
+      const isValidExtension = validExtensions[backupType as keyof typeof validExtensions].some(ext => 
+        fileExtension.endsWith(ext)
+      );
+
+      if (!isValidExtension) {
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ 
+          error: `Invalid file extension for ${backupType} backup. Expected: ${validExtensions[backupType as keyof typeof validExtensions].join(', ')}`
+        });
+      }
+
+      // Create backup directory if it doesn't exist
+      const backupDir = path.join(process.cwd(), 'backups');
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      // Generate a unique filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const originalName = file.originalname.replace(/\.[^/.]+$/, ""); // Remove extension
+      const extension = file.originalname.substring(file.originalname.lastIndexOf('.'));
+      const newFilename = `uploaded-${backupType}-${timestamp}-${originalName}${extension}`;
+      const destinationPath = path.join(backupDir, newFilename);
+
+      // Move the uploaded file to backups directory
+      fs.renameSync(file.path, destinationPath);
+
+      // Create manifest entry
+      const manifest = {
+        timestamp: new Date().toISOString(),
+        type: backupType,
+        filename: newFilename,
+        size: fs.statSync(destinationPath).size,
+        checksum: 'uploaded', // We could calculate actual checksum if needed
+        metadata: {
+          uploaded: true,
+          originalName: file.originalname
+        }
+      };
+
+      res.json({
+        success: true,
+        message: `${backupType} backup uploaded successfully`,
+        backup: manifest
+      });
+
+    } catch (error) {
+      // Clean up file on error
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      console.error("Error uploading backup:", error);
+      res.status(500).json({ 
+        error: "Failed to upload backup",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // ==================== BACKUP RESTORE ROUTES ====================
   
   // Restore database from backup

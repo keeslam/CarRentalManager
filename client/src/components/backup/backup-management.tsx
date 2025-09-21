@@ -1,9 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Table, 
   TableBody, 
@@ -27,7 +39,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { BackupSettingsPanel } from "./backup-settings";
-import { Download, Play, Trash2, Database, FolderArchive, Clock, CheckCircle, AlertTriangle, RotateCcw, HardDriveIcon } from "lucide-react";
+import { Download, Play, Trash2, Database, FolderArchive, Clock, CheckCircle, AlertTriangle, RotateCcw, HardDriveIcon, Upload } from "lucide-react";
 
 interface BackupManifest {
   timestamp: string;
@@ -53,6 +65,10 @@ interface BackupStatus {
 export function BackupManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadType, setUploadType] = useState<'database' | 'files'>('database');
 
   // Fetch backup status
   const { data: status, isLoading: statusLoading } = useQuery<BackupStatus>({
@@ -208,6 +224,41 @@ export function BackupManagement() {
     }
   });
 
+  // Upload backup mutation
+  const uploadBackupMutation = useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: 'database' | 'files' }) => {
+      const formData = new FormData();
+      formData.append('backup', file);
+      formData.append('type', type);
+
+      return fetch(`/api/backups/upload`, {
+        method: 'POST',
+        body: formData,
+      }).then(response => {
+        if (!response.ok) {
+          return response.json().then(err => Promise.reject(new Error(err.error || 'Upload failed')));
+        }
+        return response.json();
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Backup uploaded successfully",
+        description: `${data.backup.type} backup "${data.backup.metadata.originalName}" has been uploaded and is ready to restore.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions
   const getStatusBadge = () => {
     if (status?.isRunning) {
@@ -239,6 +290,24 @@ export function BackupManagement() {
 
   const databaseBackups = backups?.filter(b => b.type === 'database') || [];
   const fileBackups = backups?.filter(b => b.type === 'files') || [];
+
+  // File upload handlers
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = () => {
+    if (selectedFile && uploadType) {
+      uploadBackupMutation.mutate({ file: selectedFile, type: uploadType });
+    }
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <div className="space-y-6">
@@ -323,6 +392,87 @@ export function BackupManagement() {
             <Play className="w-4 h-4 mr-2" />
             {status?.isRunning ? 'Backup Running...' : 'Run Backup Now'}
           </Button>
+
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={uploadBackupMutation.isPending}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Backup
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Upload Backup File</DialogTitle>
+                <DialogDescription>
+                  Upload a previously downloaded backup file to restore from it.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="backup-type">Backup Type</Label>
+                  <Select value={uploadType} onValueChange={(value: 'database' | 'files') => setUploadType(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select backup type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="database">Database (.sql, .sql.gz)</SelectItem>
+                      <SelectItem value="files">Files (.tar.gz, .tgz)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="backup-file">Backup File</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={selectedFile?.name || "No file selected"}
+                      placeholder="Choose a backup file"
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={openFileDialog}>
+                      Browse
+                    </Button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept={uploadType === 'database' ? '.sql,.sql.gz' : '.tar.gz,.tgz'}
+                    className="hidden"
+                  />
+                </div>
+                {selectedFile && (
+                  <div className="text-sm text-muted-foreground">
+                    File size: {formatFileSize(selectedFile.size)}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setUploadDialogOpen(false);
+                  setSelectedFile(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpload}
+                  disabled={!selectedFile || uploadBackupMutation.isPending}
+                >
+                  {uploadBackupMutation.isPending ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
