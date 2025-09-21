@@ -563,19 +563,19 @@ export function ReservationForm({
     delete submissionData.isOpenEnded;
     
     try {
-      // Update vehicle mileage based on status
+      // Update vehicle mileage whenever mileage data is provided
       if (vehicleIdWatch) {
         const vehicleUpdateData: { id: number, departureMileage?: number, currentMileage?: number } = {
           id: Number(vehicleIdWatch)
         };
         
-        // If status is confirmed and we have start mileage, update current mileage
-        if (submissionData.status === "confirmed" && submissionData.startMileage) {
+        // Update current mileage if start mileage is provided
+        if (submissionData.startMileage) {
           vehicleUpdateData.currentMileage = Number(submissionData.startMileage);
         }
         
-        // If status is completed and we have departure mileage, update departure mileage
-        if (submissionData.status === "completed" && submissionData.departureMileage) {
+        // Update departure mileage if departure mileage is provided  
+        if (submissionData.departureMileage) {
           vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
         }
         
