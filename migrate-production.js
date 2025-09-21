@@ -62,10 +62,10 @@ async function migrateDatabase() {
       }
     }
 
-    // Add any missing columns
+    // Add any missing columns using IF NOT EXISTS to prevent errors
     for (const columnName of missingColumns) {
       console.log(`➕ Adding missing ${columnName} column...`);
-      await client.query(`ALTER TABLE vehicles ADD COLUMN ${columnName} TEXT`);
+      await client.query(`ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ${columnName} TEXT`);
       console.log(`✅ ${columnName} column added successfully`);
     }
 
