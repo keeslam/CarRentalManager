@@ -31,6 +31,8 @@ export default function DocumentsIndex() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [documentToPrint, setDocumentToPrint] = useState<Document | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -89,14 +91,17 @@ export default function DocumentsIndex() {
   
   // Handle print document
   const handlePrintDocument = (document: Document) => {
-    const viewUrl = `/api/documents/view/${document.id}`;
-    const printWindow = window.open(viewUrl, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-        }, 1000); // Small delay to ensure document loads
-      };
+    setDocumentToPrint(document);
+    setPrintDialogOpen(true);
+  };
+  
+  // Print the document from the preview
+  const printDocument = () => {
+    if (documentToPrint) {
+      const iframe = document.getElementById('print-preview-iframe') as HTMLIFrameElement;
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.print();
+      }
     }
   };
   
@@ -419,6 +424,38 @@ export default function DocumentsIndex() {
               disabled={deleteDocumentMutation.isPending}
             >
               {deleteDocumentMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Print Preview Dialog */}
+      <AlertDialog open={printDialogOpen} onOpenChange={setPrintDialogOpen}>
+        <AlertDialogContent className="max-w-4xl max-h-[80vh]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Print Preview - {documentToPrint?.fileName}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Preview the document before printing
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex-1 min-h-[500px] border rounded">
+            {documentToPrint && (
+              <iframe
+                id="print-preview-iframe"
+                src={`/api/documents/view/${documentToPrint.id}`}
+                className="w-full h-[500px] border-0"
+                title="Document Preview"
+              />
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={printDocument}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
