@@ -1974,7 +1974,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Get customers with active reservations for this specific vehicle
       // First, get all reservations for this vehicle
-      const vehicleReservations = await storage.getReservationsForVehicle(vehicleId);
+      const vehicleReservations = await storage.getReservationsByVehicle(vehicleId);
       
       // Filter for active reservations and get customer details
       const customersWithReservations = [];

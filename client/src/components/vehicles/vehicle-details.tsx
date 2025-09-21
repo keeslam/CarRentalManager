@@ -89,6 +89,17 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
     }
   });
 
+  // Fetch vehicle details (MOVED UP to fix hoisting issue)
+  const vehicleQueryKey = [`/api/vehicles/${vehicleId}`];
+  const { 
+    data: vehicle, 
+    isLoading: isLoadingVehicle,
+    error: vehicleError 
+  } = useQuery({
+    queryKey: vehicleQueryKey,
+    enabled: !!vehicleId
+  });
+
   // Send APK reminder mutation
   const sendApkReminderMutation = useMutation({
     mutationFn: async ({ message, subject, customerEmails }: { 
@@ -197,17 +208,6 @@ Autolease Lam`;
       setEditableEmails(emailsMap);
     }
   }, [isApkReminderOpen, vehicle, customersWithReservations, apkTemplate]);
-  
-  // Fetch vehicle details
-  const vehicleQueryKey = [`/api/vehicles/${vehicleId}`];
-  const { 
-    data: vehicle, 
-    isLoading: isLoadingVehicle,
-    refetch: refetchVehicle 
-  } = useQuery<Vehicle>({
-    queryKey: vehicleQueryKey,
-    staleTime: 0  // Make sure we always get fresh data
-  });
   
   // Fetch vehicle expenses
   const { data: expenses, isLoading: isLoadingExpenses } = useQuery<Expense[]>({
