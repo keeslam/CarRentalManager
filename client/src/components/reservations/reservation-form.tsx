@@ -526,7 +526,7 @@ export function ReservationForm({
         updateData.currentMileage = vehicleData.currentMileage;
       }
       
-      return await apiRequest(`/api/vehicles/${vehicleData.id}`, "PATCH", updateData);
+      return await apiRequest("PATCH", `/api/vehicles/${vehicleData.id}`, updateData);
     },
     onSuccess: () => {
       // Invalidate vehicle queries to refresh data
