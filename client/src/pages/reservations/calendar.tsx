@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -61,16 +62,21 @@ export default function ReservationCalendarPage() {
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
+    console.log('handleViewReservation called with:', reservation);
     setSelectedReservation(reservation);
     setViewDialogOpen(true);
+    console.log('View dialog should be open now');
   };
   
   const handleEditReservation = (reservation: Reservation) => {
+    console.log('handleEditReservation called with:', reservation);
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
+    console.log('Edit dialog should be open now');
   };
   
   const handleCloseDialogs = () => {
+    console.log('Closing all dialogs');
     setViewDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedReservation(null);
@@ -617,7 +623,12 @@ export default function ReservationCalendarPage() {
                                         size="sm" 
                                         variant="outline"
                                         className="h-8 text-xs"
-                                        onClick={() => handleViewReservation(res)}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('View clicked for reservation:', res.id);
+                                          handleViewReservation(res);
+                                        }}
                                       >
                                         <Eye className="mr-1 h-3 w-3" />
                                         View
@@ -626,7 +637,12 @@ export default function ReservationCalendarPage() {
                                         size="sm" 
                                         variant="outline"
                                         className="h-8 text-xs"
-                                        onClick={() => handleEditReservation(res)}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('Edit clicked for reservation:', res.id);
+                                          handleEditReservation(res);
+                                        }}
                                       >
                                         <Edit className="mr-1 h-3 w-3" />
                                         Edit
@@ -673,10 +689,19 @@ export default function ReservationCalendarPage() {
       </Card>
       
       {/* View Reservation Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+      <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+          console.log('View dialog open change:', open);
+          setViewDialogOpen(open);
+          if (!open) {
+            setSelectedReservation(null);
+          }
+        }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reservation Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this reservation including dates, customer, vehicle, and pricing.
+            </DialogDescription>
           </DialogHeader>
           {selectedReservation && (
             <div className="space-y-4">
@@ -718,10 +743,19 @@ export default function ReservationCalendarPage() {
       </Dialog>
       
       {/* Edit Reservation Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+          console.log('Edit dialog open change:', open);
+          setEditDialogOpen(open);
+          if (!open) {
+            setSelectedReservation(null);
+          }
+        }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Reservation</DialogTitle>
+            <DialogDescription>
+              Modify reservation details including dates, customer information, vehicle selection, and pricing.
+            </DialogDescription>
           </DialogHeader>
           {selectedReservation && (
             <ReservationForm 
