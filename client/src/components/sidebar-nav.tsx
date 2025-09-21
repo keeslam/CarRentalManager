@@ -1,23 +1,25 @@
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import { useTranslation } from 'react-i18next';
 
 export function SidebarNav() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isAdmin = user?.role === UserRole.ADMIN;
 
   // Define navigation items
   const navItems = [
-    { href: "/", label: "Dashboard", icon: "dashboard" },
-    { href: "/vehicles", label: "Vehicles", icon: "directions_car" },
-    { href: "/customers", label: "Customers", icon: "people" },
-    { href: "/reservations", label: "Reservations", icon: "event" },
-    { href: "/expenses", label: "Expenses", icon: "euro" },
-    { href: "/documents", label: "Documents", icon: "description" },
-    { href: "/communications", label: "Communications", icon: "email" },
+    { href: "/", label: t('dashboard'), icon: "dashboard" },
+    { href: "/vehicles", label: t('vehicles'), icon: "directions_car" },
+    { href: "/customers", label: t('customers'), icon: "people" },
+    { href: "/reservations", label: t('reservations'), icon: "event" },
+    { href: "/expenses", label: t('expenses'), icon: "euro" },
+    { href: "/documents", label: t('documents'), icon: "description" },
+    { href: "/communications", label: t('communications'), icon: "email" },
     // Users menu item moved to user dropdown menu
-    { href: "/reports", label: "Reports", icon: "assessment" }
+    { href: "/reports", label: t('reports'), icon: "assessment" }
     // My Profile moved to user dropdown menu
   ];
 

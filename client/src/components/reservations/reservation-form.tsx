@@ -49,6 +49,7 @@ import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
