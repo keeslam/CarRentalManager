@@ -89,11 +89,13 @@ export default function DocumentsIndex() {
   
   // Handle print document
   const handlePrintDocument = (document: Document) => {
-    const printUrl = `/api/documents/download/${document.id}`;
-    const printWindow = window.open(printUrl, '_blank');
+    const viewUrl = `/api/documents/view/${document.id}`;
+    const printWindow = window.open(viewUrl, '_blank');
     if (printWindow) {
       printWindow.onload = () => {
-        printWindow.print();
+        setTimeout(() => {
+          printWindow.print();
+        }, 1000); // Small delay to ensure document loads
       };
     }
   };
