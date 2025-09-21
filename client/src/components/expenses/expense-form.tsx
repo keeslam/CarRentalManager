@@ -133,7 +133,7 @@ export function ExpenseForm({
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const [receiptTab, setReceiptTab] = useState<string>("url");
+  const [receiptTab, setReceiptTab] = useState<string>("scan");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formInitialized, setFormInitialized] = useState(false);
   const [recentVehicles, setRecentVehicles] = useState<string[]>([]);
@@ -543,14 +543,14 @@ export function ExpenseForm({
               
               <div className="md:col-span-2">
                 <FormLabel className="mb-2 block">Receipt</FormLabel>
-                <Tabs defaultValue="url" value={receiptTab} onValueChange={setReceiptTab}>
+                <Tabs defaultValue="scan" value={receiptTab} onValueChange={setReceiptTab}>
                   <TabsList className="mb-4">
-                    <TabsTrigger value="url">URL</TabsTrigger>
-                    <TabsTrigger value="upload">Upload File</TabsTrigger>
-                    <TabsTrigger value="scan" className="flex items-center gap-2">
+                    <TabsTrigger value="scan" className="flex items-center gap-2 bg-primary/10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       <Scan className="w-4 h-4" />
-                      Scan Invoice
+                      Scan Invoice (AI)
                     </TabsTrigger>
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                    <TabsTrigger value="url">URL</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="url">
