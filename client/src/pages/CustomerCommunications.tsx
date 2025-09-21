@@ -227,7 +227,7 @@ export default function CustomerCommunications() {
     let emailSubject = "";
     let emailContent = "";
 
-    if (selectedTemplateId) {
+    if (selectedTemplateId && selectedTemplateId !== "none") {
       // Use saved template for any communication mode
       const savedTemplate = savedTemplates.find((t: any) => t.id.toString() === selectedTemplateId);
       if (savedTemplate) {
@@ -242,7 +242,7 @@ export default function CustomerCommunications() {
         return;
       }
     } else {
-      // When no template is selected, require custom message and subject
+      // When no template is selected or "none" is selected, require custom message and subject
       if (!customMessage.trim() || !customSubject.trim()) {
         toast({
           title: "Missing Information",
@@ -729,7 +729,7 @@ export default function CustomerCommunications() {
                     <SelectValue placeholder="Select a template or compose custom message below" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No template - Use custom message</SelectItem>
+                    <SelectItem value="none">No template - Use custom message</SelectItem>
                     {savedTemplates.length > 0 ? (
                       savedTemplates.map((template: any) => (
                         <SelectItem key={template.id} value={template.id.toString()}>
@@ -764,7 +764,7 @@ export default function CustomerCommunications() {
                   />
                 </div>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || (!selectedTemplateId && (!customMessage.trim() || !customSubject.trim()))}
+                  disabled={selectedVehicles.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-blue-600 hover:bg-blue-700"
                   data-testid="button-preview-maintenance"
@@ -918,7 +918,7 @@ export default function CustomerCommunications() {
                     <SelectValue placeholder="Select a template or compose custom message below" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No template - Use custom message</SelectItem>
+                    <SelectItem value="none">No template - Use custom message</SelectItem>
                     {savedTemplates.length > 0 ? (
                       savedTemplates.map((template: any) => (
                         <SelectItem key={template.id} value={template.id.toString()}>
@@ -953,7 +953,7 @@ export default function CustomerCommunications() {
                   />
                 </div>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || (!selectedTemplateId && (!customMessage.trim() || !customSubject.trim()))}
+                  disabled={selectedVehicles.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-green-600 hover:bg-green-700"
                   data-testid="button-preview-custom"
