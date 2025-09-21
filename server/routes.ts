@@ -565,7 +565,27 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
     } catch (error) {
       console.error("Error creating vehicle:", error);
-      res.status(400).json({ message: "Failed to create vehicle", error });
+      
+      // Check for duplicate license plate error (PostgreSQL unique constraint violation)
+      if (error && typeof error === 'object' && 'code' in error) {
+        // PostgreSQL error code 23505 = unique_violation
+        if (error.code === '23505' || error.code === 23505) {
+          // Check if it's specifically about license_plate
+          const errorMessage = String(error.message || '').toLowerCase();
+          if (errorMessage.includes('license_plate') || errorMessage.includes('duplicate key')) {
+            return res.status(409).json({ 
+              message: "A vehicle with this license plate already exists. Please use a different license plate or edit the existing vehicle.",
+              field: "licensePlate"
+            });
+          }
+        }
+      }
+      
+      // Generic error for other types of failures
+      res.status(400).json({ 
+        message: "Failed to create vehicle. Please check your data and try again.", 
+        error: error && typeof error === 'object' && 'message' in error ? error.message : String(error)
+      });
     }
   });
 

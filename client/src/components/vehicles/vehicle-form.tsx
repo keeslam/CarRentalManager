@@ -236,9 +236,29 @@ export function VehicleForm({
     },
     onError: (error: any) => {
       console.error("Mutation error:", error);
+      
+      // Handle specific error types based on status code or error content
+      let title = "Error";
+      let description = `Failed to ${editMode ? "update" : "create"} vehicle: ${error.message}`;
+      
+      // Check for duplicate license plate error (409 status or specific message)
+      if (error.status === 409 || error.message?.includes("license plate already exists")) {
+        title = "Duplicate License Plate";
+        description = "A vehicle with this license plate already exists. Please use a different license plate or edit the existing vehicle.";
+        
+        // Highlight the license plate field
+        form.setError("licensePlate", {
+          type: "duplicate",
+          message: "This license plate is already in use"
+        });
+      } else if (error.message?.includes("required")) {
+        title = "Missing Information";
+        description = "Please fill in all required fields: License Plate, Brand, and Model.";
+      }
+      
       toast({
-        title: "Error",
-        description: `Failed to ${editMode ? "update" : "create"} vehicle: ${error.message}`,
+        title,
+        description,
         variant: "destructive",
       });
     },
