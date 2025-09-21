@@ -94,6 +94,7 @@ interface ReservationFormProps {
   initialVehicleId?: string;
   initialCustomerId?: string;
   initialStartDate?: string;
+  onSuccess?: (reservation: Reservation) => void;
 }
 
 export function ReservationForm({ 
@@ -101,7 +102,8 @@ export function ReservationForm({
   initialData,
   initialVehicleId,
   initialCustomerId,
-  initialStartDate
+  initialStartDate,
+  onSuccess
 }: ReservationFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -489,13 +491,18 @@ export function ReservationForm({
       // Force refetch if needed
       queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
       
-      // If editing, navigate back to the details page, otherwise go to the list
-      if (editMode && initialData?.id) {
-        // Navigate to reservation details page
-        navigate(`/reservations/${initialData.id}`);
+      // If onSuccess callback is provided, use it instead of navigating
+      if (onSuccess) {
+        onSuccess(data);
       } else {
-        // Navigate back to reservations list
-        navigate("/reservations");
+        // Default navigation behavior when no callback is provided
+        if (editMode && initialData?.id) {
+          // Navigate to reservation details page
+          navigate(`/reservations/${initialData.id}`);
+        } else {
+          // Navigate back to reservations list
+          navigate("/reservations");
+        }
       }
     },
     onError: (error) => {

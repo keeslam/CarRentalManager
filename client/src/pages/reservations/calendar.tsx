@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,9 @@ type VehicleFilters = {
 };
 
 export default function ReservationCalendarPage() {
+  // Query client for cache invalidation
+  const queryClient = useQueryClient();
+  
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [vehicleFilters, setVehicleFilters] = useState<VehicleFilters>({
@@ -844,6 +847,13 @@ export default function ReservationCalendarPage() {
             <ReservationForm 
               editMode={true} 
               initialData={selectedReservation}
+              onSuccess={() => {
+                // Close the edit dialog and stay on calendar
+                setEditDialogOpen(false);
+                setSelectedReservation(null);
+                // Refresh calendar data
+                queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              }}
             />
           )}
         </DialogContent>
