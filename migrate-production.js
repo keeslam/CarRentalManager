@@ -7,7 +7,8 @@ async function migrateDatabase() {
   
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not set');
-    process.exit(1);
+    console.log('⚠️  Skipping database migration. App will start without migration.');
+    return;
   }
   
   console.log('✅ DATABASE_URL found');
@@ -72,9 +73,14 @@ async function migrateDatabase() {
     
   } catch (error) {
     console.error('❌ Database migration failed:', error);
-    process.exit(1);
+    console.log('⚠️  Migration failed but app will continue startup.');
+    console.log('   You may need to run migrations manually or check database connectivity.');
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch (endError) {
+      console.log('   (Note: Database connection cleanup also failed)');
+    }
   }
 }
 
