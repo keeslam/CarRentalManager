@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { vehicles, customers, reservations, emailLogs } from '../../shared/schema.js';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
-import { sendEmail, EmailTemplates } from '../utils/mailersend-service.js';
+import { sendEmail, EmailTemplates } from '../utils/sendgrid-service.js';
 
 const router = Router();
 
@@ -112,7 +112,7 @@ router.post('/send', async (req, res) => {
 
       try {
         let emailContent;
-        let fromEmail = 'info@test-2p0347z2xo7lzdrn.mlsender.net'; // MailerSend verified domain
+        let fromEmail = 'notifications@autoleaselam.nl'; // SendGrid - can use any verified sender
 
         switch (template) {
           case 'apk':
