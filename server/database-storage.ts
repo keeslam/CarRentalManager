@@ -924,43 +924,54 @@ export class DatabaseStorage implements IStorage {
   
   async createPdfTemplate(templateData: InsertPdfTemplate): Promise<PdfTemplate> {
     try {
+      console.log('Creating PDF template with data:', templateData);
+      
       // If setting as default, update all other templates to not be default
       if (templateData.isDefault) {
-        // Use SQL directly to avoid column name mismatches
         await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
-        
-        // Make sure fields is properly serialized if it's an object
-        if (templateData.fields && typeof templateData.fields === 'object' && !Array.isArray(templateData.fields)) {
-          templateData.fields = [];
+      }
+      
+      // Ensure fields is always an array (start with empty array for new templates)
+      let fieldsToStore = templateData.fields || [];
+      if (typeof fieldsToStore === 'string') {
+        try {
+          fieldsToStore = JSON.parse(fieldsToStore);
+        } catch {
+          fieldsToStore = [];
         }
       }
       
-      // Handle column name mismatch
-      const valuesToInsert: any = { 
-        name: templateData.name,
-        fields: templateData.fields 
-      };
+      // Convert fields to JSON string for storage
+      const fieldsJson = JSON.stringify(fieldsToStore);
+      const isDefault = templateData.isDefault || false;
+      const templateName = templateData.name || 'Untitled Template';
       
-      // Handle isDefault -> is_default mapping
-      if (templateData.isDefault !== undefined) {
-        valuesToInsert.is_default = templateData.isDefault;
-      }
+      console.log('Inserting template:', {
+        name: templateName,
+        fields: fieldsJson,
+        is_default: isDefault
+      });
       
-      // Use SQL to avoid column name issues
-      const result = await db.execute(
-        sql`INSERT INTO pdf_templates (name, fields, is_default) 
-            VALUES (${valuesToInsert.name}, ${JSON.stringify(valuesToInsert.fields)}, ${valuesToInsert.is_default || false})
-            RETURNING *`
-      );
+      // Use parameterized query for safety
+      const result = await db.execute(sql`
+        INSERT INTO pdf_templates (name, fields, is_default) 
+        VALUES (${templateName}, ${fieldsJson}, ${isDefault})
+        RETURNING *
+      `);
+      
+      console.log('Insert result:', result);
       
       if (result.length > 0) {
-        return result[0] as PdfTemplate;
+        const template = result[0] as PdfTemplate;
+        console.log('Template created successfully:', template);
+        return template;
       }
       
-      throw new Error('Failed to create PDF template');
+      throw new Error('Failed to create PDF template - no rows returned');
     } catch (error) {
       console.error('Error creating PDF template:', error);
-      throw error;
+      console.error('Template data:', templateData);
+      throw new Error(`Failed to create PDF template: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
