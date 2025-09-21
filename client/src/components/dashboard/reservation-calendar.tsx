@@ -272,7 +272,7 @@ export function ReservationCalendar() {
                           <TooltipTrigger asChild>
                             <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                               <Button
-                                onClick={() => navigate(`/reservations/add?date=${format(day, 'yyyy-MM-dd')}`)}
+                                onClick={() => navigate(`/reservations/add?date=${safeFormat(day, 'yyyy-MM-dd', '1970-01-01')}`)}
                                 size="icon"
                                 variant="ghost"
                                 className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
@@ -290,8 +290,8 @@ export function ReservationCalendar() {
                       {/* Show up to 3 reservations */}
                       <div className="space-y-1">
                         {dayReservations && dayReservations.slice(0, 3).map(res => {
-                          const startDate = res.startDate ? parseISO(res.startDate) : null;
-                          const endDate = res.endDate ? parseISO(res.endDate) : null;
+                          const startDate = safeParseDateISO(res.startDate);
+                          const endDate = safeParseDateISO(res.endDate);
                           const isPickupDay = startDate ? isSameDay(day, startDate) : false;
                           const isReturnDay = endDate ? isSameDay(day, endDate) : false;
                           const rentalDuration = startDate && endDate ? 
@@ -379,10 +379,10 @@ export function ReservationCalendar() {
                                     <div>
                                       <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
-                                          <span className="text-gray-500">Start:</span> {res.startDate ? format(parseISO(res.startDate), 'MMM d, yyyy') : 'Not set'}
+                                          <span className="text-gray-500">Start:</span> {res.startDate ? safeFormat(safeParseDateISO(res.startDate), 'MMM d, yyyy', 'Invalid date') : 'Not set'}
                                         </div>
                                         <div>
-                                          <span className="text-gray-500">End:</span> {res.endDate ? format(parseISO(res.endDate), 'MMM d, yyyy') : 'Open-ended'}
+                                          <span className="text-gray-500">End:</span> {res.endDate ? safeFormat(safeParseDateISO(res.endDate), 'MMM d, yyyy', 'Invalid date') : 'Open-ended'}
                                         </div>
                                         <div className="col-span-2">
                                           <span className="text-gray-500">Duration:</span> {rentalDuration} {rentalDuration === 1 ? 'day' : 'days'}
@@ -465,7 +465,7 @@ export function ReservationCalendar() {
                         {dayReservations && dayReservations.length > 3 && (
                           <div 
                             className="text-xs text-gray-500 cursor-pointer hover:underline"
-                            onClick={() => navigate(`/reservations/calendar?date=${format(day, 'yyyy-MM-dd')}`)}
+                            onClick={() => navigate(`/reservations/calendar?date=${safeFormat(day, 'yyyy-MM-dd', '1970-01-01')}`)}
                           >
                             +{dayReservations.length - 3} more
                           </div>
