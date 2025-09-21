@@ -335,6 +335,42 @@ export const insertCustomNotificationSchema = createInsertSchema(customNotificat
 export type CustomNotification = typeof customNotifications.$inferSelect;
 export type InsertCustomNotification = z.infer<typeof insertCustomNotificationSchema>;
 
+// Email Templates table
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+  lastUsed: text("last_used"),
+});
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates)
+  .omit({ id: true, createdAt: true, updatedAt: true, lastUsed: true });
+
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+
+// Email Logs table
+export const emailLogs = pgTable("email_logs", {
+  id: serial("id").primaryKey(),
+  template: text("template").notNull(), // 'apk', 'maintenance', 'custom'
+  subject: text("subject").notNull(),
+  recipients: integer("recipients").notNull(),
+  emailsSent: integer("emails_sent").notNull().default(0),
+  emailsFailed: integer("emails_failed").notNull().default(0),
+  failureReason: text("failure_reason"),
+  vehicleIds: jsonb("vehicle_ids").$type<number[]>().default([]).notNull(),
+  sentAt: text("sent_at").notNull(),
+});
+
+export const insertEmailLogSchema = createInsertSchema(emailLogs)
+  .omit({ id: true });
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
+
 // Backup Settings table
 export const backupSettings = pgTable("backup_settings", {
   id: serial("id").primaryKey(),

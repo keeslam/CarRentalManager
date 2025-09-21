@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { vehicles, customers, reservations } from '../../shared/schema.js';
+import { vehicles, customers, reservations, emailLogs } from '../../shared/schema.js';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { sendEmail, EmailTemplates } from '../utils/mailersend-service.js';
 
@@ -113,6 +113,22 @@ router.post('/send', async (req, res) => {
     }
 
     console.log('Notification results:', results);
+
+    // Log the email sending activity
+    try {
+      await db.insert(emailLogs).values({
+        template: template,
+        subject: emailContent.subject,
+        recipients: vehicleData.length,
+        emailsSent: results.sent,
+        emailsFailed: results.failed,
+        failureReason: results.errors.length > 0 ? results.errors.join('; ') : null,
+        vehicleIds: vehicleIds,
+        sentAt: new Date().toISOString(),
+      });
+    } catch (logError) {
+      console.error('Failed to log email activity:', logError);
+    }
 
     res.json({
       success: true,
