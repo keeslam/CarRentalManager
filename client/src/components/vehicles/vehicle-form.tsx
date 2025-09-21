@@ -1051,6 +1051,9 @@ export function VehicleForm({
                               if (checked) {
                                 // If registeredTo is turned on, turn off company (as boolean for UI)
                                 form.setValue('company', false);
+                                // Clear company date and set registration date to today
+                                form.setValue('companyDate', '');
+                                form.setValue('registeredToDate', new Date().toISOString().split('T')[0]);
                               }
                             }}
                           />
@@ -1101,6 +1104,9 @@ export function VehicleForm({
                               if (checked) {
                                 // If company is turned on, turn off registeredTo (as boolean for UI)
                                 form.setValue('registeredTo', false);
+                                // Clear registration date and set company date to today
+                                form.setValue('registeredToDate', '');
+                                form.setValue('companyDate', new Date().toISOString().split('T')[0]);
                               }
                             }}
                           />
