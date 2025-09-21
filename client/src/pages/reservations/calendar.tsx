@@ -498,7 +498,7 @@ export default function ReservationCalendarPage() {
                     return (
                       <div
                         key={dayIndex}
-                        className={`min-h-[100px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
+                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
                         onClick={(e) => {
                           if (isCurrentMonth) {
                             const allDayReservations = getReservationsForDate(day);
@@ -535,19 +535,19 @@ export default function ReservationCalendarPage() {
                             </Button>
                           </div>
                         )}
-                        <div className="flex justify-between items-center mb-2">
-                          <span className={`text-sm font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''}`}>
+                        <div className="flex justify-between items-center mb-3">
+                          <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
                             {format(day, "d")}
                           </span>
                           {dayReservations.length > 0 && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-sm font-medium">
                               {dayReservations.length}
                             </Badge>
                           )}
                         </div>
                         
                         {/* Show up to 5 reservations in month view */}
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {dayReservations.slice(0, 5).map(res => {
                             try {
                               const startDate = safeParseDateISO(res.startDate);
@@ -565,22 +565,22 @@ export default function ReservationCalendarPage() {
                               <HoverCard key={res.id} openDelay={300} closeDelay={200}>
                                 <HoverCardTrigger asChild>
                                   <div 
-                                    className={`px-1 py-0.5 text-xs truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                                    className={`px-2 py-1.5 text-sm truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       console.log('Main reservation item clicked for:', res.id);
                                       handleViewReservation(res);
                                     }}
                                   >
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                       <div className="flex justify-between items-center">
                                         <div className="truncate flex items-center">
                                           {displayLicensePlate(res.vehicle?.licensePlate || '')}
                                           {isPickupDay && 
-                                            <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                            <span className="ml-1 inline-block bg-green-200 text-green-800 text-[10px] px-1 rounded-sm font-medium">out</span>
                                           }
                                           {isReturnDay && 
-                                            <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                            <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[10px] px-1 rounded-sm font-medium">in</span>
                                           }
                                         </div>
                                       
@@ -600,11 +600,8 @@ export default function ReservationCalendarPage() {
                                       </div>
                                       
                                       {/* Customer information */}
-                                      <div className="text-[10px] text-gray-600 truncate">
-                                        {res.customer?.company ? 
-                                          `${res.customer.company}` : 
-                                          `${res.customer?.firstName || ''} ${res.customer?.lastName || ''}`.trim() || res.customer?.name || 'No customer'
-                                        }
+                                      <div className="text-sm text-gray-600 truncate font-medium">
+                                        {res.customer?.name || 'No customer'}
                                       </div>
                                     </div>
                                   </div>
@@ -744,7 +741,7 @@ export default function ReservationCalendarPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-auto p-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
+                              className="h-auto p-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 console.log('More button clicked for day:', format(day, 'yyyy-MM-dd'));
