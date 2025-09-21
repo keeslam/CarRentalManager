@@ -112,7 +112,7 @@ router.post('/send', async (req, res) => {
 
       try {
         let emailContent;
-        let fromEmail = 'info@trial-o65qngrwnj6g7k87.mlsender.net'; // MailerSend trial domain - always verified
+        let fromEmail = 'info@test-2p0347z2xo7lzdrn.mlsender.net'; // MailerSend verified domain
 
         switch (template) {
           case 'apk':
