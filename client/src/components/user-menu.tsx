@@ -62,9 +62,9 @@ export function UserMenu() {
             multilanguagePage: true
           }, 'google_translate_element');
           
-          // Hide Google Translate elements immediately after initialization
+          // Clean up Google Translate banners but keep dropdown visible
           setTimeout(() => {
-            // Hide banner frame
+            // Hide ONLY the unwanted banner elements
             const bannerFrame = document.querySelector('.goog-te-banner-frame');
             if (bannerFrame) {
               (bannerFrame as HTMLElement).style.display = 'none';
@@ -76,10 +76,18 @@ export function UserMenu() {
               (bar as HTMLElement).style.display = 'none';
             });
             
-            // Reset body top margin
+            // Ensure dropdown is visible and styled
+            const dropdown = document.querySelector('#google_translate_element .goog-te-combo');
+            if (dropdown) {
+              (dropdown as HTMLElement).style.display = 'block';
+              (dropdown as HTMLElement).style.visibility = 'visible';
+              (dropdown as HTMLElement).style.opacity = '1';
+            }
+            
+            // Reset body positioning
             document.body.style.top = '0';
             document.body.style.marginTop = '0';
-          }, 500);
+          }, 200);
         }
       };
 

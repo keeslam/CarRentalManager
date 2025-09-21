@@ -87,7 +87,7 @@
   width: 100%;
 }
 
-/* Completely hide Google Translate branding and banner */
+/* Hide ONLY Google Translate banners and notifications, keep dropdown visible */
 .goog-te-banner-frame,
 .goog-te-balloon-frame,
 .goog-te-balloon,
@@ -96,50 +96,45 @@
   display: none !important;
 }
 
-/* Remove text highlighting and selection colors */
+/* Remove text highlighting */
 .goog-text-highlight {
   background-color: transparent !important;
   box-shadow: none !important;
 }
 
-/* Hide notification and alert messages */
+/* Hide loading spinners */
 .goog-te-spinner,
-.goog-te-progress,
-.goog-te-loading {
+.goog-te-progress {
   display: none !important;
 }
 
-/* Hide the "Original text" tooltip */
+/* Hide tooltips */
 .goog-te-tooltip {
   display: none !important;
 }
 
-/* Style the body when Google Translate is active */
+/* Keep body positioning normal */
 body.translated-ltr,
 body.translated-rtl {
   top: 0 !important;
 }
 
-/* Remove margin when Google Translate is active */
 body {
   top: 0 !important;
 }
 
-/* Hide Google Translate's added elements */
-.skiptranslate {
+/* Hide Google branding link but keep dropdown */
+.google-translate-widget .goog-te-gadget > span > a {
   display: none !important;
 }
 
-/* Clean up any remaining Google Translate elements */
-#goog-gt-tt,
-.goog-te-menu-value span:first-child {
-  display: none !important;
-}
-
-.goog-te-menu-value:before {
-  content: 'Translate' !important;
-}
-
-.goog-te-gadget {
-  font-family: inherit !important;
+/* Style the visible dropdown */
+.google-translate-widget .goog-te-gadget .goog-te-combo {
+  font-size: 12px !important;
+  padding: 4px 6px !important;
+  border-radius: 4px !important;
+  border: 1px solid #d1d5db !important;
+  background: white !important;
+  color: #374151 !important;
+  width: 100% !important;
 }
