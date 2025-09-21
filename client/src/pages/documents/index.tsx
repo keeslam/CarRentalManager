@@ -33,6 +33,7 @@ export default function DocumentsIndex() {
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [documentToPrint, setDocumentToPrint] = useState<Document | null>(null);
+  const [iframeError, setIframeError] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,16 +94,49 @@ export default function DocumentsIndex() {
   const handlePrintDocument = (document: Document) => {
     setDocumentToPrint(document);
     setPrintDialogOpen(true);
+    setIframeError(false);
   };
   
   // Print the document from the preview
   const printDocument = () => {
     if (documentToPrint) {
-      const iframe = document.getElementById('print-preview-iframe') as HTMLIFrameElement;
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.print();
+      if (iframeError) {
+        // If iframe failed, open in new tab and print
+        const printUrl = `/api/documents/view/${documentToPrint.id}`;
+        const printWindow = window.open(printUrl, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 1000);
+          };
+        }
+      } else {
+        // Try to print from iframe
+        const iframe = document.getElementById('print-preview-iframe') as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.print();
+          } catch (error) {
+            // Fallback to new tab if iframe print fails
+            const printUrl = `/api/documents/view/${documentToPrint.id}`;
+            const printWindow = window.open(printUrl, '_blank');
+            if (printWindow) {
+              printWindow.onload = () => {
+                setTimeout(() => {
+                  printWindow.print();
+                }, 1000);
+              };
+            }
+          }
+        }
       }
     }
+  };
+  
+  // Handle iframe load error
+  const handleIframeError = () => {
+    setIframeError(true);
   };
   
   // Get unique document types
@@ -439,13 +473,47 @@ export default function DocumentsIndex() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex-1 overflow-hidden border rounded mb-4">
-            {documentToPrint && (
+            {documentToPrint && !iframeError && (
               <iframe
                 id="print-preview-iframe"
                 src={`/api/documents/view/${documentToPrint.id}`}
                 className="w-full h-full border-0"
                 title="Document Preview"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-top-navigation allow-downloads"
+                onError={handleIframeError}
+                onLoad={(e) => {
+                  // Check if iframe content is accessible
+                  try {
+                    const iframe = e.target as HTMLIFrameElement;
+                    if (!iframe.contentDocument && !iframe.contentWindow) {
+                      handleIframeError();
+                    }
+                  } catch (error) {
+                    handleIframeError();
+                  }
+                }}
               />
+            )}
+            {documentToPrint && iframeError && (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <div className="mb-4">
+                  <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Preview Blocked</h3>
+                <p className="text-gray-600 mb-4">
+                  Your browser blocked the document preview due to security settings. 
+                  You can still print the document - it will open in a new tab.
+                </p>
+                <Button 
+                  onClick={() => window.open(`/api/documents/view/${documentToPrint.id}`, '_blank')}
+                  variant="outline"
+                  className="mb-2"
+                >
+                  Open in New Tab
+                </Button>
+              </div>
             )}
           </div>
           <AlertDialogFooter className="flex-shrink-0">
