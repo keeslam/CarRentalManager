@@ -587,9 +587,15 @@ export function prepareContractData(reservation: Reservation) {
   
   // Calculate duration in days
   const startDate = new Date(reservation.startDate);
-  const endDate = new Date(reservation.endDate);
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const endDate = reservation.endDate && reservation.endDate.trim() !== '' 
+    ? new Date(reservation.endDate) 
+    : null;
+  
+  let diffDays = 1; // Default to 1 day
+  if (endDate && !isNaN(endDate.getTime())) {
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
   
   // Parse totalPrice as a number if it's a string
   const totalPrice = typeof reservation.totalPrice === 'string' 
@@ -610,7 +616,7 @@ export function prepareContractData(reservation: Reservation) {
     customerPhone: customer.phone || "Unknown",
     driverLicense: customer.driverLicenseNumber || "Unknown",
     startDate: format(startDate, 'MMMM d, yyyy'),
-    endDate: format(endDate, 'MMMM d, yyyy'),
+    endDate: endDate ? format(endDate, 'MMMM d, yyyy') : 'To be determined',
     duration: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,
     totalPrice: formatCurrency(totalPrice),
     vehicleId: reservation.vehicleId || 0,  // Add vehicleId for document cache invalidation

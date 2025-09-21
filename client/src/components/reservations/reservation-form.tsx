@@ -666,7 +666,7 @@ export function ReservationForm({
     if (createdReservationId) {
       generateContractMutation.mutate(createdReservationId);
     } else {
-      generateContractMutation.mutate();
+      generateContractMutation.mutate(undefined);
     }
   };
 
