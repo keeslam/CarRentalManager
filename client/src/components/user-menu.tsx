@@ -58,8 +58,28 @@ export function UserMenu() {
             includedLanguages: 'en,nl,de,fr,es,it,pt,ru,ja,ko,zh-CN,ar,hi',
             layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
             autoDisplay: false,
-            gaTrack: false
+            gaTrack: false,
+            multilanguagePage: true
           }, 'google_translate_element');
+          
+          // Hide Google Translate elements immediately after initialization
+          setTimeout(() => {
+            // Hide banner frame
+            const bannerFrame = document.querySelector('.goog-te-banner-frame');
+            if (bannerFrame) {
+              (bannerFrame as HTMLElement).style.display = 'none';
+            }
+            
+            // Hide notification bars
+            const notificationBars = document.querySelectorAll('.goog-te-balloon-frame, .goog-te-balloon, .goog-te-ftab');
+            notificationBars.forEach(bar => {
+              (bar as HTMLElement).style.display = 'none';
+            });
+            
+            // Reset body top margin
+            document.body.style.top = '0';
+            document.body.style.marginTop = '0';
+          }, 500);
         }
       };
 
