@@ -5,35 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Car Rental Management System</title>
     
-    <!-- Google Translate Widget -->
-    <script type="text/javascript">
-      function googleTranslateElementInit() {
-        // Google Translate API will be available globally
-        console.log('Google Translate API loaded');
-        
-        // Only hide unwanted Google Translate elements, keep dropdown visible
-        setInterval(function() {
-          // Hide ONLY banner and notification elements, NOT the dropdown
-          const unwantedElements = document.querySelectorAll('.goog-te-banner-frame, .goog-te-balloon-frame, .goog-te-balloon, .goog-te-ftab');
-          unwantedElements.forEach(function(el) {
-            el.style.display = 'none';
-          });
-          
-          // Reset body positioning
-          if (document.body.style.top !== '0px') {
-            document.body.style.top = '0';
-            document.body.style.marginTop = '0';
-          }
-          
-          // Ensure the actual dropdown is visible
-          const dropdown = document.querySelector('#google_translate_element .goog-te-combo');
-          if (dropdown) {
-            dropdown.style.display = 'block';
-          }
-        }, 500);
-      }
-    </script>
-    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </head>
   <body>
     <div id="root"></div>
