@@ -210,9 +210,14 @@ export function ReservationCalendar() {
                   const isToday = isSameDay(day, new Date());
                   
                   // Only get reservations starting or ending on this day
-                  const dayReservations = reservations?.filter(res => 
-                    (isSameDay(day, parseISO(res.startDate)) || isSameDay(day, parseISO(res.endDate)))
-                  ) || [];
+                  const dayReservations = reservations?.filter(res => {
+                    const startDate = res.startDate ? parseISO(res.startDate) : null;
+                    const endDate = res.endDate ? parseISO(res.endDate) : null;
+                    return (
+                      (startDate && isSameDay(day, startDate)) || 
+                      (endDate && isSameDay(day, endDate))
+                    );
+                  }) || [];
                   
                   return (
                     <div
@@ -254,12 +259,12 @@ export function ReservationCalendar() {
                       {/* Show up to 3 reservations */}
                       <div className="space-y-1">
                         {dayReservations && dayReservations.slice(0, 3).map(res => {
-                          const isPickupDay = isSameDay(day, parseISO(res.startDate));
-                          const isReturnDay = isSameDay(day, parseISO(res.endDate));
-                          const rentalDuration = differenceInDays(
-                            parseISO(res.endDate),
-                            parseISO(res.startDate)
-                          ) + 1;
+                          const startDate = res.startDate ? parseISO(res.startDate) : null;
+                          const endDate = res.endDate ? parseISO(res.endDate) : null;
+                          const isPickupDay = startDate ? isSameDay(day, startDate) : false;
+                          const isReturnDay = endDate ? isSameDay(day, endDate) : false;
+                          const rentalDuration = startDate && endDate ? 
+                            differenceInDays(endDate, startDate) + 1 : 1;
                           
                           return (
                             <HoverCard key={res.id} openDelay={300} closeDelay={200}>
@@ -343,10 +348,10 @@ export function ReservationCalendar() {
                                     <div>
                                       <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
-                                          <span className="text-gray-500">Start:</span> {format(parseISO(res.startDate), 'MMM d, yyyy')}
+                                          <span className="text-gray-500">Start:</span> {res.startDate ? format(parseISO(res.startDate), 'MMM d, yyyy') : 'Not set'}
                                         </div>
                                         <div>
-                                          <span className="text-gray-500">End:</span> {format(parseISO(res.endDate), 'MMM d, yyyy')}
+                                          <span className="text-gray-500">End:</span> {res.endDate ? format(parseISO(res.endDate), 'MMM d, yyyy') : 'Open-ended'}
                                         </div>
                                         <div className="col-span-2">
                                           <span className="text-gray-500">Duration:</span> {rentalDuration} {rentalDuration === 1 ? 'day' : 'days'}
@@ -359,19 +364,19 @@ export function ReservationCalendar() {
                                   <div className="px-3 py-1 flex items-start space-x-2">
                                     <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
                                     <div className="grid grid-cols-2 gap-2 text-xs">
-                                      {res.price ? (
+                                      {(res as any).totalPrice ? (
                                         <div>
-                                          <span className="text-gray-500">Price:</span> {formatCurrency(res.price)}
+                                          <span className="text-gray-500">Price:</span> {formatCurrency((res as any).totalPrice)}
                                         </div>
                                       ) : null}
-                                      {res.startMileage ? (
+                                      {(res as any).startMileage ? (
                                         <div>
-                                          <span className="text-gray-500">Start Mileage:</span> {res.startMileage} km
+                                          <span className="text-gray-500">Start Mileage:</span> {(res as any).startMileage} km
                                         </div>
                                       ) : null}
-                                      {res.returnMileage ? (
+                                      {(res as any).departureMileage ? (
                                         <div>
-                                          <span className="text-gray-500">Return Mileage:</span> {res.returnMileage} km
+                                          <span className="text-gray-500">Return Mileage:</span> {(res as any).departureMileage} km
                                         </div>
                                       ) : null}
                                     </div>
