@@ -546,9 +546,9 @@ export default function ReservationCalendarPage() {
                           )}
                         </div>
                         
-                        {/* Show up to 3 reservations in month view */}
+                        {/* Show up to 5 reservations in month view */}
                         <div className="space-y-1">
-                          {dayReservations.slice(0, 3).map(res => {
+                          {dayReservations.slice(0, 5).map(res => {
                             try {
                               const startDate = safeParseDateISO(res.startDate);
                               const endDate = safeParseDateISO(res.endDate);
@@ -572,16 +572,17 @@ export default function ReservationCalendarPage() {
                                       handleViewReservation(res);
                                     }}
                                   >
-                                    <div className="flex justify-between items-center">
-                                      <div className="truncate">
-                                        {displayLicensePlate(res.vehicle?.licensePlate || '')}
-                                        {isPickupDay && 
-                                          <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
-                                        }
-                                        {isReturnDay && 
-                                          <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
-                                        }
-                                      </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex justify-between items-center">
+                                        <div className="truncate flex items-center">
+                                          {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                          {isPickupDay && 
+                                            <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
+                                          }
+                                          {isReturnDay && 
+                                            <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[8px] px-1 rounded-sm">in</span>
+                                          }
+                                        </div>
                                       
                                       {/* Edit button - only visible on hover */}
                                       <Button
@@ -596,6 +597,15 @@ export default function ReservationCalendarPage() {
                                       >
                                         <Edit className="h-2 w-2" />
                                       </Button>
+                                      </div>
+                                      
+                                      {/* Customer information */}
+                                      <div className="text-[10px] text-gray-600 truncate">
+                                        {res.customer?.company ? 
+                                          `${res.customer.company}` : 
+                                          `${res.customer?.firstName || ''} ${res.customer?.lastName || ''}`.trim() || res.customer?.name || 'No customer'
+                                        }
+                                      </div>
                                     </div>
                                   </div>
                                 </HoverCardTrigger>
@@ -730,7 +740,7 @@ export default function ReservationCalendarPage() {
                             }
                           })}
                           
-                          {dayReservations.length > 3 && (
+                          {dayReservations.length > 5 && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -742,7 +752,7 @@ export default function ReservationCalendarPage() {
                               }}
                               data-testid={`button-more-${format(day, 'yyyy-MM-dd')}`}
                             >
-                              +{dayReservations.length - 3} more
+                              +{dayReservations.length - 5} more
                             </Button>
                           )}
                         </div>
