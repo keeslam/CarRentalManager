@@ -2705,6 +2705,73 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Generate contract using default template
+  app.get("/api/contracts/generate-default/:reservationId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      // Load related vehicle and customer details
+      if (reservation.vehicleId) {
+        reservation.vehicle = await storage.getVehicle(reservation.vehicleId);
+      }
+      
+      if (reservation.customerId) {
+        reservation.customer = await storage.getCustomer(reservation.customerId);
+      }
+
+      // Get the default PDF template
+      const defaultTemplate = await storage.getDefaultPdfTemplate();
+      
+      let pdfBuffer: Buffer;
+      
+      if (defaultTemplate) {
+        console.log(`Generating contract with default template: ${defaultTemplate.name} (ID: ${defaultTemplate.id})`);
+        
+        // Make sure the template fields are properly formatted
+        if (defaultTemplate.fields && typeof defaultTemplate.fields === 'string') {
+          try {
+            const parsedFields = JSON.parse(defaultTemplate.fields);
+            defaultTemplate.fields = parsedFields;
+          } catch (e) {
+            console.error('Error parsing default template fields:', e);
+          }
+        }
+        
+        // Use the imported function from pdf-generator.ts
+        const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+        pdfBuffer = await generateRentalContractFromTemplate(reservation, defaultTemplate);
+        console.log("Successfully generated PDF with default template");
+      } else {
+        console.log("No default template found, using standard template");
+        // Fall back to standard template if no default template is available
+        const { generateRentalContract } = await import('./utils/pdf-generator');
+        pdfBuffer = await generateRentalContract(reservation);
+      }
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=contract_${reservationId}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating contract with default template:", error);
+      res.status(500).json({ 
+        message: "Failed to generate contract", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // Get contract data as JSON (for display in browser)
   app.get("/api/contracts/data/:reservationId", requireAuth, async (req: Request, res: Response) => {
     try {
