@@ -347,6 +347,8 @@ export function QuickActions() {
   const [selectedWorkshopVehicle, setSelectedWorkshopVehicle] = useState<Vehicle | null>(null);
   const [workshopSearchQuery, setWorkshopSearchQuery] = useState<string>("");
   const [workshopPlannerOpen, setWorkshopPlannerOpen] = useState(false);
+  const [plannerLoading, setPlannerLoading] = useState(true);
+  const [plannerError, setPlannerError] = useState(false);
   
   const { toast } = useToast();
   
@@ -1534,7 +1536,9 @@ export function QuickActions() {
                       <Button
                         onClick={() => {
                           if (selectedWorkshopVehicle) {
-                            // Show embedded planner instead of external redirect
+                            // Reset states and show embedded planner
+                            setPlannerLoading(true);
+                            setPlannerError(false);
                             setWorkshopPlannerOpen(true);
                             toast({
                               title: "Opening Workshop Planner",
@@ -1590,21 +1594,82 @@ export function QuickActions() {
                     </DialogHeader>
                     
                     <div className="flex-1 relative">
-                      <iframe
-                        src={`https://planner.garage.software/#/afspraken/4353313633393035/stap1?customer=Autolease%20Lam&vehicle=${encodeURIComponent(selectedWorkshopVehicle.licensePlate)}&brand=${encodeURIComponent(selectedWorkshopVehicle.brand)}&model=${encodeURIComponent(selectedWorkshopVehicle.model)}&notes=${encodeURIComponent(`Vehicle: ${selectedWorkshopVehicle.brand} ${selectedWorkshopVehicle.model} (${selectedWorkshopVehicle.licensePlate})${selectedWorkshopVehicle.chassisNumber ? ` - Chassis: ${selectedWorkshopVehicle.chassisNumber}` : ''}`)}`}
-                        className="w-full h-full border-0"
-                        title="Workshop Planner"
-                        allow="fullscreen"
-                        loading="lazy"
-                      />
+                      {!plannerError && (
+                        <iframe
+                          src={`https://planner.garage.software/#/afspraken/4353313633393035/stap1?customer=${encodeURIComponent('Autolease Lam')}&vehicle=${encodeURIComponent(selectedWorkshopVehicle.licensePlate || '')}&brand=${encodeURIComponent(selectedWorkshopVehicle.brand || '')}&model=${encodeURIComponent(selectedWorkshopVehicle.model || '')}&notes=${encodeURIComponent(`Vehicle: ${selectedWorkshopVehicle.brand || ''} ${selectedWorkshopVehicle.model || ''} (${selectedWorkshopVehicle.licensePlate || ''})${selectedWorkshopVehicle.chassisNumber ? ` - Chassis: ${selectedWorkshopVehicle.chassisNumber}` : ''}`)}`}
+                          className="w-full h-full border-0"
+                          title="Workshop Planner"
+                          allow="fullscreen"
+                          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                          referrerPolicy="no-referrer"
+                          onLoad={() => {
+                            setPlannerLoading(false);
+                            setPlannerError(false);
+                          }}
+                          onError={() => {
+                            setPlannerLoading(false);
+                            setPlannerError(true);
+                          }}
+                        />
+                      )}
                       
                       {/* Loading overlay */}
-                      <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center pointer-events-none">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                          <p className="text-sm text-gray-600">Loading workshop planner...</p>
+                      {plannerLoading && !plannerError && (
+                        <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-lg font-medium text-gray-800">Loading Workshop Planner...</p>
+                            <p className="text-sm text-gray-600 mt-2">Connecting to planner.garage.software</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      
+                      {/* Error state with fallback */}
+                      {plannerError && (
+                        <div className="absolute inset-0 bg-white flex items-center justify-center">
+                          <div className="text-center max-w-md mx-auto p-6">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <ActionIcon name="alert-circle" className="w-8 h-8 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Planner Unavailable</h3>
+                            <p className="text-sm text-gray-600 mb-6">
+                              The workshop planner couldn't be loaded. This might be due to security restrictions or the service being temporarily unavailable.
+                            </p>
+                            <div className="space-y-3">
+                              <Button
+                                onClick={() => {
+                                  setPlannerError(false);
+                                  setPlannerLoading(true);
+                                  // Force iframe reload by re-mounting
+                                  const iframe = document.querySelector('iframe[title="Workshop Planner"]') as HTMLIFrameElement;
+                                  if (iframe) {
+                                    iframe.src = iframe.src;
+                                  }
+                                }}
+                                className="w-full"
+                              >
+                                <ActionIcon name="refresh-cw" className="w-4 h-4 mr-2" />
+                                Try Again
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  const plannerUrl = `https://planner.garage.software/#/afspraken/4353313633393035/stap1?customer=${encodeURIComponent('Autolease Lam')}&vehicle=${encodeURIComponent(selectedWorkshopVehicle.licensePlate || '')}&brand=${encodeURIComponent(selectedWorkshopVehicle.brand || '')}&model=${encodeURIComponent(selectedWorkshopVehicle.model || '')}`;
+                                  window.open(plannerUrl, '_blank');
+                                  toast({
+                                    title: "Opening in New Tab",
+                                    description: "Workshop planner opened in a new browser tab",
+                                  });
+                                }}
+                                className="w-full"
+                              >
+                                <ActionIcon name="external-link" className="w-4 h-4 mr-2" />
+                                Open in New Tab
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Info bar at bottom */}
