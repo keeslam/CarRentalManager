@@ -11,6 +11,7 @@ const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
   subject: z.string().min(1, 'Subject is required'),
   content: z.string().min(1, 'Content is required'),
+  category: z.enum(['apk', 'maintenance', 'custom']).default('custom'),
 });
 
 const updateTemplateSchema = createTemplateSchema;
@@ -18,7 +19,22 @@ const updateTemplateSchema = createTemplateSchema;
 // Get all email templates
 router.get('/', async (req, res) => {
   try {
-    const templates = await db.select().from(emailTemplates);
+    const { category } = req.query;
+    
+    let templates;
+    
+    // Filter by category if provided
+    if (category && typeof category === 'string') {
+      const validCategories = ['apk', 'maintenance', 'custom'];
+      if (validCategories.includes(category)) {
+        templates = await db.select().from(emailTemplates).where(eq(emailTemplates.category, category));
+      } else {
+        templates = await db.select().from(emailTemplates);
+      }
+    } else {
+      templates = await db.select().from(emailTemplates);
+    }
+    
     res.json(templates);
   } catch (error) {
     console.error('Error fetching email templates:', error);
@@ -64,12 +80,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const { name, subject, content } = result.data;
+    const { name, subject, content, category } = result.data;
 
     const newTemplate = await db.insert(emailTemplates).values({
       name,
       subject,
       content,
+      category,
       createdAt: new Date().toISOString(),
     }).returning();
 
@@ -100,13 +117,14 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const { name, subject, content } = result.data;
+    const { name, subject, content, category } = result.data;
 
     const updatedTemplate = await db.update(emailTemplates)
       .set({
         name,
         subject,
         content,
+        category,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(emailTemplates.id, id))
