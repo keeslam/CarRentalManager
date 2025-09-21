@@ -699,14 +699,13 @@ export default function CustomerCommunications() {
               {/* Template Selection */}
               <div className="space-y-2">
                 <Label htmlFor="maintenance-template-select" className="text-sm font-medium">
-                  Email Template (Optional)
+                  Email Template
                 </Label>
                 <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                   <SelectTrigger className="w-full" data-testid="select-maintenance-template">
-                    <SelectValue placeholder="Select a template or compose custom message below" />
+                    <SelectValue placeholder="Select a maintenance reminder template" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No template - Use custom message</SelectItem>
                     {savedTemplates.length > 0 ? (
                       savedTemplates.map((template: any) => (
                         <SelectItem key={template.id} value={template.id.toString()}>
@@ -741,7 +740,7 @@ export default function CustomerCommunications() {
                   />
                 </div>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
+                  disabled={selectedVehicles.length === 0 || !selectedTemplateId}
                   onClick={generateEmailPreview}
                   className="bg-blue-600 hover:bg-blue-700"
                   data-testid="button-preview-maintenance"
