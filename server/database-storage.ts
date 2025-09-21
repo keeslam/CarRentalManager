@@ -972,18 +972,18 @@ export class DatabaseStorage implements IStorage {
         await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
       }
       
-      // Prepare set values
+      // Prepare set values with proper indexing
       const setClause: string[] = [];
       const values: any[] = [];
+      let paramIndex = 1;
       
       if (templateData.name !== undefined) {
-        setClause.push('name = $1');
+        setClause.push(`name = $${paramIndex++}`);
         values.push(templateData.name);
       }
       
       if (templateData.fields !== undefined) {
-        const fieldIdx = values.length + 1;
-        setClause.push(`fields = $${fieldIdx}`);
+        setClause.push(`fields = $${paramIndex++}`);
         
         // If fields is an object, convert to JSON string for storage
         if (typeof templateData.fields === 'object') {
@@ -994,19 +994,13 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (templateData.isDefault !== undefined) {
-        const defaultIdx = values.length + 1;
-        setClause.push(`is_default = $${defaultIdx}`);
+        setClause.push(`is_default = $${paramIndex++}`);
         values.push(templateData.isDefault);
       }
       
       // Always update the timestamp
-      const updatedAtIdx = values.length + 1;
-      setClause.push(`updated_at = $${updatedAtIdx}`);
+      setClause.push(`updated_at = $${paramIndex++}`);
       values.push(new Date());
-      
-      // ID parameter
-      const idIdx = values.length + 1;
-      values.push(id);
       
       if (setClause.length === 0) {
         console.log('No fields to update');
@@ -1014,11 +1008,15 @@ export class DatabaseStorage implements IStorage {
         return currentTemplate || undefined;
       }
       
-      // Create and execute SQL
+      // Add ID parameter at the end
+      const idParam = `$${paramIndex}`;
+      values.push(id);
+      
+      // Create and execute SQL with proper parameter indexing
       const queryString = `
         UPDATE pdf_templates 
         SET ${setClause.join(', ')}
-        WHERE id = $${idIdx}
+        WHERE id = ${idParam}
         RETURNING *
       `;
       

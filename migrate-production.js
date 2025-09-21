@@ -52,6 +52,33 @@ async function migrateDatabase() {
       console.log('✅ email_templates table already exists');
     }
 
+    // Check if email_logs table exists
+    const emailLogsCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'email_logs'
+    `);
+
+    if (emailLogsCheck.rows.length === 0) {
+      console.log('➕ Creating missing email_logs table...');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS public.email_logs (
+          id serial PRIMARY KEY,
+          template text NOT NULL,
+          subject text NOT NULL,
+          recipients integer NOT NULL,
+          emails_sent integer NOT NULL DEFAULT 0,
+          emails_failed integer NOT NULL DEFAULT 0,
+          failure_reason text,
+          vehicle_ids jsonb DEFAULT '[]' NOT NULL,
+          sent_at text NOT NULL
+        )
+      `);
+      console.log('✅ email_logs table created successfully');
+    } else {
+      console.log('✅ email_logs table already exists');
+    }
+
     // Check if production_date column exists
     const result = await client.query(`
       SELECT column_name 
