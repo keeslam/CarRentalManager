@@ -47,6 +47,24 @@ export function UserMenu() {
     };
   }, [menuRef]);
 
+  // Initialize Google Translate when menu opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        const element = document.getElementById('google_translate_element');
+        if (element && element.innerHTML === '' && (window as any).google?.translate) {
+          new (window as any).google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,nl,de,fr,es,it',
+            layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false,
+            gaTrack: false
+          }, 'google_translate_element');
+        }
+      }, 100);
+    }
+  }, [isOpen]);
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };
