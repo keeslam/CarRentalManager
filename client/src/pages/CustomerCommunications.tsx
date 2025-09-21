@@ -1101,7 +1101,6 @@ export default function CustomerCommunications() {
         </TabsContent>
 
           </Tabs>
-        </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
           <div className="flex items-center justify-between">
