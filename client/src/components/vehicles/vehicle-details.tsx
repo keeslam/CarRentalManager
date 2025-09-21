@@ -25,6 +25,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Bell, Mail } from "lucide-react";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -33,6 +45,8 @@ interface VehicleDetailsProps {
 export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
+  const [isApkReminderOpen, setIsApkReminderOpen] = useState(false);
+  const [customMessage, setCustomMessage] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -63,6 +77,40 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
       toast({
         title: "Error deleting vehicle",
         description: error.message || "Failed to delete vehicle. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Send APK reminder mutation
+  const sendApkReminderMutation = useMutation({
+    mutationFn: async ({ message }: { message: string }) => {
+      const response = await apiRequest("POST", "/api/notifications/send", {
+        vehicleIds: [vehicleId],
+        template: message.trim() ? "custom" : "apk",
+        customMessage: message.trim() || undefined,
+        customSubject: message.trim() ? "APK Inspection Reminder" : undefined,
+        emailFieldSelection: "auto"
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send APK reminder');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "APK reminder sent",
+        description: `Successfully sent ${data.sent} reminder(s) to customer(s) with reservations for this vehicle.`
+      });
+      setIsApkReminderOpen(false);
+      setCustomMessage("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error sending APK reminder",
+        description: error.message || "Failed to send APK reminder. Please try again.",
         variant: "destructive"
       });
     }
@@ -1240,10 +1288,70 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-4 flex gap-2">
                     <Button size="sm" variant={daysUntilApk <= 30 ? "default" : "outline"}>
                       Schedule APK Inspection
                     </Button>
+                    <Dialog open={isApkReminderOpen} onOpenChange={setIsApkReminderOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex items-center gap-2"
+                          data-testid="button-send-apk-reminder"
+                        >
+                          <Bell className="h-4 w-4" />
+                          Send APK Reminder
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Mail className="h-5 w-5" />
+                            Send APK Reminder
+                          </DialogTitle>
+                          <DialogDescription>
+                            Send an APK inspection reminder to customers who have reservations for {vehicle?.licensePlate}. 
+                            You can use the default APK template or add a custom message.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="custom-message">Custom Message (Optional)</Label>
+                            <Textarea
+                              id="custom-message"
+                              placeholder="Leave empty to use the default APK reminder template, or add a custom message..."
+                              value={customMessage}
+                              onChange={(e) => setCustomMessage(e.target.value)}
+                              rows={4}
+                              data-testid="textarea-custom-message"
+                            />
+                            <p className="text-sm text-gray-500">
+                              {customMessage.trim() ? "Will send custom message" : "Will use default APK reminder template"}
+                            </p>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setIsApkReminderOpen(false);
+                              setCustomMessage("");
+                            }}
+                            data-testid="button-cancel-reminder"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={() => sendApkReminderMutation.mutate({ message: customMessage })}
+                            disabled={sendApkReminderMutation.isPending}
+                            data-testid="button-send-reminder"
+                          >
+                            {sendApkReminderMutation.isPending ? "Sending..." : "Send Reminder"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
                 
