@@ -102,15 +102,15 @@ export default function AuthPage() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">{t('login')}</TabsTrigger>
-              <TabsTrigger value="register">{t('register')}</TabsTrigger>
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <Card>
                 <CardHeader>
-                  <CardTitle>{t('login')}</CardTitle>
-                  <CardDescription>{t('enterCredentials')}</CardDescription>
+                  <CardTitle>Login</CardTitle>
+                  <CardDescription>Enter your credentials to access your account</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...loginForm}>
@@ -120,9 +120,9 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t('username')}</FormLabel>
+                            <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input placeholder={t('yourUsername')} {...field} />
+                              <Input placeholder="Enter your username" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -133,9 +133,9 @@ export default function AuthPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t('password')}</FormLabel>
+                            <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder={t('yourPassword')} {...field} />
+                              <Input type="password" placeholder="Enter your password" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -146,7 +146,7 @@ export default function AuthPage() {
                         className="w-full" 
                         disabled={loginMutation.isPending}
                       >
-                        {loginMutation.isPending ? t('signingIn') : t('login')}
+                        {loginMutation.isPending ? "Signing In..." : "Login"}
                       </Button>
                     </form>
                   </Form>
