@@ -41,6 +41,37 @@ export function ReservationCalendar() {
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
 
+  // Safe date parsing and formatting functions to prevent errors
+  const safeParseDateISO = (dateString: string | null | undefined): Date | null => {
+    if (!dateString || dateString === 'undefined' || dateString === 'null') {
+      return null;
+    }
+    try {
+      const parsed = parseISO(dateString);
+      // Check if the parsed date is valid
+      if (isNaN(parsed.getTime())) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  // Safe format function to prevent format errors with invalid dates
+  const safeFormat = (date: Date | null | undefined, formatString: string, fallback: string = ''): string => {
+    if (!date) return fallback;
+    try {
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return fallback;
+      }
+      return format(date, formatString);
+    } catch {
+      return fallback;
+    }
+  };
+
   // Calculate date ranges for month view
   const dateRanges = useMemo(() => {
     // Month view calculations
@@ -226,7 +257,7 @@ export function ReservationCalendar() {
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className={`text-xs font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
-                          {format(day, "d")}
+                          {safeFormat(day, "d", "?")}
                         </span>
                         {dayReservations.length > 0 && (
                           <Badge variant="outline" className="text-xs">
