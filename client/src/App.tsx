@@ -24,6 +24,7 @@ import TemplateEditor from "@/pages/documents/template-editor";
 import ReportsPage from "@/pages/reports/index";
 import NotificationsPage from "@/pages/notifications/index";
 import CustomNotificationsPage from "@/pages/notifications/custom-notifications";
+import CustomerCommunications from "@/pages/CustomerCommunications";
 import SearchResults from "@/pages/search-results";
 import UsersIndex from "@/pages/users/index";
 import UserAdd from "@/pages/users/add";
@@ -71,6 +72,7 @@ function AppRoutes() {
         <ProtectedRoute path="/reports" component={ReportsPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
+        <ProtectedRoute path="/communications" component={CustomerCommunications} />
         <Route path="/search-results">
           {() => {
             const { user } = useAuth();
