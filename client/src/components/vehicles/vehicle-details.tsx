@@ -185,9 +185,27 @@ Contact us to schedule your appointment.
 Best regards,
 Autolease Lam`;
 
+    // Get template content from database or use default
+    let subject = apkTemplate?.subject || defaultSubject;
+    let content = apkTemplate?.content || defaultContent;
+
+    // Replace placeholders with actual values
+    const replacePlaceholders = (text: string) => {
+      return text
+        .replace(/\{customerName\}/g, customerName)
+        .replace(/\{vehiclePlate\}/g, vehicle.licensePlate || 'N/A')
+        .replace(/\{vehicleBrand\}/g, vehicle.brand || 'N/A')
+        .replace(/\{vehicleModel\}/g, vehicle.model || 'N/A')
+        .replace(/\{apkDate\}/g, expiryDate)
+        .replace(/\{licensePlate\}/g, vehicle.licensePlate || 'N/A')
+        .replace(/\{firstName\}/g, customer.firstName || 'Customer')
+        .replace(/\{lastName\}/g, customer.lastName || '')
+        .replace(/\{email\}/g, customer.email || 'N/A');
+    };
+
     return {
-      subject: apkTemplate?.subject || defaultSubject,
-      content: apkTemplate?.content || defaultContent
+      subject: replacePlaceholders(subject),
+      content: replacePlaceholders(content)
     };
   };
 
