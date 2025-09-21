@@ -18,6 +18,18 @@ interface NotificationHistory {
   recipients: number;
   sentAt: string;
   status: 'sent' | 'failed' | 'pending';
+  failureReason?: string;
+  emailsSent: number;
+  emailsFailed: number;
+}
+
+interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  content: string;
+  createdAt: string;
+  lastUsed?: string;
 }
 
 export default function CustomerCommunications() {
@@ -29,6 +41,14 @@ export default function CustomerCommunications() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  
+  // Template builder state
+  const [templateName, setTemplateName] = useState<string>("");
+  const [templateSubject, setTemplateSubject] = useState<string>("");
+  const [templateContent, setTemplateContent] = useState<string>("");
+  const [templates, setTemplates] = useState<Array<{id: string, name: string, subject: string, content: string, createdAt: string}>>([]);
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
   const { toast } = useToast();
 
@@ -47,7 +67,17 @@ export default function CustomerCommunications() {
     queryKey: ['/api/customers']
   });
 
-  // Mock notification history - you can implement this with a real API later
+  // Fetch email logs
+  const { data: emailLogs = [] } = useQuery({
+    queryKey: ['/api/email-logs'],
+    queryFn: async () => {
+      const response = await fetch('/api/email-logs');
+      if (!response.ok) throw new Error('Failed to fetch email logs');
+      return response.json();
+    }
+  });
+
+  // Mock notification history for now - will be replaced with real data
   const notificationHistory: NotificationHistory[] = [
     {
       id: "1",
@@ -55,7 +85,9 @@ export default function CustomerCommunications() {
       subject: "APK Reminder - Inspection due soon",
       recipients: 12,
       sentAt: "2024-03-15T10:30:00Z",
-      status: "sent"
+      status: "sent",
+      emailsSent: 12,
+      emailsFailed: 0
     },
     {
       id: "2", 
@@ -63,7 +95,10 @@ export default function CustomerCommunications() {
       subject: "Scheduled maintenance reminder",
       recipients: 8,
       sentAt: "2024-03-14T14:20:00Z",
-      status: "sent"
+      status: "sent",
+      emailsSent: 7,
+      emailsFailed: 1,
+      failureReason: "Invalid email address"
     },
     {
       id: "3",
@@ -71,7 +106,9 @@ export default function CustomerCommunications() {
       subject: "Important vehicle recall notice",
       recipients: 25,
       sentAt: "2024-03-13T09:15:00Z",
-      status: "sent"
+      status: "sent",
+      emailsSent: 25,
+      emailsFailed: 0
     }
   ];
 
@@ -402,28 +439,57 @@ export default function CustomerCommunications() {
         <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Notification History</CardTitle>
-              <CardDescription>View previously sent notifications</CardDescription>
+              <CardTitle>Email Log</CardTitle>
+              <CardDescription>Track sent and failed email notifications</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {notificationHistory.map((notification) => {
                   const info = getTemplateInfo(notification.type);
                   const Icon = info.icon;
+                  const successRate = notification.emailsSent / (notification.emailsSent + notification.emailsFailed) * 100;
+                  
                   return (
-                    <div key={notification.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <Icon className={`h-5 w-5 ${info.color}`} />
-                        <div>
-                          <div className="font-medium">{notification.subject}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Sent to {notification.recipients} recipients • {new Date(notification.sentAt).toLocaleDateString('nl-NL')} at {new Date(notification.sentAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                    <div key={notification.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-4">
+                          <Icon className={`h-5 w-5 ${info.color}`} />
+                          <div>
+                            <div className="font-medium">{notification.subject}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(notification.sentAt).toLocaleDateString('nl-NL')} at {new Date(notification.sentAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
                           </div>
                         </div>
+                        <Badge variant={notification.status === 'sent' ? 'default' : 'destructive'}>
+                          {notification.status}
+                        </Badge>
                       </div>
-                      <Badge variant={notification.status === 'sent' ? 'default' : 'destructive'}>
-                        {notification.status}
-                      </Badge>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-sm font-medium text-green-900">Sent Successfully</div>
+                          <div className="text-lg font-bold text-green-700">{notification.emailsSent}</div>
+                        </div>
+                        
+                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="text-sm font-medium text-red-900">Failed</div>
+                          <div className="text-lg font-bold text-red-700">{notification.emailsFailed}</div>
+                        </div>
+                        
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-sm font-medium text-blue-900">Success Rate</div>
+                          <div className="text-lg font-bold text-blue-700">{successRate.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      
+                      {notification.failureReason && (
+                        <div className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <div className="text-sm text-yellow-800">
+                            <strong>Failure Reason:</strong> {notification.failureReason}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -432,30 +498,326 @@ export default function CustomerCommunications() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {["apk", "maintenance", "custom"].map((template) => {
-              const info = getTemplateInfo(template);
-              const Icon = info.icon;
-              return (
-                <Card key={template}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Icon className={`h-5 w-5 ${info.color}`} />
-                      <span>{info.title}</span>
-                    </CardTitle>
-                    <CardDescription>{info.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      {template === "apk" && "Reminds customers about upcoming APK inspections with expiry dates and contact information."}
-                      {template === "maintenance" && "Notifies customers about scheduled maintenance requirements for their vehicles."}
-                      {template === "custom" && "Allows you to create personalized messages for any communication need."}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-green-100 rounded-full mr-4">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">
+                      {notificationHistory.reduce((sum, n) => sum + n.emailsSent, 0)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Emails Sent</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-red-100 rounded-full mr-4">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-red-600">
+                      {notificationHistory.reduce((sum, n) => sum + n.emailsFailed, 0)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Failed Emails</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-blue-100 rounded-full mr-4">
+                    <Mail className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {notificationHistory.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Campaigns</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-purple-100 rounded-full mr-4">
+                    <Users className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {vehiclesWithReservations.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Active Customers</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Performance</CardTitle>
+              <CardDescription>Track your email communication effectiveness</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium text-sm mb-2">APK Notifications</h4>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {notificationHistory.filter(n => n.type === 'apk').reduce((sum, n) => sum + n.emailsSent, 0)}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    <p className="text-xs text-muted-foreground">Emails sent</p>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium text-sm mb-2">Maintenance Reminders</h4>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {notificationHistory.filter(n => n.type === 'maintenance').reduce((sum, n) => sum + n.emailsSent, 0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Emails sent</p>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium text-sm mb-2">Custom Messages</h4>
+                    <div className="text-2xl font-bold text-green-600">
+                      {notificationHistory.filter(n => n.type === 'custom').reduce((sum, n) => sum + n.emailsSent, 0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Emails sent</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Email Templates</h3>
+              <p className="text-sm text-muted-foreground">Create and manage custom email templates</p>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingTemplate(null);
+                setTemplateName("");
+                setTemplateSubject("");
+                setTemplateContent("");
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              New Template
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Template Builder */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {editingTemplate ? "Edit Template" : "Create New Template"}
+                </CardTitle>
+                <CardDescription>
+                  Design your email template with placeholders for dynamic content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="template-name">Template Name</Label>
+                  <Input
+                    id="template-name"
+                    placeholder="e.g., Service Reminder, Welcome Message"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="template-subject">Email Subject</Label>
+                  <Input
+                    id="template-subject"
+                    placeholder="e.g., Service Reminder for {vehiclePlate}"
+                    value={templateSubject}
+                    onChange={(e) => setTemplateSubject(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="template-content">Email Content</Label>
+                  <textarea
+                    id="template-content"
+                    placeholder="Write your email content here... Use placeholders like {customerName}, {vehiclePlate}, {vehicleBrand}, {vehicleModel}"
+                    value={templateContent}
+                    onChange={(e) => setTemplateContent(e.target.value)}
+                    className="w-full min-h-[200px] p-3 border rounded-md resize-vertical font-mono text-sm"
+                  />
+                </div>
+                
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
+                    <div><code>{"{customerName}"}</code> - Customer's name</div>
+                    <div><code>{"{vehiclePlate}"}</code> - License plate</div>
+                    <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
+                    <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
+                    <div><code>{"{apkDate}"}</code> - APK expiry date</div>
+                    <div><code>{"{companyName}"}</code> - Your company name</div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={async () => {
+                      if (!templateName.trim() || !templateSubject.trim() || !templateContent.trim()) {
+                        toast({
+                          title: "Missing Information",
+                          description: "Please fill in all template fields",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      setIsLoadingTemplates(true);
+                      
+                      try {
+                        const method = editingTemplate ? 'PUT' : 'POST';
+                        const url = editingTemplate 
+                          ? `/api/email-templates/${editingTemplate}` 
+                          : '/api/email-templates';
+                        
+                        const response = await fetch(url, {
+                          method,
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          credentials: 'include',
+                          body: JSON.stringify({
+                            name: templateName,
+                            subject: templateSubject,
+                            content: templateContent,
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(`Failed to save template: ${response.statusText}`);
+                        }
+
+                        const result = await response.json();
+                        
+                        toast({
+                          title: editingTemplate ? "Template Updated" : "Template Created",
+                          description: `Template "${templateName}" saved successfully`,
+                        });
+
+                        // Reset form
+                        setTemplateName("");
+                        setTemplateSubject("");
+                        setTemplateContent("");
+                        setEditingTemplate(null);
+                        
+                        // Refresh templates list (you'd implement this)
+                        // fetchTemplates();
+                      } catch (error) {
+                        console.error('Failed to save template:', error);
+                        toast({
+                          title: "Failed to Save Template",
+                          description: error instanceof Error ? error.message : "An error occurred",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsLoadingTemplates(false);
+                      }
+                    }}
+                    disabled={isLoadingTemplates}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isLoadingTemplates ? "Saving..." : (editingTemplate ? "Update Template" : "Save Template")}
+                  </Button>
+                  
+                  {editingTemplate && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingTemplate(null);
+                        setTemplateName("");
+                        setTemplateSubject("");
+                        setTemplateContent("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Saved Templates */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Saved Templates</CardTitle>
+                <CardDescription>Manage your existing email templates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Mock templates for now - will be replaced with real data */}
+                <div className="space-y-3">
+                  {[
+                    { id: "1", name: "APK Reminder", subject: "APK Inspection Due - {vehiclePlate}", content: "Dear {customerName}, your vehicle {vehiclePlate} requires APK inspection...", createdAt: "2024-03-15" },
+                    { id: "2", name: "Maintenance Due", subject: "Service Reminder - {vehiclePlate}", content: "Hello {customerName}, it's time for your {vehicleBrand} {vehicleModel} service...", createdAt: "2024-03-14" },
+                    { id: "3", name: "Welcome Message", subject: "Welcome to Autolease Lam", content: "Dear {customerName}, welcome to our car rental service...", createdAt: "2024-03-13" }
+                  ].map((template) => (
+                    <div key={template.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{template.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">{template.subject}</p>
+                          <p className="text-xs text-gray-500 mt-1">Created: {new Date(template.createdAt).toLocaleDateString('nl-NL')}</p>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingTemplate(template.id);
+                              setTemplateName(template.name);
+                              setTemplateSubject(template.subject);
+                              setTemplateContent(template.content);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              // Implement delete functionality
+                              toast({
+                                title: "Template Deleted",
+                                description: `Template "${template.name}" has been deleted`,
+                              });
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
