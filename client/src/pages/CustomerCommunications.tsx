@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle, Edit, Trash2, Eye, Copy } from "lucide-react";
 import type { Vehicle, Customer } from "@shared/schema";
+import { formatLicensePlate } from "@/lib/format-utils";
 
 interface NotificationHistory {
   id: string;
@@ -916,7 +917,7 @@ export default function CustomerCommunications() {
                       }}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium text-sm">{vehicle.licensePlate}</div>
+                        <div className="font-medium text-sm">{formatLicensePlate(vehicle.licensePlate)}</div>
                         {isSelected && (
                           <CheckCircle className="h-4 w-4 text-blue-600" />
                         )}
@@ -1095,7 +1096,7 @@ export default function CustomerCommunications() {
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{vehicle.licensePlate}</div>
+                          <div className="font-medium text-sm">{formatLicensePlate(vehicle.licensePlate)}</div>
                           {isSelected && (
                             <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                               <div className="w-2 h-2 bg-white rounded-full"></div>
