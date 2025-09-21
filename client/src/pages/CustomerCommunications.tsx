@@ -38,6 +38,8 @@ export default function CustomerCommunications() {
   const [activeTab, setActiveTab] = useState("send");
   const [communicationMode, setCommunicationMode] = useState<'apk' | 'maintenance' | 'custom'>('apk');
   const [selectedVehicles, setSelectedVehicles] = useState<Vehicle[]>([]);
+  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>([]);
+  const [customerReservationFilter, setCustomerReservationFilter] = useState<'all' | 'with-reservations' | 'without-reservations'>('all');
   const [customMessage, setCustomMessage] = useState<string>("");
   const [customSubject, setCustomSubject] = useState<string>("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -111,6 +113,34 @@ export default function CustomerCommunications() {
     queryKey: ['/api/customers']
   });
 
+  // Fetch customers with reservation status for custom messages
+  const { data: customersWithReservations = [] } = useQuery({
+    queryKey: ['/api/customers', 'with-reservations'],
+    queryFn: async () => {
+      const response = await fetch('/api/customers/with-reservations');
+      if (!response.ok) {
+        // Fallback to regular customers endpoint if with-reservations doesn't exist
+        const customersResponse = await fetch('/api/customers');
+        if (!customersResponse.ok) throw new Error('Failed to fetch customers');
+        const allCustomers = await customersResponse.json();
+        
+        // Get reservations to determine which customers have active reservations
+        const reservationsResponse = await fetch('/api/reservations');
+        const reservations = reservationsResponse.ok ? await reservationsResponse.json() : [];
+        
+        return allCustomers.map((customer: any) => ({
+          ...customer,
+          hasActiveReservation: reservations.some((res: any) => 
+            res.customerId === customer.id && 
+            new Date(res.startDate) <= new Date() && 
+            new Date(res.endDate) >= new Date()
+          )
+        }));
+      }
+      return response.json();
+    }
+  });
+
   // Fetch email logs
   const { data: emailLogs = [] } = useQuery({
     queryKey: ['/api/email-logs'],
@@ -163,6 +193,23 @@ export default function CustomerCommunications() {
       vehicle.licensePlate?.toLowerCase().includes(query) ||
       vehicle.brand?.toLowerCase().includes(query) ||
       vehicle.model?.toLowerCase().includes(query);
+  });
+
+  // Filter customers based on search query and reservation status
+  const filteredCustomers = customersWithReservations.filter((customer: any) => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      customer.name?.toLowerCase().includes(query) ||
+      customer.firstName?.toLowerCase().includes(query) ||
+      customer.lastName?.toLowerCase().includes(query) ||
+      customer.email?.toLowerCase().includes(query);
+
+    const matchesReservationFilter = 
+      customerReservationFilter === 'all' ||
+      (customerReservationFilter === 'with-reservations' && customer.hasActiveReservation) ||
+      (customerReservationFilter === 'without-reservations' && !customer.hasActiveReservation);
+
+    return matchesSearch && matchesReservationFilter;
   });
 
   const handleSendNotifications = async () => {
@@ -270,7 +317,18 @@ export default function CustomerCommunications() {
   };
 
   const generateEmailPreview = async () => {
-    if (selectedVehicles.length === 0) {
+    // Check if custom message mode and customers are selected
+    if (communicationMode === 'custom' && selectedCustomers.length === 0) {
+      toast({
+        title: "No Customers Selected",
+        description: "Please select at least one customer",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if APK/Maintenance mode and vehicles are selected  
+    if (communicationMode !== 'custom' && selectedVehicles.length === 0) {
       toast({
         title: "No Vehicles Selected",
         description: "Please select at least one vehicle",
@@ -326,15 +384,17 @@ export default function CustomerCommunications() {
     const subject = emailSubject.trim();
     const content = emailContent.trim();
 
-    // Generate recipients list with actual customer data and all available email options
-    const recipients = selectedVehicles.map(vehicle => {
-      const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
-      const customer = reservation?.customer;
-      
-      // Collect all available email options
-      const emailOptions: Array<{value: string, label: string, email: string}> = [];
-      
-      if (customer) {
+    // Generate recipients list based on communication mode
+    let recipients: any[];
+    let sampleCustomer: any;
+    let sampleVehicle: any;
+
+    if (communicationMode === 'custom') {
+      // For custom messages, work with selected customers
+      recipients = selectedCustomers.map(customer => {
+        // Collect all available email options
+        const emailOptions: Array<{value: string, label: string, email: string}> = [];
+        
         if (customer.email) {
           emailOptions.push({
             value: "email",
@@ -363,41 +423,103 @@ export default function CustomerCommunications() {
             email: customer.emailGeneral
           });
         }
-      }
-      
-      // Select default email (prioritize primary email)
-      let selectedEmailField = "none";
-      let selectedEmail = "No email";
-      
-      if (emailOptions.length > 0) {
-        // Find primary email first, or use the first available
-        const primaryOption = emailOptions.find(opt => opt.value === "email");
-        const defaultOption = primaryOption || emailOptions[0];
-        selectedEmailField = defaultOption.value;
-        selectedEmail = defaultOption.email;
-      }
-      
-      return {
-        name: customer?.name || "Customer",
-        email: selectedEmail,
-        vehicleLicense: vehicle.licensePlate,
-        emailField: selectedEmailField,
-        emailOptions: emailOptions,
-        customer: customer,
-        vehicleId: vehicle.id
-      };
-    });
+        
+        // Select default email (prioritize primary email)
+        let selectedEmailField = "none";
+        let selectedEmail = "No email";
+        
+        if (emailOptions.length > 0) {
+          const primaryOption = emailOptions.find(opt => opt.value === "email");
+          const defaultOption = primaryOption || emailOptions[0];
+          selectedEmailField = defaultOption.value;
+          selectedEmail = defaultOption.email;
+        }
+        
+        return {
+          name: customer?.name || "Customer",
+          email: selectedEmail,
+          vehicleLicense: "N/A", // No specific vehicle for custom messages
+          emailField: selectedEmailField,
+          emailOptions: emailOptions,
+          customer: customer,
+          customerId: customer.id
+        };
+      });
 
-    // Process content with sample data for preview
-    const sampleVehicle = selectedVehicles[0];
-    const sampleReservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === sampleVehicle.id);
-    const sampleCustomer = sampleReservation?.customer;
+      sampleCustomer = selectedCustomers[0];
+      sampleVehicle = null; // No vehicle for custom messages
+    } else {
+      // For APK/Maintenance messages, work with selected vehicles
+      recipients = selectedVehicles.map(vehicle => {
+        const reservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === vehicle.id);
+        const customer = reservation?.customer;
+        
+        // Collect all available email options
+        const emailOptions: Array<{value: string, label: string, email: string}> = [];
+        
+        if (customer) {
+          if (customer.email) {
+            emailOptions.push({
+              value: "email",
+              label: "Primary",
+              email: customer.email
+            });
+          }
+          if (customer.emailForMOT) {
+            emailOptions.push({
+              value: "emailForMOT",
+              label: "APK/MOT",
+              email: customer.emailForMOT
+            });
+          }
+          if (customer.emailForInvoices) {
+            emailOptions.push({
+              value: "emailForInvoices",
+              label: "Invoice",
+              email: customer.emailForInvoices
+            });
+          }
+          if (customer.emailGeneral) {
+            emailOptions.push({
+              value: "emailGeneral",
+              label: "General",
+              email: customer.emailGeneral
+            });
+          }
+        }
+        
+        // Select default email (prioritize primary email)
+        let selectedEmailField = "none";
+        let selectedEmail = "No email";
+        
+        if (emailOptions.length > 0) {
+          const primaryOption = emailOptions.find(opt => opt.value === "email");
+          const defaultOption = primaryOption || emailOptions[0];
+          selectedEmailField = defaultOption.value;
+          selectedEmail = defaultOption.email;
+        }
+        
+        return {
+          name: customer?.name || "Customer",
+          email: selectedEmail,
+          vehicleLicense: vehicle.licensePlate,
+          emailField: selectedEmailField,
+          emailOptions: emailOptions,
+          customer: customer,
+          vehicleId: vehicle.id
+        };
+      });
+
+      sampleVehicle = selectedVehicles[0];
+      const sampleReservation = vehiclesWithReservations.find((item: any) => item.vehicle.id === sampleVehicle.id);
+      sampleCustomer = sampleReservation?.customer;
+    }
 
     const processedContent = content
       .replace(/\{customerName\}/g, sampleCustomer?.name || "[Customer Name]")
-      .replace(/\{vehiclePlate\}/g, sampleVehicle.licensePlate || "[License Plate]")
-      .replace(/\{vehicleBrand\}/g, sampleVehicle.brand || "[Brand]")
-      .replace(/\{vehicleModel\}/g, sampleVehicle.model || "[Model]")
+      .replace(/\{vehiclePlate\}/g, sampleVehicle?.licensePlate || "[License Plate]")
+      .replace(/\{vehicleBrand\}/g, sampleVehicle?.brand || "[Brand]")
+      .replace(/\{vehicleModel\}/g, sampleVehicle?.model || "[Model]")
       .replace(/\{companyName\}/g, "Autolease Lam");
 
     setEmailPreview({
@@ -1022,7 +1144,7 @@ export default function CustomerCommunications() {
           <Card>
             <CardHeader>
               <CardTitle>Custom Message Notifications</CardTitle>
-              <CardDescription>Send custom messages to all customers with active reservations</CardDescription>
+              <CardDescription>Send custom messages to selected customers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Template Selection */}
@@ -1063,47 +1185,55 @@ export default function CustomerCommunications() {
                   <Label htmlFor="search-custom" className="text-sm font-medium sr-only">Search</Label>
                   <Input
                     id="search-custom"
-                    placeholder="Search by license plate, brand, or model..."
+                    placeholder="Search by customer name, email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     data-testid="input-search-custom"
                   />
                 </div>
+                <Select value={customerReservationFilter} onValueChange={(value: any) => setCustomerReservationFilter(value as 'all' | 'with-reservations' | 'without-reservations')}>
+                  <SelectTrigger className="w-48" data-testid="select-reservation-filter">
+                    <SelectValue placeholder="Filter by reservations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Customers</SelectItem>
+                    <SelectItem value="with-reservations">With Reservations</SelectItem>
+                    <SelectItem value="without-reservations">Without Reservations</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button 
-                  disabled={selectedVehicles.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
+                  disabled={selectedCustomers.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-green-600 hover:bg-green-700"
                   data-testid="button-preview-custom"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  Preview & Send to {selectedVehicles.length} vehicles
+                  Preview & Send to {selectedCustomers.length} customers
                 </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {filteredVehicles.slice(0, 50).map((item: any) => {
-                  const vehicle = item.vehicle;
-                  const customer = item.customer;
-                  const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
+                {filteredCustomers.slice(0, 50).map((customer: any) => {
+                  const isSelected = selectedCustomers.some(c => c.id === customer.id);
                   
                   return (
                     <div
-                      key={vehicle.id}
+                      key={customer.id}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
                         isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                       }`}
                       onClick={() => {
                         if (isSelected) {
-                          setSelectedVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+                          setSelectedCustomers(prev => prev.filter(c => c.id !== customer.id));
                         } else {
-                          setSelectedVehicles(prev => [...prev, vehicle]);
+                          setSelectedCustomers(prev => [...prev, customer]);
                         }
                       }}
-                      data-testid={`vehicle-card-${vehicle.id}`}
+                      data-testid={`customer-card-${customer.id}`}
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{vehicle.licensePlate}</div>
+                          <div className="font-medium text-sm">{customer.name}</div>
                           {isSelected && (
                             <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -1111,14 +1241,14 @@ export default function CustomerCommunications() {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {vehicle.brand} {vehicle.model}
+                          {customer.email || 'No email'}
                         </div>
                         <div className="text-xs text-gray-600">
-                          Customer: {customer?.name || 'Unknown'}
+                          {customer.firstName} {customer.lastName}
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="text-xs">
-                            {vehicle.vehicleType || 'Vehicle'}
+                          <Badge variant={customer.hasActiveReservation ? "default" : "outline"} className="text-xs">
+                            {customer.hasActiveReservation ? 'Active Reservation' : 'No Reservation'}
                           </Badge>
                         </div>
                       </div>
@@ -1127,10 +1257,10 @@ export default function CustomerCommunications() {
                 })}
               </div>
 
-              {selectedVehicles.length > 0 && (
+              {selectedCustomers.length > 0 && (
                 <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                   <div className="text-sm font-medium text-green-900">
-                    {selectedVehicles.length} vehicle(s) selected for notification
+                    {selectedCustomers.length} customer(s) selected for notification
                   </div>
                 </div>
               )}
