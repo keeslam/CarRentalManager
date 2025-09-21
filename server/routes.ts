@@ -2361,6 +2361,95 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Email document - MailerSend integration 
+  app.post("/api/documents/:id/email", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid document ID" });
+      }
+
+      const { recipients, subject, message } = req.body;
+      
+      if (!recipients || !subject) {
+        return res.status(400).json({ message: "Recipients and subject are required" });
+      }
+
+      // Get document details
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Check if document type is allowed for email (damage or contract only)
+      const allowedTypes = ['damage', 'contract'];
+      const isAllowed = allowedTypes.some(type => 
+        document.documentType.toLowerCase().includes(type)
+      );
+      
+      if (!isAllowed) {
+        return res.status(403).json({ 
+          message: "This document type cannot be emailed. Only damage and contract documents are allowed." 
+        });
+      }
+
+      if (!document.filePath) {
+        return res.status(404).json({ message: "No file path found for this document" });
+      }
+
+      // Convert relative path to absolute path
+      const absolutePath = path.join(process.cwd(), document.filePath);
+      
+      // Check if file exists
+      if (!fs.existsSync(absolutePath)) {
+        return res.status(404).json({ message: "Document file not found on disk" });
+      }
+
+      // Use MailerSend to send email with attachment
+      const { MailerSend, EmailParams, Sender, Recipient, Attachment } = require("mailersend");
+
+      const mailerSend = new MailerSend({
+        apiKey: process.env.MAILERSEND_API_KEY,
+      });
+
+      // Read file data for attachment
+      const fileData = fs.readFileSync(absolutePath);
+      const base64Data = fileData.toString('base64');
+
+      // Parse recipients (comma-separated)
+      const recipientList = recipients.split(',').map((email: string) => email.trim()).filter((email: string) => email);
+      
+      const sentFrom = new Sender("noreply@yourdomain.com", "Car Rental System");
+
+      const recipients_list = recipientList.map((email: string) => new Recipient(email));
+
+      // Create attachment
+      const attachment = new Attachment(base64Data, document.fileName, "attachment");
+
+      const emailParams = new EmailParams()
+        .setFrom(sentFrom)
+        .setTo(recipients_list)
+        .setSubject(subject)
+        .setText(message || "Please find the attached document.")
+        .setHtml(`<p>${(message || "Please find the attached document.").replace(/\n/g, '<br>')}</p>`)
+        .setAttachments([attachment]);
+
+      await mailerSend.email.send(emailParams);
+
+      res.json({ 
+        message: "Email sent successfully",
+        recipients: recipientList.length,
+        document: document.fileName
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ 
+        message: "Failed to send email", 
+        error: error instanceof Error ? error.message : "Email service error" 
+      });
+    }
+  });
+
   // Delete document
   app.delete("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
     try {
