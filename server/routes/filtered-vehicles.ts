@@ -51,17 +51,17 @@ router.get('/', async (req, res) => {
     let filteredVehicles = uniqueVehicles;
 
     if (filterType === 'apk') {
-      // Filter for APK reminders (2 months, 1 month, 14 days)
+      // Filter for APK reminders (overdue, 2 months, 1 month, 14 days)
       filteredVehicles = uniqueVehicles.filter(item => {
         if (!item.vehicle.apkDate) return false;
         
         const daysUntilAPK = getDateDifferenceInDays(item.vehicle.apkDate, today);
         
-        // APK expires within 2 months (60 days), 1 month (30 days), or 14 days
-        return (daysUntilAPK >= 0 && daysUntilAPK <= 60);
+        // Include overdue APKs and APK expires within 2 months (60 days)
+        return (daysUntilAPK <= 60);
       });
 
-      // Sort by expiry date (most urgent first)
+      // Sort by expiry date (most urgent first - overdue first, then by days)
       filteredVehicles.sort((a, b) => {
         const daysA = getDateDifferenceInDays(a.vehicle.apkDate!, today);
         const daysB = getDateDifferenceInDays(b.vehicle.apkDate!, today);
@@ -111,6 +111,24 @@ router.get('/', async (req, res) => {
           return daysSinceLastMaintenance > 365;
         });
 
+        // Add maintenance metadata to filtered vehicles
+        filteredVehicles = filteredVehicles.map(item => {
+          const latestMaintenance = latestMaintenanceExpenses.find(
+            exp => exp.vehicleId === item.vehicle.id
+          );
+          
+          return {
+            ...item,
+            maintenanceInfo: latestMaintenance ? {
+              lastMaintenanceDate: latestMaintenance.latestDate,
+              daysSinceLastMaintenance: getDateDifferenceInDays(today, latestMaintenance.latestDate)
+            } : {
+              lastMaintenanceDate: null,
+              daysSinceLastMaintenance: null
+            }
+          };
+        });
+
         // Sort by urgency (vehicles with oldest maintenance first, never maintained vehicles first)
         filteredVehicles.sort((a, b) => {
           const maintenanceA = latestMaintenanceExpenses.find(exp => exp.vehicleId === a.vehicle.id);
@@ -135,7 +153,26 @@ router.get('/', async (req, res) => {
         filterInfo = {
           apkDate: item.vehicle.apkDate,
           daysUntilAPK,
-          urgencyLevel: daysUntilAPK <= 14 ? 'urgent' : daysUntilAPK <= 30 ? 'warning' : 'notice'
+          urgencyLevel: daysUntilAPK < 0 ? 'overdue' : daysUntilAPK <= 14 ? 'urgent' : daysUntilAPK <= 30 ? 'warning' : 'notice'
+        };
+      }
+
+      if (filterType === 'maintenance' && (item as any).maintenanceInfo) {
+        const maintenanceInfo = (item as any).maintenanceInfo;
+        let urgencyLevel = 'notice';
+        
+        if (maintenanceInfo.daysSinceLastMaintenance === null) {
+          urgencyLevel = 'urgent'; // Never maintained
+        } else if (maintenanceInfo.daysSinceLastMaintenance > 730) {
+          urgencyLevel = 'overdue'; // > 2 years
+        } else if (maintenanceInfo.daysSinceLastMaintenance > 365) {
+          urgencyLevel = 'warning'; // > 1 year
+        }
+        
+        filterInfo = {
+          lastMaintenanceDate: maintenanceInfo.lastMaintenanceDate,
+          daysSinceLastMaintenance: maintenanceInfo.daysSinceLastMaintenance,
+          urgencyLevel
         };
       }
 

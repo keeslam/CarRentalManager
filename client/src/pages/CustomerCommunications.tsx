@@ -758,8 +758,19 @@ export default function CustomerCommunications() {
                 {filteredVehicles.slice(0, 50).map((item: any) => {
                   const vehicle = item.vehicle;
                   const customer = item.customer;
-                  const reservation = item.reservation;
+                  const filterInfo = item.filterInfo;
                   const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
+                  
+                  // Determine urgency color
+                  const getUrgencyColor = (urgency: string) => {
+                    switch (urgency) {
+                      case 'overdue': return 'bg-red-100 text-red-800 border-red-200';
+                      case 'urgent': return 'bg-orange-100 text-orange-800 border-orange-200';
+                      case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                      default: return 'bg-blue-100 text-blue-800 border-blue-200';
+                    }
+                  };
+                  
                   return (
                     <div
                       key={vehicle.id}
@@ -774,24 +785,64 @@ export default function CustomerCommunications() {
                         }
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-sm">{vehicle.licensePlate}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {vehicle.brand} {vehicle.model}
-                          </div>
-                          <div className="text-xs text-blue-600 mt-1">
-                            Customer: {customer.name}
-                          </div>
-                          {notificationTemplate === "apk" && vehicle.apkDate && (
-                            <div className="text-xs text-orange-600 mt-1">
-                              APK: {new Date(vehicle.apkDate).toLocaleDateString('nl-NL')}
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-medium text-sm">{vehicle.licensePlate}</div>
                         {isSelected && (
                           <CheckCircle className="h-4 w-4 text-blue-600" />
                         )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        {vehicle.brand} {vehicle.model}
+                      </div>
+                      <div className="text-xs text-blue-600 mb-2">
+                        Customer: {customer.name}
+                      </div>
+                      
+                      {/* Filter-specific information */}
+                      {filterInfo && (
+                        <div className="mb-2">
+                          {vehicleFilter === 'apk' && (
+                            <div className="space-y-1">
+                              <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                getUrgencyColor(filterInfo.urgencyLevel)
+                              }`}>
+                                {filterInfo.urgencyLevel === 'overdue' ? 'APK OVERDUE' :
+                                 filterInfo.urgencyLevel === 'urgent' ? 'APK URGENT' :
+                                 filterInfo.urgencyLevel === 'warning' ? 'APK WARNING' : 'APK NOTICE'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                APK: {filterInfo.apkDate}
+                                {filterInfo.daysUntilAPK < 0 ? 
+                                  ` (${Math.abs(filterInfo.daysUntilAPK)} days overdue)` :
+                                  ` (${filterInfo.daysUntilAPK} days remaining)`
+                                }
+                              </div>
+                            </div>
+                          )}
+                          {vehicleFilter === 'maintenance' && (
+                            <div className="space-y-1">
+                              <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                getUrgencyColor(filterInfo.urgencyLevel)
+                              }`}>
+                                {filterInfo.urgencyLevel === 'urgent' ? 'NEVER MAINTAINED' :
+                                 filterInfo.urgencyLevel === 'overdue' ? 'MAINTENANCE OVERDUE' :
+                                 filterInfo.urgencyLevel === 'warning' ? 'MAINTENANCE DUE' : 'MAINTENANCE NOTICE'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {filterInfo.lastMaintenanceDate ? 
+                                  `Last: ${filterInfo.lastMaintenanceDate} (${filterInfo.daysSinceLastMaintenance} days ago)` :
+                                  'No maintenance recorded'
+                                }
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className="text-xs">
+                          {vehicle.vehicleType || 'Vehicle'}
+                        </Badge>
                       </div>
                     </div>
                   );
