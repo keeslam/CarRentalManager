@@ -298,9 +298,9 @@ const quickActions: QuickAction[] = [
     primary: false,
   },
   {
-    label: "Send Customer Notifications",
-    icon: "mail",
-    dialog: "customer-notifications",
+    label: "Send APK Notifications",
+    icon: "shield-alert",
+    dialog: "apk-notifications",
     primary: false,
   },
 ];
@@ -342,13 +342,11 @@ export function QuickActions() {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   
-  // State for customer notifications dialog
-  const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
-  const [selectedNotificationVehicles, setSelectedNotificationVehicles] = useState<Vehicle[]>([]);
-  const [notificationTemplate, setNotificationTemplate] = useState<string>("apk");
-  const [customMessage, setCustomMessage] = useState<string>("");
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
-  const [notificationSearchQuery, setNotificationSearchQuery] = useState<string>("");
+  // State for APK notifications dialog
+  const [apkNotificationsDialogOpen, setApkNotificationsDialogOpen] = useState(false);
+  const [selectedApkVehicles, setSelectedApkVehicles] = useState<Vehicle[]>([]);
+  const [isLoadingApkNotifications, setIsLoadingApkNotifications] = useState(false);
+  const [apkSearchQuery, setApkSearchQuery] = useState<string>("");
   
   
   const { toast } = useToast();
@@ -1419,10 +1417,10 @@ export function QuickActions() {
               );
             }
             
-            // For customer notifications dialog
-            if (action.dialog === "customer-notifications") {
+            // For APK notifications dialog
+            if (action.dialog === "apk-notifications") {
               return (
-                <Dialog key={action.label} open={notificationsDialogOpen} onOpenChange={setNotificationsDialogOpen}>
+                <Dialog key={action.label} open={apkNotificationsDialogOpen} onOpenChange={setApkNotificationsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
@@ -1435,76 +1433,48 @@ export function QuickActions() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
                     <DialogHeader>
-                      <DialogTitle>Send Customer Notifications</DialogTitle>
+                      <DialogTitle>Send APK Notifications</DialogTitle>
                       <DialogDescription>
-                        Send maintenance and APK reminders to customers via email
+                        Send APK expiry reminders to customers whose vehicles need inspection
                       </DialogDescription>
                     </DialogHeader>
                     
                     <div className="flex-1 overflow-y-auto px-1">
                       <div className="space-y-6">
-                        {/* Notification Type Selection */}
-                        <div className="space-y-3">
-                          <Label>Notification Type</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            <Button
-                              variant={notificationTemplate === "apk" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setNotificationTemplate("apk")}
-                              className="h-auto p-3 flex flex-col items-center"
-                            >
-                              <ActionIcon name="shield-alert" className="w-5 h-5 mb-1" />
-                              <span className="text-xs">APK Reminder</span>
-                            </Button>
-                            <Button
-                              variant={notificationTemplate === "maintenance" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setNotificationTemplate("maintenance")}
-                              className="h-auto p-3 flex flex-col items-center"
-                            >
-                              <ActionIcon name="wrench" className="w-5 h-5 mb-1" />
-                              <span className="text-xs">Maintenance</span>
-                            </Button>
-                            <Button
-                              variant={notificationTemplate === "custom" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setNotificationTemplate("custom")}
-                              className="h-auto p-3 flex flex-col items-center"
-                            >
-                              <ActionIcon name="mail" className="w-5 h-5 mb-1" />
-                              <span className="text-xs">Custom</span>
-                            </Button>
+                        {/* Info about APK notifications */}
+                        <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                          <div className="flex items-center mb-2">
+                            <ActionIcon name="shield-alert" className="w-4 h-4 text-orange-600 mr-2" />
+                            <h4 className="font-medium text-orange-900 text-sm">APK Inspection Reminders</h4>
                           </div>
+                          <p className="text-xs text-orange-700">
+                            Send reminders to customers whose vehicles have expiring APK certificates.
+                          </p>
                         </div>
-
-                        {/* Custom Message for Custom Template */}
-                        {notificationTemplate === "custom" && (
-                          <div className="space-y-3">
-                            <Label htmlFor="custom-message">Custom Message</Label>
-                            <textarea
-                              id="custom-message"
-                              placeholder="Enter your custom message for customers..."
-                              value={customMessage}
-                              onChange={(e) => setCustomMessage(e.target.value)}
-                              className="w-full min-h-[100px] p-3 border rounded-md resize-vertical"
-                            />
-                          </div>
-                        )}
                         
-                        {/* Vehicle Selection */}
+                        {/* Vehicle Selection - Only APK expiring vehicles */}
                         <div className="space-y-3">
-                          <Label>Select Vehicles & Customers</Label>
+                          <Label>Vehicles Needing APK Inspection</Label>
                           <Input
-                            placeholder="Search by license plate, brand, or customer..."
-                            value={notificationSearchQuery}
-                            onChange={(e) => setNotificationSearchQuery(e.target.value)}
+                            placeholder="Search by license plate, brand..."
+                            value={apkSearchQuery}
+                            onChange={(e) => setApkSearchQuery(e.target.value)}
                             className="w-full"
                           />
                           
                           <div className="max-h-40 overflow-y-auto border rounded-md">
                             {vehicles
                               ?.filter(vehicle => {
-                                const query = notificationSearchQuery.toLowerCase();
+                                // Only show vehicles with APK dates and expiring soon (within 30 days)
+                                if (!vehicle.apkDate) return false;
+                                const apkDate = new Date(vehicle.apkDate);
+                                const today = new Date();
+                                const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+                                const isExpiringSoon = apkDate <= thirtyDaysFromNow;
+                                
+                                if (!isExpiringSoon) return false;
+                                
+                                const query = apkSearchQuery.toLowerCase();
                                 return !query ||
                                   vehicle.licensePlate?.toLowerCase().includes(query) ||
                                   vehicle.brand?.toLowerCase().includes(query) ||
@@ -1512,7 +1482,12 @@ export function QuickActions() {
                               })
                               .slice(0, 15)
                               .map((vehicle) => {
-                                const isSelected = selectedNotificationVehicles.some(v => v.id === vehicle.id);
+                                const isSelected = selectedApkVehicles.some(v => v.id === vehicle.id);
+                                const apkDate = new Date(vehicle.apkDate!);
+                                const today = new Date();
+                                const daysUntilExpiry = Math.ceil((apkDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+                                const isOverdue = daysUntilExpiry < 0;
+                                
                                 return (
                                   <div
                                     key={vehicle.id}
@@ -1521,9 +1496,9 @@ export function QuickActions() {
                                     }`}
                                     onClick={() => {
                                       if (isSelected) {
-                                        setSelectedNotificationVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+                                        setSelectedApkVehicles(prev => prev.filter(v => v.id !== vehicle.id));
                                       } else {
-                                        setSelectedNotificationVehicles(prev => [...prev, vehicle]);
+                                        setSelectedApkVehicles(prev => [...prev, vehicle]);
                                       }
                                     }}
                                   >
@@ -1534,11 +1509,12 @@ export function QuickActions() {
                                         </div>
                                         <div className="text-xs text-muted-foreground">
                                           {vehicle.brand} {vehicle.model}
-                                          {notificationTemplate === "apk" && vehicle.apkDate && (
-                                            <span className="ml-2 text-orange-600">
-                                              APK: {new Date(vehicle.apkDate).toLocaleDateString('nl-NL')}
-                                            </span>
-                                          )}
+                                          <span className={`ml-2 ${
+                                            isOverdue ? 'text-red-600 font-medium' : 'text-orange-600'
+                                          }`}>
+                                            APK: {apkDate.toLocaleDateString('nl-NL')}
+                                            {isOverdue ? ' (OVERDUE)' : ` (${daysUntilExpiry} days)`}
+                                          </span>
                                         </div>
                                       </div>
                                       {isSelected && (
@@ -1552,13 +1528,13 @@ export function QuickActions() {
                         </div>
                         
                         {/* Selected Summary */}
-                        {selectedNotificationVehicles.length > 0 && (
+                        {selectedApkVehicles.length > 0 && (
                           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                             <h4 className="font-medium text-green-900 mb-2 text-sm">
-                              Selected for Notification ({selectedNotificationVehicles.length})
+                              Selected for APK Notification ({selectedApkVehicles.length})
                             </h4>
                             <div className="space-y-1 text-xs max-h-20 overflow-y-auto">
-                              {selectedNotificationVehicles.map((vehicle) => (
+                              {selectedApkVehicles.map((vehicle) => (
                                 <div key={vehicle.id} className="flex justify-between">
                                   <span>{vehicle.licensePlate}</span>
                                   <span className="text-green-700">{vehicle.brand} {vehicle.model}</span>
@@ -1569,14 +1545,11 @@ export function QuickActions() {
                         )}
 
                         {/* Preview */}
-                        {selectedNotificationVehicles.length > 0 && (
+                        {selectedApkVehicles.length > 0 && (
                           <div className="space-y-2">
                             <Label className="text-sm">Email Preview</Label>
                             <div className="p-3 bg-gray-50 rounded border text-xs">
-                              <strong>Subject:</strong> 
-                              {notificationTemplate === "apk" && " APK Reminder - [Vehicle] expires soon"}
-                              {notificationTemplate === "maintenance" && " Maintenance Reminder - [Vehicle] service due"}
-                              {notificationTemplate === "custom" && " Vehicle Notification - [Vehicle]"}
+                              <strong>Subject:</strong> APK Reminder - [Vehicle] expires soon
                               <br/><br/>
                               <strong>Recipients:</strong> Customers with valid email addresses
                               <br/>
@@ -1591,18 +1564,16 @@ export function QuickActions() {
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setNotificationsDialogOpen(false);
-                          setSelectedNotificationVehicles([]);
-                          setNotificationTemplate("apk");
-                          setCustomMessage("");
-                          setNotificationSearchQuery("");
+                          setApkNotificationsDialogOpen(false);
+                          setSelectedApkVehicles([]);
+                          setApkSearchQuery("");
                         }}
                       >
                         Cancel
                       </Button>
                       <Button
                         onClick={async () => {
-                          if (selectedNotificationVehicles.length === 0) {
+                          if (selectedApkVehicles.length === 0) {
                             toast({
                               title: "No Vehicles Selected",
                               description: "Please select at least one vehicle",
@@ -1611,16 +1582,7 @@ export function QuickActions() {
                             return;
                           }
 
-                          if (notificationTemplate === "custom" && !customMessage.trim()) {
-                            toast({
-                              title: "Missing Custom Message",
-                              description: "Please enter a custom message",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
-                          setIsLoadingNotifications(true);
+                          setIsLoadingApkNotifications(true);
                           
                           try {
                             const response = await fetch('/api/notifications/send', {
@@ -1630,9 +1592,8 @@ export function QuickActions() {
                               },
                               credentials: 'include',
                               body: JSON.stringify({
-                                vehicleIds: selectedNotificationVehicles.map(v => v.id),
-                                template: notificationTemplate,
-                                customMessage: customMessage.trim() || undefined,
+                                vehicleIds: selectedApkVehicles.map(v => v.id),
+                                template: "apk",
                               }),
                             });
 
@@ -1643,16 +1604,14 @@ export function QuickActions() {
                             const result = await response.json();
                             
                             toast({
-                              title: "Notifications Sent Successfully",
+                              title: "APK Notifications Sent Successfully",
                               description: `${result.sent} emails sent, ${result.failed || 0} failed`,
                             });
 
                             // Reset form
-                            setNotificationsDialogOpen(false);
-                            setSelectedNotificationVehicles([]);
-                            setNotificationTemplate("apk");
-                            setCustomMessage("");
-                            setNotificationSearchQuery("");
+                            setApkNotificationsDialogOpen(false);
+                            setSelectedApkVehicles([]);
+                            setApkSearchQuery("");
                           } catch (error) {
                             console.error('Failed to send notifications:', error);
                             toast({
@@ -1661,21 +1620,21 @@ export function QuickActions() {
                               variant: "destructive",
                             });
                           } finally {
-                            setIsLoadingNotifications(false);
+                            setIsLoadingApkNotifications(false);
                           }
                         }}
-                        disabled={selectedNotificationVehicles.length === 0 || isLoadingNotifications}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        disabled={selectedApkVehicles.length === 0 || isLoadingApkNotifications}
+                        className="bg-orange-600 hover:bg-orange-700"
                       >
-                        {isLoadingNotifications ? (
+                        {isLoadingApkNotifications ? (
                           <>
                             <ActionIcon name="loader-2" className="w-4 h-4 mr-2 animate-spin" />
                             Sending...
                           </>
                         ) : (
                           <>
-                            <ActionIcon name="send" className="w-4 h-4 mr-2" />
-                            Send Notifications ({selectedNotificationVehicles.length})
+                            <ActionIcon name="shield-alert" className="w-4 h-4 mr-2" />
+                            Send APK Reminders ({selectedApkVehicles.length})
                           </>
                         )}
                       </Button>
