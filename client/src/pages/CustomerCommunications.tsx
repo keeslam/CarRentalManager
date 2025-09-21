@@ -164,13 +164,50 @@ export default function CustomerCommunications() {
       return;
     }
 
-    if (!customMessage.trim() || !customSubject.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both subject and message for the notification",
-        variant: "destructive",
-      });
-      return;
+    // Determine template and content based on communication mode and template selection
+    let templateType = communicationMode;
+    let emailSubject = "";
+    let emailContent = "";
+
+    if (selectedTemplateId && selectedTemplateId !== "none") {
+      // Use saved template for any communication mode
+      const savedTemplate = savedTemplates.find((t: any) => t.id.toString() === selectedTemplateId);
+      if (savedTemplate) {
+        emailSubject = savedTemplate.subject;
+        emailContent = savedTemplate.content;
+        templateType = "custom"; // Use custom when using saved templates
+      } else {
+        toast({
+          title: "Template Error",
+          description: "Selected template not found",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // When no template is selected
+      if (communicationMode === 'apk' || communicationMode === 'maintenance') {
+        // APK and Maintenance modes require template selection
+        toast({
+          title: "Template Required",
+          description: `Please select a template for ${communicationMode} reminders`,
+          variant: "destructive",
+        });
+        return;
+      } else {
+        // Custom mode - require custom message and subject when no template is selected
+        if (!customMessage.trim() || !customSubject.trim()) {
+          toast({
+            title: "Missing Information",
+            description: "Please enter both subject and message for the notification",
+            variant: "destructive",
+          });
+          return;
+        }
+        emailSubject = customSubject;
+        emailContent = customMessage;
+        templateType = "custom";
+      }
     }
 
     setIsLoadingNotifications(true);
@@ -184,9 +221,9 @@ export default function CustomerCommunications() {
         credentials: 'include',
         body: JSON.stringify({
           vehicleIds: selectedVehicles.map(v => v.id),
-          template: "custom",
-          customMessage: customMessage.trim(),
-          customSubject: customSubject.trim(),
+          template: templateType,
+          customMessage: emailContent.trim(),
+          customSubject: emailSubject.trim(),
           emailFieldSelection: "auto",
           individualEmailSelections: {},
         }),
