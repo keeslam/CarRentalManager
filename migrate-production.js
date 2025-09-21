@@ -1,14 +1,25 @@
 #!/usr/bin/env node
 
-const { Client } = require('pg');
+import { Client } from 'pg';
 
 async function migrateDatabase() {
+  console.log('🚀 Starting database migration...');
+  
+  if (!process.env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL environment variable is not set');
+    process.exit(1);
+  }
+  
+  console.log('✅ DATABASE_URL found');
+  
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
   });
 
   try {
+    console.log('🔄 Connecting to database...');
     await client.connect();
+    console.log('✅ Database connected successfully');
     console.log('🔄 Checking database schema...');
 
     // Check if production_date column exists
