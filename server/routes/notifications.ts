@@ -9,7 +9,7 @@ const router = Router();
 // Send notifications to customers
 router.post('/send', async (req, res) => {
   try {
-    const { vehicleIds, template, customMessage } = req.body;
+    const { vehicleIds, template, customMessage, customSubject } = req.body;
     
     if (!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) {
       return res.status(400).json({ error: 'Vehicle IDs are required' });
@@ -19,8 +19,8 @@ router.post('/send', async (req, res) => {
       return res.status(400).json({ error: 'Valid template is required' });
     }
 
-    if (template === 'custom' && (!customMessage || !customMessage.trim())) {
-      return res.status(400).json({ error: 'Custom message is required for custom template' });
+    if (template === 'custom' && (!customMessage || !customMessage.trim() || !customSubject || !customSubject.trim())) {
+      return res.status(400).json({ error: 'Custom subject and message are required for custom template' });
     }
 
     // Get vehicles with their associated customers through reservations
@@ -116,9 +116,21 @@ router.post('/send', async (req, res) => {
 
     // Log the email sending activity
     try {
+      // Get subject based on template type
+      let logSubject = '';
+      if (template === 'custom') {
+        logSubject = customSubject || 'Custom Message';
+      } else if (template === 'apk') {
+        logSubject = 'APK Inspection Reminder - Action Required';
+      } else if (template === 'maintenance') {
+        logSubject = 'Scheduled Maintenance Reminder';
+      } else {
+        logSubject = 'Notification';
+      }
+
       await db.insert(emailLogs).values({
         template: template,
-        subject: emailContent.subject,
+        subject: logSubject,
         recipients: vehicleData.length,
         emailsSent: results.sent,
         emailsFailed: results.failed,
