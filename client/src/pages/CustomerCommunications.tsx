@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { Mail, Shield, Wrench, Users, Send, Calendar, Clock, CheckCircle, AlertTriangle, Edit, Trash2, Eye } from "lucide-react";
 import type { Vehicle, Customer } from "@shared/schema";
 
 interface NotificationHistory {
@@ -66,9 +66,15 @@ export default function CustomerCommunications() {
   const [templateName, setTemplateName] = useState<string>("");
   const [templateSubject, setTemplateSubject] = useState<string>("");
   const [templateContent, setTemplateContent] = useState<string>("");
+  const [templateCategory, setTemplateCategory] = useState<'apk' | 'maintenance' | 'custom'>('custom');
   const [templates, setTemplates] = useState<Array<{id: string, name: string, subject: string, content: string, createdAt: string}>>([]);
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [templateSearchQuery, setTemplateSearchQuery] = useState<string>("");
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState<'all' | 'apk' | 'maintenance' | 'custom'>('all');
+  const [templatePreviewDialog, setTemplatePreviewDialog] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<any>(null);
+  const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<any>(null);
 
   const { toast } = useToast();
 
@@ -401,6 +407,65 @@ export default function CustomerCommunications() {
   const confirmSendNotifications = async () => {
     setPreviewDialogOpen(false);
     await handleSendNotifications();
+  };
+
+  // Template management functions
+  const filteredTemplates = savedTemplates.filter((template: any) => {
+    const matchesSearch = !templateSearchQuery || 
+      template.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) ||
+      template.subject.toLowerCase().includes(templateSearchQuery.toLowerCase());
+    
+    const matchesCategory = templateCategoryFilter === 'all' || template.category === templateCategoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const getCategoryBadgeColor = (category: string) => {
+    switch (category) {
+      case 'apk': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'maintenance': return 'bg-green-100 text-green-800 border-green-200';
+      case 'custom': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const handlePreviewTemplate = (template: any) => {
+    setSelectedTemplateForPreview(template);
+    setTemplatePreviewDialog(true);
+  };
+
+  const handleDeleteTemplate = (template: any) => {
+    setTemplateToDelete(template);
+  };
+
+  const confirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/email-templates/${templateToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete template: ${response.statusText}`);
+      }
+
+      toast({
+        title: "Template Deleted",
+        description: `Template "${templateToDelete.name}" has been deleted successfully.`,
+      });
+
+      // Refresh templates - this will happen automatically via react-query
+      setTemplateToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      toast({
+        title: "Failed to Delete Template",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   // Function to handle email selection changes in preview dialog
@@ -1257,6 +1322,20 @@ export default function CustomerCommunications() {
                 </div>
                 
                 <div className="space-y-2">
+                  <Label htmlFor="template-category">Template Category</Label>
+                  <Select value={templateCategory} onValueChange={(value: 'apk' | 'maintenance' | 'custom') => setTemplateCategory(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="apk">APK Reminders</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="template-content">Email Content</Label>
                   <textarea
                     id="template-content"
@@ -1309,6 +1388,7 @@ export default function CustomerCommunications() {
                             name: templateName,
                             subject: templateSubject,
                             content: templateContent,
+                            category: templateCategory,
                           }),
                         });
 
@@ -1368,56 +1448,114 @@ export default function CustomerCommunications() {
             {/* Saved Templates */}
             <Card>
               <CardHeader>
-                <CardTitle>Saved Templates</CardTitle>
-                <CardDescription>Manage your existing email templates</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Saved Templates ({savedTemplates.length})</CardTitle>
+                    <CardDescription>Manage your existing email templates</CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      placeholder="Search templates..."
+                      value={templateSearchQuery}
+                      onChange={(e) => setTemplateSearchQuery(e.target.value)}
+                      className="w-40"
+                      data-testid="input-search-templates"
+                    />
+                    <Select value={templateCategoryFilter} onValueChange={(value: any) => setTemplateCategoryFilter(value as 'all' | 'apk' | 'maintenance' | 'custom')}>
+                      <SelectTrigger className="w-32" data-testid="select-template-category">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="apk">APK</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {/* Mock templates for now - will be replaced with real data */}
-                <div className="space-y-3">
-                  {[
-                    { id: "1", name: "APK Reminder", subject: "APK Inspection Due - {vehiclePlate}", content: "Dear {customerName}, your vehicle {vehiclePlate} requires APK inspection...", createdAt: "2024-03-15" },
-                    { id: "2", name: "Maintenance Due", subject: "Service Reminder - {vehiclePlate}", content: "Hello {customerName}, it's time for your {vehicleBrand} {vehicleModel} service...", createdAt: "2024-03-14" },
-                    { id: "3", name: "Welcome Message", subject: "Welcome to Autolease Lam", content: "Dear {customerName}, welcome to our car rental service...", createdAt: "2024-03-13" }
-                  ].map((template) => (
-                    <div key={template.id} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{template.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{template.subject}</p>
-                          <p className="text-xs text-gray-500 mt-1">Created: {new Date(template.createdAt).toLocaleDateString('nl-NL')}</p>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingTemplate(template.id);
-                              setTemplateName(template.name);
-                              setTemplateSubject(template.subject);
-                              setTemplateContent(template.content);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => {
-                              // Implement delete functionality
-                              toast({
-                                title: "Template Deleted",
-                                description: `Template "${template.name}" has been deleted`,
-                              });
-                            }}
-                          >
-                            Delete
-                          </Button>
+                {savedTemplates.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No templates yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Create your first email template to get started
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setEditingTemplate(null);
+                        setTemplateName("");
+                        setTemplateSubject("");
+                        setTemplateContent("");
+                        setTemplateCategory("custom");
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      Create Template
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {filteredTemplates.map((template: any) => (
+                      <div key={template.id} className="p-4 border rounded-lg hover:shadow-sm transition-shadow" data-testid={`template-card-${template.id}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className="font-medium text-sm truncate">{template.name}</h4>
+                              <Badge className={`text-xs ${getCategoryBadgeColor(template.category)}`}>
+                                {template.category?.toUpperCase() || 'CUSTOM'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2 truncate">{template.subject}</p>
+                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{template.content}</p>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span>Created: {new Date(template.createdAt).toLocaleDateString('nl-NL')}</span>
+                              {template.lastUsed && (
+                                <span>Last used: {new Date(template.lastUsed).toLocaleDateString('nl-NL')}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex space-x-1 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handlePreviewTemplate(template)}
+                              data-testid={`button-preview-${template.id}`}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingTemplate(template.id);
+                                setTemplateName(template.name);
+                                setTemplateSubject(template.subject);
+                                setTemplateContent(template.content);
+                                setTemplateCategory(template.category || "custom");
+                              }}
+                              data-testid={`button-edit-${template.id}`}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteTemplate(template)}
+                              data-testid={`button-delete-${template.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1541,6 +1679,87 @@ export default function CustomerCommunications() {
               className="bg-green-600 hover:bg-green-700"
             >
               {isLoadingNotifications ? "Sending..." : "Confirm & Send Emails"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Preview Dialog */}
+      <Dialog open={templatePreviewDialog} onOpenChange={setTemplatePreviewDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Template Preview</DialogTitle>
+            <DialogDescription>
+              Preview how this template will appear in emails
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTemplateForPreview && (
+            <div className="space-y-4">
+              <div className="p-4 border rounded-lg bg-white">
+                <div className="border-b pb-3 mb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-sm text-gray-600">From: Car Rental System</div>
+                    <Badge className={getCategoryBadgeColor(selectedTemplateForPreview.category)}>
+                      {selectedTemplateForPreview.category?.toUpperCase() || 'CUSTOM'}
+                    </Badge>
+                  </div>
+                  <div className="font-medium text-sm text-gray-600 mt-1">To: customer@example.com</div>
+                  <div className="font-bold text-lg mt-2">{selectedTemplateForPreview.subject}</div>
+                </div>
+                <div className="whitespace-pre-wrap text-gray-900">
+                  {selectedTemplateForPreview.content}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <div><strong>Template:</strong> {selectedTemplateForPreview.name}</div>
+                <div><strong>Category:</strong> {selectedTemplateForPreview.category || 'custom'}</div>
+                <div><strong>Created:</strong> {new Date(selectedTemplateForPreview.createdAt).toLocaleDateString()}</div>
+                {selectedTemplateForPreview.lastUsed && (
+                  <div><strong>Last Used:</strong> {new Date(selectedTemplateForPreview.lastUsed).toLocaleDateString()}</div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplatePreviewDialog(false)}>
+              Close
+            </Button>
+            {selectedTemplateForPreview && (
+              <Button onClick={() => {
+                setTemplatePreviewDialog(false);
+                setEditingTemplate(selectedTemplateForPreview.id);
+                setTemplateName(selectedTemplateForPreview.name);
+                setTemplateSubject(selectedTemplateForPreview.subject);
+                setTemplateContent(selectedTemplateForPreview.content);
+                setTemplateCategory(selectedTemplateForPreview.category || "custom");
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Template
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Template Confirmation Dialog */}
+      <Dialog open={!!templateToDelete} onOpenChange={() => setTemplateToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{templateToDelete?.name}"? 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateToDelete(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDeleteTemplate}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Template
             </Button>
           </DialogFooter>
         </DialogContent>
