@@ -64,6 +64,16 @@ export default function CustomerCommunications() {
 
   const { toast } = useToast();
 
+  // Fetch saved email templates
+  const { data: savedTemplates = [] } = useQuery({
+    queryKey: ['/api/email-templates'],
+    queryFn: async () => {
+      const response = await fetch('/api/email-templates');
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      return response.json();
+    },
+  });
+
   // Fetch vehicles with active reservations (filtered or all)
   const { data: vehiclesWithReservations = [] } = useQuery({
     queryKey: ['/api/vehicles', vehicleFilter === 'all' ? 'with-reservations' : 'filtered', vehicleFilter],
@@ -213,18 +223,140 @@ export default function CustomerCommunications() {
       return;
     }
 
-    if (!customMessage.trim() || !customSubject.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both subject and message for the notification",
-        variant: "destructive",
-      });
-      return;
+    // Get email content based on communication mode
+    let emailSubject = "";
+    let emailContent = "";
+
+    if (communicationMode === 'apk' && selectedTemplateId) {
+      // Check if it's a saved template first
+      if (selectedTemplateId.startsWith('saved-')) {
+        const templateId = selectedTemplateId.replace('saved-', '');
+        const savedTemplate = savedTemplates.find((t: any) => t.id.toString() === templateId);
+        if (savedTemplate) {
+          emailSubject = savedTemplate.subject;
+          emailContent = savedTemplate.content;
+        } else {
+          toast({
+            title: "Template Error",
+            description: "Saved template not found",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Use predefined APK templates
+        const apkTemplates = {
+        'apk-urgent': {
+          subject: 'URGENT: APK Inspection Overdue - {vehiclePlate}',
+          content: `Dear {customerName},
+
+Your vehicle {vehiclePlate} ({vehicleBrand} {vehicleModel}) has an OVERDUE APK inspection.
+
+⚠️ IMPORTANT: Driving without a valid APK certificate is illegal and can result in fines.
+
+Please contact us immediately to schedule your APK inspection:
+📞 Phone: [Your phone number]
+📧 Email: [Your email]
+
+Vehicle Details:
+- License Plate: {vehiclePlate}
+- Brand: {vehicleBrand}
+- Model: {vehicleModel}
+
+Best regards,
+{companyName}`
+        },
+        'apk-warning': {
+          subject: 'APK Inspection Due Soon - {vehiclePlate}',
+          content: `Dear {customerName},
+
+Your vehicle {vehiclePlate} ({vehicleBrand} {vehicleModel}) needs an APK inspection within the next 30 days.
+
+To avoid any inconvenience and ensure road safety, please schedule your APK inspection as soon as possible.
+
+Contact us to book your appointment:
+📞 Phone: [Your phone number]
+📧 Email: [Your email]
+
+Vehicle Details:
+- License Plate: {vehiclePlate}
+- Brand: {vehicleBrand}
+- Model: {vehicleModel}
+
+Best regards,
+{companyName}`
+        },
+        'apk-notice': {
+          subject: 'APK Inspection Reminder - {vehiclePlate}',
+          content: `Dear {customerName},
+
+This is a friendly reminder that your vehicle {vehiclePlate} ({vehicleBrand} {vehicleModel}) will need an APK inspection in the coming weeks.
+
+We recommend scheduling your appointment now to ensure availability.
+
+Contact us to book your APK inspection:
+📞 Phone: [Your phone number]
+📧 Email: [Your email]
+
+Vehicle Details:
+- License Plate: {vehiclePlate}
+- Brand: {vehicleBrand}
+- Model: {vehicleModel}
+
+Best regards,
+{companyName}`
+        },
+        'apk-general': {
+          subject: 'APK Inspection - {vehiclePlate}',
+          content: `Dear {customerName},
+
+Your vehicle {vehiclePlate} ({vehicleBrand} {vehicleModel}) requires an APK inspection.
+
+Please contact us to schedule your appointment at your convenience.
+
+📞 Phone: [Your phone number]
+📧 Email: [Your email]
+
+Vehicle Details:
+- License Plate: {vehiclePlate}
+- Brand: {vehicleBrand}
+- Model: {vehicleModel}
+
+Best regards,
+{companyName}`
+        }
+      };
+
+        const template = apkTemplates[selectedTemplateId as keyof typeof apkTemplates];
+        if (template) {
+          emailSubject = template.subject;
+          emailContent = template.content;
+        } else {
+          toast({
+            title: "Template Error",
+            description: "Selected template not found",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    } else {
+      // For maintenance and custom modes, require custom message and subject
+      if (!customMessage.trim() || !customSubject.trim()) {
+        toast({
+          title: "Missing Information",
+          description: "Please enter both subject and message for the notification",
+          variant: "destructive",
+        });
+        return;
+      }
+      emailSubject = customSubject;
+      emailContent = customMessage;
     }
 
-    // Use custom message and subject
-    const subject = customSubject.trim();
-    const content = customMessage.trim();
+    // Use determined email content (template or custom)
+    const subject = emailSubject.trim();
+    const content = emailContent.trim();
 
     // Generate recipients list with actual customer data
     const recipients = selectedVehicles.map(vehicle => {
@@ -402,10 +534,24 @@ export default function CustomerCommunications() {
                         <SelectValue placeholder="Select an APK reminder template" />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* Predefined APK templates */}
                         <SelectItem value="apk-urgent">APK Urgent Reminder (Overdue)</SelectItem>
                         <SelectItem value="apk-warning">APK Warning (30 days)</SelectItem>
                         <SelectItem value="apk-notice">APK Notice (60 days)</SelectItem>
                         <SelectItem value="apk-general">General APK Reminder</SelectItem>
+                        {/* Saved templates */}
+                        {savedTemplates.length > 0 && (
+                          <>
+                            <div className="px-2 py-1 text-xs font-medium text-muted-foreground border-t">
+                              Saved Templates
+                            </div>
+                            {savedTemplates.map((template: any) => (
+                              <SelectItem key={template.id} value={`saved-${template.id}`}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                     {selectedTemplateId && (
