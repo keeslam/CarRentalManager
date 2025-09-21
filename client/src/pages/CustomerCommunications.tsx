@@ -392,6 +392,35 @@ export default function CustomerCommunications() {
                   <CardDescription>Send APK inspection reminders to customers with upcoming or overdue inspections</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Template Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="apk-template-select" className="text-sm font-medium">
+                      Email Template
+                    </Label>
+                    <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                      <SelectTrigger className="w-full" data-testid="select-apk-template">
+                        <SelectValue placeholder="Select an APK reminder template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="apk-urgent">APK Urgent Reminder (Overdue)</SelectItem>
+                        <SelectItem value="apk-warning">APK Warning (30 days)</SelectItem>
+                        <SelectItem value="apk-notice">APK Notice (60 days)</SelectItem>
+                        <SelectItem value="apk-general">General APK Reminder</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedTemplateId && (
+                      <div className="text-xs text-muted-foreground">
+                        Template selected: {
+                          selectedTemplateId === 'apk-urgent' ? 'APK Urgent Reminder (Overdue)' :
+                          selectedTemplateId === 'apk-warning' ? 'APK Warning (30 days)' :
+                          selectedTemplateId === 'apk-notice' ? 'APK Notice (60 days)' :
+                          selectedTemplateId === 'apk-general' ? 'General APK Reminder' : 
+                          selectedTemplateId
+                        }
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center space-x-4 mb-4">
                     <div className="flex-1">
                       <Label htmlFor="search-apk" className="text-sm font-medium sr-only">Search</Label>
