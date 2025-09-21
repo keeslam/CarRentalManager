@@ -9,7 +9,7 @@ const router = Router();
 // Send notifications to customers
 router.post('/send', async (req, res) => {
   try {
-    const { vehicleIds, template, customMessage, customSubject } = req.body;
+    const { vehicleIds, template, customMessage, customSubject, emailFieldSelection } = req.body;
     
     if (!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) {
       return res.status(400).json({ error: 'Vehicle IDs are required' });
@@ -54,9 +54,40 @@ router.post('/send', async (req, res) => {
       const vehicle = data.vehicle;
       const customer = data.customer;
       
-      if (!customer?.email) {
+      // Determine which email to use based on selection
+      let selectedEmail = null;
+      const emailField = emailFieldSelection || 'auto';
+      
+      if (emailField === 'auto') {
+        // Auto-select based on notification type
+        if (template === 'apk' && customer?.emailForMOT) {
+          selectedEmail = customer.emailForMOT;
+        } else if (customer?.email) {
+          selectedEmail = customer.email;
+        } else if (customer?.emailGeneral) {
+          selectedEmail = customer.emailGeneral;
+        }
+      } else {
+        // Use specifically selected email field
+        switch (emailField) {
+          case 'email':
+            selectedEmail = customer?.email;
+            break;
+          case 'emailForMOT':
+            selectedEmail = customer?.emailForMOT;
+            break;
+          case 'emailForInvoices':
+            selectedEmail = customer?.emailForInvoices;
+            break;
+          case 'emailGeneral':
+            selectedEmail = customer?.emailGeneral;
+            break;
+        }
+      }
+
+      if (!selectedEmail) {
         results.failed++;
-        results.errors.push(`No email for vehicle ${vehicle.licensePlate}`);
+        results.errors.push(`No ${emailField === 'auto' ? 'suitable' : emailField} email for vehicle ${vehicle.licensePlate}`);
         continue;
       }
 
@@ -67,21 +98,21 @@ router.post('/send', async (req, res) => {
         switch (template) {
           case 'apk':
             emailContent = EmailTemplates.apkReminder(
-              customer.name || 'Customer',
+              customer?.name || 'Customer',
               vehicle.licensePlate || 'Unknown',
               vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : 'Unknown'
             );
             break;
           case 'maintenance':
             emailContent = EmailTemplates.maintenanceReminder(
-              customer.name || 'Customer',
+              customer?.name || 'Customer',
               vehicle.licensePlate || 'Unknown',
               'Regular Service' // You could make this dynamic based on vehicle data
             );
             break;
           case 'custom':
             emailContent = EmailTemplates.generalNotification(
-              customer.name || 'Customer',
+              customer?.name || 'Customer',
               vehicle.licensePlate || 'Unknown',
               customMessage
             );
@@ -91,8 +122,8 @@ router.post('/send', async (req, res) => {
         }
 
         const success = await sendEmail({
-          to: customer.email,
-          toName: customer.name || undefined,
+          to: selectedEmail,
+          toName: customer?.name || undefined,
           from: fromEmail,
           fromName: 'Autolease Lam',
           subject: emailContent.subject,
@@ -104,11 +135,11 @@ router.post('/send', async (req, res) => {
           results.sent++;
         } else {
           results.failed++;
-          results.errors.push(`Failed to send to ${customer.email} for vehicle ${vehicle.licensePlate}`);
+          results.errors.push(`Failed to send to ${selectedEmail} for vehicle ${vehicle.licensePlate}`);
         }
       } catch (error) {
         results.failed++;
-        results.errors.push(`Error sending to ${customer.email}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        results.errors.push(`Error sending to ${selectedEmail}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 

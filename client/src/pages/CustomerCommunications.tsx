@@ -162,6 +162,7 @@ export default function CustomerCommunications() {
           template: notificationTemplate,
           customMessage: customMessage.trim() || undefined,
           customSubject: customSubject.trim() || undefined,
+          emailFieldSelection: emailFieldSelection,
         }),
       });
 
@@ -552,7 +553,17 @@ export default function CustomerCommunications() {
                               <div key={index} className="p-3 flex justify-between items-center">
                                 <div className="space-y-1">
                                   <div className="font-medium text-sm">{recipient.name}</div>
-                                  <div className="text-xs text-muted-foreground">{recipient.email}</div>
+                                  <div className="text-xs text-muted-foreground flex items-center space-x-2">
+                                  <span>{recipient.email}</span>
+                                  {recipient.emailField !== "none" && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {recipient.emailField === "email" && "Primary"}
+                                      {recipient.emailField === "emailForMOT" && "APK/MOT"}
+                                      {recipient.emailField === "emailForInvoices" && "Invoice"}
+                                      {recipient.emailField === "emailGeneral" && "General"}
+                                    </Badge>
+                                  )}
+                                </div>
                                 </div>
                                 <div className="text-xs text-blue-600 font-mono">
                                   {recipient.vehicleLicense}
