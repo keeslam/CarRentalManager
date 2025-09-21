@@ -346,6 +346,7 @@ export function QuickActions() {
   const [workshopSchedulerDialogOpen, setWorkshopSchedulerDialogOpen] = useState(false);
   const [selectedWorkshopVehicle, setSelectedWorkshopVehicle] = useState<Vehicle | null>(null);
   const [workshopSearchQuery, setWorkshopSearchQuery] = useState<string>("");
+  const [workshopPlannerOpen, setWorkshopPlannerOpen] = useState(false);
   
   const { toast } = useToast();
   
@@ -1533,15 +1534,12 @@ export function QuickActions() {
                       <Button
                         onClick={() => {
                           if (selectedWorkshopVehicle) {
-                            // Open the external planning tool in a new tab
-                            window.open('https://planner.garage.software/#/afspraken/4353313633393035/stap1', '_blank');
+                            // Show embedded planner instead of external redirect
+                            setWorkshopPlannerOpen(true);
                             toast({
-                              title: "Redirecting to Workshop Planner",
-                              description: `Opening appointment scheduler for ${selectedWorkshopVehicle.licensePlate}`,
+                              title: "Opening Workshop Planner",
+                              description: `Scheduling appointment for ${selectedWorkshopVehicle.licensePlate}`,
                             });
-                            setWorkshopSchedulerDialogOpen(false);
-                            setSelectedWorkshopVehicle(null);
-                            setWorkshopSearchQuery("");
                           } else {
                             toast({
                               title: "No Vehicle Selected",
@@ -1553,10 +1551,75 @@ export function QuickActions() {
                         disabled={!selectedWorkshopVehicle}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
-                        <ActionIcon name="external-link" className="w-4 h-4 mr-2" />
+                        <ActionIcon name="calendar-clock" className="w-4 h-4 mr-2" />
                         Schedule Appointment
                       </Button>
                     </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For embedded workshop planner - render a full screen dialog
+            if (workshopPlannerOpen && selectedWorkshopVehicle) {
+              return (
+                <Dialog key="workshop-planner" open={workshopPlannerOpen} onOpenChange={setWorkshopPlannerOpen}>
+                  <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 gap-0">
+                    <DialogHeader className="p-4 border-b bg-white">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <DialogTitle className="text-lg">Workshop Appointment - Autolease Lam</DialogTitle>
+                          <DialogDescription className="text-sm">
+                            Scheduling for: {selectedWorkshopVehicle.licensePlate} - {selectedWorkshopVehicle.brand} {selectedWorkshopVehicle.model}
+                          </DialogDescription>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setWorkshopPlannerOpen(false);
+                            setWorkshopSchedulerDialogOpen(false);
+                            setSelectedWorkshopVehicle(null);
+                            setWorkshopSearchQuery("");
+                          }}
+                        >
+                          <ActionIcon name="x" className="w-4 h-4 mr-2" />
+                          Close
+                        </Button>
+                      </div>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 relative">
+                      <iframe
+                        src={`https://planner.garage.software/#/afspraken/4353313633393035/stap1?customer=Autolease%20Lam&vehicle=${encodeURIComponent(selectedWorkshopVehicle.licensePlate)}&brand=${encodeURIComponent(selectedWorkshopVehicle.brand)}&model=${encodeURIComponent(selectedWorkshopVehicle.model)}&notes=${encodeURIComponent(`Vehicle: ${selectedWorkshopVehicle.brand} ${selectedWorkshopVehicle.model} (${selectedWorkshopVehicle.licensePlate})${selectedWorkshopVehicle.chassisNumber ? ` - Chassis: ${selectedWorkshopVehicle.chassisNumber}` : ''}`)}`}
+                        className="w-full h-full border-0"
+                        title="Workshop Planner"
+                        allow="fullscreen"
+                        loading="lazy"
+                      />
+                      
+                      {/* Loading overlay */}
+                      <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center pointer-events-none">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                          <p className="text-sm text-gray-600">Loading workshop planner...</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Info bar at bottom */}
+                    <div className="p-3 bg-blue-50 border-t text-sm text-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <span><strong>Customer:</strong> Autolease Lam</span>
+                          <span><strong>Vehicle:</strong> {selectedWorkshopVehicle.licensePlate}</span>
+                          <span><strong>Type:</strong> {selectedWorkshopVehicle.brand} {selectedWorkshopVehicle.model}</span>
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          All appointments will be booked under "Autolease Lam"
+                        </div>
+                      </div>
+                    </div>
                   </DialogContent>
                 </Dialog>
               );
