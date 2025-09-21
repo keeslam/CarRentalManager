@@ -86,6 +86,40 @@ const resources = {
       language: "Language",
       english: "English",
       dutch: "Dutch",
+      
+      // Auth page
+      vehicleFleetManager: "Vehicle Fleet Manager",
+      signInToContinue: "Sign in to continue to your dashboard",
+      login: "Login",
+      register: "Register",
+      enterCredentials: "Enter your credentials to access your account",
+      username: "Username",
+      yourUsername: "Your username",
+      password: "Password",
+      yourPassword: "Your password",
+      confirmPassword: "Confirm Password",
+      confirmYourPassword: "Confirm your password",
+      signingIn: "Signing in...",
+      registering: "Registering...",
+      alreadyHaveAccount: "Already have an account? Login here",
+      
+      // Validation messages
+      usernameRequired: "Username is required",
+      passwordRequired: "Password is required",
+      usernameMinLength: "Username must be at least 3 characters",
+      passwordMinLength: "Password must be at least 6 characters",
+      pleaseConfirmPassword: "Please confirm your password",
+      passwordsDontMatch: "Passwords don't match",
+      invalidEmail: "Invalid email address when provided",
+      nameMinLength: "Name must be at least 2 characters",
+      
+      // Fleet management info
+      fleetManagementSystem: "Fleet Management System",
+      streamlineOperations: "Streamline your vehicle rental operations with our comprehensive management system",
+      trackVehicles: "Track vehicles, customers, and reservations",
+      generateContracts: "Generate contracts and manage documents",
+      monitorExpenses: "Monitor expenses and maintenance alerts",
+      comprehensiveReporting: "Comprehensive reporting and analytics",
     }
   },
   nl: {
@@ -170,6 +204,40 @@ const resources = {
       language: "Taal",
       english: "Engels",
       dutch: "Nederlands",
+      
+      // Auth page
+      vehicleFleetManager: "Voertuig Vloot Manager",
+      signInToContinue: "Meld je aan om door te gaan naar je dashboard",
+      login: "Inloggen",
+      register: "Registreren",
+      enterCredentials: "Voer je inloggegevens in om toegang te krijgen tot je account",
+      username: "Gebruikersnaam",
+      yourUsername: "Je gebruikersnaam",
+      password: "Wachtwoord",
+      yourPassword: "Je wachtwoord",
+      confirmPassword: "Bevestig Wachtwoord",
+      confirmYourPassword: "Bevestig je wachtwoord",
+      signingIn: "Inloggen...",
+      registering: "Registreren...",
+      alreadyHaveAccount: "Heb je al een account? Log hier in",
+      
+      // Validation messages
+      usernameRequired: "Gebruikersnaam is verplicht",
+      passwordRequired: "Wachtwoord is verplicht",
+      usernameMinLength: "Gebruikersnaam moet minimaal 3 karakters zijn",
+      passwordMinLength: "Wachtwoord moet minimaal 6 karakters zijn",
+      pleaseConfirmPassword: "Bevestig je wachtwoord",
+      passwordsDontMatch: "Wachtwoorden komen niet overeen",
+      invalidEmail: "Ongeldig e-mailadres indien opgegeven",
+      nameMinLength: "Naam moet minimaal 2 karakters zijn",
+      
+      // Fleet management info
+      fleetManagementSystem: "Vloot Management Systeem",
+      streamlineOperations: "Stroomlijn je voertuigverhuur activiteiten met ons uitgebreide managementsysteem",
+      trackVehicles: "Houd voertuigen, klanten en reserveringen bij",
+      generateContracts: "Genereer contracten en beheer documenten",
+      monitorExpenses: "Monitor uitgaven en onderhoudswaarschuwingen",
+      comprehensiveReporting: "Uitgebreide rapportage en analyses",
     }
   }
 };

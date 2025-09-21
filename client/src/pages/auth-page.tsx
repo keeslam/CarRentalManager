@@ -24,28 +24,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from 'react-i18next';
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+// We'll create the schemas inside the component to access translations
+const getLoginSchema = (t: any) => z.object({
+  username: z.string().min(1, t('usernameRequired')),
+  password: z.string().min(1, t('passwordRequired')),
 });
 
-const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
+const getRegisterSchema = (t: any) => z.object({
+  username: z.string().min(3, t('usernameMinLength')),
+  password: z.string().min(6, t('passwordMinLength')),
+  confirmPassword: z.string().min(1, t('pleaseConfirmPassword')),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: t('passwordsDontMatch'),
   path: ["confirmPassword"],
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type LoginFormValues = {
+  username: string;
+  password: string;
+};
+
+type RegisterFormValues = {
+  username: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [_, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const { t } = useTranslation();
   
   // If user is already logged in, redirect to home page
   useEffect(() => {
@@ -53,6 +64,9 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user, navigate]);
+  
+  const loginSchema = getLoginSchema(t);
+  const registerSchema = getRegisterSchema(t);
   
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -87,21 +101,21 @@ export default function AuthPage() {
         {/* Form Side */}
         <div className="p-5 flex flex-col justify-center h-full">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Vehicle Fleet Manager</h1>
-            <p className="text-gray-600">Sign in to continue to your dashboard</p>
+            <h1 className="text-3xl font-bold mb-2">{t('vehicleFleetManager')}</h1>
+            <p className="text-gray-600">{t('signInToContinue')}</p>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="login">{t('login')}</TabsTrigger>
+              <TabsTrigger value="register">{t('register')}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <Card>
                 <CardHeader>
-                  <CardTitle>Login</CardTitle>
-                  <CardDescription>Enter your credentials to access your account.</CardDescription>
+                  <CardTitle>{t('login')}</CardTitle>
+                  <CardDescription>{t('enterCredentials')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...loginForm}>
@@ -111,9 +125,9 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>{t('username')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your username" {...field} />
+                              <Input placeholder={t('yourUsername')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -124,9 +138,9 @@ export default function AuthPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Password</FormLabel>
+                            <FormLabel>{t('password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Your password" {...field} />
+                              <Input type="password" placeholder={t('yourPassword')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -137,7 +151,7 @@ export default function AuthPage() {
                         className="w-full" 
                         disabled={loginMutation.isPending}
                       >
-                        {loginMutation.isPending ? "Logging in..." : "Login"}
+                        {loginMutation.isPending ? t('signingIn') : t('login')}
                       </Button>
                     </form>
                   </Form>
