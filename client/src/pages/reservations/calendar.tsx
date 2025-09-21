@@ -502,7 +502,8 @@ export default function ReservationCalendarPage() {
                                     className={`px-1 py-0.5 text-xs truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.location.href = `/reservations/${res.id}`;
+                                      console.log('Main reservation item clicked for:', res.id);
+                                      handleViewReservation(res);
                                     }}
                                   >
                                     <div className="flex justify-between items-center">
@@ -520,7 +521,8 @@ export default function ReservationCalendarPage() {
                                       <Button
                                         onClick={(e) => {
                                           e.stopPropagation(); // Prevent triggering the parent onClick
-                                          window.location.href = `/reservations/${res.id}/edit`;
+                                          console.log('Small edit button clicked for:', res.id);
+                                          handleEditReservation(res);
                                         }}
                                         size="icon"
                                         variant="ghost"
