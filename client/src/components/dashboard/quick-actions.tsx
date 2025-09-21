@@ -22,6 +22,7 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
 import { Reservation, Vehicle } from "@shared/schema";
@@ -296,6 +297,12 @@ const quickActions: QuickAction[] = [
     dialog: "apk-report",
     primary: false,
   },
+  {
+    label: "Schedule Workshop",
+    icon: "calendar-clock",
+    dialog: "workshop-scheduler",
+    primary: false,
+  },
 ];
 
 export function QuickActions() {
@@ -334,6 +341,11 @@ export function QuickActions() {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  
+  // State for workshop scheduler dialog
+  const [workshopSchedulerDialogOpen, setWorkshopSchedulerDialogOpen] = useState(false);
+  const [selectedWorkshopVehicle, setSelectedWorkshopVehicle] = useState<Vehicle | null>(null);
+  const [workshopSearchQuery, setWorkshopSearchQuery] = useState<string>("");
   
   const { toast } = useToast();
   
@@ -1396,6 +1408,152 @@ export function QuickActions() {
                           <RotateCw className="mr-2 h-4 w-4 animate-spin" />
                         )}
                         Upload
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For workshop scheduler dialog
+            if (action.dialog === "workshop-scheduler") {
+              return (
+                <Dialog key={action.label} open={workshopSchedulerDialogOpen} onOpenChange={setWorkshopSchedulerDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon || "calendar-clock"} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Schedule Workshop Appointment</DialogTitle>
+                      <DialogDescription>
+                        Select a vehicle to schedule maintenance or APK inspection at our partner workshop.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6">
+                      {/* Vehicle Selection */}
+                      <div className="space-y-3">
+                        <Label htmlFor="workshop-vehicle">Select Vehicle</Label>
+                        <div className="space-y-3">
+                          <Input
+                            id="workshop-vehicle-search"
+                            placeholder="Search by license plate or brand..."
+                            value={workshopSearchQuery}
+                            onChange={(e) => setWorkshopSearchQuery(e.target.value)}
+                            className="w-full"
+                          />
+                          
+                          <div className="max-h-48 overflow-y-auto border rounded-md">
+                            {vehicles
+                              ?.filter(vehicle => 
+                                !workshopSearchQuery ||
+                                vehicle.licensePlate?.toLowerCase().includes(workshopSearchQuery.toLowerCase()) ||
+                                vehicle.brand?.toLowerCase().includes(workshopSearchQuery.toLowerCase()) ||
+                                vehicle.model?.toLowerCase().includes(workshopSearchQuery.toLowerCase())
+                              )
+                              .map((vehicle) => (
+                                <div
+                                  key={vehicle.id}
+                                  className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${
+                                    selectedWorkshopVehicle?.id === vehicle.id ? 'bg-blue-50 border-blue-200' : ''
+                                  }`}
+                                  onClick={() => setSelectedWorkshopVehicle(vehicle)}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className="font-medium">
+                                        {vehicle.licensePlate}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {vehicle.brand} {vehicle.model} ({vehicle.productionDate || 'N/A'})
+                                      </div>
+                                    </div>
+                                    {selectedWorkshopVehicle?.id === vehicle.id && (
+                                      <ActionIcon name="check" className="w-5 h-5 text-blue-600" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Selected Vehicle Info */}
+                      {selectedWorkshopVehicle && (
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h4 className="font-medium text-blue-900 mb-2">Selected Vehicle</h4>
+                          <div className="space-y-1 text-sm">
+                            <div><strong>License Plate:</strong> {selectedWorkshopVehicle.licensePlate}</div>
+                            <div><strong>Vehicle:</strong> {selectedWorkshopVehicle.brand} {selectedWorkshopVehicle.model} ({selectedWorkshopVehicle.productionDate || 'N/A'})</div>
+                            {selectedWorkshopVehicle.chassisNumber && (
+                              <div><strong>Chassis:</strong> {selectedWorkshopVehicle.chassisNumber}</div>
+                            )}
+                            {selectedWorkshopVehicle.apkDate && (
+                              <div><strong>APK Date:</strong> {new Date(selectedWorkshopVehicle.apkDate).toLocaleDateString('nl-NL')}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Available Services */}
+                      {selectedWorkshopVehicle && (
+                        <div className="space-y-3">
+                          <Label>Available Services</Label>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="p-2 bg-gray-50 rounded border">✓ APK Inspection</div>
+                            <div className="p-2 bg-gray-50 rounded border">✓ Major Service</div>
+                            <div className="p-2 bg-gray-50 rounded border">✓ Minor Service</div>
+                            <div className="p-2 bg-gray-50 rounded border">✓ Brake Service</div>
+                            <div className="p-2 bg-gray-50 rounded border">✓ Tire Change</div>
+                            <div className="p-2 bg-gray-50 rounded border">✓ A/C Check</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <DialogFooter className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setWorkshopSchedulerDialogOpen(false);
+                          setSelectedWorkshopVehicle(null);
+                          setWorkshopSearchQuery("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (selectedWorkshopVehicle) {
+                            // Open the external planning tool in a new tab
+                            window.open('https://planner.garage.software/#/afspraken/4353313633393035/stap1', '_blank');
+                            toast({
+                              title: "Redirecting to Workshop Planner",
+                              description: `Opening appointment scheduler for ${selectedWorkshopVehicle.licensePlate}`,
+                            });
+                            setWorkshopSchedulerDialogOpen(false);
+                            setSelectedWorkshopVehicle(null);
+                            setWorkshopSearchQuery("");
+                          } else {
+                            toast({
+                              title: "No Vehicle Selected",
+                              description: "Please select a vehicle first",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        disabled={!selectedWorkshopVehicle}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <ActionIcon name="external-link" className="w-4 h-4 mr-2" />
+                        Schedule Appointment
                       </Button>
                     </DialogFooter>
                   </DialogContent>
