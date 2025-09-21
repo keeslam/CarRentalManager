@@ -1003,16 +1003,48 @@ export class DatabaseStorage implements IStorage {
         updatedBy: templateData.updatedBy
       });
       
-      // Use SQL template literals for proper parameter binding
-      const result = await db.execute(sql`
+      // Build dynamic SQL based on what fields are being updated
+      const setClauses = [];
+      const values = [];
+      
+      if (updateData.name !== undefined) {
+        setClauses.push('name = ?');
+        values.push(updateData.name);
+      }
+      
+      if (updateData.fields !== undefined) {
+        setClauses.push('fields = ?');
+        values.push(updateData.fields);
+      }
+      
+      if (updateData.is_default !== undefined) {
+        setClauses.push('is_default = ?');
+        values.push(updateData.is_default);
+      }
+      
+      // Always update timestamp
+      setClauses.push('updated_at = ?');
+      values.push(updateData.updated_at);
+      
+      if (setClauses.length === 0) {
+        console.log('No fields to update');
+        return undefined;
+      }
+      
+      // Add the ID for WHERE clause
+      values.push(id);
+      
+      const queryText = `
         UPDATE pdf_templates 
-        SET name = ${updateData.name || sql`name`}, 
-            fields = ${updateData.fields || sql`fields`}, 
-            is_default = ${updateData.is_default !== undefined ? updateData.is_default : sql`is_default`}, 
-            updated_at = ${updateData.updated_at}
-        WHERE id = ${id}
+        SET ${setClauses.join(', ')}
+        WHERE id = ?
         RETURNING *
-      `);
+      `;
+      
+      console.log('SQL Query:', queryText);
+      console.log('SQL Values:', values);
+      
+      const result = await db.execute(sql.raw(queryText, ...values));
       
       if (result.length > 0) {
         console.log('Template updated successfully:', result[0]);
