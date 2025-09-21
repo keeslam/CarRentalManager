@@ -101,9 +101,9 @@ export default function ReservationCalendarPage() {
   
   // Helper function to get all reservations for a specific day
   const getReservationsForDate = (day: Date): Reservation[] => {
-    if (!reservations?.data) return [];
+    if (!reservations) return [];
     
-    return reservations.data.filter((reservation: Reservation) => {
+    return reservations.filter((reservation: Reservation) => {
       const startDate = safeParseDateISO(reservation.startDate);
       const endDate = safeParseDateISO(reservation.endDate);
       
@@ -119,7 +119,7 @@ export default function ReservationCalendarPage() {
       }
     }).filter((reservation: Reservation) => {
       // Apply current vehicle filters
-      const vehicle = vehicles?.data?.find((v: Vehicle) => v.id === reservation.vehicleId);
+      const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
       if (!vehicle) return false;
       
       // Search filter
@@ -499,10 +499,19 @@ export default function ReservationCalendarPage() {
                       <div
                         key={dayIndex}
                         className={`min-h-[100px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
-                        onClick={() => {
+                        onClick={(e) => {
                           if (isCurrentMonth) {
-                            const formattedDate = format(day, "yyyy-MM-dd");
-                            window.location.href = `/reservations/add?date=${formattedDate}`;
+                            const allDayReservations = getReservationsForDate(day);
+                            if (allDayReservations.length > 0) {
+                              // If there are reservations, show them in dialog
+                              console.log('Date box clicked - opening day dialog for:', format(day, 'yyyy-MM-dd'));
+                              openDayDialog(day);
+                            } else {
+                              // If no reservations, navigate to add page
+                              const formattedDate = format(day, "yyyy-MM-dd");
+                              console.log('Date box clicked - no reservations, navigating to add');
+                              window.location.href = `/reservations/add?date=${formattedDate}`;
+                            }
                           }
                         }}
                       >
@@ -859,7 +868,7 @@ export default function ReservationCalendarPage() {
               {getReservationsForDate(selectedDay).map((reservation) => {
                 const startDate = safeParseDateISO(reservation.startDate);
                 const endDate = safeParseDateISO(reservation.endDate);
-                const vehicle = vehicles?.data?.find((v: Vehicle) => v.id === reservation.vehicleId);
+                const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
                 const customer = reservation.customer;
                 
                 return (
