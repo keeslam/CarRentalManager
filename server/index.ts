@@ -9,6 +9,7 @@ import { BackupScheduler } from "./backupScheduler";
 import { initializeDefaultAdmin, displayDeploymentInfo } from "./initAdmin";
 import notificationRoutes from "./routes/notifications.js";
 import vehiclesWithReservationsRoutes from "./routes/vehicles-with-reservations.js";
+import filteredVehiclesRoutes from "./routes/filtered-vehicles.js";
 import emailTemplatesRoutes from "./routes/email-templates.js";
 import emailLogsRoutes from "./routes/email-logs.js";
 
@@ -121,6 +122,7 @@ app.get('/api', (_req, res) => {
 // Register API routes FIRST (before production static files)  
 app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/vehicles/with-reservations', requireAuth, vehiclesWithReservationsRoutes);
+app.use('/api/vehicles/filtered', requireAuth, filteredVehiclesRoutes);
 app.use('/api/email-templates', requireAuth, emailTemplatesRoutes);
 app.use('/api/email-logs', requireAuth, emailLogsRoutes);
 await registerRoutes(app);
