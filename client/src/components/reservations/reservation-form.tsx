@@ -48,7 +48,7 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { Customer, Vehicle, Reservation } from "@shared/schema";
-import { PlusCircle, FileCheck, Upload, Check, X, Edit } from "lucide-react";
+import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText } from "lucide-react";
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
@@ -134,6 +134,9 @@ export function ReservationForm({
   );
   const [startMileage, setStartMileage] = useState<number | undefined>(
     initialData?.startMileage || undefined
+  );
+  const [createdReservationId, setCreatedReservationId] = useState<number | null>(
+    editMode && initialData ? initialData.id : null
   );
   
   // Get recent selections from localStorage
@@ -487,6 +490,11 @@ export function ReservationForm({
         title: `Reservation ${editMode ? "updated" : "created"} successfully`,
         description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
       });
+
+      // Set the created reservation ID to enable contract generation
+      if (data && data.id) {
+        setCreatedReservationId(data.id);
+      }
       
       // Force refetch if needed
       queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
@@ -540,6 +548,53 @@ export function ReservationForm({
       });
     }
   });
+
+  // Generate contract mutation
+  const generateContractMutation = useMutation({
+    mutationFn: async (reservationId: number) => {
+      const response = await fetch(`/api/contracts/generate-default/${reservationId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate contract');
+      }
+      
+      return response.blob();
+    },
+    onSuccess: (blob, reservationId) => {
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `contract_${reservationId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Contract Generated",
+        description: "The contract has been generated and downloaded successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate contract: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle contract generation
+  const handleGenerateContract = () => {
+    if (createdReservationId) {
+      generateContractMutation.mutate(createdReservationId);
+    }
+  };
 
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
@@ -1265,6 +1320,31 @@ export function ReservationForm({
                   : editMode ? "Update Reservation" : "Create Reservation"
                 }
               </Button>
+              {/* Generate Contract Button - only show if reservation exists */}
+              {createdReservationId && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleGenerateContract}
+                  disabled={generateContractMutation.isPending}
+                  data-testid="button-generate-contract"
+                >
+                  {generateContractMutation.isPending ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate Contract
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
             
             {/* Booking Conflict Warning */}
