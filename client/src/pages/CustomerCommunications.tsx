@@ -644,46 +644,6 @@ export default function CustomerCommunications() {
             </CardContent>
           </Card>
 
-          {/* Custom Message Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Compose Message</CardTitle>
-              <CardDescription>Write your custom notification message for the selected vehicles</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="custom-subject">Email Subject</Label>
-                <Input
-                  id="custom-subject"
-                  placeholder="Enter email subject..."
-                  value={customSubject}
-                  onChange={(e) => setCustomSubject(e.target.value)}
-                  data-testid="input-subject"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="custom-message">Message</Label>
-                <textarea
-                  id="custom-message"
-                  placeholder="Enter your message to customers..."
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  className="w-full min-h-[120px] p-3 border rounded-md resize-vertical"
-                  data-testid="textarea-message"
-                />
-              </div>
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-900 text-sm mb-2">Available Placeholders:</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
-                  <div><code>{"{customerName}"}</code> - Customer's name</div>
-                  <div><code>{"{vehiclePlate}"}</code> - License plate</div>
-                  <div><code>{"{vehicleBrand}"}</code> - Vehicle brand</div>
-                  <div><code>{"{vehicleModel}"}</code> - Vehicle model</div>
-                  <div><code>{"{companyName}"}</code> - Your company name</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
