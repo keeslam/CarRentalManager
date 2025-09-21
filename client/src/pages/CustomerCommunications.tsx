@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";\nimport { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,9 +35,11 @@ interface EmailTemplate {
 
 export default function CustomerCommunications() {
   const [activeTab, setActiveTab] = useState("send");
+  const [communicationMode, setCommunicationMode] = useState<'apk' | 'maintenance' | 'custom'>('apk');
   const [selectedVehicles, setSelectedVehicles] = useState<Vehicle[]>([]);
   const [customMessage, setCustomMessage] = useState<string>("");
   const [customSubject, setCustomSubject] = useState<string>("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -47,7 +49,9 @@ export default function CustomerCommunications() {
     content: string;
     recipients: Array<{name: string, email: string, vehicleLicense: string, emailField: string, customer?: any, vehicleId?: number}>;
   } | null>(null);
-  const [vehicleFilter, setVehicleFilter] = useState<string>("all"); // all, apk, maintenance
+  
+  // Vehicle filter is now based on communication mode
+  const vehicleFilter = communicationMode === 'custom' ? 'all' : communicationMode;
   
   // Template builder state
   const [templateName, setTemplateName] = useState<string>("");
@@ -356,51 +360,58 @@ export default function CustomerCommunications() {
         </TabsList>
 
         <TabsContent value="send" className="space-y-6">
+          {/* Communication Mode Sub-tabs */}
+          <Tabs value={communicationMode} onValueChange={(value) => {
+            setCommunicationMode(value as 'apk' | 'maintenance' | 'custom');
+            setSelectedVehicles([]);
+            setSelectedTemplateId("");
+            setCustomSubject("");
+            setCustomMessage("");
+          }} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="apk" className="flex items-center space-x-2" data-testid="tab-apk">
+                <Shield className="h-4 w-4" />
+                <span>APK Reminders</span>
+              </TabsTrigger>
+              <TabsTrigger value="maintenance" className="flex items-center space-x-2" data-testid="tab-maintenance">
+                <Wrench className="h-4 w-4" />
+                <span>Maintenance</span>
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="flex items-center space-x-2" data-testid="tab-custom">
+                <Mail className="h-4 w-4" />
+                <span>Custom Message</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Vehicle Selection - Main Focus */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Vehicles & Customers</CardTitle>
-              <CardDescription>Choose which vehicles and customers to send notifications to</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="min-w-[200px]">
-                  <Label htmlFor="vehicle-filter" className="text-sm font-medium">Filter Vehicles</Label>
-                  <Select value={vehicleFilter} onValueChange={(value) => {
-                    setVehicleFilter(value);
-                    setSelectedVehicles([]);
-                  }}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select filter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Active Rentals</SelectItem>
-                      <SelectItem value="apk">APK Reminders</SelectItem>
-                      <SelectItem value="maintenance">Maintenance Reminders</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="search" className="text-sm font-medium sr-only">Search</Label>
-                  <Input
-                    id="search"
-                    placeholder="Search by license plate, brand, or model..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="mt-6"
-                  />
-                </div>
-                <Button 
-                  disabled={selectedVehicles.length === 0}
-                  onClick={generateEmailPreview}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  data-testid="button-preview-send"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Preview & Send to {selectedVehicles.length} vehicles
-                </Button>
-              </div>
+            {/* APK Tab */}
+            <TabsContent value="apk" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>APK Reminder Notifications</CardTitle>
+                  <CardDescription>Send APK inspection reminders to customers with upcoming or overdue inspections</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="flex-1">
+                      <Label htmlFor="search-apk" className="text-sm font-medium sr-only">Search</Label>
+                      <Input
+                        id="search-apk"
+                        placeholder="Search by license plate, brand, or model..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        data-testid="input-search-apk"
+                      />
+                    </div>
+                    <Button 
+                      disabled={selectedVehicles.length === 0 || !selectedTemplateId}
+                      onClick={generateEmailPreview}
+                      className="bg-orange-600 hover:bg-orange-700"
+                      data-testid="button-preview-apk"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Preview & Send to {selectedVehicles.length} vehicles
+                    </Button>
+                  </div>
 
               {/* Filter Information */}
               {vehicleFilter !== "all" && (
