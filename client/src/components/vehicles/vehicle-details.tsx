@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, User, Eye, Edit, Calendar, Plus } from "lucide-react";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,7 +60,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { format, addDays } from "date-fns";
+import { useMemo } from "react";
 
 interface VehicleDetailsProps {
   vehicleId: number;
@@ -75,6 +77,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [templateContent, setTemplateContent] = useState("");
   const [editableEmails, setEditableEmails] = useState<{ [customerId: number]: string }>({});
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+  const [damageFile, setDamageFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -262,6 +266,15 @@ Autolease Lam`;
       z.number().optional(),
       z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
     ]).optional(),
+    damageCheckFile: z.any().optional(),
+    departureMileage: z.union([
+      z.number().optional(),
+      z.string().transform(val => val === "" ? undefined : parseInt(val) || undefined),
+    ]).optional(),
+    startMileage: z.union([
+      z.number().optional(),
+      z.string().transform(val => val === "" ? undefined : parseInt(val) || undefined),
+    ]).optional(),
   }).refine((data) => {
     // If not open-ended, end date is required
     if (!data.isOpenEnded && (!data.endDate || data.endDate === "")) {
@@ -279,6 +292,16 @@ Autolease Lam`;
     enabled: isNewReservationOpen,
   });
 
+  // Format customer options for searchable combobox
+  const customerOptions = useMemo(() => {
+    if (!customers) return [];
+    return customers.map(customer => ({
+      value: customer.id.toString(),
+      label: customer.name,
+      description: customer.email || customer.phone || undefined,
+    }));
+  }, [customers]);
+
   // Get today's date for form defaults
   const today = format(new Date(), "yyyy-MM-dd");
   const defaultEndDate = format(addDays(new Date(), 3), "yyyy-MM-dd");
@@ -294,14 +317,74 @@ Autolease Lam`;
       isOpenEnded: false,
       status: "pending",
       totalPrice: 0,
-      notes: ""
+      notes: "",
+      damageCheckFile: undefined,
+      departureMileage: undefined,
+      startMileage: undefined,
     },
   });
+
+  // File upload handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDamageFile(file);
+      newReservationForm.setValue("damageCheckFile", file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setDamageFile(file);
+      newReservationForm.setValue("damageCheckFile", file);
+    }
+  };
+
+  const removeDamageFile = () => {
+    setDamageFile(null);
+    newReservationForm.setValue("damageCheckFile", undefined);
+  };
 
   // Create reservation mutation
   const createReservationMutation = useMutation({
     mutationFn: async (data: z.infer<typeof newReservationSchema>) => {
-      const response = await apiRequest("POST", "/api/reservations", data);
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add all other form data
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== "damageCheckFile" && value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+      
+      // Add file if present
+      if (damageFile) {
+        formData.append("damageCheckFile", damageFile);
+      }
+
+      const response = await fetch("/api/reservations", {
+        method: "POST", 
+        body: formData,
+      });
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create reservation');
@@ -322,6 +405,8 @@ Autolease Lam`;
       // Close dialog and reset form
       setIsNewReservationOpen(false);
       newReservationForm.reset();
+      setDamageFile(null);
+      setIsDragActive(false);
     },
     onError: (error: Error) => {
       toast({
@@ -543,22 +628,24 @@ Autolease Lam`;
                     control={newReservationForm.control}
                     name="customerId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Customer *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a customer..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {customers?.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.name} {customer.email && `(${customer.email})`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <SearchableCombobox
+                            options={customerOptions}
+                            value={field.value ? field.value.toString() : ''}
+                            onChange={(value) => {
+                              newReservationForm.setValue("customerId", parseInt(value), {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true
+                              });
+                            }}
+                            placeholder="Search and select a customer..."
+                            searchPlaceholder="Search by name, phone, or email..."
+                            groups={false}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -663,6 +750,119 @@ Autolease Lam`;
                             {...field}
                             onChange={(e) => field.onChange(e.target.value)}
                           />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Mileage Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={newReservationForm.control}
+                      name="departureMileage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Departure Mileage</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              placeholder="Enter mileage..."
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={newReservationForm.control}
+                      name="startMileage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Mileage</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              placeholder="Enter mileage..."
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Damage Check File Upload */}
+                  <FormField
+                    control={newReservationForm.control}
+                    name="damageCheckFile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Damage Check Photo</FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {/* File upload area */}
+                            <div
+                              onDrop={handleDrop}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              className={`
+                                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+                                transition-colors duration-200
+                                ${isDragActive 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-muted-foreground/25 hover:border-primary'
+                                }
+                              `}
+                            >
+                              <input
+                                type="file"
+                                onChange={handleFileChange}
+                                accept="image/*,.pdf"
+                                className="hidden"
+                                id="damage-file-upload"
+                              />
+                              <label htmlFor="damage-file-upload" className="cursor-pointer">
+                                <div className="flex flex-col items-center space-y-2">
+                                  <Upload className="h-8 w-8 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm">
+                                      <span className="font-medium">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      PNG, JPG, PDF up to 25MB
+                                    </p>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                            
+                            {/* Selected file display */}
+                            {damageFile && (
+                              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                  <FileCheck className="h-4 w-4 text-green-600" />
+                                  <span className="text-sm font-medium">{damageFile.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ({(damageFile.size / 1024 / 1024).toFixed(2)} MB)
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={removeDamageFile}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
