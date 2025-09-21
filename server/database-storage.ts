@@ -961,8 +961,8 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Insert result:', result);
       
-      if (result.length > 0) {
-        const template = result[0] as PdfTemplate;
+      if (result.rows.length > 0) {
+        const template = result.rows[0] as PdfTemplate;
         console.log('Template created successfully:', template);
         return template;
       }
