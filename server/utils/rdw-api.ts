@@ -175,6 +175,10 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
     const registrationDate = formatDate(rdwVehicle.datum_tenaamstelling);
     const isRegisteredToPerson = !!registrationDate;
 
+    // Check WOK (Wacht op Keuren) notification status
+    const wokStatus = rdwVehicle.wacht_op_keuren;
+    const hasWokNotification = wokStatus === "Ja" || wokStatus === "J" || wokStatus === true;
+
     // Map the RDW data to our vehicle structure - only taking what we can reliably get
     const mappedVehicle: Partial<InsertVehicle> = {
       licensePlate: formatLicensePlate(normalized),
@@ -188,7 +192,9 @@ export async function fetchVehicleInfoByLicensePlate(licensePlate: string): Prom
       productionDate: formatDate(rdwVehicle.datum_eerste_toelating) || null,
       // Automatically detect registration status from RDW data
       registeredTo: isRegisteredToPerson ? "true" : "false",
-      registeredToDate: registrationDate || null
+      registeredToDate: registrationDate || null,
+      // Automatically detect WOK notification status from RDW data
+      wokNotification: hasWokNotification
     };
     
     return mappedVehicle;
