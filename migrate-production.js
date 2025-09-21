@@ -23,6 +23,35 @@ async function migrateDatabase() {
     console.log('✅ Database connected successfully');
     console.log('🔄 Checking database schema...');
 
+    // First, ensure all required tables exist
+    console.log('🔄 Checking for missing tables...');
+    
+    // Check if email_templates table exists
+    const emailTemplatesCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'email_templates'
+    `);
+
+    if (emailTemplatesCheck.rows.length === 0) {
+      console.log('➕ Creating missing email_templates table...');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS public.email_templates (
+          id serial PRIMARY KEY,
+          name text NOT NULL,
+          subject text NOT NULL,
+          content text NOT NULL,
+          category text NOT NULL DEFAULT 'custom',
+          created_at text NOT NULL,
+          updated_at text,
+          last_used text
+        )
+      `);
+      console.log('✅ email_templates table created successfully');
+    } else {
+      console.log('✅ email_templates table already exists');
+    }
+
     // Check if production_date column exists
     const result = await client.query(`
       SELECT column_name 
