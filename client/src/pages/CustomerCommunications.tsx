@@ -1368,16 +1368,30 @@ export default function CustomerCommunications() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`${showLivePreview ? 'grid grid-cols-1 xl:grid-cols-3 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}`}>
             {/* Template Builder */}
-            <Card>
+            <Card className={showLivePreview ? 'xl:col-span-2' : ''}>
               <CardHeader>
-                <CardTitle>
-                  {editingTemplate ? "Edit Template" : "Create New Template"}
-                </CardTitle>
-                <CardDescription>
-                  Design your email template with placeholders for dynamic content
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>
+                      {editingTemplate ? "Edit Template" : "Create New Template"}
+                    </CardTitle>
+                    <CardDescription>
+                      Design your email template with placeholders for dynamic content
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowLivePreview(!showLivePreview)}
+                    className="text-xs shrink-0"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    {showLivePreview ? 'Hide' : 'Show'} Live Preview
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -1429,24 +1443,10 @@ export default function CustomerCommunications() {
                 
                 {/* Placeholder Buttons */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-900 text-sm">Insert Placeholders:</h4>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setShowLivePreview(!showLivePreview)}
-                        className="text-xs"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        {showLivePreview ? 'Hide' : 'Show'} Preview
-                      </Button>
-                    </div>
-                  </div>
+                  <h4 className="font-medium text-gray-900 text-sm">Insert Placeholders:</h4>
                   
                   {/* Placeholder buttons grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className={`grid gap-2 ${showLivePreview ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
                     {placeholders.map((placeholder) => (
                       <Button
                         key={placeholder.key}
@@ -1469,31 +1469,6 @@ export default function CustomerCommunications() {
                   </div>
                 </div>
 
-                {/* Live Preview */}
-                {showLivePreview && (templateSubject || templateContent) && (
-                  <div className="border rounded-lg bg-gray-50 p-4 space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4 text-blue-600" />
-                      <h5 className="font-medium text-sm">Live Preview (with sample data)</h5>
-                    </div>
-                    
-                    <div className="bg-white border rounded p-3 space-y-2">
-                      {templateSubject && (
-                        <div>
-                          <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
-                          <div className="font-medium text-sm">{getPreviewContent().subject}</div>
-                        </div>
-                      )}
-                      
-                      {templateContent && (
-                        <div>
-                          <div className="text-xs font-medium text-gray-500 mb-1">Content:</div>
-                          <div className="text-sm whitespace-pre-wrap">{getPreviewContent().content}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
                 
                 <div className="flex space-x-2">
                   <Button
@@ -1582,8 +1557,65 @@ export default function CustomerCommunications() {
               </CardContent>
             </Card>
 
+            {/* Live Preview Panel - Only shown when preview is enabled */}
+            {showLivePreview && (
+              <Card className="xl:sticky xl:top-6 h-fit">
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Eye className="h-4 w-4 text-blue-600" />
+                    <CardTitle className="text-lg">Live Preview</CardTitle>
+                    <Badge variant="secondary" className="text-xs">Sample Data</Badge>
+                  </div>
+                  <CardDescription>
+                    See how your template will look with real data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+                    <div className="bg-white border rounded-lg shadow-sm p-4 space-y-3">
+                      <div className="border-b pb-3">
+                        <div className="text-xs text-gray-500 mb-1">From: Car Rental System</div>
+                        <div className="text-xs text-gray-500 mb-2">To: john.doe@example.com</div>
+                        {templateSubject ? (
+                          <div className="font-semibold text-gray-900">
+                            {getPreviewContent().subject}
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 italic text-sm">Subject will appear here...</div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {templateContent ? (
+                          <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                            {getPreviewContent().content}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400 italic">
+                            Your email content will appear here as you type...
+                          </div>
+                        )}
+                      </div>
+                      
+                      {(templateSubject || templateContent) && (
+                        <div className="pt-3 border-t text-xs text-gray-500 bg-gray-50 -mx-4 -mb-3 px-4 py-3 rounded-b-lg">
+                          <div className="space-y-1">
+                            <div><strong>Sample Data Used:</strong></div>
+                            <div>• Customer: John Doe</div>
+                            <div>• Vehicle: Toyota Camry (AB-123-CD)</div>
+                            <div>• APK Date: 2024-06-15</div>
+                            <div>• Company: Car Rental Company</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Saved Templates */}
-            <Card>
+            <Card className={showLivePreview ? '' : 'lg:col-span-1'}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
