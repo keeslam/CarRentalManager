@@ -1100,8 +1100,6 @@ export default function CustomerCommunications() {
           </Card>
         </TabsContent>
 
-          </Tabs>
-
         <TabsContent value="templates" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
