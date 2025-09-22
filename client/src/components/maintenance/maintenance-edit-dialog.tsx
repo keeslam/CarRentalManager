@@ -39,8 +39,8 @@ import { format, addDays, parseISO } from "date-fns";
 import { Reservation, Vehicle, Customer } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
-// Form schema for maintenance editing - simpler than the create form
-const maintenanceEditSchema = insertReservationSchema.extend({
+// Form schema for maintenance editing - only fields that can be edited
+const maintenanceEditSchema = z.object({
   vehicleId: z.union([
     z.number().min(1, "Please select a vehicle"),
     z.string().min(1, "Please select a vehicle").transform(val => parseInt(val)),
@@ -71,9 +71,18 @@ export function MaintenanceEditDialog({
     queryKey: ["/api/vehicles"],
   });
 
-  // Fetch customers for the selector (if needed)
-  const { data: customers = [] } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
+  // Fetch current renter information for this vehicle during maintenance period
+  const vehicleId = reservation?.vehicleId;
+  const startDate = reservation?.startDate;
+  const endDate = reservation?.endDate;
+
+  const { data: currentRenters = [], isLoading: isLoadingRenters } = useQuery<{
+    reservation: { id: number; startDate: string; endDate: string };
+    customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string };
+  }[]>({
+    queryKey: ["/api/vehicles", vehicleId, "overlaps", startDate, endDate],
+    queryFn: () => fetch(`/api/vehicles/${vehicleId}/overlaps?startDate=${startDate}&endDate=${endDate}`).then(res => res.json()),
+    enabled: !!(vehicleId && startDate && endDate && open),
   });
 
   // Parse the maintenance notes to extract structured data
@@ -95,13 +104,9 @@ export function MaintenanceEditDialog({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
       vehicleId: reservation?.vehicleId || 0,
-      customerId: reservation?.customerId || undefined,
       startDate: reservation?.startDate || "",
       endDate: reservation?.endDate || "",
-      status: "confirmed",
-      type: "maintenance_block",
       notes: reservation?.notes || "",
-      totalPrice: 0,
     },
   });
 
@@ -109,16 +114,11 @@ export function MaintenanceEditDialog({
   useEffect(() => {
     if (reservation && open) {
       const parsed = parseMaintenanceNotes(reservation.notes || '');
-      console.log("Setting customer ID:", reservation.customerId);
       form.reset({
         vehicleId: reservation.vehicleId,
-        customerId: reservation.customerId || undefined,
         startDate: reservation.startDate,
         endDate: reservation.endDate || "",
-        status: "confirmed",
-        type: "maintenance_block",
         notes: reservation.notes || "",
-        totalPrice: 0,
       });
     }
   }, [reservation, open, form]);
@@ -128,20 +128,17 @@ export function MaintenanceEditDialog({
     mutationFn: async (data: MaintenanceEditFormType) => {
       if (!reservation) throw new Error("No reservation to update");
       
-      const response = await fetch(`/api/reservations/${reservation.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
+        vehicleId: data.vehicleId,
+        customerId: null, // Maintenance blocks don't assign customers
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: "confirmed",
+        type: "maintenance_block",
+        notes: data.notes || "",
+        totalPrice: 0,
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update maintenance reservation");
-      }
-      
-      return response.json();
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -153,6 +150,8 @@ export function MaintenanceEditDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+      // Invalidate overlaps query to refresh current renter information
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles", vehicleId, "overlaps"] });
       
       onOpenChange(false);
     },
@@ -210,34 +209,15 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* Maintenance Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maintenance Type</FormLabel>
-                    <FormControl>
-                      <Select value={parsed.maintenanceType} disabled>
-                        <SelectTrigger data-testid="select-maintenance-type">
-                          <SelectValue placeholder="Maintenance type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="routine_service">Routine Service</SelectItem>
-                          <SelectItem value="oil_change">Oil Change</SelectItem>
-                          <SelectItem value="tire_change">Tire Change</SelectItem>
-                          <SelectItem value="brake_service">Brake Service</SelectItem>
-                          <SelectItem value="inspection">Inspection</SelectItem>
-                          <SelectItem value="repair">Repair</SelectItem>
-                          <SelectItem value="breakdown">Breakdown</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Maintenance Type - parsed from notes (display only) */}
+              <div>
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Maintenance Type
+                </label>
+                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-maintenance-type">
+                  {parsed.maintenanceType || 'Not specified'}
+                </div>
+              </div>
 
               {/* Scheduled Date */}
               <FormField
@@ -277,61 +257,45 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* Customer Selection and Contact Information */}
-              <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => {
-                  const selectedCustomer = field.value ? customers.find(c => c.id === field.value) : null;
-                  
-                  return (
-                    <FormItem>
-                      <FormLabel>Customer Contact Information</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value?.toString() || "none"}
-                          onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
-                        >
-                          <SelectTrigger data-testid="select-customer">
-                            <SelectValue placeholder="Select a customer for maintenance updates" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No customer assigned</SelectItem>
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.name} {customer.firstName && customer.lastName && `(${customer.firstName} ${customer.lastName})`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      
-                      {/* Customer Contact Details */}
-                      {selectedCustomer && (
-                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border">
-                          <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                            Customer Contact Details
-                          </div>
-                          <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
-                            <div><strong>Name:</strong> {selectedCustomer.name} {selectedCustomer.firstName} {selectedCustomer.lastName}</div>
-                            {selectedCustomer.email && (
-                              <div><strong>Email:</strong> {selectedCustomer.email}</div>
-                            )}
-                            {selectedCustomer.phone && (
-                              <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
-                            )}
-                            {selectedCustomer.address && (
-                              <div><strong>Address:</strong> {selectedCustomer.address}, {selectedCustomer.city} {selectedCustomer.postalCode}</div>
-                            )}
-                          </div>
+              {/* Current Renter Information */}
+              <div className="col-span-full" data-testid="section-current-renter">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  Customer Currently Renting This Vehicle
+                </div>
+                {isLoadingRenters ? (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="loading-current-renter">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Loading current renter information...
+                    </div>
+                  </div>
+                ) : currentRenters.length > 0 ? (
+                  <div className="space-y-2">
+                    {currentRenters.map((rental: { reservation: { id: number; startDate: string; endDate: string }; customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string } }, index: number) => (
+                      <div key={index} className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800" data-testid={`current-renter-${index}`}>
+                        <div className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-1">
+                          Contact Information for Maintenance Updates
                         </div>
-                      )}
-                      
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
+                        <div className="space-y-1 text-sm text-orange-800 dark:text-orange-200">
+                          <div data-testid="text-customer-name"><strong>Customer:</strong> {rental.customer.name} {rental.customer.firstName} {rental.customer.lastName}</div>
+                          {rental.customer.email && (
+                            <div data-testid="text-customer-email"><strong>Email:</strong> {rental.customer.email}</div>
+                          )}
+                          {rental.customer.phone && (
+                            <div data-testid="text-customer-phone"><strong>Phone:</strong> {rental.customer.phone}</div>
+                          )}
+                          <div data-testid="text-rental-period"><strong>Rental Period:</strong> {rental.reservation.startDate} to {rental.reservation.endDate}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="no-current-renter">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      No active rental overlaps this maintenance period
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Notes */}
