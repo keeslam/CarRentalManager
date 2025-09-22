@@ -245,22 +245,8 @@ export function MaintenanceEditDialog({
   });
 
   const onSubmit = (data: MaintenanceEditFormType) => {
-    // Validate spare vehicle assignments for overlapping rentals
-    if (overlappingRentals.length > 0) {
-      const missingAssignments = overlappingRentals.filter(rental => 
-        !spareVehicleAssignments.find(assignment => assignment.reservationId === rental.reservation.id)
-      );
-      
-      if (missingAssignments.length > 0) {
-        toast({
-          title: "Spare Vehicles Required",
-          description: `Please assign spare vehicles for all overlapping rentals (${missingAssignments.length} missing)`,
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-    
+    // No validation required - spare vehicle assignment is optional
+    // Customers can choose to use spare vehicles or manage without them
     console.log("Submitting maintenance edit:", data);
     updateMutation.mutate(data);
   };
@@ -367,7 +353,7 @@ export function MaintenanceEditDialog({
                   <div className="space-y-3">
                     <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
                       <div className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-3">
-                        Active rentals need spare vehicles during maintenance:
+                        Active rentals during maintenance (spare vehicle assignment is optional):
                       </div>
                       {overlappingRentals.map((rental: { reservation: { id: number; startDate: string; endDate: string; status: string; type: string }; customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string } }, index: number) => (
                         <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border mb-2" data-testid={`overlapping-rental-${index}`}>
@@ -385,7 +371,7 @@ export function MaintenanceEditDialog({
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                Assign Spare Vehicle:
+                                Assign Spare Vehicle (Optional):
                               </label>
                               <select 
                                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -405,7 +391,7 @@ export function MaintenanceEditDialog({
                                   }
                                 }}
                               >
-                                <option value="">Select spare vehicle...</option>
+                                <option value="">No spare vehicle needed</option>
                                 {availableVehicles.map(vehicle => (
                                   <option key={vehicle.id} value={vehicle.id}>
                                     {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
