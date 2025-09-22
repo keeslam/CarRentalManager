@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertReservationSchema } from "@shared/schema";
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { format, addDays, parseISO } from "date-fns";
-import { Reservation } from "@shared/schema";
+import { Reservation, Vehicle, Customer } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
 // Form schema for maintenance editing - simpler than the create form
@@ -66,6 +66,16 @@ export function MaintenanceEditDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch vehicles for the selector
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  // Fetch customers for the selector (if needed)
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
   // Parse the maintenance notes to extract structured data
   const parseMaintenanceNotes = (notes: string) => {
     const lines = notes.split('\n');
@@ -85,7 +95,7 @@ export function MaintenanceEditDialog({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
       vehicleId: reservation?.vehicleId || 0,
-      customerId: undefined,
+      customerId: reservation?.customerId || undefined,
       startDate: reservation?.startDate || "",
       endDate: reservation?.endDate || "",
       status: "confirmed",
@@ -101,9 +111,9 @@ export function MaintenanceEditDialog({
       const parsed = parseMaintenanceNotes(reservation.notes || '');
       form.reset({
         vehicleId: reservation.vehicleId,
-        customerId: undefined,
+        customerId: reservation.customerId || undefined,
         startDate: reservation.startDate,
-        endDate: reservation.endDate,
+        endDate: reservation.endDate || "",
         status: "confirmed",
         type: "maintenance_block",
         notes: reservation.notes || "",
@@ -188,10 +198,10 @@ export function MaintenanceEditDialog({
                     <FormLabel>Vehicle</FormLabel>
                     <FormControl>
                       <VehicleSelector
+                        vehicles={vehicles}
                         value={field.value?.toString() || ""}
-                        onValueChange={(value: string) => field.onChange(parseInt(value))}
+                        onChange={(value: string) => field.onChange(parseInt(value))}
                         placeholder="Select a vehicle"
-                        data-testid="input-vehicle"
                       />
                     </FormControl>
                     <FormMessage />
@@ -260,6 +270,36 @@ export function MaintenanceEditDialog({
                         {...field}
                         data-testid="input-end-date"
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Customer Selection (Optional) */}
+              <FormField
+                control={form.control}
+                name="customerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer (Optional)</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value?.toString() || ""}
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                      >
+                        <SelectTrigger data-testid="select-customer">
+                          <SelectValue placeholder="Select a customer (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No customer assigned</SelectItem>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name} {customer.firstName && customer.lastName && `(${customer.firstName} ${customer.lastName})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
