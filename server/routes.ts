@@ -1507,9 +1507,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      const { maintenanceData, conflictingReservations, spareVehicleAssignments } = bodyData;
+      const { maintenanceId, maintenanceData, conflictingReservations, spareVehicleAssignments } = bodyData;
       
-      console.log('Creating maintenance with spare vehicles:', { maintenanceData, conflictingReservations, spareVehicleAssignments });
+      console.log('Creating/updating maintenance with spare vehicles:', { maintenanceId, maintenanceData, conflictingReservations, spareVehicleAssignments });
       
       // Validate required data
       if (!maintenanceData) {
@@ -1522,28 +1522,136 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "spareVehicleAssignments must be an array" });
       }
       
-      // Create the maintenance block
-      const user = req.user;
-      const maintenanceWithTracking = {
-        ...maintenanceData,
-        createdBy: user ? user.username : null,
-        updatedBy: user ? user.username : null
-      };
-      
-      const maintenanceReservation = await storage.createReservation(maintenanceWithTracking);
-      
-      // Update conflicting reservations with spare vehicles
-      const updatePromises = spareVehicleAssignments.map(async (assignment: any) => {
+      // PRE-VALIDATE ALL ASSIGNMENTS BEFORE ANY UPDATES (for atomicity)
+      const validationPromises = spareVehicleAssignments.map(async (assignment: any) => {
         const { reservationId, spareVehicleId } = assignment;
-        return await storage.updateReservation(reservationId, {
-          vehicleId: spareVehicleId,
-          type: 'replacement',
-          replacementForReservationId: reservationId,
-          notes: `Original vehicle (${maintenanceData.vehicleId}) under maintenance. Replaced with spare vehicle (${spareVehicleId}).`
-        });
+        
+        const originalReservation = await storage.getReservation(reservationId);
+        if (!originalReservation) {
+          throw new Error(`Reservation ${reservationId} not found`);
+        }
+        
+        // Compute overlap using maintenanceData (not yet persisted)
+        const maintenanceStart = new Date(maintenanceData.startDate);
+        const maintenanceEnd = new Date(maintenanceData.endDate);
+        const rentalStart = new Date(originalReservation.startDate);
+        const rentalEnd = new Date(originalReservation.endDate);
+        
+        const overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
+        const overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
+        
+        if (overlapStart >= overlapEnd) {
+          throw new Error(`No overlap between maintenance and rental ${reservationId}`);
+        }
+        
+        // Pre-validate spare vehicle availability
+        const spareConflicts = await storage.checkReservationConflicts(
+          spareVehicleId,
+          overlapStart.toISOString().split('T')[0],
+          overlapEnd.toISOString().split('T')[0],
+          null
+        );
+        
+        if (spareConflicts.length > 0) {
+          throw new Error(`Spare vehicle ${spareVehicleId} is not available during overlap period`);
+        }
+        
+        return { originalReservation, overlapStart, overlapEnd, spareVehicleId };
       });
       
-      const updatedReservations = await Promise.all(updatePromises);
+      // Execute all validations (will throw if any fail)
+      const validatedAssignments = await Promise.all(validationPromises);
+      
+      let maintenanceReservation;
+      let updatedReservations;
+      const user = req.user;
+      
+      if (maintenanceId) {
+        // Validate that maintenanceId refers to an existing maintenance_block reservation
+        const existingReservation = await storage.getReservation(maintenanceId);
+        if (!existingReservation) {
+          return res.status(404).json({ message: "Maintenance reservation not found" });
+        }
+        if (existingReservation.type !== 'maintenance_block') {
+          return res.status(400).json({ message: "Reservation is not a maintenance block" });
+        }
+        
+        // Clean up old replacement reservations using structured approach
+        if (spareVehicleAssignments.length > 0) {
+          // Find old replacements for the same reservations being updated
+          const conflictingReservationIds = spareVehicleAssignments.map(a => a.reservationId);
+          const allReservations = await storage.getAllReservations();
+          const oldReplacements = allReservations.filter(r => 
+            r.type === 'replacement' && 
+            r.replacementForReservationId && 
+            conflictingReservationIds.includes(r.replacementForReservationId)
+          );
+          
+          for (const oldReplacement of oldReplacements) {
+            await storage.deleteReservation(oldReplacement.id);
+          }
+        }
+        
+        // CREATE REPLACEMENTS FIRST for true atomicity
+        const replacementPromises = validatedAssignments.map(async (validated) => {
+          const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
+          
+          // Create replacement reservation for overlap period ONLY  
+          return await storage.createReservation({
+            vehicleId: spareVehicleId,
+            customerId: originalReservation.customerId,
+            startDate: overlapStart.toISOString().split('T')[0],
+            endDate: overlapEnd.toISOString().split('T')[0],
+            type: 'replacement',
+            replacementForReservationId: originalReservation.id,
+            status: 'confirmed',
+            totalPrice: 0,
+            createdBy: user ? user.username : null,
+            updatedBy: user ? user.username : null,
+            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${existingReservation.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
+          });
+        });
+        
+        const newReplacements = await Promise.all(replacementPromises);
+        
+        // ONLY AFTER successful replacement creation, update maintenance
+        const maintenanceWithTracking = {
+          ...maintenanceData,
+          updatedBy: user ? user.username : null
+        };
+        maintenanceReservation = await storage.updateReservation(maintenanceId, maintenanceWithTracking);
+        
+        updatedReservations = newReplacements;
+      } else {
+        // Create new maintenance block
+        const maintenanceWithTracking = {
+          ...maintenanceData,
+          createdBy: user ? user.username : null,
+          updatedBy: user ? user.username : null
+        };
+        maintenanceReservation = await storage.createReservation(maintenanceWithTracking);
+        
+        // Create replacement reservations using pre-validated data
+        const updatePromises = validatedAssignments.map(async (validated) => {
+          const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
+          
+          return await storage.createReservation({
+            vehicleId: spareVehicleId,
+            customerId: originalReservation.customerId,
+            startDate: overlapStart.toISOString().split('T')[0],
+            endDate: overlapEnd.toISOString().split('T')[0],
+            type: 'replacement',
+            replacementForReservationId: originalReservation.id,
+            status: 'confirmed',
+            totalPrice: 0,
+            createdBy: user ? user.username : null,
+            updatedBy: user ? user.username : null,
+            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceData.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
+          });
+        });
+        
+        updatedReservations = await Promise.all(updatePromises);
+      }
       
       res.status(201).json({
         maintenanceReservation,

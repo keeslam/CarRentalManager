@@ -52,6 +52,12 @@ const maintenanceEditSchema = z.object({
 
 type MaintenanceEditFormType = z.infer<typeof maintenanceEditSchema>;
 
+// Spare vehicle assignment state
+type SpareVehicleAssignment = {
+  reservationId: number;
+  spareVehicleId: number;
+};
+
 interface MaintenanceEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,27 +71,16 @@ export function MaintenanceEditDialog({
 }: MaintenanceEditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State for spare vehicle assignments
+  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<SpareVehicleAssignment[]>([]);
 
   // Fetch vehicles for the selector
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
   });
 
-  // Fetch overlapping rental information for spare vehicle assignment
-  const vehicleId = reservation?.vehicleId;
-  const startDate = reservation?.startDate;
-  const endDate = reservation?.endDate;
-
-  const { data: overlappingRentals = [], isLoading: isLoadingRentals } = useQuery<{
-    reservation: { id: number; startDate: string; endDate: string; status: string; type: string };
-    customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string };
-  }[]>({
-    queryKey: ["/api/vehicles", vehicleId, "overlaps", startDate, endDate],
-    queryFn: () => fetch(`/api/vehicles/${vehicleId}/overlaps?startDate=${startDate}&endDate=${endDate}`).then(res => res.json()),
-    enabled: !!(vehicleId && startDate && endDate && open),
-  });
-
-  // Fetch available spare vehicles
+  // Fetch available spare vehicles (basic query for now)
   const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/available"],
   });
@@ -115,6 +110,25 @@ export function MaintenanceEditDialog({
     },
   });
 
+  // Watch form values for real-time overlap computation  
+  const formVehicleId = form.watch("vehicleId");
+  const formStartDate = form.watch("startDate");
+  const formEndDate = form.watch("endDate");
+  
+  // Use form values for overlap computation, fall back to reservation values
+  const currentVehicleId = formVehicleId || reservation?.vehicleId;
+  const currentStartDate = formStartDate || reservation?.startDate;
+  const currentEndDate = formEndDate || reservation?.endDate;
+
+  const { data: overlappingRentals = [], isLoading: isLoadingRentals } = useQuery<{
+    reservation: { id: number; startDate: string; endDate: string; status: string; type: string };
+    customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string };
+  }[]>({
+    queryKey: ["/api/vehicles", currentVehicleId, "overlaps", currentStartDate, currentEndDate],
+    queryFn: () => fetch(`/api/vehicles/${currentVehicleId}/overlaps?startDate=${currentStartDate}&endDate=${currentEndDate}`).then(res => res.json()),
+    enabled: !!(currentVehicleId && currentStartDate && currentEndDate && open),
+  });
+
   // Reset form when reservation changes
   useEffect(() => {
     if (reservation && open) {
@@ -128,22 +142,44 @@ export function MaintenanceEditDialog({
     }
   }, [reservation, open, form]);
 
-  // Update mutation using the standard reservations endpoint
+  // Update mutation - single source of truth approach
   const updateMutation = useMutation({
     mutationFn: async (data: MaintenanceEditFormType) => {
       if (!reservation) throw new Error("No reservation to update");
       
-      const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
-        vehicleId: data.vehicleId,
-        customerId: null, // Maintenance blocks don't assign customers
-        startDate: data.startDate,
-        endDate: data.endDate,
-        status: "confirmed",
-        type: "maintenance_block",
-        notes: data.notes || "",
-        totalPrice: 0,
-      });
-      return await response.json();
+      // If there are spare vehicle assignments, use the maintenance-with-spare endpoint
+      if (spareVehicleAssignments.length > 0) {
+        // Use maintenance-with-spare endpoint to update existing maintenance with spare assignments
+        const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
+          maintenanceId: reservation.id, // Reference existing maintenance to update
+          maintenanceData: {
+            vehicleId: data.vehicleId,
+            customerId: null,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            status: "confirmed",
+            type: "maintenance_block",
+            notes: data.notes || "",
+            totalPrice: 0,
+          },
+          conflictingReservations: overlappingRentals.map(rental => rental.reservation.id), // Send reservation IDs
+          spareVehicleAssignments: spareVehicleAssignments,
+        });
+        return await response.json();
+      } else {
+        // No spare assignments, just update the maintenance reservation directly
+        const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
+          vehicleId: data.vehicleId,
+          customerId: null,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          status: "confirmed",
+          type: "maintenance_block",
+          notes: data.notes || "",
+          totalPrice: 0,
+        });
+        return await response.json();
+      }
     },
     onSuccess: () => {
       toast({
@@ -155,8 +191,46 @@ export function MaintenanceEditDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
-      // Invalidate overlaps query to refresh current renter information
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles", vehicleId, "overlaps"] });
+      
+      // Invalidate vehicle availability cache
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/available"] });
+      
+      // Invalidate overlaps for both original and current form values
+      const originalVehicleId = reservation?.vehicleId;
+      const originalStartDate = reservation?.startDate;
+      const originalEndDate = reservation?.endDate;
+      
+      // Invalidate original overlaps
+      if (originalVehicleId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/vehicles", originalVehicleId, "overlaps", originalStartDate, originalEndDate] });
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === originalVehicleId && key[2] === "overlaps";
+          }
+        });
+      }
+      
+      // Invalidate current form values overlaps (if different)
+      if (currentVehicleId && currentVehicleId !== originalVehicleId) {
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === currentVehicleId && key[2] === "overlaps";
+          }
+        });
+      }
+      
+      // Invalidate vehicle caches for all spare vehicles assigned
+      spareVehicleAssignments.forEach(assignment => {
+        const spareVehicleId = assignment.spareVehicleId;
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === spareVehicleId;
+          }
+        });
+      });
       
       onOpenChange(false);
     },
@@ -171,6 +245,22 @@ export function MaintenanceEditDialog({
   });
 
   const onSubmit = (data: MaintenanceEditFormType) => {
+    // Validate spare vehicle assignments for overlapping rentals
+    if (overlappingRentals.length > 0) {
+      const missingAssignments = overlappingRentals.filter(rental => 
+        !spareVehicleAssignments.find(assignment => assignment.reservationId === rental.reservation.id)
+      );
+      
+      if (missingAssignments.length > 0) {
+        toast({
+          title: "Spare Vehicles Required",
+          description: `Please assign spare vehicles for all overlapping rentals (${missingAssignments.length} missing)`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     console.log("Submitting maintenance edit:", data);
     updateMutation.mutate(data);
   };
@@ -300,6 +390,20 @@ export function MaintenanceEditDialog({
                               <select 
                                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                 data-testid={`spare-vehicle-select-${index}`}
+                                value={spareVehicleAssignments.find(a => a.reservationId === rental.reservation.id)?.spareVehicleId || ""}
+                                onChange={(e) => {
+                                  const spareVehicleId = parseInt(e.target.value);
+                                  if (spareVehicleId) {
+                                    setSpareVehicleAssignments(prev => [
+                                      ...prev.filter(a => a.reservationId !== rental.reservation.id),
+                                      { reservationId: rental.reservation.id, spareVehicleId }
+                                    ]);
+                                  } else {
+                                    setSpareVehicleAssignments(prev => 
+                                      prev.filter(a => a.reservationId !== rental.reservation.id)
+                                    );
+                                  }
+                                }}
                               >
                                 <option value="">Select spare vehicle...</option>
                                 {availableVehicles.map(vehicle => (
