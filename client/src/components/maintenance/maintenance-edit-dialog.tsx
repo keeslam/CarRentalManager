@@ -71,18 +71,23 @@ export function MaintenanceEditDialog({
     queryKey: ["/api/vehicles"],
   });
 
-  // Fetch current renter information for this vehicle during maintenance period
+  // Fetch overlapping rental information for spare vehicle assignment
   const vehicleId = reservation?.vehicleId;
   const startDate = reservation?.startDate;
   const endDate = reservation?.endDate;
 
-  const { data: currentRenters = [], isLoading: isLoadingRenters } = useQuery<{
-    reservation: { id: number; startDate: string; endDate: string };
+  const { data: overlappingRentals = [], isLoading: isLoadingRentals } = useQuery<{
+    reservation: { id: number; startDate: string; endDate: string; status: string; type: string };
     customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string };
   }[]>({
     queryKey: ["/api/vehicles", vehicleId, "overlaps", startDate, endDate],
     queryFn: () => fetch(`/api/vehicles/${vehicleId}/overlaps?startDate=${startDate}&endDate=${endDate}`).then(res => res.json()),
     enabled: !!(vehicleId && startDate && endDate && open),
+  });
+
+  // Fetch available spare vehicles
+  const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/available"],
   });
 
   // Parse the maintenance notes to extract structured data
@@ -257,41 +262,62 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* Current Renter Information */}
-              <div className="col-span-full" data-testid="section-current-renter">
+              {/* Spare Vehicle Assignment for Overlapping Rentals */}
+              <div className="col-span-full" data-testid="section-spare-vehicles">
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Customer Currently Renting This Vehicle
+                  Spare Vehicle Assignment
                 </div>
-                {isLoadingRenters ? (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="loading-current-renter">
+                {isLoadingRentals ? (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="loading-rentals">
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Loading current renter information...
+                      Loading rental information...
                     </div>
                   </div>
-                ) : currentRenters.length > 0 ? (
-                  <div className="space-y-2">
-                    {currentRenters.map((rental: { reservation: { id: number; startDate: string; endDate: string }; customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string } }, index: number) => (
-                      <div key={index} className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800" data-testid={`current-renter-${index}`}>
-                        <div className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-1">
-                          Contact Information for Maintenance Updates
-                        </div>
-                        <div className="space-y-1 text-sm text-orange-800 dark:text-orange-200">
-                          <div data-testid="text-customer-name"><strong>Customer:</strong> {rental.customer.name} {rental.customer.firstName} {rental.customer.lastName}</div>
-                          {rental.customer.email && (
-                            <div data-testid="text-customer-email"><strong>Email:</strong> {rental.customer.email}</div>
-                          )}
-                          {rental.customer.phone && (
-                            <div data-testid="text-customer-phone"><strong>Phone:</strong> {rental.customer.phone}</div>
-                          )}
-                          <div data-testid="text-rental-period"><strong>Rental Period:</strong> {rental.reservation.startDate} to {rental.reservation.endDate}</div>
-                        </div>
+                ) : overlappingRentals.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <div className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-3">
+                        Active rentals need spare vehicles during maintenance:
                       </div>
-                    ))}
+                      {overlappingRentals.map((rental: { reservation: { id: number; startDate: string; endDate: string; status: string; type: string }; customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string } }, index: number) => (
+                        <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border mb-2" data-testid={`overlapping-rental-${index}`}>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
+                                {rental.customer.firstName || rental.customer.name} {rental.customer.lastName || ''}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                Rental: {rental.reservation.startDate} to {rental.reservation.endDate}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                Status: {rental.reservation.status}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Assign Spare Vehicle:
+                              </label>
+                              <select 
+                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                data-testid={`spare-vehicle-select-${index}`}
+                              >
+                                <option value="">Select spare vehicle...</option>
+                                {availableVehicles.map(vehicle => (
+                                  <option key={vehicle.id} value={vehicle.id}>
+                                    {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="no-current-renter">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="no-overlapping-rentals">
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      No active rental overlaps this maintenance period
+                      No active rentals overlap this maintenance period
                     </div>
                   </div>
                 )}
