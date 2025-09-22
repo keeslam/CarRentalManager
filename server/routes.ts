@@ -1522,6 +1522,187 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== SPARE VEHICLE MANAGEMENT ROUTES ====================
+  
+  // Get available spare vehicles for a date range
+  app.get("/api/spare-vehicles/available", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, excludeVehicleId } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      
+      const exclude = excludeVehicleId ? parseInt(excludeVehicleId as string) : undefined;
+      const availableVehicles = await storage.getAvailableVehiclesInRange(
+        startDate as string, 
+        endDate as string, 
+        exclude
+      );
+      
+      res.json(availableVehicles);
+    } catch (error) {
+      console.error("Error getting available spare vehicles:", error);
+      res.status(500).json({ message: "Error getting available vehicles" });
+    }
+  });
+
+  // Mark a reservation's vehicle as needing service
+  app.post("/api/reservations/:id/mark-needs-service", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.id);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+      
+      const { maintenanceStatus, maintenanceNote, serviceStartDate, serviceEndDate } = req.body;
+      
+      // Validate required fields
+      if (!maintenanceStatus) {
+        return res.status(400).json({ message: "maintenanceStatus is required" });
+      }
+      
+      // Get the reservation to find the vehicle
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      // Mark the vehicle for service
+      const updatedVehicle = await storage.markVehicleForService(
+        reservation.vehicleId, 
+        maintenanceStatus, 
+        maintenanceNote
+      );
+      
+      if (!updatedVehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      // Create maintenance block if dates provided
+      if (serviceStartDate) {
+        await storage.createMaintenanceBlock(
+          reservation.vehicleId,
+          serviceStartDate,
+          serviceEndDate
+        );
+      }
+      
+      res.json({
+        message: "Vehicle marked for service successfully",
+        vehicle: updatedVehicle
+      });
+      
+    } catch (error) {
+      console.error("Error marking vehicle for service:", error);
+      res.status(500).json({ message: "Error marking vehicle for service" });
+    }
+  });
+
+  // Assign a spare vehicle to a reservation
+  app.post("/api/reservations/:id/assign-spare", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const originalReservationId = parseInt(req.params.id);
+      if (isNaN(originalReservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+      
+      const { spareVehicleId, startDate, endDate } = req.body;
+      
+      // Validate required fields
+      if (!spareVehicleId || !startDate) {
+        return res.status(400).json({ 
+          message: "spareVehicleId and startDate are required" 
+        });
+      }
+      
+      const spareId = parseInt(spareVehicleId);
+      if (isNaN(spareId)) {
+        return res.status(400).json({ message: "Invalid spare vehicle ID" });
+      }
+      
+      // Create replacement reservation
+      const replacementReservation = await storage.createReplacementReservation(
+        originalReservationId,
+        spareId,
+        startDate,
+        endDate
+      );
+      
+      res.json({
+        message: "Spare vehicle assigned successfully",
+        replacementReservation
+      });
+      
+    } catch (error) {
+      console.error("Error assigning spare vehicle:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Error assigning spare vehicle" });
+      }
+    }
+  });
+
+  // Return vehicle from service and close replacement
+  app.post("/api/reservations/:id/return-from-service", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const replacementReservationId = parseInt(req.params.id);
+      if (isNaN(replacementReservationId)) {
+        return res.status(400).json({ message: "Invalid replacement reservation ID" });
+      }
+      
+      const { returnDate, mileage } = req.body;
+      
+      if (!returnDate) {
+        return res.status(400).json({ message: "returnDate is required" });
+      }
+      
+      // Close the replacement reservation
+      const updatedReservation = await storage.closeReplacementReservation(
+        replacementReservationId,
+        returnDate
+      );
+      
+      if (!updatedReservation) {
+        return res.status(404).json({ 
+          message: "Replacement reservation not found or invalid" 
+        });
+      }
+      
+      res.json({
+        message: "Vehicle returned from service successfully",
+        reservation: updatedReservation
+      });
+      
+    } catch (error) {
+      console.error("Error returning vehicle from service:", error);
+      res.status(500).json({ message: "Error returning vehicle from service" });
+    }
+  });
+
+  // Get active replacement by original reservation
+  app.get("/api/reservations/:id/active-replacement", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const originalReservationId = parseInt(req.params.id);
+      if (isNaN(originalReservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+      
+      const activeReplacement = await storage.getActiveReplacementByOriginal(originalReservationId);
+      
+      if (!activeReplacement) {
+        return res.status(404).json({ message: "No active replacement found" });
+      }
+      
+      res.json(activeReplacement);
+      
+    } catch (error) {
+      console.error("Error getting active replacement:", error);
+      res.status(500).json({ message: "Error getting active replacement" });
+    }
+  });
+
   // ==================== EXPENSE ROUTES ====================
   // Setup storage for expense receipt uploads
   const createExpenseReceiptStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {
