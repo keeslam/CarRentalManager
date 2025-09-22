@@ -6,8 +6,7 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
-  customNotifications, type CustomNotification, type InsertCustomNotification,
-  backupSettings, type BackupSettings, type InsertBackupSettings
+  customNotifications, type CustomNotification, type InsertCustomNotification
 } from "../shared/schema";
 import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -49,6 +48,15 @@ export interface IStorage {
   getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
   checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null): Promise<Reservation[]>;
   
+  // Spare vehicle management methods
+  getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]>;
+  getActiveReplacementByOriginal(originalReservationId: number): Promise<Reservation | undefined>;
+  createReplacementReservation(originalReservationId: number, spareVehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
+  closeReplacementReservation(replacementReservationId: number, endDate: string): Promise<Reservation | undefined>;
+  markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined>;
+  createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
+  closeMaintenanceBlock(blockReservationId: number, endDate: string): Promise<Reservation | undefined>;
+  
   // Expense methods
   getAllExpenses(): Promise<Expense[]>;
   getExpense(id: number): Promise<Expense | undefined>;
@@ -85,10 +93,6 @@ export interface IStorage {
   markCustomNotificationAsRead(id: number): Promise<boolean>;
   deleteCustomNotification(id: number): Promise<boolean>;
   
-  // Backup Settings methods
-  getBackupSettings(): Promise<BackupSettings | undefined>;
-  createBackupSettings(settings: InsertBackupSettings): Promise<BackupSettings>;
-  updateBackupSettings(id: number, settingsData: Partial<InsertBackupSettings>): Promise<BackupSettings | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -109,8 +113,6 @@ export class MemStorage implements IStorage {
   private documentId: number;
   private pdfTemplateId: number;
   private customNotificationId: number;
-  private backupSettings: Map<number, BackupSettings>;
-  private backupSettingsId: number;
 
   constructor() {
     this.users = new Map();
@@ -121,7 +123,6 @@ export class MemStorage implements IStorage {
     this.documents = new Map();
     this.pdfTemplates = new Map();
     this.customNotifications = new Map();
-    this.backupSettings = new Map();
     
     this.userId = 1;
     this.vehicleId = 1;
@@ -131,7 +132,6 @@ export class MemStorage implements IStorage {
     this.documentId = 1;
     this.pdfTemplateId = 1;
     this.customNotificationId = 1;
-    this.backupSettingsId = 1;
     
     // Initialize with sample data for demo
     this.initializeSampleData();
@@ -1084,39 +1084,216 @@ export class MemStorage implements IStorage {
     return this.customNotifications.delete(id);
   }
 
-  // Backup Settings methods
-  async getBackupSettings(): Promise<BackupSettings | undefined> {
-    // Return the first (and should be only) backup settings record
-    const settings = Array.from(this.backupSettings.values())[0];
-    return settings;
+  // Spare vehicle management methods
+  async getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]> {
+    const allVehicles = Array.from(this.vehicles.values());
+    const availableVehicles: Vehicle[] = [];
+
+    for (const vehicle of allVehicles) {
+      // Skip excluded vehicle (usually the original vehicle needing service)
+      if (excludeVehicleId && vehicle.id === excludeVehicleId) {
+        continue;
+      }
+
+      // Only include vehicles that are in good maintenance status
+      if (vehicle.maintenanceStatus !== 'ok') {
+        continue;
+      }
+
+      // Check for any overlapping reservations (standard, replacement, maintenance_block)
+      const hasConflicts = Array.from(this.reservations.values()).some(r => {
+        if (r.vehicleId !== vehicle.id || r.status === 'cancelled') {
+          return false;
+        }
+        
+        const rStart = new Date(r.startDate);
+        const rEnd = r.endDate ? new Date(r.endDate) : null; // null means ongoing
+        const checkStart = new Date(startDate);
+        const checkEnd = new Date(endDate);
+        
+        // Check for overlap: ongoing reservations (null end) or date range overlap
+        if (!rEnd) {
+          // Ongoing reservation - conflicts if our start is before or equal to reservation start
+          return checkEnd >= rStart;
+        }
+        
+        // Standard date range overlap check
+        return checkStart <= rEnd && checkEnd >= rStart;
+      });
+      
+      if (!hasConflicts) {
+        availableVehicles.push(vehicle);
+      }
+    }
+
+    return availableVehicles;
   }
 
-  async createBackupSettings(settings: InsertBackupSettings): Promise<BackupSettings> {
-    const newSettings: BackupSettings = {
-      id: this.backupSettingsId++,
-      ...settings,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  async getActiveReplacementByOriginal(originalReservationId: number): Promise<Reservation | undefined> {
+    const today = new Date();
+    return Array.from(this.reservations.values()).find(r => {
+      if (r.type !== 'replacement' || 
+          r.replacementForReservationId !== originalReservationId ||
+          r.status === 'cancelled') {
+        return false;
+      }
+      
+      const rStart = new Date(r.startDate);
+      const rEnd = r.endDate ? new Date(r.endDate) : null;
+      
+      // Active if today is within range (or ongoing if no end date)
+      return today >= rStart && (!rEnd || today <= rEnd);
+    });
+  }
+
+  async createReplacementReservation(originalReservationId: number, spareVehicleId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    const original = this.reservations.get(originalReservationId);
+    if (!original) {
+      throw new Error('Original reservation not found');
+    }
+    
+    // Ensure spare vehicle is not the same as original
+    if (spareVehicleId === original.vehicleId) {
+      throw new Error('Spare vehicle cannot be the same as original vehicle');
+    }
+    
+    // Use original's end date if replacement end date not specified
+    const finalEndDate = endDate || original.endDate;
+    
+    // Check for conflicts on the spare vehicle
+    const conflicts = await this.checkReservationConflicts(spareVehicleId, startDate, finalEndDate || '', null);
+    if (conflicts.length > 0) {
+      throw new Error('Spare vehicle has conflicting reservations');
+    }
+
+    const id = this.reservationId++;
+    const now = new Date();
+    
+    const replacementReservation: Reservation = {
+      id,
+      vehicleId: spareVehicleId,
+      customerId: original.customerId,
+      startDate,
+      endDate: finalEndDate,
+      status: new Date(startDate) <= new Date() ? 'active' : 'pending',
+      type: 'replacement',
+      replacementForReservationId: originalReservationId,
+      totalPrice: null,
+      notes: `Replacement vehicle for reservation #${originalReservationId}`,
+      damageCheckPath: null,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      createdByUser: null,
+      updatedByUser: null,
     };
 
-    this.backupSettings.set(newSettings.id, newSettings);
-    return newSettings;
+    // Mark original vehicle as in service and create maintenance block
+    await this.markVehicleForService(original.vehicleId, 'in_service', `Service period for replacement reservation #${id}`);
+    await this.createMaintenanceBlock(original.vehicleId, startDate, finalEndDate);
+
+    this.reservations.set(id, replacementReservation);
+    return replacementReservation;
   }
 
-  async updateBackupSettings(id: number, settingsData: Partial<InsertBackupSettings>): Promise<BackupSettings | undefined> {
-    const existingSettings = this.backupSettings.get(id);
-    if (!existingSettings) {
+  async closeReplacementReservation(replacementReservationId: number, endDate: string): Promise<Reservation | undefined> {
+    const reservation = this.reservations.get(replacementReservationId);
+    if (!reservation || reservation.type !== 'replacement' || !reservation.replacementForReservationId) {
+      return undefined;
+    }
+    
+    const original = this.reservations.get(reservation.replacementForReservationId);
+    if (!original) {
       return undefined;
     }
 
-    const updatedSettings: BackupSettings = {
-      ...existingSettings,
-      ...settingsData,
+    const updatedReservation: Reservation = {
+      ...reservation,
+      endDate,
+      status: 'returned',
       updatedAt: new Date()
     };
 
-    this.backupSettings.set(id, updatedSettings);
-    return updatedSettings;
+    // Restore original vehicle to good status
+    await this.markVehicleForService(original.vehicleId, 'ok');
+    
+    // Close any maintenance blocks for the original vehicle
+    const maintenanceBlocks = Array.from(this.reservations.values()).filter(r =>
+      r.type === 'maintenance_block' && 
+      r.vehicleId === original.vehicleId &&
+      r.status !== 'cancelled' &&
+      (!r.endDate || new Date(r.endDate) >= new Date())
+    );
+    
+    for (const block of maintenanceBlocks) {
+      await this.closeMaintenanceBlock(block.id, endDate);
+    }
+
+    this.reservations.set(replacementReservationId, updatedReservation);
+    return updatedReservation;
+  }
+
+  async markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined> {
+    const vehicle = this.vehicles.get(vehicleId);
+    if (!vehicle) {
+      return undefined;
+    }
+
+    const updatedVehicle: Vehicle = {
+      ...vehicle,
+      maintenanceStatus,
+      maintenanceNote: maintenanceNote || null,
+      updatedAt: new Date()
+    };
+
+    this.vehicles.set(vehicleId, updatedVehicle);
+    return updatedVehicle;
+  }
+  
+  async createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    const id = this.reservationId++;
+    const now = new Date();
+    
+    const maintenanceBlock: Reservation = {
+      id,
+      vehicleId,
+      customerId: 0, // System reservation, no customer
+      startDate,
+      endDate: endDate || null,
+      status: 'active',
+      type: 'maintenance_block',
+      replacementForReservationId: null,
+      totalPrice: null,
+      notes: 'Vehicle maintenance block',
+      damageCheckPath: null,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      createdByUser: null,
+      updatedByUser: null,
+    };
+
+    this.reservations.set(id, maintenanceBlock);
+    return maintenanceBlock;
+  }
+  
+  async closeMaintenanceBlock(blockReservationId: number, endDate: string): Promise<Reservation | undefined> {
+    const block = this.reservations.get(blockReservationId);
+    if (!block || block.type !== 'maintenance_block') {
+      return undefined;
+    }
+
+    const updatedBlock: Reservation = {
+      ...block,
+      endDate,
+      status: 'completed',
+      updatedAt: new Date()
+    };
+
+    this.reservations.set(blockReservationId, updatedBlock);
+    return updatedBlock;
   }
 }
 
