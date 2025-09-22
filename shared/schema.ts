@@ -217,7 +217,8 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   ),
   endDate: z.string().optional().or(z.null()), // Make end date optional for open-ended rentals
   type: z.enum(["standard", "replacement", "maintenance_block"]).optional(),
-  replacementForReservationId: z.number().optional()
+  replacementForReservationId: z.number().optional(),
+  customerId: z.number().optional().or(z.null()) // Make customerId optional for maintenance blocks
 });
 
 // Expenses table
