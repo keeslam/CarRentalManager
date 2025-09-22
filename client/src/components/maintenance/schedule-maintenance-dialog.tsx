@@ -80,6 +80,12 @@ export function ScheduleMaintenanceDialog({
 }: ScheduleMaintenanceDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State for spare vehicle selection
+  const [showSpareDialog, setShowSpareDialog] = useState(false);
+  const [conflictingReservations, setConflictingReservations] = useState<any[]>([]);
+  const [maintenanceData, setMaintenanceData] = useState<any>(null);
+  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number}>({});
 
   // Fetch all vehicles for selection
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
@@ -129,6 +135,72 @@ export function ScheduleMaintenanceDialog({
         throw new Error(errorData.message || "Failed to schedule maintenance");
       }
 
+      const result = await response.json();
+      
+      // Check if spare vehicles are needed
+      if (result.needsSpareVehicle) {
+        setConflictingReservations(result.conflictingReservations);
+        setMaintenanceData(result.maintenanceData);
+        setShowSpareDialog(true);
+        return null; // Don't proceed with success yet
+      }
+
+      return result;
+    },
+    onSuccess: (result) => {
+      if (result === null) return; // Spare vehicle dialog will handle this
+      
+      // Invalidate related queries to refresh the calendar
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+      
+      toast({
+        title: "Maintenance scheduled",
+        description: "The maintenance event has been scheduled successfully.",
+      });
+      onSuccess?.();
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for creating maintenance with spare vehicle assignments
+  const createMaintenanceWithSpareMutation = useMutation({
+    mutationFn: async (data: { 
+      maintenanceData: any; 
+      conflictingReservations: any[]; 
+      spareVehicleAssignments: {[reservationId: number]: number} 
+    }) => {
+      const assignmentsArray = Object.entries(data.spareVehicleAssignments).map(([reservationId, spareVehicleId]) => ({
+        reservationId: parseInt(reservationId),
+        spareVehicleId
+      }));
+
+      const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
+        body: JSON.stringify({
+          maintenanceData: data.maintenanceData,
+          conflictingReservations: data.conflictingReservations,
+          spareVehicleAssignments: assignmentsArray
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to schedule maintenance with spare vehicles");
+      }
+
       return response.json();
     },
     onSuccess: () => {
@@ -140,8 +212,15 @@ export function ScheduleMaintenanceDialog({
       
       toast({
         title: "Maintenance scheduled",
-        description: "The maintenance event has been scheduled successfully.",
+        description: "Maintenance scheduled and spare vehicles assigned to affected reservations.",
       });
+      
+      // Reset all states
+      setShowSpareDialog(false);
+      setConflictingReservations([]);
+      setMaintenanceData(null);
+      setSpareVehicleAssignments({});
+      
       onSuccess?.();
       form.reset();
       onOpenChange(false);
@@ -217,7 +296,41 @@ export function ScheduleMaintenanceDialog({
 
   const selectedVehicle = vehicles.find(v => v.id.toString() === form.watch('vehicleId'));
 
+  // Fetch available vehicles for spare assignment
+  const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ['/api/vehicles/available'],
+    enabled: showSpareDialog, // Only fetch when spare dialog is open
+  });
+
+  const handleSpareVehicleAssignment = () => {
+    // Check that all conflicting reservations have spare vehicles assigned
+    const missingAssignments = conflictingReservations.filter(r => !spareVehicleAssignments[r.id]);
+    
+    if (missingAssignments.length > 0) {
+      toast({
+        title: "Missing Spare Vehicles",
+        description: "Please assign spare vehicles to all affected reservations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createMaintenanceWithSpareMutation.mutate({
+      maintenanceData,
+      conflictingReservations,
+      spareVehicleAssignments
+    });
+  };
+
+  const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string) => {
+    setSpareVehicleAssignments(prev => ({
+      ...prev,
+      [reservationId]: parseInt(spareVehicleId)
+    }));
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" data-testid="dialog-schedule-maintenance">
         <DialogHeader>
@@ -566,5 +679,93 @@ export function ScheduleMaintenanceDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Spare Vehicle Selection Dialog */}
+    <Dialog open={showSpareDialog} onOpenChange={setShowSpareDialog}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Car className="h-5 w-5 text-orange-600" />
+            Assign Spare Vehicles
+          </DialogTitle>
+          <DialogDescription>
+            The selected vehicle has active reservations during the maintenance period. Please assign spare vehicles to affected customers.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {conflictingReservations.map((reservation: any) => (
+            <div key={reservation.id} className="p-4 border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">
+                    {reservation.customer?.name || 'Unknown Customer'}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Reservation: {reservation.startDate} - {reservation.endDate}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Original vehicle: {reservation.vehicle?.brand} {reservation.vehicle?.model} ({formatLicensePlate(reservation.vehicle?.licensePlate)})
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Select Spare Vehicle:</label>
+                <Select 
+                  value={spareVehicleAssignments[reservation.id]?.toString() || ""} 
+                  onValueChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Choose a spare vehicle..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableVehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <Car className="w-4 h-4" />
+                          <span>
+                            {vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowSpareDialog(false);
+              setConflictingReservations([]);
+              setMaintenanceData(null);
+              setSpareVehicleAssignments({});
+            }}
+            disabled={createMaintenanceWithSpareMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSpareVehicleAssignment}
+            disabled={createMaintenanceWithSpareMutation.isPending}
+          >
+            {createMaintenanceWithSpareMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Assigning...
+              </>
+            ) : (
+              "Assign Spare Vehicles & Schedule Maintenance"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 }

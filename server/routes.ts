@@ -1327,9 +1327,28 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       const reservationData = insertReservationSchema.parse(bodyData);
       
-      // Only check for conflicts if this is NOT a maintenance block
-      // Maintenance blocks are scheduled separately and don't conflict with customer reservations
-      if (reservationData.type !== 'maintenance_block') {
+      // For maintenance blocks, check for customer reservations that need spare vehicles
+      if (reservationData.type === 'maintenance_block') {
+        const customerReservations = await storage.checkReservationConflicts(
+          reservationData.vehicleId,
+          reservationData.startDate,
+          reservationData.endDate,
+          null
+        );
+        
+        // Filter to only include customer reservations (not other maintenance blocks)
+        const customerConflicts = customerReservations.filter(r => r.type !== 'maintenance_block');
+        
+        if (customerConflicts.length > 0) {
+          return res.status(200).json({ 
+            message: "Customer reservations found during maintenance period",
+            needsSpareVehicle: true,
+            conflictingReservations: customerConflicts,
+            maintenanceData: reservationData
+          });
+        }
+      } else {
+        // For regular reservations, check for conflicts normally
         const conflicts = await storage.checkReservationConflicts(
           reservationData.vehicleId,
           reservationData.startDate,
@@ -1388,6 +1407,50 @@ export async function registerRoutes(app: Express): Promise<void> {
           error: error instanceof Error ? error.message : "Unknown error" 
         });
       }
+    }
+  });
+
+  // Create maintenance with spare vehicle assignment
+  app.post("/api/reservations/maintenance-with-spare", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { maintenanceData, conflictingReservations, spareVehicleAssignments } = req.body;
+      
+      console.log('Creating maintenance with spare vehicles:', { maintenanceData, conflictingReservations, spareVehicleAssignments });
+      
+      // Create the maintenance block
+      const user = req.user;
+      const maintenanceWithTracking = {
+        ...maintenanceData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      const maintenanceReservation = await storage.createReservation(maintenanceWithTracking);
+      
+      // Update conflicting reservations with spare vehicles
+      const updatePromises = spareVehicleAssignments.map(async (assignment: any) => {
+        const { reservationId, spareVehicleId } = assignment;
+        return await storage.updateReservation(reservationId, {
+          vehicleId: spareVehicleId,
+          type: 'replacement',
+          replacementForReservationId: reservationId,
+          notes: `Original vehicle (${maintenanceData.vehicleId}) under maintenance. Replaced with spare vehicle (${spareVehicleId}).`
+        });
+      });
+      
+      const updatedReservations = await Promise.all(updatePromises);
+      
+      res.status(201).json({
+        maintenanceReservation,
+        updatedReservations,
+        message: "Maintenance scheduled and spare vehicles assigned"
+      });
+    } catch (error) {
+      console.error("Error creating maintenance with spare:", error);
+      res.status(400).json({ 
+        message: "Failed to create maintenance with spare vehicles", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
