@@ -9,6 +9,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -578,15 +579,7 @@ export default function ReservationsIndex() {
               Calendar View
             </Button>
           </Link>
-          <Link href="/reservations/add">
-            <Button>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
-                <line x1="12" x2="12" y1="5" y2="19" />
-                <line x1="5" x2="19" y1="12" y2="12" />
-              </svg>
-              New Reservation
-            </Button>
-          </Link>
+          <ReservationAddDialog />
         </div>
       </div>
       
@@ -682,7 +675,7 @@ export default function ReservationsIndex() {
               <p className="text-gray-500 max-w-md mb-4">
                 There are no reservations matching your current filters. Try adjusting your search criteria or create a new reservation.
               </p>
-              <Link href="/reservations/add">
+              <ReservationAddDialog>
                 <Button size="sm">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
                     <line x1="12" x2="12" y1="5" y2="19" />
@@ -690,7 +683,7 @@ export default function ReservationsIndex() {
                   </svg>
                   New Reservation
                 </Button>
-              </Link>
+              </ReservationAddDialog>
             </div>
           ) : (
             // Display grouped or ungrouped reservations
