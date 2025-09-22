@@ -39,6 +39,15 @@ export default function MaintenanceCalendar() {
   
   const { data: monthReservations = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations/range', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const startDate = format(monthStart, 'yyyy-MM-dd');
+      const endDate = format(monthEnd, 'yyyy-MM-dd');
+      const response = await fetch(`/api/reservations/range?startDate=${startDate}&endDate=${endDate}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch reservations');
+      }
+      return response.json();
+    },
   });
 
   // Create maintenance events from vehicle data
@@ -66,11 +75,24 @@ export default function MaintenanceCalendar() {
     }))
   ];
 
-  // Filter events for current month and add vehicles currently in service
+  // Filter events for current month and next 2 months (3 month view)
+  const threeMonthsOut = addMonths(currentDate, 2);
   const currentMonthEvents = maintenanceEvents.filter(event => {
     if (!event.date) return false;
     const eventDate = new Date(event.date);
-    return isSameMonth(eventDate, currentDate);
+    const isCurrentMonth = isSameMonth(eventDate, currentDate);
+    // Also include events if they're within the next 3 months for better planning
+    const isWithinThreeMonths = eventDate >= startOfMonth(currentDate) && eventDate <= endOfMonth(threeMonthsOut);
+    return isCurrentMonth;
+  });
+  
+  // Get all upcoming events (within next 6 months) for the list view
+  const sixMonthsOut = addMonths(new Date(), 6);
+  const upcomingEvents = maintenanceEvents.filter(event => {
+    if (!event.date) return false;
+    const eventDate = new Date(event.date);
+    const now = new Date();
+    return eventDate >= now && eventDate <= sixMonthsOut;
   });
 
   // Get calendar days
@@ -129,6 +151,9 @@ export default function MaintenanceCalendar() {
               Schedule Maintenance
             </Button>
           </Link>
+          <div className="text-sm text-gray-600">
+            {currentMonthEvents.length} events this month • {upcomingEvents.length} upcoming
+          </div>
         </div>
       </div>
 
@@ -235,9 +260,9 @@ export default function MaintenanceCalendar() {
               <AlertTriangle className="w-5 h-5 text-red-500" />
               <div>
                 <div className="text-2xl font-bold text-red-600">
-                  {currentMonthEvents.filter(e => e.type === 'apk_due').length}
+                  {upcomingEvents.filter(e => e.type === 'apk_due').length}
                 </div>
-                <div className="text-sm text-gray-600">APK Due This Month</div>
+                <div className="text-sm text-gray-600">APK Due (6 months)</div>
               </div>
             </div>
           </CardContent>
@@ -249,7 +274,7 @@ export default function MaintenanceCalendar() {
               <Clock className="w-5 h-5 text-yellow-500" />
               <div>
                 <div className="text-2xl font-bold text-yellow-600">
-                  {currentMonthEvents.filter(e => e.type === 'warranty_expiring').length}
+                  {upcomingEvents.filter(e => e.type === 'warranty_expiring').length}
                 </div>
                 <div className="text-sm text-gray-600">Warranties Expiring</div>
               </div>
@@ -263,7 +288,7 @@ export default function MaintenanceCalendar() {
               <Car className="w-5 h-5 text-orange-500" />
               <div>
                 <div className="text-2xl font-bold text-orange-600">
-                  {currentMonthEvents.filter(e => e.needsSpareVehicle && e.currentReservations && e.currentReservations.length > 0).length}
+                  {upcomingEvents.filter(e => e.needsSpareVehicle && e.currentReservations && e.currentReservations.length > 0).length}
                 </div>
                 <div className="text-sm text-gray-600">Spare Vehicles Needed</div>
               </div>
@@ -277,9 +302,9 @@ export default function MaintenanceCalendar() {
               <Wrench className="w-5 h-5 text-blue-500" />
               <div>
                 <div className="text-2xl font-bold text-blue-600">
-                  {currentMonthEvents.length}
+                  {upcomingEvents.length}
                 </div>
-                <div className="text-sm text-gray-600">Total Events</div>
+                <div className="text-sm text-gray-600">Total Upcoming</div>
               </div>
             </div>
           </CardContent>
@@ -289,14 +314,14 @@ export default function MaintenanceCalendar() {
       {/* Upcoming Maintenance List */}
       <Card>
         <CardHeader>
-          <CardTitle>Upcoming Maintenance This Month</CardTitle>
+          <CardTitle>Upcoming Maintenance (Next 6 Months)</CardTitle>
         </CardHeader>
         <CardContent>
-          {currentMonthEvents.length === 0 ? (
-            <p className="text-gray-500">No maintenance events scheduled for this month.</p>
+          {upcomingEvents.length === 0 ? (
+            <p className="text-gray-500">No maintenance events scheduled in the next 6 months.</p>
           ) : (
             <div className="space-y-3">
-              {currentMonthEvents
+              {upcomingEvents
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .map(event => (
                   <div key={`${event.id}-${event.type}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
