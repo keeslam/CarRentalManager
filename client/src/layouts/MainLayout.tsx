@@ -380,6 +380,7 @@ function getPageTitle(location: string): string {
   if (location.startsWith("/vehicles")) return "Vehicles";
   if (location.startsWith("/customers")) return "Customers";
   if (location.startsWith("/reservations")) return "Reservations";
+  if (location.startsWith("/maintenance")) return "Maintenance";
   if (location.startsWith("/expenses")) return "Expenses";
   if (location.startsWith("/documents")) return "Documents";
   if (location.startsWith("/reports")) return "Reports";
