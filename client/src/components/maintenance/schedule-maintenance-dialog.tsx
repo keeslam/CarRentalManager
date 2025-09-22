@@ -39,7 +39,22 @@ import { Loader2, Calendar, AlertTriangle, Wrench, Clock } from "lucide-react";
 
 const scheduleMaintenanceSchema = z.object({
   vehicleId: z.string().min(1, "Please select a vehicle"),
-  maintenanceType: z.enum(["apk_inspection", "regular_maintenance", "warranty_service", "emergency_repair"], {
+  maintenanceType: z.enum([
+    "breakdown", 
+    "tire_replacement", 
+    "brake_service", 
+    "engine_repair", 
+    "transmission_repair",
+    "electrical_issue",
+    "air_conditioning",
+    "battery_replacement",
+    "oil_change",
+    "regular_maintenance", 
+    "apk_inspection", 
+    "warranty_service",
+    "accident_damage",
+    "other"
+  ], {
     required_error: "Please select a maintenance type",
   }),
   scheduledDate: z.string().min(1, "Scheduled date is required"),
@@ -76,10 +91,10 @@ export function ScheduleMaintenanceDialog({
     resolver: zodResolver(scheduleMaintenanceSchema),
     defaultValues: {
       vehicleId: "",
-      maintenanceType: "regular_maintenance",
-      scheduledDate: "",
+      maintenanceType: "breakdown",
+      scheduledDate: new Date().toISOString().split('T')[0], // Default to today
       estimatedDuration: "",
-      priority: "medium",
+      priority: "high", // Default to high priority for unplanned maintenance
       description: "",
       notes: "",
       needsSpareVehicle: false,
@@ -142,16 +157,36 @@ export function ScheduleMaintenanceDialog({
 
   const getMaintenanceTypeInfo = (type: string) => {
     switch (type) {
-      case "apk_inspection":
-        return { icon: <AlertTriangle className="w-4 h-4" />, label: "APK Inspection" };
+      case "breakdown":
+        return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, label: "Vehicle Breakdown", urgent: true };
+      case "tire_replacement":
+        return { icon: <Car className="w-4 h-4 text-orange-500" />, label: "Tire Replacement", urgent: false };
+      case "brake_service":
+        return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, label: "Brake Service", urgent: true };
+      case "engine_repair":
+        return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, label: "Engine Repair", urgent: true };
+      case "transmission_repair":
+        return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, label: "Transmission Repair", urgent: true };
+      case "electrical_issue":
+        return { icon: <Wrench className="w-4 h-4 text-yellow-500" />, label: "Electrical Issue", urgent: false };
+      case "air_conditioning":
+        return { icon: <Wrench className="w-4 h-4 text-blue-500" />, label: "Air Conditioning", urgent: false };
+      case "battery_replacement":
+        return { icon: <Wrench className="w-4 h-4 text-yellow-500" />, label: "Battery Replacement", urgent: false };
+      case "oil_change":
+        return { icon: <Wrench className="w-4 h-4 text-blue-500" />, label: "Oil Change", urgent: false };
       case "regular_maintenance":
-        return { icon: <Wrench className="w-4 h-4" />, label: "Regular Maintenance" };
+        return { icon: <Wrench className="w-4 h-4 text-blue-500" />, label: "Regular Maintenance", urgent: false };
+      case "apk_inspection":
+        return { icon: <Clock className="w-4 h-4 text-green-500" />, label: "APK Inspection", urgent: false };
       case "warranty_service":
-        return { icon: <Clock className="w-4 h-4" />, label: "Warranty Service" };
-      case "emergency_repair":
-        return { icon: <AlertTriangle className="w-4 h-4" />, label: "Emergency Repair" };
+        return { icon: <Clock className="w-4 h-4 text-green-500" />, label: "Warranty Service", urgent: false };
+      case "accident_damage":
+        return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, label: "Accident Damage", urgent: true };
+      case "other":
+        return { icon: <Wrench className="w-4 h-4 text-gray-500" />, label: "Other", urgent: false };
       default:
-        return { icon: <Wrench className="w-4 h-4" />, label: "Maintenance" };
+        return { icon: <Wrench className="w-4 h-4" />, label: "Maintenance", urgent: false };
     }
   };
 
@@ -166,7 +201,7 @@ export function ScheduleMaintenanceDialog({
             Schedule Maintenance
           </DialogTitle>
           <DialogDescription>
-            Schedule APK inspections, regular maintenance, or other services for your vehicles.
+            Report breakdowns, schedule repairs, or plan maintenance for your vehicles. Perfect for when a vehicle needs immediate attention or has worn parts.
           </DialogDescription>
         </DialogHeader>
 
@@ -223,29 +258,131 @@ export function ScheduleMaintenanceDialog({
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="apk_inspection">
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="breakdown">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-red-500" />
-                          APK Inspection
+                          <div>
+                            <div className="font-medium">Vehicle Breakdown</div>
+                            <div className="text-xs text-gray-500">Car won't start, engine issues</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="tire_replacement">
+                        <div className="flex items-center gap-2">
+                          <Car className="w-4 h-4 text-orange-500" />
+                          <div>
+                            <div className="font-medium">Tire Replacement</div>
+                            <div className="text-xs text-gray-500">Worn tires, punctures</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="brake_service">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500" />
+                          <div>
+                            <div className="font-medium">Brake Service</div>
+                            <div className="text-xs text-gray-500">Worn brake pads, brake fluid</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="engine_repair">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500" />
+                          <div>
+                            <div className="font-medium">Engine Repair</div>
+                            <div className="text-xs text-gray-500">Engine problems, overheating</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="transmission_repair">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500" />
+                          <div>
+                            <div className="font-medium">Transmission Repair</div>
+                            <div className="text-xs text-gray-500">Gear shifting issues</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="electrical_issue">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4 text-yellow-500" />
+                          <div>
+                            <div className="font-medium">Electrical Issue</div>
+                            <div className="text-xs text-gray-500">Lights, sensors, electronics</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="air_conditioning">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div className="font-medium">Air Conditioning</div>
+                            <div className="text-xs text-gray-500">A/C repair, gas refill</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="battery_replacement">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4 text-yellow-500" />
+                          <div>
+                            <div className="font-medium">Battery Replacement</div>
+                            <div className="text-xs text-gray-500">Dead battery, charging issues</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="oil_change">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div className="font-medium">Oil Change</div>
+                            <div className="text-xs text-gray-500">Regular oil service</div>
+                          </div>
                         </div>
                       </SelectItem>
                       <SelectItem value="regular_maintenance">
                         <div className="flex items-center gap-2">
                           <Wrench className="w-4 h-4 text-blue-500" />
-                          Regular Maintenance
+                          <div>
+                            <div className="font-medium">Regular Maintenance</div>
+                            <div className="text-xs text-gray-500">Scheduled service</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="apk_inspection">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-green-500" />
+                          <div>
+                            <div className="font-medium">APK Inspection</div>
+                            <div className="text-xs text-gray-500">Annual vehicle inspection</div>
+                          </div>
                         </div>
                       </SelectItem>
                       <SelectItem value="warranty_service">
                         <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-yellow-500" />
-                          Warranty Service
+                          <Clock className="w-4 h-4 text-green-500" />
+                          <div>
+                            <div className="font-medium">Warranty Service</div>
+                            <div className="text-xs text-gray-500">Covered repairs</div>
+                          </div>
                         </div>
                       </SelectItem>
-                      <SelectItem value="emergency_repair">
+                      <SelectItem value="accident_damage">
                         <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-500" />
-                          Emergency Repair
+                          <AlertTriangle className="w-4 h-4 text-red-500" />
+                          <div>
+                            <div className="font-medium">Accident Damage</div>
+                            <div className="text-xs text-gray-500">Collision repairs</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="other">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <div className="font-medium">Other</div>
+                            <div className="text-xs text-gray-500">Custom maintenance</div>
+                          </div>
                         </div>
                       </SelectItem>
                     </SelectContent>
