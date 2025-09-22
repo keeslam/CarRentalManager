@@ -511,7 +511,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       const overlaps = await storage.checkReservationConflicts(
         vehicleIdNum, 
         startDate as string, 
-        endDate as string
+        endDate as string,
+        null // Don't exclude any reservations for overlap check
       );
 
       // Filter to only regular (non-maintenance) reservations and get customer info
