@@ -1427,9 +1427,21 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create maintenance with spare vehicle assignment
   app.post("/api/reservations/maintenance-with-spare", requireAuth, async (req: Request, res: Response) => {
     try {
+      console.log('Raw request body:', req.body);
       const { maintenanceData, conflictingReservations, spareVehicleAssignments } = req.body;
       
       console.log('Creating maintenance with spare vehicles:', { maintenanceData, conflictingReservations, spareVehicleAssignments });
+      
+      // Validate required data
+      if (!maintenanceData) {
+        return res.status(400).json({ message: "maintenanceData is required" });
+      }
+      if (!conflictingReservations || !Array.isArray(conflictingReservations)) {
+        return res.status(400).json({ message: "conflictingReservations must be an array" });
+      }
+      if (!spareVehicleAssignments || !Array.isArray(spareVehicleAssignments)) {
+        return res.status(400).json({ message: "spareVehicleAssignments must be an array" });
+      }
       
       // Create the maintenance block
       const user = req.user;
