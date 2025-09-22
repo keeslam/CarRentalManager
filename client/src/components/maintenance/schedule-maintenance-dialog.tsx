@@ -104,17 +104,21 @@ export function ScheduleMaintenanceDialog({
   const scheduleMaintenanceMutation = useMutation({
     mutationFn: async (data: ScheduleMaintenanceFormData) => {
       // Create a maintenance block reservation
+      const payload = {
+        vehicleId: parseInt(data.vehicleId),
+        customerId: null, // No customer for maintenance blocks
+        startDate: data.scheduledDate,
+        endDate: data.scheduledDate, // Same day by default
+        status: "confirmed",
+        type: "maintenance_block",
+        notes: `${data.maintenanceType}: ${data.description || ''}\n${data.notes || ''}`.trim(),
+        totalPrice: 0,
+      };
+      
+      console.log('Sending payload:', payload);
+      
       const response = await apiRequest("POST", "/api/reservations", {
-        body: JSON.stringify({
-          vehicleId: parseInt(data.vehicleId),
-          customerId: null, // No customer for maintenance blocks
-          startDate: data.scheduledDate,
-          endDate: data.scheduledDate, // Same day by default
-          status: "confirmed",
-          type: "maintenance_block",
-          notes: `${data.maintenanceType}: ${data.description || ''}\n${data.notes || ''}`.trim(),
-          totalPrice: 0,
-        }),
+        body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
         },
@@ -152,6 +156,27 @@ export function ScheduleMaintenanceDialog({
   });
 
   const handleSubmit = (data: ScheduleMaintenanceFormData) => {
+    console.log('Form data:', data);
+    
+    // Validate required fields before submitting
+    if (!data.vehicleId || data.vehicleId === "") {
+      toast({
+        title: "Validation Error",
+        description: "Please select a vehicle",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.scheduledDate) {
+      toast({
+        title: "Validation Error", 
+        description: "Please select a date",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     scheduleMaintenanceMutation.mutate(data);
   };
 
