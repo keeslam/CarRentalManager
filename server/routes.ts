@@ -1327,19 +1327,22 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       const reservationData = insertReservationSchema.parse(bodyData);
       
-      // Check for conflicts
-      const conflicts = await storage.checkReservationConflicts(
-        reservationData.vehicleId,
-        reservationData.startDate,
-        reservationData.endDate,
-        null
-      );
-      
-      if (conflicts.length > 0) {
-        return res.status(409).json({ 
-          message: "Reservation conflicts with existing bookings",
-          conflicts
-        });
+      // Only check for conflicts if this is NOT a maintenance block
+      // Maintenance blocks are scheduled separately and don't conflict with customer reservations
+      if (reservationData.type !== 'maintenance_block') {
+        const conflicts = await storage.checkReservationConflicts(
+          reservationData.vehicleId,
+          reservationData.startDate,
+          reservationData.endDate,
+          null
+        );
+        
+        if (conflicts.length > 0) {
+          return res.status(409).json({ 
+            message: "Reservation conflicts with existing bookings",
+            conflicts
+          });
+        }
       }
       
       // Add user tracking information
