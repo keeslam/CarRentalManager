@@ -179,100 +179,170 @@ export default function MaintenanceCalendar() {
         </div>
       </div>
 
-      {/* Calendar Navigation */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              {format(currentDate, 'MMMM yyyy')}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                data-testid="button-prev-month"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentDate(new Date())}
-                data-testid="button-today"
-              >
-                Today
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                data-testid="button-next-month"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1 mb-4">
-            {/* Day headers */}
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-              <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-                {day}
+      {/* Main Content Grid - Calendar and Upcoming List */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendar */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  {format(currentDate, 'MMMM yyyy')}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                    data-testid="button-prev-month"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentDate(new Date())}
+                    data-testid="button-today"
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                    data-testid="button-next-month"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            ))}
-            
-            {/* Calendar days */}
-            {calendarDays.map(day => {
-              const dayEvents = getEventsForDay(day);
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isToday = isSameDay(day, new Date());
-              
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`p-2 min-h-[120px] border border-gray-200 ${
-                    isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                  } ${isToday ? 'bg-blue-50' : ''}`}
-                  data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
-                >
-                  <div className={`text-sm font-medium mb-1 ${
-                    isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                  } ${isToday ? 'text-blue-600' : ''}`}>
-                    {format(day, 'd')}
+            </CardHeader>
+            <CardContent>
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1 mb-4">
+                {/* Day headers */}
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+                    {day}
                   </div>
+                ))}
+                
+                {/* Calendar days */}
+                {calendarDays.map(day => {
+                  const dayEvents = getEventsForDay(day);
+                  const isCurrentMonth = isSameMonth(day, currentDate);
+                  const isToday = isSameDay(day, new Date());
                   
-                  {/* Events for this day */}
-                  <div className="space-y-1">
-                    {dayEvents.map(event => (
-                      <Link key={`${event.id}-${event.type}`} href={`/vehicles/${event.vehicleId}`}>
-                        <div
-                          className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
-                          data-testid={`event-${event.id}-${event.type}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {getEventIcon(event.type)}
-                            <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`p-2 min-h-[120px] border border-gray-200 ${
+                        isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                      } ${isToday ? 'bg-blue-50' : ''}`}
+                      data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
+                    >
+                      <div className={`text-sm font-medium mb-1 ${
+                        isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                      } ${isToday ? 'text-blue-600' : ''}`}>
+                        {format(day, 'd')}
+                      </div>
+                      
+                      {/* Events for this day */}
+                      <div className="space-y-1">
+                        {dayEvents.map(event => (
+                          <Link key={`${event.id}-${event.type}`} href={`/vehicles/${event.vehicleId}`}>
+                            <div
+                              className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
+                              data-testid={`event-${event.id}-${event.type}`}
+                            >
+                              <div className="flex items-center gap-1">
+                                {getEventIcon(event.type)}
+                                <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
+                              </div>
+                              <div className="truncate">{event.title}</div>
+                              {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
+                                <Badge className="bg-orange-500 text-white text-xs mt-1">
+                                  Spare needed
+                                </Badge>
+                              )}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Upcoming Maintenance List - Right Side */}
+        <div className="lg:col-span-1">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg">Upcoming Maintenance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {upcomingEvents.length === 0 ? (
+                <p className="text-gray-500 text-sm">No maintenance events scheduled in the next 6 months.</p>
+              ) : (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {upcomingEvents
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .map(event => (
+                      <div key={`${event.id}-${event.type}`} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div className="flex items-start gap-2 mb-2">
+                          {getEventIcon(event.type)}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {event.vehicle.brand} {event.vehicle.model}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ({formatLicensePlate(event.vehicle.licensePlate)})
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              Due: {format(new Date(event.date), 'MMM d, yyyy')}
+                            </div>
                           </div>
-                          <div className="truncate">{event.title}</div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          <Badge className={`${getEventTypeStyle(event.type)} text-xs`}>
+                            {event.title}
+                          </Badge>
                           {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                            <Badge className="bg-orange-500 text-white text-xs mt-1">
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">
                               Spare needed
                             </Badge>
                           )}
                         </div>
-                      </Link>
+                        
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => setIsScheduleDialogOpen(true)}
+                            data-testid={`button-schedule-${event.vehicleId}`}
+                          >
+                            Schedule
+                          </Button>
+                          <Link href={`/vehicles/${event.vehicleId}`}>
+                            <Button variant="outline" size="sm" className="text-xs h-7" data-testid={`button-view-vehicle-${event.vehicleId}`}>
+                              View
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
                     ))}
-                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Maintenance Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -333,59 +403,6 @@ export default function MaintenanceCalendar() {
         </Card>
       </div>
 
-      {/* Upcoming Maintenance List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Maintenance (Next 6 Months)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {upcomingEvents.length === 0 ? (
-            <p className="text-gray-500">No maintenance events scheduled in the next 6 months.</p>
-          ) : (
-            <div className="space-y-3">
-              {upcomingEvents
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map(event => (
-                  <div key={`${event.id}-${event.type}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {getEventIcon(event.type)}
-                      <div>
-                        <div className="font-medium">
-                          {event.vehicle.brand} {event.vehicle.model} ({formatLicensePlate(event.vehicle.licensePlate)})
-                        </div>
-                        <div className="text-sm text-gray-600">{event.description}</div>
-                        <div className="text-sm text-gray-500">Due: {format(new Date(event.date), 'PPP')}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                        <Badge className="bg-orange-100 text-orange-800">
-                          Spare vehicle needed
-                        </Badge>
-                      )}
-                      <Badge className={getEventTypeStyle(event.type)}>
-                        {event.title}
-                      </Badge>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setIsScheduleDialogOpen(true)}
-                        data-testid={`button-schedule-${event.vehicleId}`}
-                      >
-                        Schedule Service
-                      </Button>
-                      <Link href={`/vehicles/${event.vehicleId}`}>
-                        <Button variant="outline" size="sm" data-testid={`button-view-vehicle-${event.vehicleId}`}>
-                          View Vehicle
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Schedule Maintenance Dialog */}
       <ScheduleMaintenanceDialog
