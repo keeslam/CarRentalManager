@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,12 +72,14 @@ interface ScheduleMaintenanceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  editingReservation?: any; // Reservation being edited, null for new reservations
 }
 
 export function ScheduleMaintenanceDialog({
   open,
   onOpenChange,
   onSuccess,
+  editingReservation,
 }: ScheduleMaintenanceDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -108,9 +110,42 @@ export function ScheduleMaintenanceDialog({
     },
   });
 
+  // Reset form when editing reservation changes
+  useEffect(() => {
+    if (editingReservation) {
+      // Parse maintenance data from the reservation
+      const noteParts = editingReservation.notes?.split(':') || [];
+      const maintenanceType = noteParts[0] || "breakdown";
+      const descriptionPart = noteParts[1]?.split('\n')[0]?.trim() || "";
+      const notesPart = editingReservation.notes?.split('\n')[1]?.trim() || "";
+      
+      form.reset({
+        vehicleId: editingReservation.vehicleId?.toString() || "",
+        maintenanceType,
+        scheduledDate: editingReservation.startDate || new Date().toISOString().split('T')[0],
+        estimatedDuration: "",
+        priority: "high",
+        description: descriptionPart,
+        notes: notesPart,
+        needsSpareVehicle: false,
+      });
+    } else {
+      // Reset to default values for new maintenance
+      form.reset({
+        vehicleId: "",
+        maintenanceType: "breakdown",
+        scheduledDate: new Date().toISOString().split('T')[0],
+        estimatedDuration: "",
+        priority: "high",
+        description: "",
+        notes: "",
+        needsSpareVehicle: false,
+      });
+    }
+  }, [editingReservation, form]);
+
   const scheduleMaintenanceMutation = useMutation({
     mutationFn: async (data: ScheduleMaintenanceFormData) => {
-      // Create a maintenance block reservation
       const payload = {
         vehicleId: parseInt(data.vehicleId),
         customerId: null, // No customer for maintenance blocks
@@ -124,7 +159,11 @@ export function ScheduleMaintenanceDialog({
       
       console.log('Sending payload:', payload);
       
-      const response = await apiRequest("POST", "/api/reservations", {
+      // Use PUT for editing, POST for creating
+      const method = editingReservation ? "PUT" : "POST";
+      const url = editingReservation ? `/api/reservations/${editingReservation.id}` : "/api/reservations";
+      
+      const response = await apiRequest(method, url, {
         body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
@@ -158,8 +197,10 @@ export function ScheduleMaintenanceDialog({
       queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
       
       toast({
-        title: "Maintenance scheduled",
-        description: "The maintenance event has been scheduled successfully.",
+        title: editingReservation ? "Maintenance updated" : "Maintenance scheduled",
+        description: editingReservation 
+          ? "The maintenance event has been updated successfully."
+          : "The maintenance event has been scheduled successfully.",
       });
       onSuccess?.();
       form.reset();
@@ -341,7 +382,7 @@ export function ScheduleMaintenanceDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-blue-600" />
-            Schedule Maintenance
+            {editingReservation ? "Edit Maintenance" : "Schedule Maintenance"}
           </DialogTitle>
           <DialogDescription>
             Report breakdowns, schedule repairs, or plan maintenance for your vehicles. Perfect for when a vehicle needs immediate attention or has worn parts.
@@ -662,10 +703,10 @@ export function ScheduleMaintenanceDialog({
                 {scheduleMaintenanceMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Scheduling...
+                    {editingReservation ? "Updating..." : "Scheduling..."}
                   </>
                 ) : (
-                  "Schedule Maintenance"
+                  editingReservation ? "Update Maintenance" : "Schedule Maintenance"
                 )}
               </Button>
             </DialogFooter>

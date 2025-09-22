@@ -25,6 +25,7 @@ interface MaintenanceEvent {
 export default function MaintenanceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   
   // Fetch vehicles with maintenance needs
   const { data: apkExpiringVehicles = [] } = useQuery<Vehicle[]>({
@@ -250,25 +251,60 @@ export default function MaintenanceCalendar() {
                       
                       {/* Events for this day */}
                       <div className="space-y-1">
-                        {dayEvents.map(event => (
-                          <Link key={`${event.id}-${event.type}`} href={`/vehicles/${event.vehicleId}`}>
-                            <div
-                              className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
-                              data-testid={`event-${event.id}-${event.type}`}
-                            >
-                              <div className="flex items-center gap-1">
-                                {getEventIcon(event.type)}
-                                <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
+                        {dayEvents.map(event => {
+                          // Check if this is a maintenance block (scheduled maintenance)
+                          const isMaintenanceBlock = event.type === 'scheduled_maintenance';
+                          
+                          if (isMaintenanceBlock) {
+                            // For maintenance blocks, make them clickable to edit
+                            return (
+                              <div
+                                key={`${event.id}-${event.type}`}
+                                className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
+                                data-testid={`event-${event.id}-${event.type}`}
+                                onClick={() => {
+                                  // Find the reservation in the allReservations and open edit dialog
+                                  const allReservations = [];
+                                  // We'll need to fetch the reservation data
+                                  setEditingReservation(event as any);
+                                  setIsScheduleDialogOpen(true);
+                                }}
+                              >
+                                <div className="flex items-center gap-1">
+                                  {getEventIcon(event.type)}
+                                  <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
+                                </div>
+                                <div className="truncate">{event.title}</div>
+                                {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
+                                  <Badge className="bg-orange-500 text-white text-xs mt-1">
+                                    Spare needed
+                                  </Badge>
+                                )}
                               </div>
-                              <div className="truncate">{event.title}</div>
-                              {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                                <Badge className="bg-orange-500 text-white text-xs mt-1">
-                                  Spare needed
-                                </Badge>
-                              )}
-                            </div>
-                          </Link>
-                        ))}
+                            );
+                          } else {
+                            // For other events (APK, warranty), keep the original link behavior
+                            return (
+                              <Link key={`${event.id}-${event.type}`} href={`/vehicles/${event.vehicleId}`}>
+                                <div
+                                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
+                                  data-testid={`event-${event.id}-${event.type}`}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    {getEventIcon(event.type)}
+                                    <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
+                                  </div>
+                                  <div className="truncate">{event.title}</div>
+                                  {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
+                                    <Badge className="bg-orange-500 text-white text-xs mt-1">
+                                      Spare needed
+                                    </Badge>
+                                  )}
+                                </div>
+                              </Link>
+                            );
+                          }
+                        })}
                       </div>
                     </div>
                   );
@@ -425,10 +461,17 @@ export default function MaintenanceCalendar() {
       {/* Schedule Maintenance Dialog */}
       <ScheduleMaintenanceDialog
         open={isScheduleDialogOpen}
-        onOpenChange={setIsScheduleDialogOpen}
+        onOpenChange={(open) => {
+          setIsScheduleDialogOpen(open);
+          if (!open) {
+            setEditingReservation(null); // Clear editing state when dialog closes
+          }
+        }}
+        editingReservation={editingReservation}
         onSuccess={() => {
           // Refresh the calendar data
           setCurrentDate(new Date(currentDate)); // Force re-render
+          setEditingReservation(null); // Clear editing state
         }}
       />
     </div>
@@ -573,6 +616,16 @@ function MaintenanceReservationsList() {
               </div>
               
               <div className="flex items-center gap-2 ml-4">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setEditingReservation(reservation);
+                    setIsScheduleDialogOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
                 <Link href={`/vehicles/${reservation.vehicleId}`}>
                   <Button variant="outline" size="sm">
                     View Vehicle
