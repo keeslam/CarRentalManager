@@ -404,6 +404,24 @@ export default function MaintenanceCalendar() {
       </div>
 
 
+      {/* All Maintenance Reservations List */}
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5" />
+              All Scheduled Maintenance
+            </CardTitle>
+            <CardDescription>
+              Complete list of all maintenance reservations and service appointments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MaintenanceReservationsList />
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Schedule Maintenance Dialog */}
       <ScheduleMaintenanceDialog
         open={isScheduleDialogOpen}
@@ -413,6 +431,158 @@ export default function MaintenanceCalendar() {
           setCurrentDate(new Date(currentDate)); // Force re-render
         }}
       />
+    </div>
+  );
+}
+
+// Component to display all maintenance reservations
+function MaintenanceReservationsList() {
+  // Fetch all reservations and filter for maintenance blocks
+  const { data: allReservations = [], isLoading } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+  });
+
+  // Filter for maintenance blocks only
+  const maintenanceReservations = allReservations.filter(r => r.type === 'maintenance_block');
+
+  // Sort by date (newest first)
+  const sortedReservations = maintenanceReservations.sort((a, b) => 
+    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading maintenance reservations...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (maintenanceReservations.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No maintenance scheduled</h3>
+        <p className="text-gray-500">No maintenance appointments have been scheduled yet.</p>
+      </div>
+    );
+  }
+
+  // Extract maintenance type from notes
+  const getMaintenanceType = (notes: string) => {
+    if (!notes) return 'maintenance';
+    const match = notes.match(/^([^:]+):/);
+    return match ? match[1] : 'maintenance';
+  };
+
+  // Get maintenance description from notes
+  const getMaintenanceDescription = (notes: string) => {
+    if (!notes) return '';
+    const match = notes.match(/^[^:]+:\s*(.+?)(\n|$)/);
+    return match ? match[1] : notes.split('\n')[0];
+  };
+
+  // Get icon for maintenance type
+  const getMaintenanceIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'breakdown':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'apk_inspection':
+        return <Clock className="w-4 h-4 text-green-500" />;
+      case 'tire_replacement':
+        return <Car className="w-4 h-4 text-orange-500" />;
+      default:
+        return <Wrench className="w-4 h-4 text-blue-500" />;
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {sortedReservations.map((reservation) => {
+        const maintenanceType = getMaintenanceType(reservation.notes || '');
+        const description = getMaintenanceDescription(reservation.notes || '');
+        
+        return (
+          <div
+            key={reservation.id}
+            className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1">
+                {getMaintenanceIcon(maintenanceType)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-medium text-gray-900">
+                      {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                    </h4>
+                    <span className="text-sm text-gray-500">
+                      ({formatLicensePlate(reservation.vehicle?.licensePlate || '')})
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>
+                        {format(new Date(reservation.startDate), 'MMM d, yyyy')}
+                        {reservation.endDate && reservation.endDate !== reservation.startDate && (
+                          <span> - {format(new Date(reservation.endDate), 'MMM d, yyyy')}</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium capitalize">{maintenanceType.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                  
+                  {description && (
+                    <p className="text-sm text-gray-700 mb-2">{description}</p>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge className={`text-xs ${getStatusColor(reservation.status)}`}>
+                      {reservation.status}
+                    </Badge>
+                    <span className="text-xs text-gray-500">
+                      Scheduled {format(new Date(reservation.createdAt || ''), 'MMM d, yyyy')}
+                    </span>
+                    {reservation.createdBy && (
+                      <span className="text-xs text-gray-500">
+                        by {reservation.createdBy}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-4">
+                <Link href={`/vehicles/${reservation.vehicleId}`}>
+                  <Button variant="outline" size="sm">
+                    View Vehicle
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
