@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Calendar, AlertTriangle, Wrench, Clock } from "lucide-react";
+import { Loader2, Calendar, AlertTriangle, Wrench, Clock, Car } from "lucide-react";
 
 const scheduleMaintenanceSchema = z.object({
   vehicleId: z.string().min(1, "Please select a vehicle"),
