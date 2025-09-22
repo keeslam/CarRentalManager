@@ -1298,9 +1298,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create reservation with damage check upload
   app.post("/api/reservations", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
+      console.log('Raw req.body:', req.body);
+      console.log('req.body type:', typeof req.body);
+      console.log('customerId value:', req.body.customerId, 'type:', typeof req.body.customerId);
+      
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
+      if (req.body.customerId !== null && req.body.customerId !== undefined) {
+        req.body.customerId = parseInt(req.body.customerId);
+      }
       
       // Handle totalPrice properly - treat empty string and NaN as undefined
       if (req.body.totalPrice === "" || req.body.totalPrice === null) {
