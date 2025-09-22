@@ -1428,7 +1428,19 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/reservations/maintenance-with-spare", requireAuth, async (req: Request, res: Response) => {
     try {
       console.log('Raw request body:', req.body);
-      const { maintenanceData, conflictingReservations, spareVehicleAssignments } = req.body;
+      
+      // Handle the case where multer wraps the JSON data
+      let bodyData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        try {
+          bodyData = JSON.parse(req.body.body);
+        } catch (parseError) {
+          console.error('Error parsing JSON body:', parseError);
+          return res.status(400).json({ message: "Invalid JSON in request body" });
+        }
+      }
+      
+      const { maintenanceData, conflictingReservations, spareVehicleAssignments } = bodyData;
       
       console.log('Creating maintenance with spare vehicles:', { maintenanceData, conflictingReservations, spareVehicleAssignments });
       
