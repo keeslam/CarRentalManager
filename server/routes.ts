@@ -1298,24 +1298,34 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create reservation with damage check upload
   app.post("/api/reservations", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
-      console.log('Raw req.body:', req.body);
-      console.log('req.body type:', typeof req.body);
-      console.log('customerId value:', req.body.customerId, 'type:', typeof req.body.customerId);
+      // Handle JSON data that comes through multer middleware
+      let bodyData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        // This is JSON data sent through multer - parse it
+        try {
+          bodyData = JSON.parse(req.body.body);
+        } catch (e) {
+          console.error('Failed to parse JSON body:', e);
+          return res.status(400).json({ message: "Invalid JSON in request body" });
+        }
+      }
+      
+      console.log('Parsed bodyData:', bodyData);
       
       // Convert string fields to the correct types
-      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.customerId !== null && req.body.customerId !== undefined) {
-        req.body.customerId = parseInt(req.body.customerId);
+      if (bodyData.vehicleId) bodyData.vehicleId = parseInt(bodyData.vehicleId);
+      if (bodyData.customerId !== null && bodyData.customerId !== undefined) {
+        bodyData.customerId = parseInt(bodyData.customerId);
       }
       
       // Handle totalPrice properly - treat empty string and NaN as undefined
-      if (req.body.totalPrice === "" || req.body.totalPrice === null) {
-        req.body.totalPrice = undefined;
-      } else if (req.body.totalPrice) {
-        const parsedPrice = parseFloat(req.body.totalPrice);
-        req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
+      if (bodyData.totalPrice === "" || bodyData.totalPrice === null) {
+        bodyData.totalPrice = undefined;
+      } else if (bodyData.totalPrice) {
+        const parsedPrice = parseFloat(bodyData.totalPrice);
+        bodyData.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
-      const reservationData = insertReservationSchema.parse(req.body);
+      const reservationData = insertReservationSchema.parse(bodyData);
       
       // Check for conflicts
       const conflicts = await storage.checkReservationConflicts(
