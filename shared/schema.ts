@@ -95,6 +95,11 @@ export const vehicles = pgTable("vehicles", {
   warrantyEndDate: text("warranty_end_date"),
   seatcovers: boolean("seatcovers"),
   backupbeepers: boolean("backupbeepers"),
+  
+  // Maintenance status for spare vehicle management
+  maintenanceStatus: text("maintenance_status").default("ok").notNull(), // 'ok' | 'needs_service' | 'in_service'
+  maintenanceNote: text("maintenance_note"), // Optional note about maintenance
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -177,6 +182,10 @@ export const reservations = pgTable("reservations", {
   notes: text("notes"),
   damageCheckPath: text("damage_check_path"),
   
+  // Spare vehicle management
+  type: text("type").default("standard").notNull(), // 'standard' | 'replacement' | 'maintenance_block'
+  replacementForReservationId: integer("replacement_for_reservation_id"), // FK to reservations.id for replacement reservations
+  
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -206,7 +215,9 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
       return isNaN(num) ? undefined : num;
     })
   ),
-  endDate: z.string().optional().or(z.null()) // Make end date optional for open-ended rentals
+  endDate: z.string().optional().or(z.null()), // Make end date optional for open-ended rentals
+  type: z.enum(["standard", "replacement", "maintenance_block"]).optional(),
+  replacementForReservationId: z.number().optional()
 });
 
 // Expenses table
