@@ -166,13 +166,27 @@ function categorizeLineItem(description: string): string {
 }
 
 /**
- * Process invoice with Google Gemini Vision API
+ * Available Gemini models in order of preference (best to fallback)
+ */
+const GEMINI_MODELS = [
+  'gemini-2.5-pro',        // Most capable, but more likely to be overloaded
+  'gemini-2.5-flash',      // Best price-performance ratio
+  'gemini-2.0-flash',      // Fast and reliable
+  'gemini-2.5-flash-lite', // Cost-effective, high throughput
+  'gemini-2.0-flash-lite'  // Most cost-effective fallback
+];
+
+/**
+ * Process invoice with Google Gemini Vision API using model fallback strategy
  */
 export async function processInvoiceWithAI(pdfPath: string): Promise<ParsedInvoice> {
-  const maxRetries = 3;
-  const retryDelay = 2000; // 2 seconds
+  const modelRetryDelay = 1500; // 1.5 seconds delay between model attempts
   
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  // Try each model in sequence
+  for (let modelIndex = 0; modelIndex < GEMINI_MODELS.length; modelIndex++) {
+    const currentModel = GEMINI_MODELS[modelIndex];
+    console.log(`Attempting invoice processing with model: ${currentModel} (${modelIndex + 1}/${GEMINI_MODELS.length})`);
+    
     try {
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY) {
@@ -222,7 +236,7 @@ Please respond ONLY with the JSON object, no additional text.
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: currentModel,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -312,50 +326,65 @@ Please respond ONLY with the JSON object, no additional text.
     
     return parsedInvoice;
     
-  } catch (error) {
-    console.error(`Error processing invoice with AI (attempt ${attempt}/${maxRetries}):`, error);
-    
-    // Handle specific API errors with user-friendly messages
-    if (error instanceof Error) {
-      const errorMessage = error.message;
+    } catch (error) {
+      console.error(`Error processing invoice with model ${currentModel}:`, error);
       
-      // Check for retryable errors (overload, rate limit)
-      const isRetryable = errorMessage.includes('503') || 
-                         errorMessage.includes('overloaded') || 
-                         errorMessage.includes('UNAVAILABLE') ||
-                         errorMessage.includes('429') || 
-                         errorMessage.includes('rate limit');
-      
-      // If this is a retryable error and we have attempts left, wait and retry
-      if (isRetryable && attempt < maxRetries) {
-        console.log(`Retrying in ${retryDelay}ms... (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        continue; // Go to next iteration of the retry loop
+      // Handle specific API errors  
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        
+        // Check for model overload errors (503, UNAVAILABLE)
+        const isModelOverloaded = errorMessage.includes('503') || 
+                                 errorMessage.includes('overloaded') || 
+                                 errorMessage.includes('UNAVAILABLE');
+        
+        // If this model is overloaded and we have more models to try, continue to next model
+        if (isModelOverloaded && modelIndex < GEMINI_MODELS.length - 1) {
+          console.log(`Model ${currentModel} is overloaded. Trying next model in ${modelRetryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
+          continue; // Try next model
+        }
+        
+        // Check for rate limit errors
+        if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+          if (modelIndex < GEMINI_MODELS.length - 1) {
+            console.log(`Rate limit hit for ${currentModel}. Trying next model in ${modelRetryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
+            continue; // Try next model
+          } else {
+            throw new Error('API rate limit exceeded on all available models. Please try again later.');
+          }
+        }
+        
+        // Check for authentication errors (don't retry other models for this)
+        if (errorMessage.includes('401') || errorMessage.includes('unauthorized') || errorMessage.includes('API key')) {
+          throw new Error('AI service authentication failed. Please check the API configuration.');
+        }
+        
+        // For other errors, if we have more models, try them
+        if (modelIndex < GEMINI_MODELS.length - 1) {
+          console.log(`Model ${currentModel} failed with error: ${errorMessage}. Trying next model...`);
+          await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
+          continue; // Try next model
+        }
+        
+        // If this is the last model, throw a user-friendly error
+        throw new Error('Failed to process invoice with AI service. Please try again or contact support if the issue persists.');
       }
       
-      // If we've exhausted retries or it's a non-retryable error, throw user-friendly messages
-      if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
-        throw new Error('The AI service is currently overloaded. Please try again in a few minutes.');
+      // For non-Error objects, if we have more models, try them
+      if (modelIndex < GEMINI_MODELS.length - 1) {
+        console.log(`Model ${currentModel} failed. Trying next model...`);
+        await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
+        continue;
       }
       
-      if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-        throw new Error('API rate limit exceeded. Please try again later.');
-      }
-      
-      if (errorMessage.includes('401') || errorMessage.includes('unauthorized') || errorMessage.includes('API key')) {
-        throw new Error('AI service authentication failed. Please check the API configuration.');
-      }
-      
-      // Generic error with helpful message
-      throw new Error('Failed to process invoice with AI service. Please try again or contact support if the issue persists.');
+      throw new Error('Failed to process invoice: Unknown error occurred');
     }
-    
-    throw new Error('Failed to process invoice: Unknown error occurred');
-  }
   }
   
-  // If we get here, all retries failed
-  throw new Error('Failed to process invoice after multiple attempts. The AI service may be temporarily unavailable.');
+  // If we get here, all models failed
+  throw new Error('Failed to process invoice with all available AI models. The service may be temporarily unavailable.');
 }
 
 /**
