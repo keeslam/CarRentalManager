@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { Loader2, Calendar, AlertTriangle, Wrench, Clock, Car } from "lucide-react";
 
 const scheduleMaintenanceSchema = z.object({
@@ -351,34 +352,23 @@ export function ScheduleMaintenanceDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Vehicle</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-vehicle">
-                        <SelectValue placeholder="Select a vehicle" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      {vehiclesLoading ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="ml-2">Loading vehicles...</span>
-                        </div>
-                      ) : vehicles.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500">No vehicles available</div>
-                      ) : (
-                        vehicles.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
-                              <span className="text-sm text-gray-500">
-                                ({formatLicensePlate(vehicle.licensePlate)})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    {vehiclesLoading ? (
+                      <div className="flex items-center justify-center p-2 border rounded-md">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="ml-2">Loading vehicles...</span>
+                      </div>
+                    ) : (
+                      <div data-testid="select-vehicle">
+                        <VehicleSelector
+                          vehicles={vehicles}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select a vehicle..."
+                        />
+                      </div>
+                    )}
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -712,26 +702,15 @@ export function ScheduleMaintenanceDialog({
               
               <div>
                 <label className="text-sm font-medium">Select Spare Vehicle:</label>
-                <Select 
-                  value={spareVehicleAssignments[reservation.id]?.toString() || ""} 
-                  onValueChange={(value) => handleSpareVehicleChange(reservation.id, value)}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Choose a spare vehicle..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableVehicles.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                        <div className="flex items-center gap-2">
-                          <Car className="w-4 h-4" />
-                          <span>
-                            {vehicle.brand} {vehicle.model} ({formatLicensePlate(vehicle.licensePlate)})
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
+                  <VehicleSelector
+                    vehicles={availableVehicles}
+                    value={spareVehicleAssignments[reservation.id]?.toString() || ""}
+                    onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                    placeholder="Choose a spare vehicle..."
+                    disabled={availableVehicles.length === 0}
+                  />
+                </div>
               </div>
             </div>
           ))}
