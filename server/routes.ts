@@ -1531,11 +1531,22 @@ export async function registerRoutes(app: Express): Promise<void> {
           throw new Error(`Reservation ${reservationId} not found`);
         }
         
+        // Handle open-ended rentals (endDate is null, undefined, or "undefined")
+        if (!originalReservation.endDate || originalReservation.endDate === "undefined" || originalReservation.endDate === null) {
+          throw new Error(`Cannot assign spare vehicle to open-ended rental ${reservationId}. Customer already has the vehicle indefinitely.`);
+        }
+        
         // Compute overlap using maintenanceData (not yet persisted)
         const maintenanceStart = new Date(maintenanceData.startDate);
         const maintenanceEnd = new Date(maintenanceData.endDate);
         const rentalStart = new Date(originalReservation.startDate);
         const rentalEnd = new Date(originalReservation.endDate);
+        
+        // Validate dates are valid
+        if (isNaN(maintenanceStart.getTime()) || isNaN(maintenanceEnd.getTime()) || 
+            isNaN(rentalStart.getTime()) || isNaN(rentalEnd.getTime())) {
+          throw new Error(`Invalid date format in maintenance or rental ${reservationId}`);
+        }
         
         const overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
         const overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
@@ -1608,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${existingReservation.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
+            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceReservation.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
           });
         });
         

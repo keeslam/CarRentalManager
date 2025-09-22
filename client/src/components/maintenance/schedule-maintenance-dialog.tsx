@@ -349,13 +349,17 @@ export function ScheduleMaintenanceDialog({
   });
 
   const handleSpareVehicleAssignment = () => {
-    // Check that all conflicting reservations have spare vehicles assigned
-    const missingAssignments = conflictingReservations.filter(r => !spareVehicleAssignments[r.id]);
+    // Only check reservations that can actually get spare vehicles (not open-ended ones)
+    const reservationsNeedingSpares = conflictingReservations.filter(r => {
+      return r.endDate && r.endDate !== "undefined" && r.endDate !== null;
+    });
+    
+    const missingAssignments = reservationsNeedingSpares.filter(r => !spareVehicleAssignments[r.id]);
     
     if (missingAssignments.length > 0) {
       toast({
         title: "Missing Spare Vehicles",
-        description: "Please assign spare vehicles to all affected reservations.",
+        description: "Please assign spare vehicles to all affected reservations that need them.",
         variant: "destructive",
       });
       return;
@@ -729,36 +733,63 @@ export function ScheduleMaintenanceDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {conflictingReservations.map((reservation: any) => (
-            <div key={reservation.id} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">
-                    {reservation.customer?.name || 'Unknown Customer'}
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Reservation: {reservation.startDate} - {reservation.endDate}
+          {conflictingReservations.map((reservation: any) => {
+            // Check if this is an open-ended rental
+            const isOpenEnded = !reservation.endDate || reservation.endDate === "undefined" || reservation.endDate === null;
+            
+            if (isOpenEnded) {
+              return (
+                <div key={reservation.id} className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <h4 className="font-medium text-yellow-800">
+                      {reservation.customer?.name || 'Unknown Customer'} - Open-ended Rental
+                    </h4>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Reservation: {reservation.startDate} - <span className="font-medium">No end date</span>
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-yellow-600 mt-1">
                     Original vehicle: {reservation.vehicle?.brand} {reservation.vehicle?.model} ({formatLicensePlate(reservation.vehicle?.licensePlate)})
                   </p>
+                  <p className="text-sm text-yellow-700 mt-2 font-medium">
+                    ⚠️ Cannot assign spare vehicle: Customer already has the vehicle indefinitely. Contact customer directly about maintenance.
+                  </p>
+                </div>
+              );
+            }
+            
+            return (
+              <div key={reservation.id} className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">
+                      {reservation.customer?.name || 'Unknown Customer'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Reservation: {reservation.startDate} - {reservation.endDate}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Original vehicle: {reservation.vehicle?.brand} {reservation.vehicle?.model} ({formatLicensePlate(reservation.vehicle?.licensePlate)})
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Select Spare Vehicle:</label>
+                  <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
+                    <VehicleSelector
+                      vehicles={availableVehicles}
+                      value={spareVehicleAssignments[reservation.id]?.toString() || ""}
+                      onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                      placeholder="Choose a spare vehicle..."
+                      disabled={availableVehicles.length === 0}
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium">Select Spare Vehicle:</label>
-                <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
-                  <VehicleSelector
-                    vehicles={availableVehicles}
-                    value={spareVehicleAssignments[reservation.id]?.toString() || ""}
-                    onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
-                    placeholder="Choose a spare vehicle..."
-                    disabled={availableVehicles.length === 0}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <DialogFooter>
