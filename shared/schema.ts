@@ -174,7 +174,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 export const reservations = pgTable("reservations", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").notNull(),
-  customerId: integer("customer_id").notNull(),
+  customerId: integer("customer_id"), // Allow null for maintenance blocks
   startDate: text("start_date").notNull(),
   endDate: text("end_date"), // Allow null for open-ended rentals
   status: text("status").default("pending").notNull(),
