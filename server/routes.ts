@@ -490,6 +490,72 @@ export async function registerRoutes(app: Express): Promise<void> {
     const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon();
     res.json(vehicles);
   });
+
+  // Get overlapping regular reservations for a vehicle during maintenance period
+  app.get("/api/vehicles/:vehicleId/overlaps", requireAuth, async (req, res) => {
+    try {
+      const { vehicleId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      // Validate input parameters
+      const vehicleIdNum = parseInt(vehicleId);
+      if (isNaN(vehicleIdNum)) {
+        return res.status(400).json({ error: "Invalid vehicle ID" });
+      }
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "startDate and endDate are required" });
+      }
+
+      // Get overlapping reservations for this vehicle
+      const overlaps = await storage.checkReservationConflicts(
+        vehicleIdNum, 
+        startDate as string, 
+        endDate as string
+      );
+
+      // Filter to only regular (non-maintenance) reservations and get customer info
+      const regularOverlaps = [];
+      for (const reservation of overlaps) {
+        // Skip maintenance reservations
+        if (reservation.type === 'maintenance_block') {
+          continue;
+        }
+
+        // Skip if no customer assigned
+        if (!reservation.customerId) {
+          continue;
+        }
+
+        // Get customer information
+        const customer = await storage.getCustomer(reservation.customerId);
+        if (customer) {
+          regularOverlaps.push({
+            reservation: {
+              id: reservation.id,
+              startDate: reservation.startDate,
+              endDate: reservation.endDate,
+              status: reservation.status,
+              type: reservation.type
+            },
+            customer: {
+              id: customer.id,
+              name: customer.name,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              email: customer.email,
+              phone: customer.phone
+            }
+          });
+        }
+      }
+
+      res.json(regularOverlaps);
+    } catch (error) {
+      console.error("Error fetching overlapping reservations:", error);
+      res.status(500).json({ error: "Failed to fetch overlapping reservations" });
+    }
+  });
   
   // Get all vehicles with optional search
   app.get("/api/vehicles", async (req, res) => {
