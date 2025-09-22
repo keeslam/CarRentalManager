@@ -459,9 +459,23 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // ==================== VEHICLE ROUTES ====================
-  // Get available vehicles
+  // Get available vehicles (optionally for a specific date range)
   app.get("/api/vehicles/available", async (req, res) => {
-    const vehicles = await storage.getAvailableVehicles();
+    const { startDate, endDate, excludeVehicleId } = req.query;
+    
+    let vehicles;
+    if (startDate && endDate) {
+      // Use date range method when dates are provided
+      vehicles = await storage.getAvailableVehiclesInRange(
+        startDate as string, 
+        endDate as string, 
+        excludeVehicleId ? parseInt(excludeVehicleId as string) : undefined
+      );
+    } else {
+      // Fall back to basic method for compatibility
+      vehicles = await storage.getAvailableVehicles();
+    }
+    
     res.json(vehicles);
   });
 

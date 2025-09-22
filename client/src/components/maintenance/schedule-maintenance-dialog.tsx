@@ -297,10 +297,14 @@ export function ScheduleMaintenanceDialog({
 
   const selectedVehicle = vehicles.find(v => v.id.toString() === form.watch('vehicleId'));
 
-  // Fetch available vehicles for spare assignment
+  // Fetch available vehicles for spare assignment during the maintenance period
   const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ['/api/vehicles/available'],
-    enabled: showSpareDialog, // Only fetch when spare dialog is open
+    queryKey: ['/api/vehicles/available', {
+      startDate: maintenanceData?.scheduledDate,
+      endDate: maintenanceData?.scheduledDate, // For now, maintenance is single day
+      excludeVehicleId: maintenanceData?.vehicleId
+    }],
+    enabled: showSpareDialog && maintenanceData?.scheduledDate && maintenanceData?.vehicleId, // Only fetch when spare dialog is open and we have maintenance data
   });
 
   const handleSpareVehicleAssignment = () => {
