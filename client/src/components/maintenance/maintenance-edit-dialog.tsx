@@ -109,6 +109,7 @@ export function MaintenanceEditDialog({
   useEffect(() => {
     if (reservation && open) {
       const parsed = parseMaintenanceNotes(reservation.notes || '');
+      console.log("Setting customer ID:", reservation.customerId);
       form.reset({
         vehicleId: reservation.vehicleId,
         customerId: reservation.customerId || undefined,
@@ -276,34 +277,60 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* Customer Selection (Optional) */}
+              {/* Customer Selection and Contact Information */}
               <FormField
                 control={form.control}
                 name="customerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer (Optional)</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value?.toString() || "none"}
-                        onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
-                      >
-                        <SelectTrigger data-testid="select-customer">
-                          <SelectValue placeholder="Select a customer (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No customer assigned</SelectItem>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.name} {customer.firstName && customer.lastName && `(${customer.firstName} ${customer.lastName})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedCustomer = field.value ? customers.find(c => c.id === field.value) : null;
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Customer Contact Information</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value?.toString() || "none"}
+                          onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
+                        >
+                          <SelectTrigger data-testid="select-customer">
+                            <SelectValue placeholder="Select a customer for maintenance updates" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No customer assigned</SelectItem>
+                            {customers.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id.toString()}>
+                                {customer.name} {customer.firstName && customer.lastName && `(${customer.firstName} ${customer.lastName})`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      
+                      {/* Customer Contact Details */}
+                      {selectedCustomer && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border">
+                          <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            Customer Contact Details
+                          </div>
+                          <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                            <div><strong>Name:</strong> {selectedCustomer.name} {selectedCustomer.firstName} {selectedCustomer.lastName}</div>
+                            {selectedCustomer.email && (
+                              <div><strong>Email:</strong> {selectedCustomer.email}</div>
+                            )}
+                            {selectedCustomer.phone && (
+                              <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
+                            )}
+                            {selectedCustomer.address && (
+                              <div><strong>Address:</strong> {selectedCustomer.address}, {selectedCustomer.city} {selectedCustomer.postalCode}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
