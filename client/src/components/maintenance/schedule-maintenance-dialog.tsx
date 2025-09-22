@@ -159,8 +159,8 @@ export function ScheduleMaintenanceDialog({
       
       console.log('Sending payload:', payload);
       
-      // Use PUT for editing, POST for creating
-      const method = editingReservation ? "PUT" : "POST";
+      // Use PATCH for editing, POST for creating
+      const method = editingReservation ? "PATCH" : "POST";
       const url = editingReservation ? `/api/reservations/${editingReservation.id}` : "/api/reservations";
       
       const response = await apiRequest(method, url, {
