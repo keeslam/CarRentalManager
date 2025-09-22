@@ -169,7 +169,11 @@ function categorizeLineItem(description: string): string {
  * Process invoice with Google Gemini Vision API
  */
 export async function processInvoiceWithAI(pdfPath: string): Promise<ParsedInvoice> {
-  try {
+  const maxRetries = 3;
+  const retryDelay = 2000; // 2 seconds
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set. Please configure your Google Gemini API key.');
@@ -309,9 +313,49 @@ Please respond ONLY with the JSON object, no additional text.
     return parsedInvoice;
     
   } catch (error) {
-    console.error('Error processing invoice with AI:', error);
-    throw new Error('Failed to process invoice: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    console.error(`Error processing invoice with AI (attempt ${attempt}/${maxRetries}):`, error);
+    
+    // Handle specific API errors with user-friendly messages
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      // Check for retryable errors (overload, rate limit)
+      const isRetryable = errorMessage.includes('503') || 
+                         errorMessage.includes('overloaded') || 
+                         errorMessage.includes('UNAVAILABLE') ||
+                         errorMessage.includes('429') || 
+                         errorMessage.includes('rate limit');
+      
+      // If this is a retryable error and we have attempts left, wait and retry
+      if (isRetryable && attempt < maxRetries) {
+        console.log(`Retrying in ${retryDelay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        continue; // Go to next iteration of the retry loop
+      }
+      
+      // If we've exhausted retries or it's a non-retryable error, throw user-friendly messages
+      if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+        throw new Error('The AI service is currently overloaded. Please try again in a few minutes.');
+      }
+      
+      if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+        throw new Error('API rate limit exceeded. Please try again later.');
+      }
+      
+      if (errorMessage.includes('401') || errorMessage.includes('unauthorized') || errorMessage.includes('API key')) {
+        throw new Error('AI service authentication failed. Please check the API configuration.');
+      }
+      
+      // Generic error with helpful message
+      throw new Error('Failed to process invoice with AI service. Please try again or contact support if the issue persists.');
+    }
+    
+    throw new Error('Failed to process invoice: Unknown error occurred');
   }
+  }
+  
+  // If we get here, all retries failed
+  throw new Error('Failed to process invoice after multiple attempts. The AI service may be temporarily unavailable.');
 }
 
 /**
