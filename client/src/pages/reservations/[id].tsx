@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
-import { Calendar, List, ArrowLeft, Trash2 } from "lucide-react";
+import { Calendar, List, ArrowLeft, Trash2, Wrench, Car, ArrowRightLeft, CheckCircle } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -23,12 +23,18 @@ import {
 import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UploadContractButton } from "@/components/documents/contract-upload-button";
+import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
+import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
+import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
 
 export default function ReservationDetails() {
   const { id } = useParams();
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isSpareDialogOpen, setIsSpareDialogOpen] = useState(false);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const clientQuery = useQueryClient();
 
   // Fetch reservation details
@@ -84,6 +90,18 @@ export default function ReservationDetails() {
     enabled: !!reservation?.customerId,
   });
 
+  // Fetch active replacement reservation if this is an original reservation
+  const { data: activeReplacement } = useQuery<Reservation>({
+    queryKey: [`/api/reservations/${id}/active-replacement`],
+    enabled: !!reservation && reservation.type === 'standard',
+  });
+
+  // Fetch original reservation if this is a replacement
+  const { data: originalReservation } = useQuery<Reservation>({
+    queryKey: [`/api/reservations/${reservation?.replacementForReservationId}`],
+    enabled: !!reservation?.replacementForReservationId,
+  });
+
   // Calculate rental duration
   const rentalDuration = (() => {
     if (!reservation?.startDate || !reservation?.endDate) return 0;
@@ -106,6 +124,26 @@ export default function ReservationDetails() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  // Get reservation type badge style and text
+  const getReservationTypeInfo = (type: string) => {
+    switch (type) {
+      case "replacement":
+        return {
+          text: "Replacement Vehicle",
+          className: "bg-orange-100 text-orange-800 border-orange-200",
+          icon: <ArrowRightLeft className="w-3 h-3" />
+        };
+      case "maintenance_block":
+        return {
+          text: "Maintenance Block",
+          className: "bg-purple-100 text-purple-800 border-purple-200",
+          icon: <Wrench className="w-3 h-3" />
+        };
+      default:
+        return null;
     }
   };
   
@@ -235,13 +273,24 @@ export default function ReservationDetails() {
             <CardTitle>Reservation Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Status and dates */}
+            {/* Status and reservation type */}
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                <Badge className={`mt-1 ${getStatusStyle(reservation.status)}`}>
-                  {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
-                </Badge>
+                <div className="flex gap-2 mt-1">
+                  <Badge className={`${getStatusStyle(reservation.status)}`}>
+                    {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                  </Badge>
+                  {reservation.type && reservation.type !== 'standard' && (() => {
+                    const typeInfo = getReservationTypeInfo(reservation.type);
+                    return typeInfo ? (
+                      <Badge className={`flex items-center gap-1 ${typeInfo.className}`} data-testid={`badge-${reservation.type}`}>
+                        {typeInfo.icon}
+                        {typeInfo.text}
+                      </Badge>
+                    ) : null;
+                  })()}
+                </div>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Rental Period</h3>
@@ -287,6 +336,12 @@ export default function ReservationDetails() {
                         {vehicle.currentMileage && (
                           <Badge variant="outline" className="bg-gray-50 text-gray-800 border-gray-200">
                             Mileage: {vehicle.currentMileage.toLocaleString()} km
+                          </Badge>
+                        )}
+                        {vehicle.maintenanceStatus && vehicle.maintenanceStatus !== 'ok' && (
+                          <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200 font-medium">
+                            <Wrench className="w-3 h-3 mr-1" />
+                            {vehicle.maintenanceStatus === 'needs_service' ? 'Needs Service' : 'In Service'}
                           </Badge>
                         )}
                       </div>
@@ -381,6 +436,50 @@ export default function ReservationDetails() {
                 )}
               </div>
             </div>
+
+            {/* Replacement relationship */}
+            {(originalReservation || activeReplacement) && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  {reservation.type === 'replacement' ? 'Original Reservation' : 'Replacement Vehicle'}
+                </h3>
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-md">
+                  {reservation.type === 'replacement' && originalReservation ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">
+                          Replacing reservation #{originalReservation.id}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Original dates: {formatDate(originalReservation.startDate)} - {formatDate(originalReservation.endDate)}
+                        </p>
+                      </div>
+                      <Link href={`/reservations/${originalReservation.id}`}>
+                        <Button variant="outline" size="sm" data-testid="link-original-reservation">
+                          View Original
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : activeReplacement ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">
+                          Replacement: {activeReplacement.vehicle?.brand} {activeReplacement.vehicle?.model}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Replacement period: {formatDate(activeReplacement.startDate)} - {formatDate(activeReplacement.endDate)}
+                        </p>
+                      </div>
+                      <Link href={`/reservations/${activeReplacement.id}`}>
+                        <Button variant="outline" size="sm" data-testid="link-replacement-reservation">
+                          View Replacement
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             {reservation.notes && (
@@ -477,6 +576,61 @@ export default function ReservationDetails() {
               </div>
             </div>
             
+            {/* Spare Vehicle Management */}
+            {reservation.type === 'standard' && (
+              <div className="pt-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Vehicle Service</h3>
+                <div className="space-y-2">
+                  {!activeReplacement && vehicle?.maintenanceStatus === 'ok' && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start" 
+                      size="sm"
+                      onClick={() => setIsServiceDialogOpen(true)}
+                      data-testid="button-mark-for-service"
+                    >
+                      <Wrench className="mr-2 h-4 w-4" />
+                      Mark Vehicle for Service
+                    </Button>
+                  )}
+                  
+                  {(vehicle?.maintenanceStatus === 'in_service' || vehicle?.maintenanceStatus === 'needs_service') && !activeReplacement && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start" 
+                      size="sm"
+                      onClick={() => setIsSpareDialogOpen(true)}
+                      data-testid="button-assign-spare"
+                    >
+                      <Car className="mr-2 h-4 w-4" />
+                      Assign Spare Vehicle
+                    </Button>
+                  )}
+                  
+                  {activeReplacement && (
+                    <div className="space-y-2">
+                      <div className="p-3 border border-orange-200 bg-orange-50 rounded-md">
+                        <p className="text-sm font-medium text-orange-800">Spare vehicle assigned</p>
+                        <p className="text-xs text-orange-600 mt-1">
+                          Vehicle is currently being serviced
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start" 
+                        size="sm"
+                        onClick={() => setIsReturnDialogOpen(true)}
+                        data-testid="button-return-from-service"
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Return from Service
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Related actions */}
             <div className="pt-4">
               <h3 className="text-sm font-medium text-gray-500 mb-3">Actions</h3>
@@ -534,6 +688,40 @@ export default function ReservationDetails() {
           </CardFooter>
         </Card>
       </div>
+
+      {/* Spare Vehicle Dialogs */}
+      <ServiceVehicleDialog
+        open={isServiceDialogOpen}
+        onOpenChange={setIsServiceDialogOpen}
+        reservationId={parseInt(id as string)}
+        vehicle={vehicle}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
+        }}
+      />
+
+      <SpareVehicleDialog
+        open={isSpareDialogOpen}
+        onOpenChange={setIsSpareDialogOpen}
+        originalReservation={reservation}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}/active-replacement`] });
+        }}
+      />
+
+      <ReturnFromServiceDialog
+        open={isReturnDialogOpen}
+        onOpenChange={setIsReturnDialogOpen}
+        replacementReservation={activeReplacement}
+        originalReservation={reservation}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}/active-replacement`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
+        }}
+      />
     </div>
   );
 }
