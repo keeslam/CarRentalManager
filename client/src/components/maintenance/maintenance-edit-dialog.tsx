@@ -285,14 +285,14 @@ export function MaintenanceEditDialog({
                     <FormLabel>Customer (Optional)</FormLabel>
                     <FormControl>
                       <Select
-                        value={field.value?.toString() || ""}
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                        value={field.value?.toString() || "none"}
+                        onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
                       >
                         <SelectTrigger data-testid="select-customer">
                           <SelectValue placeholder="Select a customer (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No customer assigned</SelectItem>
+                          <SelectItem value="none">No customer assigned</SelectItem>
                           {customers.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id.toString()}>
                               {customer.name} {customer.firstName && customer.lastName && `(${customer.firstName} ${customer.lastName})`}
