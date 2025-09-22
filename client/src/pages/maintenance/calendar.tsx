@@ -9,6 +9,7 @@ import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
+import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 
 interface MaintenanceEvent {
   id: number;
@@ -25,7 +26,17 @@ interface MaintenanceEvent {
 export default function MaintenanceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+
+  // Edit handler following reservations calendar pattern
+  const handleEditMaintenance = (reservation: Reservation) => {
+    console.log('handleEditMaintenance called with:', reservation);
+    setSelectedReservation(reservation);
+    setEditDialogOpen(true);
+    console.log('Edit dialog should be open now');
+  };
   
   // Fetch vehicles with maintenance needs
   const { data: apkExpiringVehicles = [] } = useQuery<Vehicle[]>({
@@ -279,8 +290,7 @@ export default function MaintenanceCalendar() {
                                     );
                                     
                                     if (actualReservation) {
-                                      setEditingReservation(actualReservation);
-                                      setIsScheduleDialogOpen(true);
+                                      handleEditMaintenance(actualReservation);
                                     }
                                   } catch (error) {
                                     console.error('Failed to fetch reservation:', error);
@@ -471,10 +481,7 @@ export default function MaintenanceCalendar() {
           </CardHeader>
           <CardContent>
             <MaintenanceReservationsList 
-              onEditReservation={(reservation) => {
-                setEditingReservation(reservation);
-                setIsScheduleDialogOpen(true);
-              }}
+              onEditReservation={handleEditMaintenance}
             />
           </CardContent>
         </Card>
@@ -495,6 +502,13 @@ export default function MaintenanceCalendar() {
           setCurrentDate(new Date(currentDate)); // Force re-render
           setEditingReservation(null); // Clear editing state
         }}
+      />
+
+      {/* New Simple Edit Dialog */}
+      <MaintenanceEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        reservation={selectedReservation}
       />
     </div>
   );
