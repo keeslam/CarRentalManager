@@ -1500,6 +1500,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
+      // Debug logging
+      console.log('Update request body:', req.body);
+      console.log('Request headers:', req.headers);
+
       // Convert string fields to the correct types
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
