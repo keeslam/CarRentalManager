@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
 import { formatLicensePlate } from "@/lib/format-utils";
+import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 
 interface MaintenanceEvent {
   id: number;
@@ -23,6 +24,7 @@ interface MaintenanceEvent {
 
 export default function MaintenanceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   
   // Fetch vehicles with maintenance needs
   const { data: apkExpiringVehicles = [] } = useQuery<Vehicle[]>({
@@ -50,7 +52,14 @@ export default function MaintenanceCalendar() {
     },
   });
 
-  // Create maintenance events from vehicle data
+  // Fetch scheduled maintenance blocks (reservations with type maintenance_block)
+  const { data: maintenanceBlocks = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    select: (reservations: Reservation[]) => 
+      reservations.filter(r => r.type === 'maintenance_block')
+  });
+
+  // Create maintenance events from vehicle data and scheduled maintenance
   const maintenanceEvents: MaintenanceEvent[] = [
     ...apkExpiringVehicles.map(vehicle => ({
       id: vehicle.id,
@@ -71,6 +80,16 @@ export default function MaintenanceCalendar() {
       date: vehicle.warrantyEndDate || '',
       title: 'Warranty Expiring',
       description: `Warranty expires for ${vehicle.brand} ${vehicle.model}`,
+      needsSpareVehicle: false
+    })),
+    ...maintenanceBlocks.map(reservation => ({
+      id: reservation.id + 20000, // Avoid ID conflicts
+      vehicleId: reservation.vehicleId,
+      vehicle: reservation.vehicle!,
+      type: 'scheduled_maintenance' as const,
+      date: reservation.startDate,
+      title: 'Scheduled Maintenance',
+      description: reservation.notes || `Scheduled maintenance for ${reservation.vehicle?.brand} ${reservation.vehicle?.model}`,
       needsSpareVehicle: false
     }))
   ];
@@ -145,12 +164,15 @@ export default function MaintenanceCalendar() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Maintenance Calendar</h1>
         <div className="flex items-center gap-2">
-          <Link href="/vehicles/add">
-            <Button variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Schedule Maintenance
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsScheduleDialogOpen(true)}
+            data-testid="button-schedule-maintenance"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Schedule Maintenance
+          </Button>
           <div className="text-sm text-gray-600">
             {currentMonthEvents.length} events this month • {upcomingEvents.length} upcoming
           </div>
@@ -344,6 +366,14 @@ export default function MaintenanceCalendar() {
                       <Badge className={getEventTypeStyle(event.type)}>
                         {event.title}
                       </Badge>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setIsScheduleDialogOpen(true)}
+                        data-testid={`button-schedule-${event.vehicleId}`}
+                      >
+                        Schedule Service
+                      </Button>
                       <Link href={`/vehicles/${event.vehicleId}`}>
                         <Button variant="outline" size="sm" data-testid={`button-view-vehicle-${event.vehicleId}`}>
                           View Vehicle
@@ -356,6 +386,16 @@ export default function MaintenanceCalendar() {
           )}
         </CardContent>
       </Card>
+
+      {/* Schedule Maintenance Dialog */}
+      <ScheduleMaintenanceDialog
+        open={isScheduleDialogOpen}
+        onOpenChange={setIsScheduleDialogOpen}
+        onSuccess={() => {
+          // Refresh the calendar data
+          setCurrentDate(new Date(currentDate)); // Force re-render
+        }}
+      />
     </div>
   );
 }
