@@ -115,10 +115,15 @@ export default function MaintenanceCalendar() {
     return eventDate >= now && eventDate <= sixMonthsOut;
   });
 
-  // Get calendar days
+  // Get calendar days (weekdays only - Monday to Friday)
   const monthStartWeek = startOfWeek(monthStart, { weekStartsOn: 1 });
   const monthEndWeek = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const calendarDays = eachDayOfInterval({ start: monthStartWeek, end: monthEndWeek });
+  const allDays = eachDayOfInterval({ start: monthStartWeek, end: monthEndWeek });
+  // Filter to only show weekdays (Monday = 1, Friday = 5)
+  const calendarDays = allDays.filter(day => {
+    const dayOfWeek = day.getDay();
+    return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday only
+  });
 
   // Get events for a specific day
   const getEventsForDay = (day: Date) => {
@@ -221,9 +226,9 @@ export default function MaintenanceCalendar() {
             </CardHeader>
             <CardContent>
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 mb-4">
+              <div className="grid grid-cols-5 gap-1 mb-4">
                 {/* Day headers */}
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
                   <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
                     {day}
                   </div>
@@ -262,12 +267,24 @@ export default function MaintenanceCalendar() {
                                 key={`${event.id}-${event.type}`}
                                 className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
                                 data-testid={`event-${event.id}-${event.type}`}
-                                onClick={() => {
-                                  // Find the reservation in the allReservations and open edit dialog
-                                  const allReservations = [];
-                                  // We'll need to fetch the reservation data
-                                  setEditingReservation(event as any);
-                                  setIsScheduleDialogOpen(true);
+                                onClick={async () => {
+                                  // Get the actual reservation data by finding it in the reservations
+                                  try {
+                                    const response = await fetch('/api/reservations');
+                                    const allReservations = await response.json();
+                                    const actualReservation = allReservations.find((r: any) => 
+                                      r.vehicleId === event.vehicleId && 
+                                      r.type === 'maintenance_block' &&
+                                      r.startDate === event.date
+                                    );
+                                    
+                                    if (actualReservation) {
+                                      setEditingReservation(actualReservation);
+                                      setIsScheduleDialogOpen(true);
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to fetch reservation:', error);
+                                  }
                                 }}
                               >
                                 <div className="flex items-center gap-1">
@@ -453,7 +470,12 @@ export default function MaintenanceCalendar() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <MaintenanceReservationsList />
+            <MaintenanceReservationsList 
+              onEditReservation={(reservation) => {
+                setEditingReservation(reservation);
+                setIsScheduleDialogOpen(true);
+              }}
+            />
           </CardContent>
         </Card>
       </div>
@@ -479,7 +501,7 @@ export default function MaintenanceCalendar() {
 }
 
 // Component to display all maintenance reservations
-function MaintenanceReservationsList() {
+function MaintenanceReservationsList({ onEditReservation }: { onEditReservation: (reservation: Reservation) => void }) {
   // Fetch all reservations and filter for maintenance blocks
   const { data: allReservations = [], isLoading } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations'],
@@ -619,10 +641,7 @@ function MaintenanceReservationsList() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => {
-                    setEditingReservation(reservation);
-                    setIsScheduleDialogOpen(true);
-                  }}
+                  onClick={() => onEditReservation(reservation)}
                 >
                   Edit
                 </Button>
