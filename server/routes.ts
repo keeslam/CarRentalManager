@@ -1500,22 +1500,30 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
-      // Debug logging
-      console.log('Update request body:', req.body);
-      console.log('Request headers:', req.headers);
+      // Handle JSON data that might come through wrapped in a body property
+      let bodyData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        // This is JSON data sent in a wrapped format - parse it
+        try {
+          bodyData = JSON.parse(req.body.body);
+        } catch (error) {
+          console.error('Failed to parse wrapped JSON:', error);
+          return res.status(400).json({ message: "Invalid JSON data" });
+        }
+      }
 
       // Convert string fields to the correct types
-      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
-      if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
+      if (bodyData.vehicleId) bodyData.vehicleId = parseInt(bodyData.vehicleId);
+      if (bodyData.customerId) bodyData.customerId = parseInt(bodyData.customerId);
       
       // Handle totalPrice properly - treat empty string and NaN as undefined
-      if (req.body.totalPrice === "" || req.body.totalPrice === null) {
-        req.body.totalPrice = undefined;
-      } else if (req.body.totalPrice) {
-        const parsedPrice = parseFloat(req.body.totalPrice);
-        req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
+      if (bodyData.totalPrice === "" || bodyData.totalPrice === null) {
+        bodyData.totalPrice = undefined;
+      } else if (bodyData.totalPrice) {
+        const parsedPrice = parseFloat(bodyData.totalPrice);
+        bodyData.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
-      const reservationData = insertReservationSchema.parse(req.body);
+      const reservationData = insertReservationSchema.parse(bodyData);
       
       // Check for conflicts (exclude the current reservation)
       const conflicts = await storage.checkReservationConflicts(
