@@ -161,7 +161,7 @@ export function ScheduleMaintenanceDialog({
       
       // Use PATCH for editing, POST for creating
       const method = editingReservation ? "PATCH" : "POST";
-      const url = editingReservation ? `/api/reservations/${editingReservation.id}` : "/api/reservations";
+      const url = editingReservation ? `/api/reservations/${editingReservation.id}/basic` : "/api/reservations";
       
       const response = await apiRequest(method, url, {
         body: JSON.stringify(payload),

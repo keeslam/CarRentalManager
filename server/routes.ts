@@ -1492,6 +1492,71 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Update reservation data (JSON endpoint without file upload)
+  app.patch("/api/reservations/:id/basic", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      // Convert string fields to the correct types
+      if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
+      
+      // Handle totalPrice properly - treat empty string and NaN as undefined
+      if (req.body.totalPrice === "" || req.body.totalPrice === null) {
+        req.body.totalPrice = undefined;
+      } else if (req.body.totalPrice) {
+        const parsedPrice = parseFloat(req.body.totalPrice);
+        req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
+      }
+      const reservationData = insertReservationSchema.parse(req.body);
+      
+      // Check for conflicts (exclude the current reservation)
+      const conflicts = await storage.checkReservationConflicts(
+        reservationData.vehicleId,
+        reservationData.startDate,
+        reservationData.endDate,
+        id
+      );
+      
+      if (conflicts.length > 0) {
+        return res.status(409).json({ 
+          message: "Reservation conflicts with existing bookings",
+          conflicts
+        });
+      }
+      
+      // Add user tracking information for updates
+      const user = req.user;
+      const dataWithTracking = {
+        ...reservationData,
+        updatedBy: user ? user.username : null
+      };
+      
+      const reservation = await storage.updateReservation(id, dataWithTracking);
+      
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      res.json(reservation);
+    } catch (error) {
+      console.error("Error updating reservation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid reservation data", 
+          error: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Failed to update reservation", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Update reservation status only (special endpoint for status changes)
   app.patch("/api/reservations/:id/status", requireAuth, async (req: Request, res: Response) => {
     try {
