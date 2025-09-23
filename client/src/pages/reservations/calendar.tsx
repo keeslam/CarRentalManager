@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
+import { formatLicensePlate } from "@/lib/format-utils";
 import { 
   Select, 
   SelectContent, 
@@ -634,7 +635,9 @@ export default function ReservationCalendarPage() {
                                     <div className="space-y-1">
                                       <div className="flex justify-between items-center">
                                         <div className="truncate flex items-center">
-                                          {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                          <span className="bg-primary-100 text-primary-800 px-1.5 py-0.5 rounded text-xs font-semibold mr-1">
+                                            {formatLicensePlate(res.vehicle?.licensePlate || '')}
+                                          </span>
                                           {res.type === 'replacement' && (
                                             <span className="ml-1 inline-block bg-orange-300 text-orange-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-orange-400">
                                               🚗 SPARE
@@ -715,7 +718,11 @@ export default function ReservationCalendarPage() {
                                       <Car className="h-4 w-4 text-gray-500 mt-0.5" />
                                       <div>
                                         <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
-                                        <div className="text-xs text-gray-600">{displayLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                        <div className="text-xs text-gray-600">
+                                          <span className="bg-primary-100 text-primary-800 px-1.5 py-0.5 rounded text-xs font-semibold">
+                                            {formatLicensePlate(res.vehicle?.licensePlate || '')}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
                                     
@@ -913,7 +920,7 @@ export default function ReservationCalendarPage() {
                       const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
                       
                       if (originalVehicle) {
-                        return `Spare for ${displayLicensePlate(originalVehicle.licensePlate)} (${originalVehicle.brand} ${originalVehicle.model})`;
+                        return `Spare for ${formatLicensePlate(originalVehicle.licensePlate)} (${originalVehicle.brand} ${originalVehicle.model})`;
                       }
                       
                       return `Spare for #${selectedReservation.replacementForReservationId}`;
@@ -931,7 +938,7 @@ export default function ReservationCalendarPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-semibold">
-                      {displayLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
+                      {formatLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
                     </span>
                     <span className="font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</span>
                     {selectedReservation.type === 'replacement' && (
@@ -1131,7 +1138,9 @@ export default function ReservationCalendarPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="font-medium flex items-center gap-2">
-                          {displayLicensePlate(vehicle?.licensePlate || '')}
+                          <span className="bg-primary-100 text-primary-800 px-1.5 py-0.5 rounded text-xs font-semibold mr-1">
+                            {formatLicensePlate(vehicle?.licensePlate || '')}
+                          </span>
                           {reservation.type === 'replacement' && (
                             <span className="inline-block bg-orange-300 text-orange-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-orange-400">
                               🚗 SPARE
