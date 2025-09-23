@@ -907,7 +907,17 @@ export default function ReservationCalendarPage() {
                 </Badge>
                 {selectedReservation.type === 'replacement' && selectedReservation.replacementForReservationId && (
                   <Badge className="bg-orange-50 text-orange-800 border-orange-200" variant="outline">
-                    Spare for #{selectedReservation.replacementForReservationId}
+                    {(() => {
+                      // Try to find the original reservation to get vehicle details
+                      const originalReservation = reservations?.find(r => r.id === selectedReservation.replacementForReservationId);
+                      const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
+                      
+                      if (originalVehicle) {
+                        return `Spare for ${displayLicensePlate(originalVehicle.licensePlate)} (${originalVehicle.brand} ${originalVehicle.model})`;
+                      }
+                      
+                      return `Spare for #${selectedReservation.replacementForReservationId}`;
+                    })()}
                   </Badge>
                 )}
               </div>
