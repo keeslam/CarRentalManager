@@ -88,7 +88,7 @@ export function ScheduleMaintenanceDialog({
   const [showSpareDialog, setShowSpareDialog] = useState(false);
   const [conflictingReservations, setConflictingReservations] = useState<any[]>([]);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
-  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number}>({});
+  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd'}>({});
 
   // Fetch all vehicles for selection
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
@@ -180,7 +180,10 @@ export function ScheduleMaintenanceDialog({
       // Check if spare vehicles are needed
       if (result.needsSpareVehicle) {
         setConflictingReservations(result.conflictingReservations);
-        setMaintenanceData(result.maintenanceData);
+        setMaintenanceData({
+          ...result.maintenanceData,
+          maintenanceId: result.id // Store the created maintenance ID
+        });
         setShowSpareDialog(true);
         return null; // Don't proceed with success yet
       }
@@ -215,24 +218,16 @@ export function ScheduleMaintenanceDialog({
     },
   });
 
-  // Mutation for creating maintenance with spare vehicle assignments
-  const createMaintenanceWithSpareMutation = useMutation({
-    mutationFn: async (data: { 
-      maintenanceData: any; 
-      conflictingReservations: any[]; 
-      spareVehicleAssignments: {[reservationId: number]: number} 
+  // Mutation for creating placeholder reservations
+  const createPlaceholderMutation = useMutation({
+    mutationFn: async (data: {
+      originalReservationId: number;
+      customerId: number;
+      startDate: string;
+      endDate?: string;
     }) => {
-      const assignmentsArray = Object.entries(data.spareVehicleAssignments).map(([reservationId, spareVehicleId]) => ({
-        reservationId: parseInt(reservationId),
-        spareVehicleId
-      }));
-
-      const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
-        body: JSON.stringify({
-          maintenanceData: data.maintenanceData,
-          conflictingReservations: data.conflictingReservations,
-          spareVehicleAssignments: assignmentsArray
-        }),
+      const response = await apiRequest("POST", "/api/placeholder-reservations", {
+        body: JSON.stringify(data),
         headers: {
           "Content-Type": "application/json",
         },
@@ -240,17 +235,92 @@ export function ScheduleMaintenanceDialog({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to schedule maintenance with spare vehicles");
+        throw new Error(errorData.message || "Failed to create placeholder reservation");
       }
 
       return response.json();
+    }
+  });
+
+  // Mutation for handling spare vehicle assignments (maintenance already created)
+  const createMaintenanceWithSpareMutation = useMutation({
+    mutationFn: async (data: { 
+      maintenanceData: any; 
+      conflictingReservations: any[]; 
+      spareVehicleAssignments: {[reservationId: number]: number | 'tbd'} 
+    }) => {
+      // Separate TBD and specific assignments
+      const tbdAssignments: any[] = [];
+      const specificAssignments: any[] = [];
+
+      Object.entries(data.spareVehicleAssignments).forEach(([reservationId, assignment]) => {
+        const reservation = data.conflictingReservations.find(r => r.id.toString() === reservationId);
+        if (assignment === 'tbd') {
+          tbdAssignments.push({
+            reservationId: parseInt(reservationId),
+            reservation
+          });
+        } else {
+          specificAssignments.push({
+            reservationId: parseInt(reservationId),
+            spareVehicleId: assignment
+          });
+        }
+      });
+
+      // Create placeholder reservations for TBD assignments
+      for (const tbdAssignment of tbdAssignments) {
+        // Calculate the overlap between maintenance window and original reservation
+        const maintenanceStart = data.maintenanceData.startDate;
+        const maintenanceEnd = data.maintenanceData.endDate || data.maintenanceData.startDate;
+        const reservationStart = tbdAssignment.reservation.startDate;
+        const reservationEnd = tbdAssignment.reservation.endDate || tbdAssignment.reservation.startDate;
+        
+        // Calculate intersection dates (overlap period)
+        const overlapStart = reservationStart > maintenanceStart ? reservationStart : maintenanceStart;
+        const overlapEnd = reservationEnd < maintenanceEnd ? reservationEnd : maintenanceEnd;
+        
+        // Only create placeholder if there's a valid overlap period
+        if (overlapStart <= overlapEnd) {
+          await createPlaceholderMutation.mutateAsync({
+            originalReservationId: tbdAssignment.reservationId,
+            customerId: tbdAssignment.reservation.customerId,
+            startDate: overlapStart,
+            endDate: overlapEnd
+          });
+        }
+      }
+
+      // Create specific vehicle assignments if any
+      if (specificAssignments.length > 0) {
+        const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
+          body: JSON.stringify({
+            maintenanceId: data.maintenanceData.maintenanceId, // Use existing maintenance ID
+            conflictingReservations: data.conflictingReservations.filter(r => 
+              specificAssignments.some(sa => sa.reservationId === r.id)
+            ),
+            spareVehicleAssignments: specificAssignments
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to assign specific spare vehicles");
+        }
+      }
+
+      return { success: true };
     },
     onSuccess: () => {
-      // Invalidate related queries to refresh the calendar
+      // Invalidate related queries to refresh the calendar and placeholder lists
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations'] });
       
       toast({
         title: "Maintenance scheduled",
@@ -341,41 +411,55 @@ export function ScheduleMaintenanceDialog({
   // Fetch available vehicles for spare assignment during the maintenance period
   const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ['/api/vehicles/available', {
-      startDate: maintenanceData?.scheduledDate,
-      endDate: maintenanceData?.scheduledDate, // For now, maintenance is single day
+      startDate: maintenanceData?.startDate,
+      endDate: maintenanceData?.endDate || maintenanceData?.startDate, // Use endDate if available, otherwise same day
       excludeVehicleId: maintenanceData?.vehicleId
     }],
-    enabled: showSpareDialog && maintenanceData?.scheduledDate && maintenanceData?.vehicleId, // Only fetch when spare dialog is open and we have maintenance data
+    enabled: showSpareDialog && maintenanceData?.startDate && maintenanceData?.vehicleId, // Only fetch when spare dialog is open and we have maintenance data
   });
 
   const handleSpareVehicleAssignment = () => {
-    // Only validate spare assignments if the user has opted for spare vehicles
-    const userWantsSpareVehicles = form.getValues('needsSpareVehicle');
+    // Check that all conflicting reservations have either a specific vehicle or TBD assigned
+    const missingAssignments = conflictingReservations.filter(r => {
+      const assignment = spareVehicleAssignments[r.id];
+      return !assignment; // No assignment at all (neither specific vehicle nor TBD)
+    });
     
-    if (userWantsSpareVehicles) {
-      const missingAssignments = conflictingReservations.filter(r => !spareVehicleAssignments[r.id]);
-      
-      if (missingAssignments.length > 0) {
-        toast({
-          title: "Missing Spare Vehicles",
-          description: "Please assign spare vehicles to all affected reservations.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (missingAssignments.length > 0) {
+      toast({
+        title: "Missing Spare Vehicle Assignments",
+        description: "Please choose either a specific vehicle or 'TBD' for all affected reservations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if specific vehicle assignments are valid (not just 'specific' radio selected)
+    const invalidSpecificAssignments = conflictingReservations.filter(r => {
+      const assignment = spareVehicleAssignments[r.id];
+      return assignment && assignment !== 'tbd' && (!assignment || isNaN(Number(assignment)));
+    });
+
+    if (invalidSpecificAssignments.length > 0) {
+      toast({
+        title: "Invalid Spare Vehicle Assignments",
+        description: "Please select a specific vehicle for all reservations marked as 'specific vehicle'.",
+        variant: "destructive",
+      });
+      return;
     }
 
     createMaintenanceWithSpareMutation.mutate({
       maintenanceData,
       conflictingReservations,
-      spareVehicleAssignments: userWantsSpareVehicles ? spareVehicleAssignments : {}
+      spareVehicleAssignments
     });
   };
 
   const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string) => {
     setSpareVehicleAssignments(prev => ({
       ...prev,
-      [reservationId]: parseInt(spareVehicleId)
+      [reservationId]: spareVehicleId === 'tbd' ? 'tbd' : parseInt(spareVehicleId)
     }));
   };
 
@@ -761,14 +845,68 @@ export function ScheduleMaintenanceDialog({
                 
                 <div>
                   <label className="text-sm font-medium">Select Spare Vehicle:</label>
-                  <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
-                    <VehicleSelector
-                      vehicles={availableVehicles}
-                      value={spareVehicleAssignments[reservation.id]?.toString() || ""}
-                      onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
-                      placeholder="Choose a spare vehicle..."
-                      disabled={availableVehicles.length === 0}
-                    />
+                  <div className="mt-1 space-y-2">
+                    {/* TBD Option */}
+                    <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        id={`tbd-${reservation.id}`}
+                        name={`spare-option-${reservation.id}`}
+                        value="tbd"
+                        checked={spareVehicleAssignments[reservation.id] === 'tbd'}
+                        onChange={() => handleSpareVehicleChange(reservation.id, 'tbd')}
+                        className="h-4 w-4 text-blue-600"
+                      />
+                      <label htmlFor={`tbd-${reservation.id}`} className="flex items-center gap-2 text-sm cursor-pointer flex-1">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        <div>
+                          <div className="font-medium text-orange-700">TBD (To Be Determined)</div>
+                          <div className="text-xs text-orange-600">Assign spare vehicle later</div>
+                        </div>
+                      </label>
+                    </div>
+                    
+                    {/* Specific Vehicle Option */}
+                    <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        id={`specific-${reservation.id}`}
+                        name={`spare-option-${reservation.id}`}
+                        value="specific"
+                        checked={spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd'}
+                        onChange={() => {
+                          // If switching to specific vehicle but no vehicle selected, clear the assignment
+                          if (spareVehicleAssignments[reservation.id] === 'tbd') {
+                            setSpareVehicleAssignments(prev => {
+                              const updated = { ...prev };
+                              delete updated[reservation.id];
+                              return updated;
+                            });
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600"
+                        disabled={availableVehicles.length === 0}
+                      />
+                      <div className="flex-1">
+                        <label htmlFor={`specific-${reservation.id}`} className="text-sm font-medium cursor-pointer">
+                          Assign specific vehicle now
+                        </label>
+                        {availableVehicles.length === 0 && (
+                          <div className="text-xs text-gray-500 mt-1">No vehicles available for this date</div>
+                        )}
+                        {(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd') && (
+                          <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
+                            <VehicleSelector
+                              vehicles={availableVehicles}
+                              value={spareVehicleAssignments[reservation.id]?.toString() || ""}
+                              onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                              placeholder="Choose a spare vehicle..."
+                              disabled={availableVehicles.length === 0}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -792,6 +930,7 @@ export function ScheduleMaintenanceDialog({
           <Button
             onClick={handleSpareVehicleAssignment}
             disabled={createMaintenanceWithSpareMutation.isPending}
+            data-testid="button-assign-spare-vehicles"
           >
             {createMaintenanceWithSpareMutation.isPending ? (
               <>
