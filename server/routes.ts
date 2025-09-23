@@ -16,6 +16,10 @@ import {
   insertDocumentSchema,
   insertUserSchema,
   insertPdfTemplateSchema,
+  createPlaceholderReservationSchema,
+  placeholderQuerySchema,
+  placeholderNeedingAssignmentQuerySchema,
+  assignVehicleToPlaceholderSchema,
   Reservation,
   UserRole,
   UserPermission
@@ -2141,6 +2145,152 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error updating legacy notes:", error);
       res.status(500).json({ message: "Error updating legacy notes" });
+    }
+  });
+
+  // ==================== PLACEHOLDER SPARE VEHICLE ROUTES ====================
+  
+  // Create a placeholder spare vehicle reservation
+  app.post("/api/placeholder-reservations", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = createPlaceholderReservationSchema.parse(req.body);
+      
+      // Create placeholder reservation
+      const placeholderReservation = await storage.createPlaceholderReservation(
+        validatedData.originalReservationId,
+        validatedData.customerId,
+        validatedData.startDate,
+        validatedData.endDate
+      );
+      
+      res.status(201).json(placeholderReservation);
+      
+    } catch (error) {
+      console.error("Error creating placeholder reservation:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      
+      if (error instanceof Error) {
+        // Map storage errors to proper HTTP status codes
+        if (error.message.includes('not found')) {
+          return res.status(404).json({ message: error.message });
+        }
+        if (error.message.includes('already exists')) {
+          return res.status(409).json({ message: error.message });
+        }
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get placeholder reservations with optional date filtering
+  app.get("/api/placeholder-reservations", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate query parameters with Zod
+      const validatedQuery = placeholderQuerySchema.parse(req.query);
+      
+      const placeholders = await storage.getPlaceholderReservations(
+        validatedQuery.startDate,
+        validatedQuery.endDate
+      );
+      
+      res.json(placeholders);
+      
+    } catch (error) {
+      console.error("Error getting placeholder reservations:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid query parameters", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get placeholder reservations needing assignment (upcoming within specified days)
+  app.get("/api/placeholder-reservations/needing-assignment", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate query parameters with Zod
+      const validatedQuery = placeholderNeedingAssignmentQuerySchema.parse(req.query);
+      
+      const placeholders = await storage.getPlaceholderReservationsNeedingAssignment(validatedQuery.daysAhead);
+      
+      res.json(placeholders);
+      
+    } catch (error) {
+      console.error("Error getting placeholders needing assignment:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid query parameters", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign a vehicle to a placeholder reservation
+  app.post("/api/placeholder-reservations/:id/assign-vehicle", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate path parameter
+      const placeholderReservationId = parseInt(req.params.id);
+      if (isNaN(placeholderReservationId) || placeholderReservationId <= 0) {
+        return res.status(400).json({ message: "Invalid placeholder reservation ID" });
+      }
+      
+      // Validate request body with Zod
+      const validatedData = assignVehicleToPlaceholderSchema.parse(req.body);
+      
+      // Assign vehicle to placeholder
+      const updatedReservation = await storage.assignVehicleToPlaceholder(
+        placeholderReservationId,
+        validatedData.vehicleId,
+        validatedData.endDate
+      );
+      
+      if (!updatedReservation) {
+        return res.status(404).json({ 
+          message: "Placeholder reservation not found or invalid" 
+        });
+      }
+      
+      res.json(updatedReservation);
+      
+    } catch (error) {
+      console.error("Error assigning vehicle to placeholder:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      
+      if (error instanceof Error) {
+        // Map storage errors to proper HTTP status codes
+        if (error.message.includes('not found')) {
+          return res.status(404).json({ message: error.message });
+        }
+        if (error.message.includes('not available') || error.message.includes('conflict')) {
+          return res.status(409).json({ message: error.message });
+        }
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

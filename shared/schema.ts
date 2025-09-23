@@ -292,6 +292,51 @@ export const insertReservationSchema = insertReservationSchemaBase
   path: ["vehicleId"]
 });
 
+// ============= PLACEHOLDER SPARE VEHICLE SCHEMAS =============
+
+// Schema for creating placeholder reservations
+export const createPlaceholderReservationSchema = z.object({
+  originalReservationId: z.coerce.number().int().positive(),
+  customerId: z.coerce.number().int().positive(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional()
+}).refine((data) => {
+  if (data.endDate) {
+    return data.startDate <= data.endDate;
+  }
+  return true;
+}, {
+  message: "End date must be on or after start date",
+  path: ["endDate"]
+});
+
+// Schema for querying placeholder reservations
+export const placeholderQuerySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional()
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.startDate <= data.endDate;
+  }
+  return true;
+}, {
+  message: "End date must be on or after start date",
+  path: ["endDate"]
+});
+
+// Schema for querying placeholders needing assignment
+export const placeholderNeedingAssignmentQuerySchema = z.object({
+  daysAhead: z.coerce.number().int().min(1).max(365).default(7)
+});
+
+// Schema for assigning vehicles to placeholders
+export const assignVehicleToPlaceholderSchema = z.object({
+  vehicleId: z.coerce.number().int().positive(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional()
+});
+
+// ============= END PLACEHOLDER SCHEMAS =============
+
 // Expenses table
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
