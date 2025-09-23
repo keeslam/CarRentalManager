@@ -2158,17 +2158,19 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create a placeholder spare vehicle reservation
   app.post("/api/placeholder-reservations", requireAuth, async (req: Request, res: Response) => {
     try {
-      // Debug: Log the raw request body to see what we're receiving
-      console.log("Raw request body received:", JSON.stringify(req.body, null, 2));
-      console.log("Data types:", {
-        originalReservationId: typeof req.body.originalReservationId,
-        customerId: typeof req.body.customerId,
-        startDate: typeof req.body.startDate,
-        endDate: typeof req.body.endDate
-      });
+      // Handle the case where the body is double-wrapped (from apiRequest function)
+      let requestData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        try {
+          requestData = JSON.parse(req.body.body);
+          console.log("Parsed double-wrapped body:", requestData);
+        } catch (e) {
+          console.error("Failed to parse body.body:", e);
+        }
+      }
       
       // Validate request body with Zod
-      const validatedData = createPlaceholderReservationSchema.parse(req.body);
+      const validatedData = createPlaceholderReservationSchema.parse(requestData);
       
       // Create placeholder reservation
       const placeholderReservation = await storage.createPlaceholderReservation(
