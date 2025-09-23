@@ -141,6 +141,7 @@ export function ReservationForm({
     editMode && initialData ? initialData.id : null
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [showAllVehicles, setShowAllVehicles] = useState<boolean>(false);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -185,6 +186,12 @@ export function ReservationForm({
   // Fetch vehicles for select field
   const { data: vehicles, isLoading: isLoadingVehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+
+  // Fetch available vehicles based on selected date range
+  const { data: availableVehicles, isLoading: isLoadingAvailableVehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/available", startDateWatch, endDateWatch],
+    enabled: !!startDateWatch && (!isOpenEndedWatch ? !!endDateWatch : true),
   });
   
   // Fetch PDF templates for contract generation
@@ -246,6 +253,26 @@ export function ReservationForm({
   const customerIdWatch = form.watch("customerId");
   const statusWatch = form.watch("status");
   
+  // Determine which vehicles to show based on toggle and date selection
+  const vehiclesToShow = useMemo(() => {
+    if (showAllVehicles || !startDateWatch) {
+      return vehicles || [];
+    }
+    
+    // For open-ended rentals, use available vehicles with just start date
+    if (isOpenEndedWatch) {
+      return availableVehicles || [];
+    }
+    
+    // For date-ranged rentals, only show available vehicles if both dates are selected
+    if (startDateWatch && endDateWatch) {
+      return availableVehicles || [];
+    }
+    
+    // Default to all vehicles if dates aren't fully selected
+    return vehicles || [];
+  }, [vehicles, availableVehicles, showAllVehicles, startDateWatch, endDateWatch, isOpenEndedWatch]);
+
   // Find the selected vehicle and customer
   const selectedVehicle = useMemo(() => {
     if (!vehicles || !vehicleIdWatch) return null;
@@ -764,10 +791,121 @@ export function ReservationForm({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Vehicle and Customer Selection Section */}
+            {/* Date Selection Section - Now First */}
             <div className="space-y-6">
-              <div className="text-lg font-medium">
-                {actualVehicleId ? "1. Selected Vehicle & Customer" : "1. Select Vehicle and Customer"}
+              <div className="text-lg font-medium">1. Select Rental Dates</div>
+              <div className="text-sm text-muted-foreground">
+                Choose your rental dates first to see only available vehicles and avoid booking conflicts.
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Start Date */}
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setSelectedStartDate(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Open-ended rental checkbox */}
+                <FormField
+                  control={form.control}
+                  name="isOpenEnded"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          data-testid="checkbox-open-ended-rental"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Open-ended rental
+                        </FormLabel>
+                        <FormDescription>
+                          Check this if the return date is not yet known
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {/* End Date - only show if not open-ended */}
+                {!isOpenEndedWatch && (
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            data-testid="input-end-date"
+                            type="date" 
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* Duration display */}
+              <div className="text-sm text-muted-foreground">
+                {startDateWatch && (
+                  <div className="flex items-center gap-2">
+                    <span>Duration:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {rentalDuration === "Open-ended" ? "Open-ended" : `${rentalDuration} day${rentalDuration !== 1 ? 's' : ''}`}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+            <Separator />
+
+            {/* Vehicle and Customer Selection Section - Now Second */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-lg font-medium">
+                    {actualVehicleId ? "2. Selected Vehicle & Customer" : "2. Select Vehicle and Customer"}
+                  </div>
+                  {!showAllVehicles && startDateWatch && (
+                    <div className="text-sm text-green-600 mt-1">
+                      Showing only available vehicles for your selected dates
+                    </div>
+                  )}
+                </div>
+                {!actualVehicleId && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      data-testid="checkbox-show-all-vehicles"
+                      checked={showAllVehicles}
+                      onCheckedChange={setShowAllVehicles}
+                    />
+                    <label htmlFor="show-all-vehicles" className="text-sm text-muted-foreground cursor-pointer">
+                      Show all vehicles (for long-term rentals)
+                    </label>
+                  </div>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -887,7 +1025,7 @@ export function ReservationForm({
                           
                           <FormControl>
                             <VehicleSelector
-                              vehicles={vehicles || []}
+                              vehicles={vehiclesToShow}
                               value={field.value ? field.value.toString() : ''}
                               onChange={(value) => {
                                 field.onChange(value);
@@ -1090,9 +1228,9 @@ export function ReservationForm({
               <Separator />
             </div>
 
-            {/* Date and Duration Section */}
+            {/* Status and Price Section */}
             <div className="space-y-6">
-              <div className="text-lg font-medium">2. Select Dates</div>
+              <div className="text-lg font-medium">3. Reservation Details</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Start Date */}
                 <FormField
@@ -1104,7 +1242,7 @@ export function ReservationForm({
                       <FormControl>
                         <Input 
                           type="date" 
-                          min={today} 
+ 
                           {...field} 
                           onChange={(e) => {
                             field.onChange(e);
