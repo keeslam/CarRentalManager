@@ -32,6 +32,7 @@ import { formatLicensePlate } from "@/lib/format-utils";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { PlusCircle, Edit, Eye, Calendar, User, Car, CreditCard, Clock, MapPin } from "lucide-react";
 import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
+import { SpareVehicleAssignmentDialog } from "@/components/reservations/spare-vehicle-assignment-dialog";
 
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -40,6 +41,8 @@ export function ReservationCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [selectedPlaceholderReservations, setSelectedPlaceholderReservations] = useState<any[]>([]);
 
   // Safe date parsing and formatting functions to prevent errors
   const safeParseDateISO = (dateString: string | null | undefined): Date | null => {
@@ -454,19 +457,35 @@ export function ReservationCalendar() {
                                       <Edit className="mr-1 h-3 w-3" />
                                       Edit
                                     </Button>
-                                    <ReservationQuickStatusButton 
-                                      reservation={res}
-                                      size="sm"
-                                      variant="outline"
-                                      withText={true}
-                                      className="h-8 text-xs"
-                                      onStatusChanged={() => {
-                                        // Force refresh of reservations data
-                                        queryClient.invalidateQueries({ 
-                                          queryKey: ["/api/reservations/range", startDate, endDate]
-                                        });
-                                      }}
-                                    />
+                                    {res.placeholderSpare ? (
+                                      <Button 
+                                        size="sm" 
+                                        variant="default"
+                                        className="h-8 text-xs bg-orange-600 hover:bg-orange-700"
+                                        onClick={() => {
+                                          setSelectedPlaceholderReservations([res]);
+                                          setAssignmentDialogOpen(true);
+                                        }}
+                                        data-testid="button-assign-vehicle"
+                                      >
+                                        <Car className="mr-1 h-3 w-3" />
+                                        Assign
+                                      </Button>
+                                    ) : (
+                                      <ReservationQuickStatusButton 
+                                        reservation={res}
+                                        size="sm"
+                                        variant="outline"
+                                        withText={true}
+                                        className="h-8 text-xs"
+                                        onStatusChanged={() => {
+                                          // Force refresh of reservations data
+                                          queryClient.invalidateQueries({ 
+                                            queryKey: ["/api/reservations/range", startDate, endDate]
+                                          });
+                                        }}
+                                      />
+                                    )}
                                   </div>
                                 </div>
                               </HoverCardContent>
@@ -491,6 +510,16 @@ export function ReservationCalendar() {
           )}
         </div>
       </CardContent>
+      
+      {/* Spare Vehicle Assignment Dialog */}
+      <SpareVehicleAssignmentDialog
+        open={assignmentDialogOpen}
+        onOpenChange={(open) => {
+          setAssignmentDialogOpen(open);
+          if (!open) setSelectedPlaceholderReservations([]);
+        }}
+        placeholderReservations={selectedPlaceholderReservations}
+      />
     </Card>
   );
 }
