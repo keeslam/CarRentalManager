@@ -309,35 +309,66 @@ export default function ReservationCalendarPage() {
     );
   };
   
-  // Function to get reservation color and style based on status
-  const getReservationStyle = (status: string, isStart: boolean, isEnd: boolean) => {
+  // Function to get reservation color and style based on status and type
+  const getReservationStyle = (status: string, isStart: boolean, isEnd: boolean, reservationType?: string) => {
     let bgColor, textColor, borderColor;
     
-    switch (status.toLowerCase()) {
-      case "confirmed":
-        bgColor = "bg-green-100";
-        textColor = "text-green-800";
-        borderColor = "border-green-300";
-        break;
-      case "pending":
-        bgColor = "bg-amber-100";
-        textColor = "text-amber-800";
-        borderColor = "border-amber-300";
-        break;
-      case "cancelled":
-        bgColor = "bg-gray-100";
-        textColor = "text-gray-500";
-        borderColor = "border-gray-300";
-        break;
-      case "completed":
-        bgColor = "bg-blue-100";
-        textColor = "text-blue-800";
-        borderColor = "border-blue-300";
-        break;
-      default:
-        bgColor = "bg-gray-100";
-        textColor = "text-gray-800";
-        borderColor = "border-gray-300";
+    // Spare cars get distinct orange-based color scheme
+    if (reservationType === 'replacement') {
+      switch (status.toLowerCase()) {
+        case "confirmed":
+          bgColor = "bg-orange-100";
+          textColor = "text-orange-900";
+          borderColor = "border-orange-400";
+          break;
+        case "pending":
+          bgColor = "bg-orange-50";
+          textColor = "text-orange-700";
+          borderColor = "border-orange-300";
+          break;
+        case "cancelled":
+          bgColor = "bg-orange-50";
+          textColor = "text-orange-400";
+          borderColor = "border-orange-200";
+          break;
+        case "completed":
+          bgColor = "bg-orange-200";
+          textColor = "text-orange-900";
+          borderColor = "border-orange-500";
+          break;
+        default:
+          bgColor = "bg-orange-50";
+          textColor = "text-orange-600";
+          borderColor = "border-orange-200";
+      }
+    } else {
+      // Regular rentals keep the original color scheme
+      switch (status.toLowerCase()) {
+        case "confirmed":
+          bgColor = "bg-green-100";
+          textColor = "text-green-800";
+          borderColor = "border-green-300";
+          break;
+        case "pending":
+          bgColor = "bg-amber-100";
+          textColor = "text-amber-800";
+          borderColor = "border-amber-300";
+          break;
+        case "cancelled":
+          bgColor = "bg-gray-100";
+          textColor = "text-gray-500";
+          borderColor = "border-gray-300";
+          break;
+        case "completed":
+          bgColor = "bg-blue-100";
+          textColor = "text-blue-800";
+          borderColor = "border-blue-300";
+          break;
+        default:
+          bgColor = "bg-gray-100";
+          textColor = "text-gray-800";
+          borderColor = "border-gray-300";
+      }
     }
     
     const roundedLeft = isStart ? "rounded-l-md" : "";
@@ -589,7 +620,7 @@ export default function ReservationCalendarPage() {
                               <HoverCard key={res.id} openDelay={300} closeDelay={200}>
                                 <HoverCardTrigger asChild>
                                   <div 
-                                    className={`px-2 py-1.5 text-sm truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay)}`}
+                                    className={`px-2 py-1.5 text-sm truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay, res.type)}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       console.log('Main reservation item clicked for:', res.id);
@@ -601,8 +632,8 @@ export default function ReservationCalendarPage() {
                                         <div className="truncate flex items-center">
                                           {displayLicensePlate(res.vehicle?.licensePlate || '')}
                                           {res.type === 'replacement' && (
-                                            <span className="ml-1 inline-block bg-orange-200 text-orange-800 text-[10px] px-1 rounded-sm font-medium">
-                                              SPARE
+                                            <span className="ml-1 inline-block bg-orange-300 text-orange-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-orange-400">
+                                              🚗 SPARE
                                             </span>
                                           )}
                                           {isPickupDay && 
@@ -628,9 +659,16 @@ export default function ReservationCalendarPage() {
                                       </Button>
                                       </div>
                                       
-                                      {/* Customer information */}
-                                      <div className="text-sm text-gray-600 truncate font-medium">
-                                        {res.customer?.name || 'No customer'}
+                                      {/* Customer information and status */}
+                                      <div className="flex justify-between items-center">
+                                        <div className="text-sm text-gray-600 truncate font-medium">
+                                          {res.customer?.name || 'No customer'}
+                                        </div>
+                                        {res.type === 'replacement' && (
+                                          <span className="text-[10px] font-semibold text-orange-700 bg-orange-200 px-1 py-0.5 rounded border border-orange-300">
+                                            {formatReservationStatus(res.status).toUpperCase()}
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -975,20 +1013,32 @@ export default function ReservationCalendarPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="font-medium">
+                        <div className="font-medium flex items-center gap-2">
                           {displayLicensePlate(vehicle?.licensePlate || '')}
+                          {reservation.type === 'replacement' && (
+                            <span className="inline-block bg-orange-300 text-orange-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-orange-400">
+                              🚗 SPARE
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600">
                           {vehicle?.brand} {vehicle?.model}
                         </div>
                         <Badge 
                           className={`text-xs ${
-                            reservation.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' : 
-                            reservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            reservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                            reservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
+                            reservation.type === 'replacement' 
+                              ? (reservation.status?.toLowerCase() === 'confirmed' ? 'bg-orange-100 text-orange-800 border-orange-200' : 
+                                 reservation.status?.toLowerCase() === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                 reservation.status?.toLowerCase() === 'completed' ? 'bg-orange-200 text-orange-900 border-orange-300' :
+                                 reservation.status?.toLowerCase() === 'cancelled' ? 'bg-orange-50 text-orange-400 border-orange-200' :
+                                 'bg-orange-50 text-orange-600 border-orange-200')
+                              : (reservation.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' : 
+                                 reservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800' :
+                                 reservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                 reservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                 'bg-gray-100 text-gray-800')
                           }`}
+                          variant="outline"
                         >
                           {formatReservationStatus(reservation.status)}
                         </Badge>
