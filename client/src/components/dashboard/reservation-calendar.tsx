@@ -306,7 +306,10 @@ export function ReservationCalendar() {
                                 >
                                   <div className="flex justify-between items-center">
                                     <div className="truncate">
-                                      {formatLicensePlate(res.vehicle?.licensePlate || '')}
+                                      {res.placeholderSpare ? 
+                                        <span className="text-orange-700 font-medium">TBD</span> : 
+                                        formatLicensePlate(res.vehicle?.licensePlate || '')
+                                      }
                                       {isPickupDay && 
                                         <span className="ml-1 inline-block bg-green-200 text-green-800 text-[8px] px-1 rounded-sm">out</span>
                                       }
