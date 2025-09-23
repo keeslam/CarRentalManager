@@ -491,13 +491,6 @@ export default function ReservationDetails() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="bg-gray-50 rounded-b-lg">
-            <Link href={`/reservations/edit/${id}`} className="w-full">
-              <Button className="w-full" data-testid="button-edit-reservation">
-                Edit Reservation
-              </Button>
-            </Link>
-          </CardFooter>
         </Card>
 
         {/* Right column - Related info and actions */}
