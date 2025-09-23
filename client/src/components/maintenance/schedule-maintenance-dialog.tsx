@@ -415,7 +415,7 @@ export function ScheduleMaintenanceDialog({
       endDate: maintenanceData?.endDate || maintenanceData?.startDate, // Use endDate if available, otherwise same day
       excludeVehicleId: maintenanceData?.vehicleId
     }],
-    enabled: showSpareDialog && maintenanceData?.startDate && maintenanceData?.vehicleId, // Only fetch when spare dialog is open and we have maintenance data
+    enabled: Boolean(showSpareDialog && maintenanceData?.startDate && maintenanceData?.vehicleId), // Ensure boolean return
   });
 
   const handleSpareVehicleAssignment = () => {
