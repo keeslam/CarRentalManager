@@ -1627,6 +1627,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         const replacementPromises = validatedAssignments.map(async (validated) => {
           const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
           
+          // Get vehicle details for better notes
+          const spareVehicle = await storage.getVehicle(spareVehicleId);
+          const originalVehicle = originalReservation.vehicle || await storage.getVehicle(originalReservation.vehicleId);
+          
+          const originalVehicleDesc = originalVehicle ? 
+            `${originalVehicle.licensePlate} (${originalVehicle.brand} ${originalVehicle.model})` : 
+            `vehicle ${originalReservation.vehicleId}`;
+          const spareVehicleDesc = spareVehicle ? 
+            `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})` : 
+            `vehicle ${spareVehicleId}`;
+          
           // Create replacement reservation for overlap period ONLY  
           return await storage.createReservation({
             vehicleId: spareVehicleId,
@@ -1639,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceData.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
           });
         });
         
@@ -1666,6 +1677,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         const updatePromises = validatedAssignments.map(async (validated) => {
           const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
           
+          // Get vehicle details for better notes
+          const spareVehicle = await storage.getVehicle(spareVehicleId);
+          const originalVehicle = originalReservation.vehicle || await storage.getVehicle(originalReservation.vehicleId);
+          
+          const originalVehicleDesc = originalVehicle ? 
+            `${originalVehicle.licensePlate} (${originalVehicle.brand} ${originalVehicle.model})` : 
+            `vehicle ${originalReservation.vehicleId}`;
+          const spareVehicleDesc = spareVehicle ? 
+            `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})` : 
+            `vehicle ${spareVehicleId}`;
+          
           return await storage.createReservation({
             vehicleId: spareVehicleId,
             customerId: originalReservation.customerId,
@@ -1677,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceData.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
           });
         });
         
