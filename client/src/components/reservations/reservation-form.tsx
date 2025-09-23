@@ -188,11 +188,6 @@ export function ReservationForm({
     queryKey: ["/api/vehicles"],
   });
 
-  // Fetch available vehicles based on selected date range
-  const { data: availableVehicles, isLoading: isLoadingAvailableVehicles } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles/available", startDateWatch, endDateWatch],
-    enabled: !!startDateWatch && (!isOpenEndedWatch ? !!endDateWatch : true),
-  });
   
   // Fetch PDF templates for contract generation
   const { data: pdfTemplates = [] } = useQuery<any[]>({
@@ -253,6 +248,12 @@ export function ReservationForm({
   const customerIdWatch = form.watch("customerId");
   const statusWatch = form.watch("status");
   
+  // Fetch available vehicles based on selected date range (after form watch variables are declared)
+  const { data: availableVehicles, isLoading: isLoadingAvailableVehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/available", startDateWatch, endDateWatch],
+    enabled: !!startDateWatch && (!isOpenEndedWatch ? !!endDateWatch : true),
+  });
+
   // Determine which vehicles to show based on toggle and date selection
   const vehiclesToShow = useMemo(() => {
     if (showAllVehicles || !startDateWatch) {
