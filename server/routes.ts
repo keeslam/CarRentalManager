@@ -1403,6 +1403,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         bodyData.customerId = parseInt(bodyData.customerId);
       }
       
+      // Convert boolean fields from strings
+      if (bodyData.placeholderSpare !== undefined) {
+        bodyData.placeholderSpare = bodyData.placeholderSpare === 'true' || bodyData.placeholderSpare === true;
+      }
+      
       // Handle totalPrice properly - treat empty string and NaN as undefined
       if (bodyData.totalPrice === "" || bodyData.totalPrice === null) {
         bodyData.totalPrice = undefined;
