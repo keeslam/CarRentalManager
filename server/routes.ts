@@ -2158,6 +2158,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create a placeholder spare vehicle reservation
   app.post("/api/placeholder-reservations", requireAuth, async (req: Request, res: Response) => {
     try {
+      // Debug: Log the raw request body to see what we're receiving
+      console.log("Raw request body received:", JSON.stringify(req.body, null, 2));
+      console.log("Data types:", {
+        originalReservationId: typeof req.body.originalReservationId,
+        customerId: typeof req.body.customerId,
+        startDate: typeof req.body.startDate,
+        endDate: typeof req.body.endDate
+      });
+      
       // Validate request body with Zod
       const validatedData = createPlaceholderReservationSchema.parse(req.body);
       
