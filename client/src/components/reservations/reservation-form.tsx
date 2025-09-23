@@ -248,6 +248,9 @@ export function ReservationForm({
   const customerIdWatch = form.watch("customerId");
   const statusWatch = form.watch("status");
   
+  // Flag to hide duplicate date fields in section 3 (dates are already handled in section 1)
+  const SHOW_DUPLICATE_DATES = false;
+  
   // Fetch available vehicles based on selected date range (after form watch variables are declared)
   const { data: availableVehicles, isLoading: isLoadingAvailableVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/available", startDateWatch, endDateWatch],
@@ -1232,8 +1235,9 @@ export function ReservationForm({
             {/* Status and Price Section */}
             <div className="space-y-6">
               <div className="text-lg font-medium">3. Reservation Details</div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Start Date */}
+              {SHOW_DUPLICATE_DATES && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Start Date */}
                 <FormField
                   control={form.control}
                   name="startDate"
@@ -1310,6 +1314,28 @@ export function ReservationForm({
                     <span className="font-medium">{rentalDuration}</span>
                     {typeof rentalDuration === 'number' && (
                       <span className="ml-1 text-muted-foreground">
+                        {rentalDuration === 1 ? "day" : "days"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                </div>
+              )}
+              
+              {/* Date Summary - Read-only display of dates selected above */}
+              <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Rental Period (selected above):</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Start Date:</span> {startDateWatch || 'Not selected'}
+                  </div>
+                  <div>
+                    <span className="font-medium">End Date:</span> {isOpenEndedWatch ? 'Open-ended' : (endDateWatch || 'Not selected')}
+                  </div>
+                  <div>
+                    <span className="font-medium">Duration:</span> {rentalDuration}
+                    {typeof rentalDuration === 'number' && (
+                      <span className="ml-1">
                         {rentalDuration === 1 ? "day" : "days"}
                       </span>
                     )}
