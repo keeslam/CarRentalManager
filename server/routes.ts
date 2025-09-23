@@ -2128,6 +2128,22 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Update legacy notes with vehicle details
+  app.post("/api/reservations/update-legacy-notes", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const updatedCount = await storage.updateLegacyNotesWithVehicleDetails();
+      
+      res.json({
+        message: `Successfully updated ${updatedCount} reservation notes with vehicle details`,
+        updatedCount
+      });
+      
+    } catch (error) {
+      console.error("Error updating legacy notes:", error);
+      res.status(500).json({ message: "Error updating legacy notes" });
+    }
+  });
+
   // ==================== EXPENSE ROUTES ====================
   // Setup storage for expense receipt uploads
   const createExpenseReceiptStorage = async (req: Request, file: Express.Multer.File, callback: Function) => {

@@ -52,6 +52,7 @@ export interface IStorage {
   getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]>;
   getActiveReplacementByOriginal(originalReservationId: number): Promise<Reservation | undefined>;
   createReplacementReservation(originalReservationId: number, spareVehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
+  updateLegacyNotesWithVehicleDetails(): Promise<number>;
   closeReplacementReservation(replacementReservationId: number, endDate: string): Promise<Reservation | undefined>;
   markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined>;
   createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
@@ -1217,6 +1218,69 @@ export class MemStorage implements IStorage {
 
     this.reservations.set(id, replacementReservation);
     return replacementReservation;
+  }
+
+  async updateLegacyNotesWithVehicleDetails(): Promise<number> {
+    let updatedCount = 0;
+    
+    // Regex patterns to find vehicle IDs in notes like "(39)" or "vehicle (36)"
+    const vehicleIdPattern = /\((\d+)\)/g;
+    const originalVehiclePattern = /Original vehicle \((\d+)\)/g;
+    const replacedWithPattern = /Replaced with spare vehicle \((\d+)\)/g;
+    
+    for (const [reservationId, reservation] of this.reservations.entries()) {
+      if (!reservation.notes) continue;
+      
+      let updatedNotes = reservation.notes;
+      let hasChanges = false;
+      
+      // Replace original vehicle references
+      updatedNotes = updatedNotes.replace(originalVehiclePattern, (match, vehicleId) => {
+        const vehicle = this.vehicles.get(parseInt(vehicleId));
+        if (vehicle) {
+          hasChanges = true;
+          return `Original vehicle ${vehicle.licensePlate} (${vehicle.brand} ${vehicle.model})`;
+        }
+        return match;
+      });
+      
+      // Replace spare vehicle references  
+      updatedNotes = updatedNotes.replace(replacedWithPattern, (match, vehicleId) => {
+        const vehicle = this.vehicles.get(parseInt(vehicleId));
+        if (vehicle) {
+          hasChanges = true;
+          return `Replaced with spare vehicle ${vehicle.licensePlate} (${vehicle.brand} ${vehicle.model})`;
+        }
+        return match;
+      });
+      
+      // General replacement for any remaining vehicle IDs in parentheses
+      updatedNotes = updatedNotes.replace(vehicleIdPattern, (match, vehicleId) => {
+        // Skip if this doesn't look like a vehicle ID (e.g., reservation numbers)
+        if (updatedNotes.includes(`reservation #${vehicleId}`) || updatedNotes.includes(`#${vehicleId}`)) {
+          return match;
+        }
+        
+        const vehicle = this.vehicles.get(parseInt(vehicleId));
+        if (vehicle) {
+          hasChanges = true;
+          return `${vehicle.licensePlate} (${vehicle.brand} ${vehicle.model})`;
+        }
+        return match;
+      });
+      
+      if (hasChanges) {
+        const updatedReservation: Reservation = {
+          ...reservation,
+          notes: updatedNotes,
+          updatedAt: new Date()
+        };
+        this.reservations.set(reservationId, updatedReservation);
+        updatedCount++;
+      }
+    }
+    
+    return updatedCount;
   }
 
   async closeReplacementReservation(replacementReservationId: number, endDate: string): Promise<Reservation | undefined> {
