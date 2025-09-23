@@ -1,15 +1,49 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
-import { formatLicensePlate } from "@/lib/format-utils";
+import { displayLicensePlate } from "@/lib/utils";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
+import { formatLicensePlate } from "@/lib/format-utils";
+import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit } from "lucide-react";
+
+// Calendar view options
+type CalendarView = "month";
+
+// Calendar configuration
+const COLUMNS = 5;
+
+// Type for filters
+type MaintenanceFilters = {
+  search: string;
+  type: string;
+  eventType: string;
+};
 
 interface MaintenanceEvent {
   id: number;
@@ -24,19 +58,95 @@ interface MaintenanceEvent {
 }
 
 export default function MaintenanceCalendar() {
+  // Query client for cache invalidation
+  const queryClient = useQueryClient();
+  
+  const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [maintenanceFilters, setMaintenanceFilters] = useState<MaintenanceFilters>({
+    search: "",
+    type: "all",
+    eventType: "all"
+  });
+  
+  // Dialog states
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-
-  // Edit handler following reservations calendar pattern
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  
+  // Day dialog for maintenance events
+  const [dayDialogOpen, setDayDialogOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  
+  // Dialog handlers
+  const handleViewMaintenanceEvent = (reservation: Reservation) => {
+    console.log('handleViewMaintenanceEvent called with:', reservation);
+    setSelectedReservation(reservation);
+    setViewDialogOpen(true);
+  };
+  
   const handleEditMaintenance = (reservation: Reservation) => {
     console.log('handleEditMaintenance called with:', reservation);
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
     console.log('Edit dialog should be open now');
   };
+  
+  const handleCloseDialogs = () => {
+    console.log('Closing all dialogs');
+    setViewDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedReservation(null);
+  };
+  
+  // Day dialog handlers
+  const openDayDialog = (day: Date) => {
+    console.log('Opening maintenance day dialog for:', day);
+    setSelectedDay(day);
+    setDayDialogOpen(true);
+  };
+  
+  const closeDayDialog = () => {
+    console.log('Closing maintenance day dialog');
+    setDayDialogOpen(false);
+    setSelectedDay(null);
+  };
+  
+  // Calculate date ranges for month view
+  const dateRanges = useMemo(() => {
+    // Month view calculations
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    
+    // Get the first Monday before or on the first day of the month
+    const firstDay = new Date(start);
+    const firstDayOfWeek = getDay(firstDay) || 7; // Convert Sunday (0) to 7
+    firstDay.setDate(firstDay.getDate() - ((firstDayOfWeek - 1) || 0));
+    
+    // Get the last Sunday after or on the last day of the month
+    const lastDay = new Date(end);
+    const lastDayOfWeek = getDay(lastDay) || 7; // Convert Sunday (0) to 7
+    lastDay.setDate(lastDay.getDate() + (7 - lastDayOfWeek));
+    
+    // Generate all days in the calendar grid, but only weekdays
+    const dayCount = differenceInDays(lastDay, firstDay) + 1;
+    const allDays = Array.from({ length: dayCount }, (_, i) => addDays(firstDay, i));
+    const days = allDays.filter(day => {
+      const dayOfWeek = getDay(day);
+      return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday only
+    });
+    
+    const rangeText = format(currentDate, "MMMM yyyy");
+    
+    return { start, end, days, rangeText };
+  }, [currentDate]);
+  
+  // Fetch vehicles
+  const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
   
   // Fetch vehicles with maintenance needs
   const { data: apkExpiringVehicles = [] } = useQuery<Vehicle[]>({
@@ -47,21 +157,15 @@ export default function MaintenanceCalendar() {
     queryKey: ['/api/vehicles/warranty-expiring'],
   });
 
-  // Fetch reservations for the current month to check for conflicts
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  
-  const { data: monthReservations = [] } = useQuery<Reservation[]>({
-    queryKey: ['/api/reservations/range', format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const startDate = format(monthStart, 'yyyy-MM-dd');
-      const endDate = format(monthEnd, 'yyyy-MM-dd');
-      const response = await fetch(`/api/reservations/range?startDate=${startDate}&endDate=${endDate}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch reservations');
+  // Fetch reservations for the current date range
+  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
+    queryKey: [
+      "/api/reservations/range", 
+      {
+        startDate: format(dateRanges.start, "yyyy-MM-dd"),
+        endDate: format(dateRanges.end, "yyyy-MM-dd")
       }
-      return response.json();
-    },
+    ],
   });
 
   // Fetch scheduled maintenance blocks (reservations with type maintenance_block)
@@ -72,7 +176,7 @@ export default function MaintenanceCalendar() {
   });
 
   // Create maintenance events from vehicle data and scheduled maintenance
-  const maintenanceEvents: MaintenanceEvent[] = [
+  const maintenanceEvents: MaintenanceEvent[] = useMemo(() => [
     ...apkExpiringVehicles.map(vehicle => ({
       id: vehicle.id,
       vehicleId: vehicle.id,
@@ -82,7 +186,7 @@ export default function MaintenanceCalendar() {
       title: 'APK Inspection Due',
       description: `APK inspection required for ${vehicle.brand} ${vehicle.model}`,
       needsSpareVehicle: true,
-      currentReservations: monthReservations.filter(r => r.vehicleId === vehicle.id)
+      currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
     })),
     ...warrantyExpiringVehicles.map(vehicle => ({
       id: vehicle.id + 10000, // Avoid ID conflicts
@@ -104,43 +208,41 @@ export default function MaintenanceCalendar() {
       description: reservation.notes || `Scheduled maintenance for ${reservation.vehicle?.brand} ${reservation.vehicle?.model}`,
       needsSpareVehicle: false
     }))
-  ];
+  ], [apkExpiringVehicles, warrantyExpiringVehicles, maintenanceBlocks, reservations]);
 
-  // Filter events for current month and next 2 months (3 month view)
-  const threeMonthsOut = addMonths(currentDate, 2);
-  const currentMonthEvents = maintenanceEvents.filter(event => {
-    if (!event.date) return false;
-    const eventDate = new Date(event.date);
-    const isCurrentMonth = isSameMonth(eventDate, currentDate);
-    // Also include events if they're within the next 3 months for better planning
-    const isWithinThreeMonths = eventDate >= startOfMonth(currentDate) && eventDate <= endOfMonth(threeMonthsOut);
-    return isCurrentMonth;
-  });
-  
-  // Get all upcoming events (within next 6 months) for the list view
-  const sixMonthsOut = addMonths(new Date(), 6);
-  const upcomingEvents = maintenanceEvents.filter(event => {
-    if (!event.date) return false;
-    const eventDate = new Date(event.date);
-    const now = new Date();
-    return eventDate >= now && eventDate <= sixMonthsOut;
-  });
-
-  // Get calendar days (weekdays only - Monday to Friday)
-  const monthStartWeek = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const monthEndWeek = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const allDays = eachDayOfInterval({ start: monthStartWeek, end: monthEndWeek });
-  // Filter to only show weekdays (Monday = 1, Friday = 5)
-  const calendarDays = allDays.filter(day => {
-    const dayOfWeek = day.getDay();
-    return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday only
-  });
-
-  // Get events for a specific day
-  const getEventsForDay = (day: Date) => {
-    return currentMonthEvents.filter(event => {
+  // Helper function to get all maintenance events for a specific day
+  const getMaintenanceEventsForDate = (day: Date): MaintenanceEvent[] => {
+    if (!maintenanceEvents) return [];
+    
+    return maintenanceEvents.filter((event: MaintenanceEvent) => {
       if (!event.date) return false;
-      return isSameDay(new Date(event.date), day);
+      const eventDate = new Date(event.date);
+      return isSameDay(day, eventDate);
+    }).filter((event: MaintenanceEvent) => {
+      // Apply current filters
+      const vehicle = event.vehicle;
+      if (!vehicle) return false;
+      
+      // Search filter
+      if (maintenanceFilters.search && 
+          !vehicle.licensePlate?.toLowerCase().includes(maintenanceFilters.search.toLowerCase()) &&
+          !vehicle.brand?.toLowerCase().includes(maintenanceFilters.search.toLowerCase()) &&
+          !vehicle.model?.toLowerCase().includes(maintenanceFilters.search.toLowerCase()) &&
+          !event.title?.toLowerCase().includes(maintenanceFilters.search.toLowerCase())) {
+        return false;
+      }
+      
+      // Vehicle type filter
+      if (maintenanceFilters.type !== "all" && vehicle.vehicleType !== maintenanceFilters.type) {
+        return false;
+      }
+      
+      // Event type filter
+      if (maintenanceFilters.eventType !== "all" && event.type !== maintenanceFilters.eventType) {
+        return false;
+      }
+      
+      return true;
     });
   };
 
@@ -174,318 +276,484 @@ export default function MaintenanceCalendar() {
         return <Calendar className="w-3 h-3" />;
     }
   };
+  
+  // Extract unique vehicle types for filtering
+  const vehicleTypes = useMemo(() => {
+    if (!vehicles) return [];
+    const types = Array.from(new Set(vehicles.map(v => v.vehicleType).filter(Boolean))) as string[];
+    return types.sort();
+  }, [vehicles]);
+  
+  // Extract unique event types for filtering
+  const eventTypes = ['apk_due', 'warranty_expiring', 'scheduled_maintenance', 'in_service'];
+  
+  // Functions to navigate between months
+  const navigatePrevious = () => {
+    setCurrentDate(prevDate => addMonths(prevDate, -1));
+  };
+  
+  const navigateNext = () => {
+    setCurrentDate(prevDate => addMonths(prevDate, 1));
+  };
+  
+  // Reset to today
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+  
+  // Safe date parsing function to prevent invalid date errors
+  const safeParseDateISO = (dateString: string | null | undefined): Date | null => {
+    if (!dateString || dateString === 'undefined' || dateString === 'null') {
+      return null;
+    }
+    try {
+      const parsed = parseISO(dateString);
+      // Check if the parsed date is valid
+      if (isNaN(parsed.getTime())) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  // Safe format function to prevent format errors with invalid dates
+  const safeFormat = (date: Date | null | undefined, formatString: string, fallback: string = ''): string => {
+    if (!date) return fallback;
+    try {
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return fallback;
+      }
+      return format(date, formatString);
+    } catch {
+      return fallback;
+    }
+  };
+  
+  // Filter handlers
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMaintenanceFilters({
+      ...maintenanceFilters,
+      search: e.target.value
+    });
+  };
+  
+  const handleTypeChange = (value: string) => {
+    setMaintenanceFilters({
+      ...maintenanceFilters,
+      type: value
+    });
+  };
+  
+  const handleEventTypeChange = (value: string) => {
+    setMaintenanceFilters({
+      ...maintenanceFilters,
+      eventType: value
+    });
+  };
+  
+  // Generate calendar grid for month view
+  const calendarGrid = useMemo(() => {
+    const rows: Date[][] = [];
+    const days = dateRanges.days;
+    
+    // Group days into rows of 5 columns
+    for (let i = 0; i < days.length; i += COLUMNS) {
+      rows.push(days.slice(i, i + COLUMNS));
+    }
+    
+    return rows;
+  }, [dateRanges.days]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Maintenance Calendar</h1>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsScheduleDialogOpen(true)}
-            data-testid="button-schedule-maintenance"
-          >
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Maintenance Calendar</h1>
+        <div className="flex gap-2">
+          <Link href="/maintenance">
+            <Button variant="outline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list mr-2">
+                <line x1="8" x2="21" y1="6" y2="6" />
+                <line x1="8" x2="21" y1="12" y2="12" />
+                <line x1="8" x2="21" y1="18" y2="18" />
+                <line x1="3" x2="3" y1="6" y2="6" />
+                <line x1="3" x2="3" y1="12" y2="12" />
+                <line x1="3" x2="3" y1="18" y2="18" />
+              </svg>
+              List View
+            </Button>
+          </Link>
+          <Button onClick={() => setIsScheduleDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Schedule Maintenance
           </Button>
-          <div className="text-sm text-gray-600">
-            {currentMonthEvents.length} events this month • {upcomingEvents.length} upcoming
-          </div>
         </div>
       </div>
-
-      {/* Main Content Grid - Calendar and Upcoming List */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  {format(currentDate, 'MMMM yyyy')}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                    data-testid="button-prev-month"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(new Date())}
-                    data-testid="button-today"
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                    data-testid="button-next-month"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-5 gap-1 mb-4">
-                {/* Day headers */}
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
-                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-                    {day}
-                  </div>
-                ))}
-                
-                {/* Calendar days */}
-                {calendarDays.map(day => {
-                  const dayEvents = getEventsForDay(day);
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-                  const isToday = isSameDay(day, new Date());
-                  
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      className={`p-2 min-h-[120px] border border-gray-200 ${
-                        isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                      } ${isToday ? 'bg-blue-50' : ''}`}
-                      data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
-                    >
-                      <div className={`text-sm font-medium mb-1 ${
-                        isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                      } ${isToday ? 'text-blue-600' : ''}`}>
-                        {format(day, 'd')}
-                      </div>
-                      
-                      {/* Events for this day */}
-                      <div className="space-y-1">
-                        {dayEvents.map(event => {
-                          // Check if this is a maintenance block (scheduled maintenance)
-                          const isMaintenanceBlock = event.type === 'scheduled_maintenance';
-                          
-                          if (isMaintenanceBlock) {
-                            // For maintenance blocks, make them clickable to edit
-                            return (
-                              <div
-                                key={`${event.id}-${event.type}`}
-                                className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
-                                data-testid={`event-${event.id}-${event.type}`}
-                                onClick={async () => {
-                                  // Get the actual reservation data by finding it in the reservations
-                                  try {
-                                    const response = await fetch('/api/reservations');
-                                    const allReservations = await response.json();
-                                    const actualReservation = allReservations.find((r: any) => 
-                                      r.vehicleId === event.vehicleId && 
-                                      r.type === 'maintenance_block' &&
-                                      r.startDate === event.date
-                                    );
-                                    
-                                    if (actualReservation) {
-                                      handleEditMaintenance(actualReservation);
-                                    }
-                                  } catch (error) {
-                                    console.error('Failed to fetch reservation:', error);
-                                  }
-                                }}
-                              >
-                                <div className="flex items-center gap-1">
-                                  {getEventIcon(event.type)}
-                                  <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
-                                </div>
-                                <div className="truncate">{event.title}</div>
-                                {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                                  <Badge className="bg-orange-500 text-white text-xs mt-1">
-                                    Spare needed
-                                  </Badge>
-                                )}
-                              </div>
-                            );
-                          } else {
-                            // For other events (APK, warranty), keep the original link behavior
-                            return (
-                              <Link key={`${event.id}-${event.type}`} href={`/vehicles/${event.vehicleId}`}>
-                                <div
-                                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getEventTypeStyle(event.type)}`}
-                                  data-testid={`event-${event.id}-${event.type}`}
-                                >
-                                  <div className="flex items-center gap-1">
-                                    {getEventIcon(event.type)}
-                                    <span className="truncate">{formatLicensePlate(event.vehicle.licensePlate)}</span>
-                                  </div>
-                                  <div className="truncate">{event.title}</div>
-                                  {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                                    <Badge className="bg-orange-500 text-white text-xs mt-1">
-                                      Spare needed
-                                    </Badge>
-                                  )}
-                                </div>
-                              </Link>
-                            );
+      
+      <Card>
+        <CardHeader className="flex-row justify-between items-center space-y-0 pb-2">
+          <div>
+            <CardTitle>Maintenance Schedule</CardTitle>
+            <CardDescription>View and manage vehicle maintenance events</CardDescription>
+          </div>
+          <div className="flex-shrink-0">
+            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {/* Top Controls */}
+          <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+            {/* Calendar Navigation */}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={navigatePrevious}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h4 className="text-base font-medium w-40 text-center">{dateRanges.rangeText}</h4>
+              <Button variant="ghost" size="icon" onClick={navigateNext}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+            </div>
+            
+            {/* Maintenance Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Search vehicles or events..."
+                value={maintenanceFilters.search}
+                onChange={handleSearchChange}
+                className="w-50 h-9"
+              />
+              
+              {vehicleTypes.length > 0 && (
+                <Select value={maintenanceFilters.type} onValueChange={handleTypeChange}>
+                  <SelectTrigger className="w-40 h-9">
+                    <SelectValue placeholder="Vehicle Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {vehicleTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <Select value={maintenanceFilters.eventType} onValueChange={handleEventTypeChange}>
+                <SelectTrigger className="w-40 h-9">
+                  <SelectValue placeholder="Event Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectItem value="apk_due">APK Due</SelectItem>
+                  <SelectItem value="warranty_expiring">Warranty Expiring</SelectItem>
+                  <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Month View */}
+          <div className="mb-6">
+            {/* Calendar Grid */}
+            <div className="border rounded-lg overflow-hidden">
+              {calendarGrid.map((week, weekIndex) => (
+                <div key={weekIndex} className="grid grid-cols-5 divide-x border-b last:border-b-0">
+                  {week.map((day, dayIndex) => {
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    // Get maintenance events for this day with filters applied
+                    const dayEvents = getMaintenanceEventsForDate(day);
+                    
+                    return (
+                      <div
+                        key={dayIndex}
+                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
+                        onClick={(e) => {
+                          if (isCurrentMonth) {
+                            const allDayEvents = getMaintenanceEventsForDate(day);
+                            if (allDayEvents.length > 0) {
+                              // If there are events, show them in dialog
+                              console.log('Maintenance date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
+                              openDayDialog(day);
+                            } else {
+                              // If no events, open schedule dialog
+                              console.log('Maintenance date box clicked - no events, opening schedule dialog');
+                              setIsScheduleDialogOpen(true);
+                            }
                           }
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Upcoming Maintenance List - Right Side */}
-        <div className="lg:col-span-1">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="text-lg">Upcoming Maintenance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingEvents.length === 0 ? (
-                <p className="text-gray-500 text-sm">No maintenance events scheduled in the next 6 months.</p>
-              ) : (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                  {upcomingEvents
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                    .map(event => (
-                      <div key={`${event.id}-${event.type}`} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <div className="flex items-start gap-2 mb-2">
-                          {getEventIcon(event.type)}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">
-                              {event.vehicle.brand} {event.vehicle.model}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              ({formatLicensePlate(event.vehicle.licensePlate)})
-                            </div>
-                            <div className="text-xs text-gray-600 mt-1">
-                              Due: {format(new Date(event.date), 'MMM d, yyyy')}
-                            </div>
+                        }}
+                      >
+                        {/* Quick add button - only shows on hover for current month days */}
+                        {isCurrentMonth && (
+                          <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsScheduleDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          <Badge className={`${getEventTypeStyle(event.type)} text-xs`}>
-                            {event.title}
-                          </Badge>
-                          {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs">
-                              Spare needed
+                        )}
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-500 font-medium">
+                              {safeFormat(day, "EEE", "???")}
+                            </span>
+                            <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
+                              {safeFormat(day, "d", "?")}
+                            </span>
+                          </div>
+                          {dayEvents.length > 0 && (
+                            <Badge variant="outline" className="text-sm font-medium">
+                              {dayEvents.length}
                             </Badge>
                           )}
                         </div>
                         
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-xs h-7"
-                            onClick={() => setIsScheduleDialogOpen(true)}
-                            data-testid={`button-schedule-${event.vehicleId}`}
-                          >
-                            Schedule
-                          </Button>
+                        {/* Events for this day */}
+                        <div className="space-y-1">
+                          {dayEvents.map(event => {
+                            const isMaintenanceBlock = event.type === 'scheduled_maintenance';
+                            
+                            return (
+                              <HoverCard key={`${event.id}-${event.type}`}>
+                                <HoverCardTrigger asChild>
+                                  <div
+                                    className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${getEventTypeStyle(event.type)} group`}
+                                    data-testid={`event-${event.id}-${event.type}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1 min-w-0">
+                                        {getEventIcon(event.type)}
+                                        <span className="truncate">{displayLicensePlate(event.vehicle.licensePlate)}</span>
+                                      </div>
+                                      
+                                      {/* Action buttons - only show on hover */}
+                                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {isMaintenanceBlock && (
+                                          <Button 
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-4 w-4 p-0"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                const response = await fetch('/api/reservations');
+                                                const allReservations = await response.json();
+                                                const actualReservation = allReservations.find((r: any) => 
+                                                  r.vehicleId === event.vehicleId && 
+                                                  r.type === 'maintenance_block' &&
+                                                  r.startDate === event.date
+                                                );
+                                                
+                                                if (actualReservation) {
+                                                  handleEditMaintenance(actualReservation);
+                                                }
+                                              } catch (error) {
+                                                console.error('Failed to fetch reservation:', error);
+                                              }
+                                            }}
+                                            data-testid={`button-edit-${event.id}`}
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                        <Link href={`/vehicles/${event.vehicleId}`}>
+                                          <Button 
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-4 w-4 p-0"
+                                            data-testid={`button-view-${event.vehicleId}`}
+                                          >
+                                            <Eye className="h-3 w-3" />
+                                          </Button>
+                                        </Link>
+                                      </div>
+                                    </div>
+                                    <div className="truncate mt-1">{event.title}</div>
+                                    {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
+                                      <Badge className="bg-orange-500 text-white text-xs mt-1">
+                                        Spare needed
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-80">
+                                  <div className="flex justify-between space-x-4">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        {getEventIcon(event.type)}
+                                        <h4 className="text-sm font-semibold">{event.title}</h4>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground">
+                                        {event.vehicle.brand} {event.vehicle.model}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {displayLicensePlate(event.vehicle.licensePlate)}
+                                      </p>
+                                      <p className="text-sm">
+                                        {event.description}
+                                      </p>
+                                      <div className="flex items-center pt-2 gap-2">
+                                        {isMaintenanceBlock && (
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={async () => {
+                                              try {
+                                                const response = await fetch('/api/reservations');
+                                                const allReservations = await response.json();
+                                                const actualReservation = allReservations.find((r: any) => 
+                                                  r.vehicleId === event.vehicleId && 
+                                                  r.type === 'maintenance_block' &&
+                                                  r.startDate === event.date
+                                                );
+                                                
+                                                if (actualReservation) {
+                                                  handleEditMaintenance(actualReservation);
+                                                }
+                                              } catch (error) {
+                                                console.error('Failed to fetch reservation:', error);
+                                              }
+                                            }}
+                                            data-testid={`hover-edit-${event.id}`}
+                                          >
+                                            <Edit className="h-3 w-3 mr-1" />
+                                            Edit
+                                          </Button>
+                                        )}
+                                        <Link href={`/vehicles/${event.vehicleId}`}>
+                                          <Button size="sm" variant="outline" data-testid={`hover-view-${event.vehicleId}`}>
+                                            <Eye className="h-3 w-3 mr-1" />
+                                            View Vehicle
+                                          </Button>
+                                        </Link>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Day Dialog for viewing maintenance events */}
+      <Dialog open={dayDialogOpen} onOpenChange={(open) => { 
+        if (!open) closeDayDialog(); 
+      }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Maintenance Events - {selectedDay ? safeFormat(selectedDay, 'MMMM d, yyyy', 'Selected Day') : 'Day'}</DialogTitle>
+            <DialogDescription>
+              View and manage maintenance events for this day
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDay && (
+            <div className="space-y-4">
+              {getMaintenanceEventsForDate(selectedDay).map(event => {
+                const isMaintenanceBlock = event.type === 'scheduled_maintenance';
+                
+                return (
+                  <Card key={`${event.id}-${event.type}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            {getEventIcon(event.type)}
+                            <h4 className="font-semibold">{event.title}</h4>
+                            <Badge className={getEventTypeStyle(event.type)}>
+                              {event.type.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {event.vehicle.brand} {event.vehicle.model} - {displayLicensePlate(event.vehicle.licensePlate)}
+                          </p>
+                          <p className="text-sm">{event.description}</p>
+                          {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
+                            <Badge className="bg-orange-100 text-orange-800">
+                              Spare vehicle needed
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          {isMaintenanceBlock && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/reservations');
+                                  const allReservations = await response.json();
+                                  const actualReservation = allReservations.find((r: any) => 
+                                    r.vehicleId === event.vehicleId && 
+                                    r.type === 'maintenance_block' &&
+                                    r.startDate === event.date
+                                  );
+                                  
+                                  if (actualReservation) {
+                                    handleEditMaintenance(actualReservation);
+                                    closeDayDialog();
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to fetch reservation:', error);
+                                }
+                              }}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
                           <Link href={`/vehicles/${event.vehicleId}`}>
-                            <Button variant="outline" size="sm" className="text-xs h-7" data-testid={`button-view-vehicle-${event.vehicleId}`}>
-                              View
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Vehicle
                             </Button>
                           </Link>
                         </div>
                       </div>
-                    ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              
+              {getMaintenanceEventsForDate(selectedDay).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No maintenance events scheduled for this day</p>
+                  <Button 
+                    className="mt-4" 
+                    onClick={() => {
+                      closeDayDialog();
+                      setIsScheduleDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule Maintenance
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Maintenance Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              <div>
-                <div className="text-2xl font-bold text-red-600">
-                  {upcomingEvents.filter(e => e.type === 'apk_due').length}
-                </div>
-                <div className="text-sm text-gray-600">APK Due (6 months)</div>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-500" />
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">
-                  {upcomingEvents.filter(e => e.type === 'warranty_expiring').length}
-                </div>
-                <div className="text-sm text-gray-600">Warranties Expiring</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Car className="w-5 h-5 text-orange-500" />
-              <div>
-                <div className="text-2xl font-bold text-orange-600">
-                  {upcomingEvents.filter(e => e.needsSpareVehicle && e.currentReservations && e.currentReservations.length > 0).length}
-                </div>
-                <div className="text-sm text-gray-600">Spare Vehicles Needed</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-blue-500" />
-              <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {upcomingEvents.length}
-                </div>
-                <div className="text-sm text-gray-600">Total Upcoming</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-
-      {/* All Maintenance Reservations List */}
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5" />
-              All Scheduled Maintenance
-            </CardTitle>
-            <CardDescription>
-              Complete list of all maintenance reservations and service appointments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MaintenanceReservationsList 
-              onEditReservation={handleEditMaintenance}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Schedule Maintenance Dialog */}
       <ScheduleMaintenanceDialog
@@ -493,182 +761,48 @@ export default function MaintenanceCalendar() {
         onOpenChange={(open) => {
           setIsScheduleDialogOpen(open);
           if (!open) {
-            setEditingReservation(null); // Clear editing state when dialog closes
+            setEditingReservation(null);
           }
         }}
         editingReservation={editingReservation}
         onSuccess={() => {
-          // Refresh the calendar data
-          setCurrentDate(new Date(currentDate)); // Force re-render
-          setEditingReservation(null); // Clear editing state
+          // Invalidate all relevant queries to refresh the calendar
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/reservations/range', {
+              startDate: format(dateRanges.start, "yyyy-MM-dd"),
+              endDate: format(dateRanges.end, "yyyy-MM-dd")
+            }]
+          });
+          setCurrentDate(new Date(currentDate));
+          setEditingReservation(null);
         }}
       />
 
-      {/* New Simple Edit Dialog */}
+      {/* Maintenance Edit Dialog */}
       <MaintenanceEditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         reservation={selectedReservation}
+        onSuccess={() => {
+          // Invalidate all relevant queries to refresh the calendar
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/reservations/range', {
+              startDate: format(dateRanges.start, "yyyy-MM-dd"),
+              endDate: format(dateRanges.end, "yyyy-MM-dd")
+            }]
+          });
+          setEditDialogOpen(false);
+          setSelectedReservation(null);
+        }}
       />
-    </div>
-  );
-}
-
-// Component to display all maintenance reservations
-function MaintenanceReservationsList({ onEditReservation }: { onEditReservation: (reservation: Reservation) => void }) {
-  // Fetch all reservations and filter for maintenance blocks
-  const { data: allReservations = [], isLoading } = useQuery<Reservation[]>({
-    queryKey: ['/api/reservations'],
-  });
-
-  // Filter for maintenance blocks only
-  const maintenanceReservations = allReservations.filter(r => r.type === 'maintenance_block');
-
-  // Sort by date (newest first)
-  const sortedReservations = maintenanceReservations.sort((a, b) => 
-    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading maintenance reservations...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (maintenanceReservations.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No maintenance scheduled</h3>
-        <p className="text-gray-500">No maintenance appointments have been scheduled yet.</p>
-      </div>
-    );
-  }
-
-  // Extract maintenance type from notes
-  const getMaintenanceType = (notes: string) => {
-    if (!notes) return 'maintenance';
-    const match = notes.match(/^([^:]+):/);
-    return match ? match[1] : 'maintenance';
-  };
-
-  // Get maintenance description from notes
-  const getMaintenanceDescription = (notes: string) => {
-    if (!notes) return '';
-    const match = notes.match(/^[^:]+:\s*(.+?)(\n|$)/);
-    return match ? match[1] : notes.split('\n')[0];
-  };
-
-  // Get icon for maintenance type
-  const getMaintenanceIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'breakdown':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'apk_inspection':
-        return <Clock className="w-4 h-4 text-green-500" />;
-      case 'tire_replacement':
-        return <Car className="w-4 h-4 text-orange-500" />;
-      default:
-        return <Wrench className="w-4 h-4 text-blue-500" />;
-    }
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {sortedReservations.map((reservation) => {
-        const maintenanceType = getMaintenanceType(reservation.notes || '');
-        const description = getMaintenanceDescription(reservation.notes || '');
-        
-        return (
-          <div
-            key={reservation.id}
-            className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3 flex-1">
-                {getMaintenanceIcon(maintenanceType)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className="font-medium text-gray-900">
-                      {reservation.vehicle?.brand} {reservation.vehicle?.model}
-                    </h4>
-                    <span className="text-sm text-gray-500">
-                      ({formatLicensePlate(reservation.vehicle?.licensePlate || '')})
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>
-                        {format(new Date(reservation.startDate), 'MMM d, yyyy')}
-                        {reservation.endDate && reservation.endDate !== reservation.startDate && (
-                          <span> - {format(new Date(reservation.endDate), 'MMM d, yyyy')}</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium capitalize">{maintenanceType.replace('_', ' ')}</span>
-                    </div>
-                  </div>
-                  
-                  {description && (
-                    <p className="text-sm text-gray-700 mb-2">{description}</p>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge className={`text-xs ${getStatusColor(reservation.status)}`}>
-                      {reservation.status}
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      Scheduled {format(new Date(reservation.createdAt || ''), 'MMM d, yyyy')}
-                    </span>
-                    {reservation.createdBy && (
-                      <span className="text-xs text-gray-500">
-                        by {reservation.createdBy}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 ml-4">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => onEditReservation(reservation)}
-                >
-                  Edit
-                </Button>
-                <Link href={`/vehicles/${reservation.vehicleId}`}>
-                  <Button variant="outline" size="sm">
-                    View Vehicle
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
