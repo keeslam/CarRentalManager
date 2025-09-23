@@ -1639,7 +1639,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceReservation.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
+            notes: `Spare vehicle for reservation ${originalReservation.id} during maintenance of vehicle ${maintenanceData.vehicleId}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
           });
         });
         
