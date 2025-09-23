@@ -4,7 +4,7 @@ import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Vehicle, Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { 
@@ -49,6 +49,9 @@ type VehicleFilters = {
 export default function ReservationCalendarPage() {
   // Query client for cache invalidation
   const queryClient = useQueryClient();
+  
+  // Navigation
+  const [_, navigate] = useLocation();
   
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -624,8 +627,10 @@ export default function ReservationCalendarPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       console.log('Main reservation item clicked for:', res.id);
-                                      handleViewReservation(res);
+                                      // Navigate directly to reservation details page
+                                      navigate(`/reservations/${res.id}`);
                                     }}
+                                    data-testid={`reservation-item-${res.id}`}
                                   >
                                     <div className="space-y-1">
                                       <div className="flex justify-between items-center">
