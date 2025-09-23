@@ -219,7 +219,73 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   endDate: z.string().optional().or(z.null()), // Make end date optional for open-ended rentals
   type: z.enum(["standard", "replacement", "maintenance_block"]).optional(),
   replacementForReservationId: z.number().optional(),
-  customerId: z.number().optional().or(z.null()) // Make customerId optional for maintenance blocks
+  customerId: z.number().optional().or(z.null()), // Make customerId optional for maintenance blocks
+  vehicleId: z.number().optional().or(z.null()), // Allow null for placeholder spare vehicles
+  placeholderSpare: z.boolean().optional().default(false) // Default to false for normal reservations
+})
+.refine((data) => {
+  const type = data.type ?? 'standard'; // Handle default type
+  const noVehicle = data.vehicleId == null; // Handles both null and undefined
+  
+  // If placeholderSpare is true, then vehicleId must be null/undefined, type must be 'replacement', and replacementForReservationId must be present
+  if (data.placeholderSpare === true) {
+    return noVehicle && 
+           type === 'replacement' && 
+           data.replacementForReservationId != null;
+  }
+  return true;
+}, {
+  message: "Placeholder spare reservations must have no vehicleId, type 'replacement', and a replacementForReservationId",
+  path: ["placeholderSpare"]
+})
+.refine((data) => {
+  const noVehicle = data.vehicleId == null; // Handles both null and undefined
+  
+  // If vehicleId is null/undefined, then placeholderSpare must be true
+  if (noVehicle) {
+    return data.placeholderSpare === true;
+  }
+  return true;
+}, {
+  message: "Reservations with no vehicleId must be placeholder spare reservations",
+  path: ["vehicleId"]
+})
+.refine((data) => {
+  const type = data.type ?? 'standard'; // Handle default type
+  const noVehicle = data.vehicleId == null; // Handles both null and undefined
+  
+  // If type is 'maintenance_block', then vehicleId must be present
+  if (type === 'maintenance_block') {
+    return !noVehicle;
+  }
+  return true;
+}, {
+  message: "Maintenance block reservations must have a vehicleId",
+  path: ["type"]
+})
+.refine((data) => {
+  const type = data.type ?? 'standard'; // Handle default type
+  
+  // All replacement reservations (placeholder or not) must have replacementForReservationId
+  if (type === 'replacement') {
+    return data.replacementForReservationId != null;
+  }
+  return true;
+}, {
+  message: "Replacement reservations must have a replacementForReservationId",
+  path: ["type"]
+})
+.refine((data) => {
+  const noVehicle = data.vehicleId == null; // Handles both null and undefined
+  
+  // Non-placeholder reservations must have a vehicleId
+  if (data.placeholderSpare !== true) {
+    return !noVehicle;
+  }
+  return true;
+}, {
+  message: "Non-placeholder reservations must have a vehicleId",
+  path: ["vehicleId"]
 });
 
 // Expenses table
