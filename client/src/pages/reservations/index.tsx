@@ -300,6 +300,7 @@ export default function ReservationsIndex() {
       header: "Vehicle",
       cell: ({ row }) => {
         const vehicle = row.original.vehicle;
+        const reservation = row.original;
         return vehicle ? (
           <div>
             <div className="font-medium flex items-center gap-1">
@@ -307,6 +308,11 @@ export default function ReservationsIndex() {
                 {formatLicensePlate(vehicle.licensePlate)}
               </span>
               <span>{vehicle.brand} {vehicle.model}</span>
+              {reservation.type === 'replacement' && (
+                <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs font-semibold border border-orange-200">
+                  SPARE
+                </span>
+              )}
             </div>
             <div className="text-sm text-gray-500 flex flex-wrap items-center mt-1 gap-2">
               {vehicle.vehicleType && (
@@ -315,6 +321,11 @@ export default function ReservationsIndex() {
               {vehicle.apkDate && (
                 <span className="px-1.5 py-0.5 rounded-full text-xs bg-blue-50 text-blue-800 border border-blue-100">
                   APK: {formatDate(vehicle.apkDate)}
+                </span>
+              )}
+              {reservation.type === 'replacement' && reservation.replacementForReservationId && (
+                <span className="px-1.5 py-0.5 rounded-full text-xs bg-orange-50 text-orange-800 border border-orange-100">
+                  Spare for #{reservation.replacementForReservationId}
                 </span>
               )}
             </div>

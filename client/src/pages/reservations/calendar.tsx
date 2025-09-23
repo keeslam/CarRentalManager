@@ -600,6 +600,11 @@ export default function ReservationCalendarPage() {
                                       <div className="flex justify-between items-center">
                                         <div className="truncate flex items-center">
                                           {displayLicensePlate(res.vehicle?.licensePlate || '')}
+                                          {res.type === 'replacement' && (
+                                            <span className="ml-1 inline-block bg-orange-200 text-orange-800 text-[10px] px-1 rounded-sm font-medium">
+                                              SPARE
+                                            </span>
+                                          )}
                                           {isPickupDay && 
                                             <span className="ml-1 inline-block bg-green-200 text-green-800 text-[10px] px-1 rounded-sm font-medium">out</span>
                                           }
@@ -639,19 +644,28 @@ export default function ReservationCalendarPage() {
                                   <div className="space-y-2">
                                     {/* Header with status badge */}
                                     <div className="flex items-center justify-between border-b p-3">
-                                      <h4 className="font-medium">Reservation Details</h4>
-                                      <Badge 
-                                        className={`${
-                                          res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
-                                          res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
-                                          res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
-                                          res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
-                                          'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
-                                        }`}
-                                        variant="outline"
-                                      >
-                                        {formatReservationStatus(res.status)}
-                                      </Badge>
+                                      <h4 className="font-medium">
+                                        {res.type === 'replacement' ? 'Spare Vehicle Assignment' : 'Reservation Details'}
+                                      </h4>
+                                      <div className="flex gap-2">
+                                        {res.type === 'replacement' && (
+                                          <Badge className="bg-orange-100 text-orange-800 border-orange-200" variant="outline">
+                                            SPARE CAR
+                                          </Badge>
+                                        )}
+                                        <Badge 
+                                          className={`${
+                                            res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
+                                            res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
+                                            res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
+                                            res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
+                                            'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
+                                          }`}
+                                          variant="outline"
+                                        >
+                                          {formatReservationStatus(res.status)}
+                                        </Badge>
+                                      </div>
                                     </div>
                                     
                                     {/* Vehicle details */}

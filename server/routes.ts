@@ -1524,12 +1524,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // PRE-VALIDATE ALL ASSIGNMENTS BEFORE ANY UPDATES (for atomicity)
       const validationPromises = spareVehicleAssignments.map(async (assignment: any) => {
-        console.log('Processing assignment:', assignment);
         const { reservationId, spareVehicleId } = assignment;
         
-        console.log(`Looking up reservation ${reservationId}`);
         const originalReservation = await storage.getReservation(reservationId);
-        console.log(`Found reservation:`, originalReservation ? 'yes' : 'no');
         if (!originalReservation) {
           throw new Error(`Reservation ${reservationId} not found`);
         }
@@ -1590,34 +1587,11 @@ export async function registerRoutes(app: Express): Promise<void> {
           throw new Error(`Spare vehicle ${spareVehicleId} is not available during overlap period`);
         }
         
-        console.log(`Returning validation result for reservation ${originalReservation.id}`);
         return { originalReservation, overlapStart, overlapEnd, spareVehicleId };
       });
       
       // Execute all validations (will throw if any fail)
-      console.log('Executing all validations...');
-      let validatedAssignments;
-      try {
-        validatedAssignments = await Promise.all(validationPromises);
-        console.log('All validations completed successfully');
-        
-        // Debug logging to identify the issue
-        console.log('validatedAssignments:', validatedAssignments);
-        if (validatedAssignments && validatedAssignments.length > 0) {
-          validatedAssignments.forEach((assignment, index) => {
-            console.log(`Assignment ${index}:`, {
-              hasOriginalReservation: !!assignment.originalReservation,
-              originalReservationId: assignment.originalReservation?.id,
-              spareVehicleId: assignment.spareVehicleId
-            });
-          });
-        } else {
-          console.log('validatedAssignments is empty or undefined');
-        }
-      } catch (validationError) {
-        console.error('Validation error:', validationError);
-        throw validationError;
-      }
+      const validatedAssignments = await Promise.all(validationPromises);
       
       let maintenanceReservation;
       let updatedReservations;
@@ -1650,11 +1624,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
         
         // CREATE REPLACEMENTS FIRST for true atomicity
-        if (!validatedAssignments || validatedAssignments.length === 0) {
-          console.error('validatedAssignments is null or empty, cannot create replacements');
-          return res.status(400).json({ message: "No valid spare vehicle assignments found" });
-        }
-        
         const replacementPromises = validatedAssignments.map(async (validated) => {
           const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
           
