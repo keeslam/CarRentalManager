@@ -627,8 +627,7 @@ export default function ReservationCalendarPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       console.log('Main reservation item clicked for:', res.id);
-                                      // Navigate directly to reservation details page
-                                      navigate(`/reservations/${res.id}`);
+                                      handleViewReservation(res);
                                     }}
                                     data-testid={`reservation-item-${res.id}`}
                                   >
@@ -876,47 +875,150 @@ export default function ReservationCalendarPage() {
             setSelectedReservation(null);
           }
         }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Reservation Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedReservation?.type === 'replacement' ? 'Spare Vehicle Assignment' : 'Reservation Details'}
+              {selectedReservation?.type === 'replacement' && (
+                <Badge className="bg-orange-100 text-orange-800 border-orange-200" variant="outline">
+                  SPARE CAR
+                </Badge>
+              )}
+            </DialogTitle>
             <DialogDescription>
-              View detailed information about this reservation including dates, customer, vehicle, and pricing.
+              {selectedReservation ? `Reservation #${selectedReservation.id} - ${selectedReservation.customer?.name || 'No customer'}` : 'View detailed reservation information'}
             </DialogDescription>
           </DialogHeader>
           {selectedReservation && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Customer</label>
-                  <p className="text-sm">{selectedReservation.customer?.name || 'Not specified'}</p>
+            <div className="space-y-6">
+              {/* Status and type badges */}
+              <div className="flex gap-2 flex-wrap">
+                <Badge 
+                  className={`${
+                    selectedReservation.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 border-green-200' : 
+                    selectedReservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    selectedReservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                    'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}
+                  variant="outline"
+                >
+                  {formatReservationStatus(selectedReservation.status)}
+                </Badge>
+                {selectedReservation.type === 'replacement' && selectedReservation.replacementForReservationId && (
+                  <Badge className="bg-orange-50 text-orange-800 border-orange-200" variant="outline">
+                    Spare for #{selectedReservation.replacementForReservationId}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Vehicle Details */}
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Vehicle Information
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-semibold">
+                      {displayLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
+                    </span>
+                    <span className="font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</span>
+                    {selectedReservation.type === 'replacement' && (
+                      <span className="bg-orange-200 text-orange-900 text-xs px-2 py-1 rounded font-bold">
+                        🚗 SPARE
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Vehicle</label>
-                  <p className="text-sm">{selectedReservation.vehicle?.licensePlate || 'N/A'} - {selectedReservation.vehicle?.brand || ''} {selectedReservation.vehicle?.model || ''}</p>
+              </div>
+
+              {/* Customer Details */}
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Customer Information
+                </h3>
+                <div className="space-y-2">
+                  <div className="font-medium">{selectedReservation.customer?.name || 'No customer specified'}</div>
+                  {selectedReservation.customer?.email && (
+                    <div className="text-sm text-gray-600">{selectedReservation.customer.email}</div>
+                  )}
+                  {selectedReservation.customer?.phone && (
+                    <div className="text-sm text-gray-600">{selectedReservation.customer.phone}</div>
+                  )}
                 </div>
+              </div>
+
+              {/* Dates and Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-sm">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
+                  <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">End Date</label>
-                  <p className="text-sm">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
+                  <p className="text-sm font-medium">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <Badge className="text-xs">{formatReservationStatus(selectedReservation.status)}</Badge>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Total Price</label>
-                  <p className="text-sm">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+                  <label className="text-sm font-medium text-gray-500">Duration</label>
+                  <p className="text-sm font-medium">
+                    {(() => {
+                      if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
+                      const startDate = safeParseDateISO(selectedReservation.startDate);
+                      const endDate = safeParseDateISO(selectedReservation.endDate);
+                      if (!startDate || !endDate) return 'Invalid dates';
+                      const duration = differenceInDays(endDate, startDate) + 1;
+                      return `${duration} ${duration === 1 ? 'day' : 'days'}`;
+                    })()}
+                  </p>
                 </div>
               </div>
+
+              {/* Price */}
+              <div>
+                <label className="text-sm font-medium text-gray-500">Total Price</label>
+                <p className="text-lg font-semibold">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+              </div>
+
+              {/* Notes */}
               {selectedReservation.notes && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Notes</label>
-                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedReservation.notes}</p>
+                  <div className="bg-gray-50 p-3 rounded-md mt-1">
+                    <p className="text-sm whitespace-pre-wrap">{selectedReservation.notes}</p>
+                  </div>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleEditReservation(selectedReservation);
+                  }}
+                  data-testid="button-edit-reservation-dialog"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Reservation
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleStatusChange(selectedReservation);
+                  }}
+                  data-testid="button-change-status-dialog"
+                >
+                  <ClipboardEdit className="mr-2 h-4 w-4" />
+                  Change Status
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
