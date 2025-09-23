@@ -1593,6 +1593,16 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Execute all validations (will throw if any fail)
       const validatedAssignments = await Promise.all(validationPromises);
       
+      // Debug logging to identify the issue
+      console.log('validatedAssignments:', validatedAssignments);
+      validatedAssignments.forEach((assignment, index) => {
+        console.log(`Assignment ${index}:`, {
+          hasOriginalReservation: !!assignment.originalReservation,
+          originalReservationId: assignment.originalReservation?.id,
+          spareVehicleId: assignment.spareVehicleId
+        });
+      });
+      
       let maintenanceReservation;
       let updatedReservations;
       const user = req.user;
