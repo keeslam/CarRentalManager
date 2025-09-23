@@ -8,7 +8,7 @@ import {
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification
 } from "../shared/schema";
-import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
+import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike } from "drizzle-orm";
 import { IStorage } from "./storage";
@@ -1175,5 +1175,366 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedSettings || undefined;
+  }
+
+  // Placeholder spare vehicle methods (Missing implementations)
+  async getPlaceholderReservations(startDate?: string, endDate?: string): Promise<Reservation[]> {
+    const conditions = [
+      eq(reservations.placeholderSpare, true),
+      eq(reservations.type, 'replacement'),
+      sql`${reservations.vehicleId} IS NULL`
+    ];
+
+    if (startDate) {
+      conditions.push(gte(reservations.startDate, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(reservations.startDate, endDate));
+    }
+
+    return await db
+      .select()
+      .from(reservations)
+      .where(and(...conditions));
+  }
+
+  async getPlaceholderReservationsNeedingAssignment(daysAhead: number = 7): Promise<Reservation[]> {
+    const cutoffDate = addDays(new Date(), daysAhead);
+    const cutoffDateString = cutoffDate.toISOString().split('T')[0];
+    
+    return await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.placeholderSpare, true),
+          eq(reservations.type, 'replacement'),
+          sql`${reservations.vehicleId} IS NULL`,
+          lte(reservations.startDate, cutoffDateString)
+        )
+      );
+  }
+
+  async createPlaceholderReservation(originalReservationId: number, customerId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    // Verify the original reservation exists
+    const [originalReservation] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.id, originalReservationId));
+    
+    if (!originalReservation) {
+      throw new Error('Original reservation not found');
+    }
+
+    // Check for duplicate placeholder
+    const [duplicate] = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.replacementForReservationId, originalReservationId),
+          eq(reservations.placeholderSpare, true)
+        )
+      );
+
+    if (duplicate) {
+      throw new Error('A placeholder spare reservation already exists for this original reservation');
+    }
+
+    const placeholderData: InsertReservation = {
+      vehicleId: null,
+      customerId,
+      startDate,
+      endDate: endDate || null,
+      status: 'pending',
+      type: 'replacement',
+      replacementForReservationId: originalReservationId,
+      placeholderSpare: true,
+      notes: `TBD spare vehicle for reservation #${originalReservationId}`,
+      totalPrice: null,
+      damageCheckPath: null
+    };
+
+    const [placeholder] = await db
+      .insert(reservations)
+      .values(placeholderData)
+      .returning();
+
+    // Create notification for pending spare assignment
+    await this.createCustomNotification({
+      title: "Spare Vehicle Assignment Required",
+      description: `TBD spare vehicle needs assignment for ${startDate}${endDate ? ` - ${endDate}` : ''}`,
+      date: startDate,
+      type: "spare_assignment",
+      isRead: false,
+      link: "/dashboard",
+      icon: "Car",
+      priority: "high",
+      userId: null // System-wide notification
+    });
+
+    return placeholder;
+  }
+
+  async assignVehicleToPlaceholder(reservationId: number, vehicleId: number, endDate?: string): Promise<Reservation | undefined> {
+    // Get the placeholder reservation
+    const [reservation] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.id, reservationId));
+
+    if (!reservation || !reservation.placeholderSpare || reservation.vehicleId != null || reservation.type !== 'replacement') {
+      return undefined;
+    }
+
+    // Verify the target vehicle exists
+    const [vehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, vehicleId));
+
+    if (!vehicle) {
+      throw new Error('Vehicle not found');
+    }
+
+    // Check if vehicle is available (not in service)
+    if (vehicle.maintenanceStatus === 'in_service') {
+      throw new Error('Vehicle is currently in service and not available');
+    }
+
+    // For open-ended placeholders, require an explicit endDate for assignment
+    const assignmentEndDate = endDate || reservation.endDate;
+    if (!assignmentEndDate && !reservation.endDate) {
+      throw new Error('End date must be specified when assigning vehicle to open-ended placeholder reservation');
+    }
+
+    // Check for conflicts with the new vehicle assignment
+    const conflicts = await this.checkReservationConflicts(
+      vehicleId,
+      reservation.startDate,
+      assignmentEndDate || reservation.startDate,
+      reservationId
+    );
+
+    if (conflicts.length > 0) {
+      throw new Error('Vehicle has conflicting reservations during the assignment period');
+    }
+
+    // Assign the vehicle to the placeholder
+    const [updatedReservation] = await db
+      .update(reservations)
+      .set({
+        vehicleId,
+        endDate: assignmentEndDate,
+        placeholderSpare: false,
+        notes: `Spare vehicle ${vehicle.licensePlate} (${vehicle.brand} ${vehicle.model}) assigned for reservation #${reservation.replacementForReservationId}`,
+        updatedAt: new Date()
+      })
+      .where(eq(reservations.id, reservationId))
+      .returning();
+
+    // Mark related notifications as read when assignment is complete
+    await db
+      .update(customNotifications)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(customNotifications.type, "spare_assignment"),
+          eq(customNotifications.date, reservation.startDate),
+          eq(customNotifications.isRead, false)
+        )
+      );
+
+    return updatedReservation || undefined;
+  }
+
+  // Other missing spare vehicle methods
+  async getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]> {
+    // Get all vehicles
+    let vehicleQuery = db.select().from(vehicles);
+
+    if (excludeVehicleId) {
+      vehicleQuery = vehicleQuery.where(not(eq(vehicles.id, excludeVehicleId)));
+    }
+
+    const allVehicles = await vehicleQuery;
+
+    // Get conflicting reservations in the date range
+    const conflictingReservations = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          not(eq(reservations.status, 'cancelled')),
+          sql`${reservations.vehicleId} IS NOT NULL`,
+          or(
+            and(
+              lte(reservations.startDate, endDate),
+              gte(reservations.endDate, startDate)
+            ),
+            and(
+              lte(reservations.startDate, endDate),
+              sql`${reservations.endDate} IS NULL`
+            )
+          )
+        )
+      );
+
+    const unavailableVehicleIds = new Set(
+      conflictingReservations.map(r => r.vehicleId).filter(id => id !== null)
+    );
+
+    return allVehicles.filter(vehicle => 
+      !unavailableVehicleIds.has(vehicle.id) && 
+      vehicle.maintenanceStatus !== 'in_service'
+    );
+  }
+
+  async getActiveReplacementByOriginal(originalReservationId: number): Promise<Reservation | undefined> {
+    const [replacement] = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.replacementForReservationId, originalReservationId),
+          eq(reservations.type, 'replacement'),
+          not(eq(reservations.status, 'cancelled'))
+        )
+      );
+    
+    return replacement || undefined;
+  }
+
+  async createReplacementReservation(originalReservationId: number, spareVehicleId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    const [original] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.id, originalReservationId));
+      
+    if (!original) {
+      throw new Error('Original reservation not found');
+    }
+
+    // Ensure spare vehicle is not the same as original
+    if (spareVehicleId === original.vehicleId) {
+      throw new Error('Spare vehicle cannot be the same as original vehicle');
+    }
+
+    // Get vehicle details for meaningful notes
+    const [originalVehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, original.vehicleId!));
+
+    const [spareVehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, spareVehicleId));
+
+    const finalEndDate = endDate || original.endDate;
+
+    // Check for conflicts on the spare vehicle
+    const conflicts = await this.checkReservationConflicts(spareVehicleId, startDate, finalEndDate || startDate, null);
+    if (conflicts.length > 0) {
+      throw new Error('Spare vehicle has conflicting reservations');
+    }
+
+    const originalVehicleInfo = originalVehicle 
+      ? `${originalVehicle.licensePlate} (${originalVehicle.brand} ${originalVehicle.model})`
+      : `Vehicle ID ${original.vehicleId}`;
+    const spareVehicleInfo = spareVehicle 
+      ? `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})`
+      : `Vehicle ID ${spareVehicleId}`;
+
+    const replacementData: InsertReservation = {
+      vehicleId: spareVehicleId,
+      customerId: original.customerId,
+      startDate,
+      endDate: finalEndDate,
+      status: new Date(startDate) <= new Date() ? 'active' : 'pending',
+      type: 'replacement',
+      replacementForReservationId: originalReservationId,
+      placeholderSpare: false,
+      totalPrice: null,
+      notes: `Spare vehicle ${spareVehicleInfo} for reservation #${originalReservationId}`,
+      damageCheckPath: null
+    };
+
+    const [replacement] = await db
+      .insert(reservations)
+      .values(replacementData)
+      .returning();
+
+    return replacement;
+  }
+
+  async updateLegacyNotesWithVehicleDetails(): Promise<number> {
+    // This is a maintenance method - for DatabaseStorage, return 0 as no legacy data to update
+    return 0;
+  }
+
+  async closeReplacementReservation(replacementReservationId: number, endDate: string): Promise<Reservation | undefined> {
+    const [updatedReservation] = await db
+      .update(reservations)
+      .set({
+        endDate,
+        status: 'completed',
+        updatedAt: new Date()
+      })
+      .where(eq(reservations.id, replacementReservationId))
+      .returning();
+
+    return updatedReservation || undefined;
+  }
+
+  async markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined> {
+    const [updatedVehicle] = await db
+      .update(vehicles)
+      .set({
+        maintenanceStatus,
+        maintenanceNote: maintenanceNote || null,
+        updatedAt: new Date()
+      })
+      .where(eq(vehicles.id, vehicleId))
+      .returning();
+
+    return updatedVehicle || undefined;
+  }
+
+  async createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    const maintenanceData: InsertReservation = {
+      vehicleId,
+      customerId: null,
+      startDate,
+      endDate: endDate || null,
+      status: 'active',
+      type: 'maintenance_block',
+      replacementForReservationId: null,
+      placeholderSpare: false,
+      totalPrice: null,
+      notes: 'Vehicle maintenance block',
+      damageCheckPath: null
+    };
+
+    const [maintenanceBlock] = await db
+      .insert(reservations)
+      .values(maintenanceData)
+      .returning();
+
+    return maintenanceBlock;
+  }
+
+  async closeMaintenanceBlock(blockReservationId: number, endDate: string): Promise<Reservation | undefined> {
+    const [updatedBlock] = await db
+      .update(reservations)
+      .set({
+        endDate,
+        status: 'completed',
+        updatedAt: new Date()
+      })
+      .where(eq(reservations.id, blockReservationId))
+      .returning();
+
+    return updatedBlock || undefined;
   }
 }
