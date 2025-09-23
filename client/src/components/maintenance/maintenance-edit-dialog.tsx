@@ -373,13 +373,16 @@ export function MaintenanceEditDialog({
                               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                 Assign Spare Vehicle (Optional):
                               </label>
-                              <select 
-                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                data-testid={`spare-vehicle-select-${index}`}
-                                value={spareVehicleAssignments.find(a => a.reservationId === rental.reservation.id)?.spareVehicleId || ""}
-                                onChange={(e) => {
-                                  const spareVehicleId = parseInt(e.target.value);
-                                  if (spareVehicleId) {
+                              <VehicleSelector
+                                vehicles={[
+                                  // Add a "no vehicle" option by creating a dummy vehicle
+                                  { id: 0, licensePlate: "NO-SPARE", brand: "No spare vehicle", model: "needed", vehicleType: "None" } as Vehicle,
+                                  ...availableVehicles
+                                ]}
+                                value={spareVehicleAssignments.find(a => a.reservationId === rental.reservation.id)?.spareVehicleId?.toString() || "0"}
+                                onChange={(value) => {
+                                  const spareVehicleId = parseInt(value);
+                                  if (spareVehicleId && spareVehicleId !== 0) {
                                     setSpareVehicleAssignments(prev => [
                                       ...prev.filter(a => a.reservationId !== rental.reservation.id),
                                       { reservationId: rental.reservation.id, spareVehicleId }
@@ -390,14 +393,10 @@ export function MaintenanceEditDialog({
                                     );
                                   }
                                 }}
-                              >
-                                <option value="">No spare vehicle needed</option>
-                                {availableVehicles.map(vehicle => (
-                                  <option key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="Select spare vehicle..."
+                                disabled={availableVehicles.length === 0}
+                                className="w-full"
+                              />
                             </div>
                           </div>
                         </div>
