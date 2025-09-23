@@ -173,7 +173,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 // Reservations table
 export const reservations = pgTable("reservations", {
   id: serial("id").primaryKey(),
-  vehicleId: integer("vehicle_id").notNull(),
+  vehicleId: integer("vehicle_id"), // Made nullable to support placeholder spare vehicles
   customerId: integer("customer_id"), // Allow null for maintenance blocks
   startDate: text("start_date").notNull(),
   endDate: text("end_date"), // Allow null for open-ended rentals
@@ -185,6 +185,7 @@ export const reservations = pgTable("reservations", {
   // Spare vehicle management
   type: text("type").default("standard").notNull(), // 'standard' | 'replacement' | 'maintenance_block'
   replacementForReservationId: integer("replacement_for_reservation_id"), // FK to reservations.id for replacement reservations
+  placeholderSpare: boolean("placeholder_spare").default(false).notNull(), // True when vehicleId is null and spare vehicle assignment is pending
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
