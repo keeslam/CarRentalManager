@@ -1596,18 +1596,28 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Execute all validations (will throw if any fail)
       console.log('Executing all validations...');
-      const validatedAssignments = await Promise.all(validationPromises);
-      console.log('All validations completed successfully');
-      
-      // Debug logging to identify the issue
-      console.log('validatedAssignments:', validatedAssignments);
-      validatedAssignments.forEach((assignment, index) => {
-        console.log(`Assignment ${index}:`, {
-          hasOriginalReservation: !!assignment.originalReservation,
-          originalReservationId: assignment.originalReservation?.id,
-          spareVehicleId: assignment.spareVehicleId
-        });
-      });
+      let validatedAssignments;
+      try {
+        validatedAssignments = await Promise.all(validationPromises);
+        console.log('All validations completed successfully');
+        
+        // Debug logging to identify the issue
+        console.log('validatedAssignments:', validatedAssignments);
+        if (validatedAssignments && validatedAssignments.length > 0) {
+          validatedAssignments.forEach((assignment, index) => {
+            console.log(`Assignment ${index}:`, {
+              hasOriginalReservation: !!assignment.originalReservation,
+              originalReservationId: assignment.originalReservation?.id,
+              spareVehicleId: assignment.spareVehicleId
+            });
+          });
+        } else {
+          console.log('validatedAssignments is empty or undefined');
+        }
+      } catch (validationError) {
+        console.error('Validation error:', validationError);
+        throw validationError;
+      }
       
       let maintenanceReservation;
       let updatedReservations;
@@ -1640,6 +1650,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
         
         // CREATE REPLACEMENTS FIRST for true atomicity
+        if (!validatedAssignments || validatedAssignments.length === 0) {
+          console.error('validatedAssignments is null or empty, cannot create replacements');
+          return res.status(400).json({ message: "No valid spare vehicle assignments found" });
+        }
+        
         const replacementPromises = validatedAssignments.map(async (validated) => {
           const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
           
