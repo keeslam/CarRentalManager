@@ -1417,13 +1417,23 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       const reservationData = insertReservationSchema.parse(bodyData);
       
-      // For maintenance blocks, check for customer reservations that need spare vehicles
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...reservationData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      // For maintenance blocks, always create the reservation first, then handle conflicts
       if (reservationData.type === 'maintenance_block') {
+        const reservation = await storage.createReservation(dataWithTracking);
+        
         const customerReservations = await storage.checkReservationConflicts(
           reservationData.vehicleId,
           reservationData.startDate,
           reservationData.endDate,
-          null
+          reservation.id // Exclude the just-created maintenance reservation from conflicts
         );
         
         // Filter to only include customer reservations (not other maintenance blocks)
@@ -1434,9 +1444,13 @@ export async function registerRoutes(app: Express): Promise<void> {
             message: "Customer reservations found during maintenance period",
             needsSpareVehicle: true,
             conflictingReservations: customerConflicts,
-            maintenanceData: reservationData
+            maintenanceData: reservationData,
+            maintenanceReservationId: reservation.id // Include the created maintenance ID
           });
         }
+        
+        // No conflicts, return the created maintenance reservation
+        return res.status(201).json(reservation);
       } else {
         // For regular reservations, check for conflicts normally
         const conflicts = await storage.checkReservationConflicts(
@@ -1453,14 +1467,6 @@ export async function registerRoutes(app: Express): Promise<void> {
           });
         }
       }
-      
-      // Add user tracking information
-      const user = req.user;
-      const dataWithTracking = {
-        ...reservationData,
-        createdBy: user ? user.username : null,
-        updatedBy: user ? user.username : null
-      };
       
       const reservation = await storage.createReservation(dataWithTracking);
       
