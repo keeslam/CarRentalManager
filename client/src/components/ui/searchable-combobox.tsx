@@ -163,7 +163,7 @@ export function SearchableCombobox({
             )}
             
             {Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
-              <React.Fragment key={group}>
+              <div key={group}>
                 {groupIndex > 0 && <DropdownMenuSeparator />}
                 <DropdownMenuGroup>
                   {group !== "All" && (
@@ -205,7 +205,7 @@ export function SearchableCombobox({
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuGroup>
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </DropdownMenuContent>
