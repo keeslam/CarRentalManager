@@ -51,6 +51,8 @@ interface MaintenanceEvent {
   vehicle: Vehicle;
   type: 'apk_due' | 'warranty_expiring' | 'scheduled_maintenance' | 'in_service';
   date: string;
+  startDate?: string;
+  endDate?: string;
   title: string;
   description: string;
   needsSpareVehicle?: boolean;
@@ -176,48 +178,88 @@ export default function MaintenanceCalendar() {
   });
 
   // Create maintenance events from vehicle data and scheduled maintenance
-  const maintenanceEvents: MaintenanceEvent[] = useMemo(() => [
-    ...apkExpiringVehicles.map(vehicle => ({
-      id: vehicle.id,
-      vehicleId: vehicle.id,
-      vehicle,
-      type: 'apk_due' as const,
-      date: vehicle.apkDate || '',
-      title: 'APK Inspection Due',
-      description: `APK inspection required for ${vehicle.brand} ${vehicle.model}`,
-      needsSpareVehicle: true,
-      currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
-    })),
-    ...warrantyExpiringVehicles.map(vehicle => ({
-      id: vehicle.id + 10000, // Avoid ID conflicts
-      vehicleId: vehicle.id,
-      vehicle,
-      type: 'warranty_expiring' as const,
-      date: vehicle.warrantyEndDate || '',
-      title: 'Warranty Expiring',
-      description: `Warranty expires for ${vehicle.brand} ${vehicle.model}`,
-      needsSpareVehicle: false
-    })),
-    ...maintenanceBlocks.map(reservation => ({
-      id: reservation.id + 20000, // Avoid ID conflicts
-      vehicleId: reservation.vehicleId,
-      vehicle: reservation.vehicle!,
-      type: 'scheduled_maintenance' as const,
-      date: reservation.startDate,
-      title: 'Scheduled Maintenance',
-      description: reservation.notes || `Scheduled maintenance for ${reservation.vehicle?.brand} ${reservation.vehicle?.model}`,
-      needsSpareVehicle: false
-    }))
-  ], [apkExpiringVehicles, warrantyExpiringVehicles, maintenanceBlocks, reservations]);
+  const maintenanceEvents: MaintenanceEvent[] = useMemo(() => {
+    const events: MaintenanceEvent[] = [];
+    
+    // APK due events (single date)
+    apkExpiringVehicles.forEach(vehicle => {
+      events.push({
+        id: vehicle.id,
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'apk_due' as const,
+        date: vehicle.apkDate || '',
+        title: 'APK Inspection Due',
+        description: `APK inspection required for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: true,
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+      });
+    });
+    
+    // Warranty expiring events (single date)
+    warrantyExpiringVehicles.forEach(vehicle => {
+      events.push({
+        id: vehicle.id + 10000, // Avoid ID conflicts
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'warranty_expiring' as const,
+        date: vehicle.warrantyEndDate || '',
+        title: 'Warranty Expiring',
+        description: `Warranty expires for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false
+      });
+    });
+    
+    // Scheduled maintenance events (potentially multi-day)
+    maintenanceBlocks.forEach(reservation => {
+      // Find vehicle from vehicles list instead of relying on embedded object
+      const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
+      if (!vehicle) return; // Skip if vehicle not found
+      
+      events.push({
+        id: reservation.id + 20000, // Avoid ID conflicts
+        vehicleId: reservation.vehicleId,
+        vehicle,
+        type: 'scheduled_maintenance' as const,
+        date: reservation.startDate,
+        startDate: reservation.startDate,
+        endDate: reservation.endDate,
+        title: 'Scheduled Maintenance',
+        description: reservation.notes || `Scheduled maintenance for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false
+      });
+    });
+    
+    return events;
+  }, [apkExpiringVehicles, warrantyExpiringVehicles, maintenanceBlocks, reservations, vehicles]);
 
   // Helper function to get all maintenance events for a specific day
   const getMaintenanceEventsForDate = (day: Date): MaintenanceEvent[] => {
     if (!maintenanceEvents) return [];
     
     return maintenanceEvents.filter((event: MaintenanceEvent) => {
-      if (!event.date) return false;
-      const eventDate = new Date(event.date);
-      return isSameDay(day, eventDate);
+      // Handle multi-day events for scheduled maintenance
+      if (event.type === 'scheduled_maintenance' && event.startDate) {
+        const startDate = safeParseDateISO(event.startDate);
+        const endDate = safeParseDateISO(event.endDate);
+        
+        if (!startDate) return false;
+        
+        // Check if this day falls within the maintenance period
+        if (endDate) {
+          return (isSameDay(day, startDate) || isSameDay(day, endDate) || 
+                  (day >= startDate && day <= endDate));
+        } else {
+          // Open-ended maintenance - check if day is on or after start date
+          return isSameDay(day, startDate) || day >= startDate;
+        }
+      } else {
+        // Single date events (APK due, warranty expiring)
+        if (!event.date) return false;
+        const eventDate = safeParseDateISO(event.date);
+        if (!eventDate) return false;
+        return isSameDay(day, eventDate);
+      }
     }).filter((event: MaintenanceEvent) => {
       // Apply current filters
       const vehicle = event.vehicle;
