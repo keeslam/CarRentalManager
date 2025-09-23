@@ -162,9 +162,7 @@ export function MaintenanceEditDialog({
             notes: data.notes || "",
             totalPrice: 0,
           },
-          conflictingReservations: overlappingRentals
-            .filter(rental => rental.reservation.endDate && rental.reservation.endDate !== "undefined" && rental.reservation.endDate !== null)
-            .map(rental => rental.reservation.id), // Only send reservations that can get spare vehicles (not open-ended)
+          conflictingReservations: overlappingRentals.map(rental => rental.reservation.id), // Send all overlapping rentals (including open-ended)
           spareVehicleAssignments: spareVehicleAssignments,
         });
         return await response.json();

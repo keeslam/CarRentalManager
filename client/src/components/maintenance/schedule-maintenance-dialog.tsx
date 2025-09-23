@@ -349,26 +349,26 @@ export function ScheduleMaintenanceDialog({
   });
 
   const handleSpareVehicleAssignment = () => {
-    // Only check reservations that can actually get spare vehicles (not open-ended ones)
-    const reservationsNeedingSpares = conflictingReservations.filter(r => {
-      return r.endDate && r.endDate !== "undefined" && r.endDate !== null;
-    });
+    // Only validate spare assignments if the user has opted for spare vehicles
+    const userWantsSpareVehicles = form.getValues('needsSpareVehicle');
     
-    const missingAssignments = reservationsNeedingSpares.filter(r => !spareVehicleAssignments[r.id]);
-    
-    if (missingAssignments.length > 0) {
-      toast({
-        title: "Missing Spare Vehicles",
-        description: "Please assign spare vehicles to all affected reservations that need them.",
-        variant: "destructive",
-      });
-      return;
+    if (userWantsSpareVehicles) {
+      const missingAssignments = conflictingReservations.filter(r => !spareVehicleAssignments[r.id]);
+      
+      if (missingAssignments.length > 0) {
+        toast({
+          title: "Missing Spare Vehicles",
+          description: "Please assign spare vehicles to all affected reservations.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     createMaintenanceWithSpareMutation.mutate({
       maintenanceData,
       conflictingReservations,
-      spareVehicleAssignments
+      spareVehicleAssignments: userWantsSpareVehicles ? spareVehicleAssignments : {}
     });
   };
 
@@ -737,41 +737,25 @@ export function ScheduleMaintenanceDialog({
             // Check if this is an open-ended rental
             const isOpenEnded = !reservation.endDate || reservation.endDate === "undefined" || reservation.endDate === null;
             
-            if (isOpenEnded) {
-              return (
-                <div key={reservation.id} className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <h4 className="font-medium text-yellow-800">
-                      {reservation.customer?.name || 'Unknown Customer'} - Open-ended Rental
-                    </h4>
-                  </div>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Reservation: {reservation.startDate} - <span className="font-medium">No end date</span>
-                  </p>
-                  <p className="text-sm text-yellow-600 mt-1">
-                    Original vehicle: {reservation.vehicle?.brand} {reservation.vehicle?.model} ({formatLicensePlate(reservation.vehicle?.licensePlate)})
-                  </p>
-                  <p className="text-sm text-yellow-700 mt-2 font-medium">
-                    ⚠️ Cannot assign spare vehicle: Customer already has the vehicle indefinitely. Contact customer directly about maintenance.
-                  </p>
-                </div>
-              );
-            }
-            
             return (
-              <div key={reservation.id} className="p-4 border rounded-lg space-y-3">
+              <div key={reservation.id} className={`p-4 border rounded-lg space-y-3 ${isOpenEnded ? 'bg-blue-50 border-blue-200' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium">
                       {reservation.customer?.name || 'Unknown Customer'}
+                      {isOpenEnded && <span className="ml-2 text-blue-600 font-medium">(Open-ended Rental)</span>}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Reservation: {reservation.startDate} - {reservation.endDate}
+                      Reservation: {reservation.startDate} - {isOpenEnded ? <span className="font-medium text-blue-600">No end date</span> : reservation.endDate}
                     </p>
                     <p className="text-sm text-gray-500">
                       Original vehicle: {reservation.vehicle?.brand} {reservation.vehicle?.model} ({formatLicensePlate(reservation.vehicle?.licensePlate)})
                     </p>
+                    {isOpenEnded && (
+                      <p className="text-sm text-blue-600 mt-1">
+                        💡 Spare vehicle will be assigned for the entire maintenance period
+                      </p>
+                    )}
                   </div>
                 </div>
                 

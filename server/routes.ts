@@ -1531,28 +1531,48 @@ export async function registerRoutes(app: Express): Promise<void> {
           throw new Error(`Reservation ${reservationId} not found`);
         }
         
-        // Handle open-ended rentals (endDate is null, undefined, or "undefined")
-        if (!originalReservation.endDate || originalReservation.endDate === "undefined" || originalReservation.endDate === null) {
-          throw new Error(`Cannot assign spare vehicle to open-ended rental ${reservationId}. Customer already has the vehicle indefinitely.`);
-        }
-        
         // Compute overlap using maintenanceData (not yet persisted)
         const maintenanceStart = new Date(maintenanceData.startDate);
         const maintenanceEnd = new Date(maintenanceData.endDate);
         const rentalStart = new Date(originalReservation.startDate);
-        const rentalEnd = new Date(originalReservation.endDate);
         
-        // Validate dates are valid
-        if (isNaN(maintenanceStart.getTime()) || isNaN(maintenanceEnd.getTime()) || 
-            isNaN(rentalStart.getTime()) || isNaN(rentalEnd.getTime())) {
+        // Validate dates are valid and maintenance period is valid
+        if (isNaN(maintenanceStart.getTime()) || isNaN(maintenanceEnd.getTime()) || isNaN(rentalStart.getTime())) {
           throw new Error(`Invalid date format in maintenance or rental ${reservationId}`);
         }
         
-        const overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
-        const overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
+        if (maintenanceStart >= maintenanceEnd) {
+          throw new Error(`Invalid maintenance period: start date must be before end date`);
+        }
         
-        if (overlapStart >= overlapEnd) {
-          throw new Error(`No overlap between maintenance and rental ${reservationId}`);
+        let overlapStart: Date;
+        let overlapEnd: Date;
+        
+        // Handle open-ended rentals (endDate is null, undefined, or "undefined")
+        if (!originalReservation.endDate || originalReservation.endDate === "undefined" || originalReservation.endDate === null) {
+          // For open-ended rentals, customer has vehicle indefinitely
+          // Spare vehicle assignment covers the entire maintenance period
+          overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
+          overlapEnd = maintenanceEnd; // Spare vehicle for entire maintenance period
+          
+          // Validate overlap for open-ended rentals too
+          if (overlapStart >= overlapEnd) {
+            throw new Error(`No overlap between maintenance and open-ended rental ${reservationId}: rental starts after maintenance ends`);
+          }
+        } else {
+          // For regular rentals with end dates
+          const rentalEnd = new Date(originalReservation.endDate);
+          
+          if (isNaN(rentalEnd.getTime())) {
+            throw new Error(`Invalid end date format in rental ${reservationId}`);
+          }
+          
+          overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
+          overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
+          
+          if (overlapStart >= overlapEnd) {
+            throw new Error(`No overlap between maintenance and rental ${reservationId}`);
+          }
         }
         
         // Pre-validate spare vehicle availability
