@@ -270,11 +270,32 @@ export function ScheduleMaintenanceDialog({
 
       // Create placeholder reservations for TBD assignments
       for (const tbdAssignment of tbdAssignments) {
+        // Validate that we have the reservation data
+        if (!tbdAssignment.reservation) {
+          console.error('Missing reservation data for TBD assignment:', tbdAssignment);
+          continue;
+        }
+        
+        // Validate required fields
+        const reservationId = parseInt(tbdAssignment.reservationId);
+        const customerId = parseInt(tbdAssignment.reservation.customerId);
+        
+        if (isNaN(reservationId) || isNaN(customerId)) {
+          console.error('Invalid reservation or customer ID:', { reservationId, customerId });
+          continue;
+        }
+        
         // Calculate the overlap between maintenance window and original reservation
         const maintenanceStart = data.maintenanceData.startDate;
         const maintenanceEnd = data.maintenanceData.endDate || data.maintenanceData.startDate;
         const reservationStart = tbdAssignment.reservation.startDate;
         const reservationEnd = tbdAssignment.reservation.endDate || tbdAssignment.reservation.startDate;
+        
+        // Validate dates
+        if (!maintenanceStart || !reservationStart) {
+          console.error('Missing required dates:', { maintenanceStart, reservationStart });
+          continue;
+        }
         
         // Calculate intersection dates (overlap period)
         const overlapStart = reservationStart > maintenanceStart ? reservationStart : maintenanceStart;
@@ -282,9 +303,16 @@ export function ScheduleMaintenanceDialog({
         
         // Only create placeholder if there's a valid overlap period
         if (overlapStart <= overlapEnd) {
+          console.log('Creating placeholder reservation with data:', {
+            originalReservationId: reservationId,
+            customerId: customerId,
+            startDate: overlapStart,
+            endDate: overlapEnd
+          });
+          
           await createPlaceholderMutation.mutateAsync({
-            originalReservationId: tbdAssignment.reservationId,
-            customerId: tbdAssignment.reservation.customerId,
+            originalReservationId: reservationId,
+            customerId: customerId,
             startDate: overlapStart,
             endDate: overlapEnd
           });
