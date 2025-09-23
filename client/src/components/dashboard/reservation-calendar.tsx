@@ -361,8 +361,17 @@ export function ReservationCalendar() {
                                   <div className="px-3 py-1 flex items-start space-x-2">
                                     <Car className="h-4 w-4 text-gray-500 mt-0.5" />
                                     <div>
-                                      <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
-                                      <div className="text-xs text-gray-600">{formatLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                      {res.placeholderSpare ? (
+                                        <>
+                                          <div className="font-medium text-sm text-orange-700">TBD Spare Vehicle</div>
+                                          <div className="text-xs text-gray-600">Awaiting assignment</div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="font-medium text-sm">{res.vehicle?.brand} {res.vehicle?.model}</div>
+                                          <div className="text-xs text-gray-600">{formatLicensePlate(res.vehicle?.licensePlate || '')}</div>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                   

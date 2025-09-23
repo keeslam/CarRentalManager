@@ -156,16 +156,17 @@ export default function ReservationsIndex() {
       // Date range filter
       let matchesDateRange = true;
       if (dateRangeFilter !== "all") {
-        const startDate = parseISO(reservation.startDate);
-        const endDate = parseISO(reservation.endDate);
+        const startDate = reservation.startDate ? parseISO(reservation.startDate) : null;
+        const endDate = reservation.endDate ? parseISO(reservation.endDate) : null;
         
         switch (dateRangeFilter) {
           case "today":
             // Today filter - reservation overlaps with today 
-            // This means either:
-            // 1. It starts today
-            // 2. It ends today
-            // 3. It spans today (started before and ends after)
+            if (!startDate || !endDate) {
+              matchesDateRange = false;
+              break;
+            }
+            
             const todayStart = startOfToday();
             const todayEnd = endOfToday();
             
@@ -184,6 +185,11 @@ export default function ReservationsIndex() {
             break;
           case "week":
             // This week filter - reservation is within the next 7 days
+            if (!startDate || !endDate) {
+              matchesDateRange = false;
+              break;
+            }
+            
             const weekStart = startOfToday();
             const weekEnd = endOfDay(addDays(today, 7));
             
@@ -202,6 +208,11 @@ export default function ReservationsIndex() {
             break;
           case "month":
             // This month filter - reservation is within the next 30 days
+            if (!startDate || !endDate) {
+              matchesDateRange = false;
+              break;
+            }
+            
             const monthStart = startOfToday();
             const monthEnd = endOfDay(addDays(today, 30));
             
@@ -219,10 +230,10 @@ export default function ReservationsIndex() {
             );
             break;
           case "past":
-            matchesDateRange = isBefore(endDate, today);
+            matchesDateRange = endDate ? isBefore(endDate, today) : false;
             break;
           case "future":
-            matchesDateRange = isAfter(startDate, today);
+            matchesDateRange = startDate ? isAfter(startDate, today) : false;
             break;
         }
       }
@@ -301,6 +312,34 @@ export default function ReservationsIndex() {
       cell: ({ row }) => {
         const vehicle = row.original.vehicle;
         const reservation = row.original;
+        
+        // Handle placeholder spare vehicles
+        if (reservation.placeholderSpare) {
+          return (
+            <div>
+              <div className="font-medium flex items-center gap-1">
+                <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs font-semibold border border-orange-200">
+                  TBD
+                </span>
+                <span className="text-orange-700">Spare Vehicle</span>
+                <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs font-semibold border border-orange-200">
+                  SPARE
+                </span>
+              </div>
+              <div className="text-sm text-gray-500 flex flex-wrap items-center mt-1 gap-2">
+                <span className="px-1.5 py-0.5 rounded-full text-xs bg-orange-50 text-orange-800 border border-orange-100">
+                  Awaiting assignment
+                </span>
+                {reservation.type === 'replacement' && reservation.replacementForReservationId && (
+                  <span className="px-1.5 py-0.5 rounded-full text-xs bg-orange-50 text-orange-800 border border-orange-100">
+                    Spare for #{reservation.replacementForReservationId}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        }
+        
         return vehicle ? (
           <div>
             <div className="font-medium flex items-center gap-1">
@@ -380,20 +419,20 @@ export default function ReservationsIndex() {
       cell: ({ row }) => {
         const startDate = row.original.startDate;
         const endDate = row.original.endDate;
-        const start = parseISO(startDate);
-        const end = parseISO(endDate);
+        const start = startDate ? parseISO(startDate) : null;
+        const end = endDate ? parseISO(endDate) : null;
         
         // Calculate if this is current, upcoming, or past
-        const isPast = isBefore(end, today);
-        const isCurrent = isBefore(start, today) && isAfter(end, today);
-        const isUpcoming = isAfter(start, today);
+        const isPast = end ? isBefore(end, today) : false;
+        const isCurrent = start && end ? isBefore(start, today) && isAfter(end, today) : false;
+        const isUpcoming = start ? isAfter(start, today) : false;
         
         let timeIndicator = null;
         if (isPast) {
           timeIndicator = <span className="px-1.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-800">Past</span>;
         } else if (isCurrent) {
           timeIndicator = <span className="px-1.5 py-0.5 rounded-full text-xs bg-green-100 text-green-800">Current</span>;
-        } else if (isUpcoming) {
+        } else if (isUpcoming && start) {
           const daysUntil = differenceInDays(start, today);
           if (daysUntil <= 3) {
             timeIndicator = <span className="px-1.5 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800">Soon</span>;
@@ -403,10 +442,10 @@ export default function ReservationsIndex() {
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span>{formatDate(startDate)} - {formatDate(endDate)}</span>
+              <span>{startDate ? formatDate(startDate) : 'TBD'} - {endDate ? formatDate(endDate) : 'TBD'}</span>
               {timeIndicator}
             </div>
-            <div className="text-sm text-gray-500">{getDuration(startDate, endDate)}</div>
+            <div className="text-sm text-gray-500">{startDate && endDate ? getDuration(startDate, endDate) : 'Duration TBD'}</div>
           </div>
         );
       },
