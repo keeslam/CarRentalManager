@@ -36,7 +36,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
-import { Loader2, Calendar, AlertTriangle, Wrench, Clock, Car } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Calendar, AlertTriangle, Wrench, Clock, Car, Filter } from "lucide-react";
 
 const scheduleMaintenanceSchema = z.object({
   vehicleId: z.string().min(1, "Please select a vehicle"),
@@ -89,12 +90,10 @@ export function ScheduleMaintenanceDialog({
   const [conflictingReservations, setConflictingReservations] = useState<any[]>([]);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
   const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd'}>({});
-
-  // Fetch all vehicles for selection
-  const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
-    queryKey: ['/api/vehicles'],
-    enabled: open, // Only fetch when dialog is open
-  });
+  
+  // State for vehicle filtering
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+  const [excludeMaintenanceVehicles, setExcludeMaintenanceVehicles] = useState(false);
 
   const form = useForm<ScheduleMaintenanceFormData>({
     resolver: zodResolver(scheduleMaintenanceSchema),
@@ -143,6 +142,59 @@ export function ScheduleMaintenanceDialog({
       });
     }
   }, [editingReservation, form]);
+
+  // Get selected date for filtering (after form is defined)
+  const scheduledDate = form.watch('scheduledDate');
+  
+  // Get current vehicle ID to exclude from filters when editing
+  const currentVehicleId = editingReservation?.vehicleId || (form.watch('vehicleId') ? parseInt(form.watch('vehicleId')) : undefined);
+  
+  // Fetch vehicles based on filter settings
+  const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
+    queryKey: showAvailableOnly 
+      ? ['/api/vehicles/available', { 
+          startDate: scheduledDate, 
+          endDate: scheduledDate,
+          excludeVehicleId: currentVehicleId // Keep current vehicle in list when editing
+        }]
+      : ['/api/vehicles'],
+    enabled: open, // Only fetch when dialog is open
+  });
+
+  // Fetch all reservations to filter out vehicles with maintenance (if filter is enabled)
+  const { data: allReservations = [] } = useQuery<any[]>({
+    queryKey: ['/api/reservations'],
+    enabled: open && excludeMaintenanceVehicles, // Only fetch when needed
+  });
+
+  // Helper function to check if a date falls within a range
+  const dateInRange = (checkDate: string, startDate: string, endDate?: string) => {
+    const check = new Date(checkDate);
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : start;
+    
+    // Normalize to date-only comparison
+    check.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    
+    return check >= start && check <= end;
+  };
+
+  // Filter vehicles based on current filters
+  const filteredVehicles = vehicles.filter(vehicle => {
+    // If excluding maintenance vehicles, check if this vehicle has maintenance that overlaps the scheduled date
+    if (excludeMaintenanceVehicles && scheduledDate) {
+      const hasMaintenanceConflict = allReservations.some(reservation => 
+        reservation.vehicleId === vehicle.id &&
+        reservation.type === 'maintenance_block' &&
+        reservation.id !== editingReservation?.id && // Don't exclude current editing reservation
+        dateInRange(scheduledDate, reservation.startDate, reservation.endDate)
+      );
+      if (hasMaintenanceConflict) return false;
+    }
+    return true;
+  });
 
   const scheduleMaintenanceMutation = useMutation({
     mutationFn: async (data: ScheduleMaintenanceFormData) => {
@@ -434,7 +486,7 @@ export function ScheduleMaintenanceDialog({
     }
   };
 
-  const selectedVehicle = vehicles.find(v => v.id.toString() === form.watch('vehicleId'));
+  const selectedVehicle = filteredVehicles.find(v => v.id.toString() === form.watch('vehicleId'));
 
   // Fetch available vehicles for spare assignment during the maintenance period
   const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
@@ -520,13 +572,55 @@ export function ScheduleMaintenanceDialog({
                         <span className="ml-2">Loading vehicles...</span>
                       </div>
                     ) : (
-                      <div data-testid="select-vehicle">
-                        <VehicleSelector
-                          vehicles={vehicles}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Select a vehicle..."
-                        />
+                      <div className="space-y-3">
+                        {/* Filter Options */}
+                        <div className="bg-gray-50 p-3 rounded-lg border">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Filter className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-700">Vehicle Filters</span>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="show-available-only"
+                                checked={showAvailableOnly}
+                                onCheckedChange={(checked) => setShowAvailableOnly(checked === true)}
+                                data-testid="checkbox-available-only"
+                              />
+                              <label htmlFor="show-available-only" className="text-sm text-gray-600">
+                                Show available vehicles only
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="exclude-maintenance"
+                                checked={excludeMaintenanceVehicles}
+                                onCheckedChange={(checked) => setExcludeMaintenanceVehicles(checked === true)}
+                                data-testid="checkbox-exclude-maintenance"
+                              />
+                              <label htmlFor="exclude-maintenance" className="text-sm text-gray-600">
+                                Exclude vehicles with existing maintenance
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Vehicle Selector */}
+                        <div data-testid="select-vehicle">
+                          <VehicleSelector
+                            vehicles={filteredVehicles}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select a vehicle..."
+                          />
+                        </div>
+                        
+                        {/* Results summary */}
+                        <div className="text-xs text-gray-500">
+                          Showing {filteredVehicles.length} of {vehicles.length} vehicles
+                          {showAvailableOnly && ` (available on ${scheduledDate})`}
+                          {excludeMaintenanceVehicles && ` (no maintenance conflicts)`}
+                        </div>
                       </div>
                     )}
                   </FormControl>
