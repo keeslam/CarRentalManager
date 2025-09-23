@@ -8,7 +8,7 @@ import {
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification
 } from "../shared/schema";
-import { addMonths, parseISO, isBefore, isAfter, isEqual } from "date-fns";
+import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
 export interface IStorage {
   // User methods
@@ -57,6 +57,12 @@ export interface IStorage {
   markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined>;
   createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
   closeMaintenanceBlock(blockReservationId: number, endDate: string): Promise<Reservation | undefined>;
+  
+  // Placeholder spare vehicle methods
+  getPlaceholderReservations(startDate?: string, endDate?: string): Promise<Reservation[]>;
+  getPlaceholderReservationsNeedingAssignment(daysAhead?: number): Promise<Reservation[]>;
+  assignVehicleToPlaceholder(reservationId: number, vehicleId: number, endDate?: string): Promise<Reservation | undefined>;
+  createPlaceholderReservation(originalReservationId: number, customerId: number, startDate: string, endDate?: string): Promise<Reservation>;
   
   // Expense methods
   getAllExpenses(): Promise<Expense[]>;
@@ -1380,6 +1386,145 @@ export class MemStorage implements IStorage {
 
     this.reservations.set(blockReservationId, updatedBlock);
     return updatedBlock;
+  }
+
+  // Placeholder spare vehicle methods
+  async getPlaceholderReservations(startDate?: string, endDate?: string): Promise<Reservation[]> {
+    const placeholders = Array.from(this.reservations.values()).filter(r => 
+      r.placeholderSpare === true && r.type === 'replacement' && r.vehicleId == null
+    );
+
+    if (!startDate && !endDate) {
+      return placeholders;
+    }
+
+    return placeholders.filter(r => {
+      const reservationStart = parseISO(r.startDate);
+      // Treat null endDate as far future for open-ended reservations
+      const reservationEnd = r.endDate ? parseISO(r.endDate) : new Date('2099-12-31');
+      
+      if (startDate && isAfter(parseISO(startDate), reservationEnd)) {
+        return false;
+      }
+      if (endDate && isBefore(parseISO(endDate), reservationStart)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }
+
+  async getPlaceholderReservationsNeedingAssignment(daysAhead: number = 7): Promise<Reservation[]> {
+    const cutoffDate = addDays(new Date(), daysAhead);
+    const placeholders = await this.getPlaceholderReservations();
+    
+    // Double-check that these are truly unassigned placeholders
+    return placeholders.filter(r => {
+      const startDate = parseISO(r.startDate);
+      return isBefore(startDate, cutoffDate) && r.vehicleId == null;
+    });
+  }
+
+  async assignVehicleToPlaceholder(reservationId: number, vehicleId: number, endDate?: string): Promise<Reservation | undefined> {
+    const reservation = this.reservations.get(reservationId);
+    if (!reservation || !reservation.placeholderSpare || reservation.vehicleId != null || reservation.type !== 'replacement') {
+      return undefined;
+    }
+
+    // Verify the target vehicle exists
+    const vehicle = this.vehicles.get(vehicleId);
+    if (!vehicle) {
+      throw new Error('Vehicle not found');
+    }
+
+    // Check if vehicle is available (not in service)
+    if (vehicle.maintenanceStatus === 'in_service') {
+      throw new Error('Vehicle is currently in service and not available');
+    }
+
+    // For open-ended placeholders, require an explicit endDate for assignment
+    const assignmentEndDate = endDate || reservation.endDate;
+    if (!assignmentEndDate && !reservation.endDate) {
+      throw new Error('End date must be specified when assigning vehicle to open-ended placeholder reservation');
+    }
+
+    // Check for conflicts with the new vehicle assignment across the full period
+    const conflicts = await this.checkReservationConflicts(
+      vehicleId, 
+      reservation.startDate, 
+      assignmentEndDate || reservation.startDate,
+      reservationId
+    );
+    
+    if (conflicts.length > 0) {
+      throw new Error('Vehicle is not available for the requested dates');
+    }
+
+    const updatedReservation: Reservation = {
+      ...reservation,
+      vehicleId,
+      placeholderSpare: false,
+      status: 'confirmed',
+      endDate: assignmentEndDate || reservation.endDate, // Update endDate if provided
+      updatedAt: new Date()
+    };
+
+    this.reservations.set(reservationId, updatedReservation);
+    
+    // Return enriched reservation with vehicle and customer data for consistency
+    const customer = reservation.customerId ? await this.getCustomer(reservation.customerId) : undefined;
+    return {
+      ...updatedReservation,
+      vehicle,
+      customer
+    };
+  }
+
+  async createPlaceholderReservation(originalReservationId: number, customerId: number, startDate: string, endDate?: string): Promise<Reservation> {
+    // Verify the original reservation exists
+    const originalReservation = this.reservations.get(originalReservationId);
+    if (!originalReservation) {
+      throw new Error('Original reservation not found');
+    }
+
+    // Check if a replacement (placeholder or active) already exists for this original reservation
+    const existingReplacement = await this.getActiveReplacementByOriginal(originalReservationId);
+    if (existingReplacement) {
+      throw new Error('A replacement reservation already exists for this original reservation');
+    }
+
+    // Check for existing placeholder reservations with overlapping dates for the same original reservation
+    const placeholders = await this.getPlaceholderReservations(startDate, endDate || startDate);
+    const duplicatePlaceholder = placeholders.find(p => 
+      p.replacementForReservationId === originalReservationId
+    );
+    if (duplicatePlaceholder) {
+      throw new Error('A placeholder spare reservation already exists for this original reservation');
+    }
+
+    const newReservation: Reservation = {
+      id: this.reservationId++,
+      vehicleId: null, // Placeholder - no vehicle assigned yet
+      customerId,
+      startDate,
+      endDate: endDate || null,
+      status: 'pending',
+      totalPrice: null,
+      notes: `Placeholder spare vehicle for reservation ${originalReservationId}`,
+      damageCheckPath: null,
+      type: 'replacement',
+      replacementForReservationId: originalReservationId,
+      placeholderSpare: true, // This is a placeholder reservation
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: null,
+      updatedBy: null,
+      createdByUser: null,
+      updatedByUser: null
+    };
+
+    this.reservations.set(newReservation.id, newReservation);
+    return newReservation;
   }
 }
 

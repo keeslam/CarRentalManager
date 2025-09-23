@@ -196,7 +196,8 @@ export const reservations = pgTable("reservations", {
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
 });
 
-export const insertReservationSchema = createInsertSchema(reservations).omit({
+// Base schema that can be extended by frontend forms
+export const insertReservationSchemaBase = createInsertSchema(reservations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -222,7 +223,10 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   customerId: z.number().optional().or(z.null()), // Make customerId optional for maintenance blocks
   vehicleId: z.number().optional().or(z.null()), // Allow null for placeholder spare vehicles
   placeholderSpare: z.boolean().optional().default(false) // Default to false for normal reservations
-})
+});
+
+// Fully validated schema with business rules for server-side use
+export const insertReservationSchema = insertReservationSchemaBase
 .refine((data) => {
   const type = data.type ?? 'standard'; // Handle default type
   const noVehicle = data.vehicleId == null; // Handles both null and undefined

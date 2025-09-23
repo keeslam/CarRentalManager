@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { insertReservationSchema } from "@shared/schema";
+import { insertReservationSchemaBase } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { 
@@ -49,7 +49,7 @@ import { PlusCircle, FileCheck, Upload, Check, X } from "lucide-react";
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 
 // Extended schema with validation
-const formSchema = insertReservationSchema.extend({
+const formSchema = insertReservationSchemaBase.extend({
   vehicleId: z.union([
     z.number().min(1, "Please select a vehicle"),
     z.string().min(1, "Please select a vehicle").transform(val => parseInt(val)),
