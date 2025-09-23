@@ -1157,6 +1157,10 @@ export class MemStorage implements IStorage {
       throw new Error('Spare vehicle cannot be the same as original vehicle');
     }
     
+    // Get vehicle details for meaningful notes
+    const originalVehicle = this.vehicles.get(original.vehicleId);
+    const spareVehicle = this.vehicles.get(spareVehicleId);
+    
     // Use original's end date if replacement end date not specified
     const finalEndDate = endDate || original.endDate;
     
@@ -1169,6 +1173,14 @@ export class MemStorage implements IStorage {
     const id = this.reservationId++;
     const now = new Date();
     
+    // Create meaningful notes with vehicle details instead of IDs
+    const originalVehicleInfo = originalVehicle 
+      ? `${originalVehicle.licensePlate} (${originalVehicle.brand} ${originalVehicle.model})`
+      : `Vehicle ID ${original.vehicleId}`;
+    const spareVehicleInfo = spareVehicle 
+      ? `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})`
+      : `Vehicle ID ${spareVehicleId}`;
+    
     const replacementReservation: Reservation = {
       id,
       vehicleId: spareVehicleId,
@@ -1179,7 +1191,7 @@ export class MemStorage implements IStorage {
       type: 'replacement',
       replacementForReservationId: originalReservationId,
       totalPrice: null,
-      notes: `Replacement vehicle for reservation #${originalReservationId}`,
+      notes: `Spare vehicle ${spareVehicleInfo} for reservation #${originalReservationId}`,
       damageCheckPath: null,
       createdAt: now,
       updatedAt: now,
@@ -1192,6 +1204,16 @@ export class MemStorage implements IStorage {
     // Mark original vehicle as in service and create maintenance block
     await this.markVehicleForService(original.vehicleId, 'in_service', `Service period for replacement reservation #${id}`);
     await this.createMaintenanceBlock(original.vehicleId, startDate, finalEndDate);
+
+    // Update the original reservation's notes to reflect the replacement
+    const updatedOriginal: Reservation = {
+      ...original,
+      notes: original.notes 
+        ? `${original.notes}\n\nOriginal vehicle ${originalVehicleInfo} under maintenance. Replaced with spare vehicle ${spareVehicleInfo}.`
+        : `Original vehicle ${originalVehicleInfo} under maintenance. Replaced with spare vehicle ${spareVehicleInfo}.`,
+      updatedAt: now
+    };
+    this.reservations.set(originalReservationId, updatedOriginal);
 
     this.reservations.set(id, replacementReservation);
     return replacementReservation;
