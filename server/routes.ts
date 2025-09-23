@@ -1524,9 +1524,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // PRE-VALIDATE ALL ASSIGNMENTS BEFORE ANY UPDATES (for atomicity)
       const validationPromises = spareVehicleAssignments.map(async (assignment: any) => {
+        console.log('Processing assignment:', assignment);
         const { reservationId, spareVehicleId } = assignment;
         
+        console.log(`Looking up reservation ${reservationId}`);
         const originalReservation = await storage.getReservation(reservationId);
+        console.log(`Found reservation:`, originalReservation ? 'yes' : 'no');
         if (!originalReservation) {
           throw new Error(`Reservation ${reservationId} not found`);
         }
@@ -1587,11 +1590,14 @@ export async function registerRoutes(app: Express): Promise<void> {
           throw new Error(`Spare vehicle ${spareVehicleId} is not available during overlap period`);
         }
         
+        console.log(`Returning validation result for reservation ${originalReservation.id}`);
         return { originalReservation, overlapStart, overlapEnd, spareVehicleId };
       });
       
       // Execute all validations (will throw if any fail)
+      console.log('Executing all validations...');
       const validatedAssignments = await Promise.all(validationPromises);
+      console.log('All validations completed successfully');
       
       // Debug logging to identify the issue
       console.log('validatedAssignments:', validatedAssignments);
