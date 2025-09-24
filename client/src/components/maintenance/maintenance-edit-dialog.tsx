@@ -103,7 +103,7 @@ export function MaintenanceEditDialog({
   const form = useForm<MaintenanceEditFormType>({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
-      vehicleId: reservation?.vehicleId || 0,
+      vehicleId: reservation?.vehicleId || undefined,
       startDate: reservation?.startDate || "",
       endDate: reservation?.endDate || "",
       notes: reservation?.notes || "",
@@ -134,7 +134,7 @@ export function MaintenanceEditDialog({
     if (reservation && open) {
       const parsed = parseMaintenanceNotes(reservation.notes || '');
       form.reset({
-        vehicleId: reservation.vehicleId,
+        vehicleId: reservation.vehicleId || undefined,
         startDate: reservation.startDate,
         endDate: reservation.endDate || "",
         notes: reservation.notes || "",
