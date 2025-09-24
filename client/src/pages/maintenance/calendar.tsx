@@ -306,7 +306,7 @@ export default function MaintenanceCalendar() {
     return events;
   }, [apkExpiringVehicles, warrantyExpiringVehicles, maintenanceBlocks, reservations, vehicles]);
 
-  // Helper function to get all maintenance events for a specific day
+  // Helper function to get maintenance events that start, end, or occur on a specific day
   const getMaintenanceEventsForDate = (day: Date): MaintenanceEvent[] => {
     if (!maintenanceEvents) return [];
     
@@ -318,16 +318,13 @@ export default function MaintenanceCalendar() {
         
         if (!startDate) return false;
         
-        // Check if this day falls within the maintenance period
-        if (endDate) {
-          return (isSameDay(day, startDate) || isSameDay(day, endDate) || 
-                  (day >= startDate && day <= endDate));
-        } else {
-          // Open-ended maintenance - check if day is on or after start date
-          return isSameDay(day, startDate) || day >= startDate;
-        }
+        // Only show maintenance that starts or ends on this specific day
+        const isStartDay = isSameDay(day, startDate);
+        const isEndDay = endDate ? isSameDay(day, endDate) : false;
+        
+        return isStartDay || isEndDay;
       } else {
-        // Single date events (APK due, warranty expiring)
+        // Single date events (APK due, warranty expiring) - always show
         if (!event.date) return false;
         const eventDate = safeParseDateISO(event.date);
         if (!eventDate) return false;

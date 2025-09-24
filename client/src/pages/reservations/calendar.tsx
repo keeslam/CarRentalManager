@@ -121,7 +121,7 @@ export default function ReservationCalendarPage() {
     setSelectedDay(null);
   };
   
-  // Helper function to get all reservations for a specific day
+  // Helper function to get reservations that start or end on a specific day
   const getReservationsForDate = (day: Date): Reservation[] => {
     if (!reservations) return [];
     
@@ -131,14 +131,11 @@ export default function ReservationCalendarPage() {
       
       if (!startDate) return false;
       
-      // Check if this day falls within the reservation period
-      if (endDate) {
-        return (isSameDay(day, startDate) || isSameDay(day, endDate) || 
-                (day >= startDate && day <= endDate));
-      } else {
-        // Open-ended reservation - check if day is on or after start date
-        return isSameDay(day, startDate) || day >= startDate;
-      }
+      // Only show reservations that start or end on this specific day
+      const isStartDay = isSameDay(day, startDate);
+      const isEndDay = endDate ? isSameDay(day, endDate) : false;
+      
+      return isStartDay || isEndDay;
     }).filter((reservation: Reservation) => {
       // Apply current vehicle filters
       const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
