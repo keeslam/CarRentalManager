@@ -76,6 +76,10 @@ export default function ReservationCalendarPage() {
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   
+  // New reservation dialog
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
   // Color coding dialog
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   
@@ -516,10 +520,11 @@ export default function ReservationCalendarPage() {
                               console.log('Date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
                               openDayDialog(day);
                             } else {
-                              // If no reservations, navigate to add page
+                              // If no reservations, open new reservation dialog
                               const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
-                              console.log('Date box clicked - no reservations, navigating to add');
-                              window.location.href = `/reservations/add?date=${formattedDate}`;
+                              console.log('Date box clicked - no reservations, opening add dialog');
+                              setSelectedDate(formattedDate);
+                              setAddDialogOpen(true);
                             }
                           }
                         }}
@@ -534,7 +539,8 @@ export default function ReservationCalendarPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
-                                window.location.href = `/reservations/add?date=${formattedDate}`;
+                                setSelectedDate(formattedDate);
+                                setAddDialogOpen(true);
                               }}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
@@ -1223,6 +1229,36 @@ export default function ReservationCalendarPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New Reservation Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Reservation</DialogTitle>
+            <DialogDescription>
+              Create a new reservation for {selectedDate ? format(parseISO(selectedDate), 'MMMM d, yyyy') : 'the selected date'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <ReservationForm 
+              initialStartDate={selectedDate || undefined}
+              onSuccess={() => {
+                // Close dialog on successful creation
+                setAddDialogOpen(false);
+                setSelectedDate(null);
+                // Refresh the calendar data
+                queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/reservations/range', {
+                    startDate: format(dateRanges.start, "yyyy-MM-dd"),
+                    endDate: format(dateRanges.end, "yyyy-MM-dd")
+                  }]
+                });
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
