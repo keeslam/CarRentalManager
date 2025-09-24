@@ -394,7 +394,6 @@ export function MaintenanceEditDialog({
                                   }
                                 }}
                                 placeholder="Select spare vehicle..."
-                                disabled={availableVehicles.length === 0}
                                 className="w-full"
                               />
                             </div>
