@@ -385,6 +385,8 @@ export function MaintenanceEditDialog({
                                 vehicles={[
                                   // Add a "no vehicle" option by creating a dummy vehicle
                                   { id: 0, licensePlate: "NO-SPARE", brand: "No spare vehicle", model: "needed", vehicleType: "None" } as Vehicle,
+                                  // Add a "TBD" option for placeholder assignment
+                                  { id: -1, licensePlate: "TBD-SPARE", brand: "TBD - Vehicle", model: "placeholder", vehicleType: "TBD" } as Vehicle,
                                   ...availableVehicles
                                 ]}
                                 value={spareVehicleAssignments.find(a => a.reservationId === rental.reservation.id)?.spareVehicleId?.toString() || "0"}
