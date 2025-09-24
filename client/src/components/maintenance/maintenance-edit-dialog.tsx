@@ -80,10 +80,6 @@ export function MaintenanceEditDialog({
     queryKey: ["/api/vehicles"],
   });
 
-  // Fetch available spare vehicles (basic query for now)
-  const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles/available"],
-  });
 
   // Parse the maintenance notes to extract structured data
   const parseMaintenanceNotes = (notes: string) => {
@@ -119,6 +115,18 @@ export function MaintenanceEditDialog({
   const currentVehicleId = formVehicleId || reservation?.vehicleId;
   const currentStartDate = formStartDate || reservation?.startDate;
   const currentEndDate = formEndDate || reservation?.endDate;
+
+  // Fetch available spare vehicles for the maintenance period
+  const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/available", currentStartDate, currentEndDate],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (currentStartDate) params.set('startDate', currentStartDate);
+      if (currentEndDate) params.set('endDate', currentEndDate);
+      return fetch(`/api/vehicles/available?${params.toString()}`).then(res => res.json());
+    },
+    enabled: !!(currentStartDate && currentEndDate && open),
+  });
 
   const { data: overlappingRentals = [], isLoading: isLoadingRentals } = useQuery<{
     reservation: { id: number; startDate: string; endDate: string; status: string; type: string };
