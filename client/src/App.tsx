@@ -57,9 +57,9 @@ function AppRoutes() {
         <ProtectedRoute path="/customers/add" component={CustomerAdd} />
         <ProtectedRoute path="/customers/:id/edit" component={CustomerEdit} />
         <ProtectedRoute path="/customers/:id" component={CustomerDetails} />
-        <ProtectedRoute path="/reservations" component={ReservationsIndex} />
+        <ProtectedRoute path="/reservations" component={ReservationCalendar} />
         <ProtectedRoute path="/reservations/add" component={ReservationAdd} />
-        <ProtectedRoute path="/reservations/calendar" component={ReservationCalendar} />
+        <ProtectedRoute path="/reservations/list" component={ReservationsIndex} />
         <ProtectedRoute path="/reservations/edit/:id" component={ReservationEdit} />
         <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
         <ProtectedRoute path="/maintenance" component={MaintenanceCalendar} />

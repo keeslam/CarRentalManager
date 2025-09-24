@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
+import { ReservationListDialog } from "@/components/reservations/reservation-list-dialog";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
@@ -79,6 +80,9 @@ export default function ReservationCalendarPage() {
   // New reservation dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // List view dialog
+  const [listDialogOpen, setListDialogOpen] = useState(false);
   
   // Color coding dialog
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
@@ -380,19 +384,17 @@ export default function ReservationCalendarPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Reservation Calendar</h1>
         <div className="flex gap-2">
-          <Link href="/reservations">
-            <Button variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list mr-2">
-                <line x1="8" x2="21" y1="6" y2="6" />
-                <line x1="8" x2="21" y1="12" y2="12" />
-                <line x1="8" x2="21" y1="18" y2="18" />
-                <line x1="3" x2="3" y1="6" y2="6" />
-                <line x1="3" x2="3" y1="12" y2="12" />
-                <line x1="3" x2="3" y1="18" y2="18" />
-              </svg>
-              List View
-            </Button>
-          </Link>
+          <Button variant="outline" onClick={() => setListDialogOpen(true)} data-testid="button-list-view">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list mr-2">
+              <line x1="8" x2="21" y1="6" y2="6" />
+              <line x1="8" x2="21" y1="12" y2="12" />
+              <line x1="8" x2="21" y1="18" y2="18" />
+              <line x1="3" x2="3" y1="6" y2="6" />
+              <line x1="3" x2="3" y1="12" y2="12" />
+              <line x1="3" x2="3" y1="18" y2="18" />
+            </svg>
+            List View
+          </Button>
           <Link href="/reservations/add">
             <Button>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
@@ -1261,6 +1263,12 @@ export default function ReservationCalendarPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reservation List Dialog */}
+      <ReservationListDialog
+        open={listDialogOpen}
+        onOpenChange={setListDialogOpen}
+      />
 
       {/* Color Coding Dialog */}
       <ColorCodingDialog
