@@ -30,9 +30,11 @@ import {
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
+import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit } from "lucide-react";
+import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette } from "lucide-react";
 
 // Calendar view options
 type CalendarView = "month";
@@ -72,6 +74,9 @@ export default function ReservationCalendarPage() {
   // Day reservations dialog
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  
+  // Color coding dialog
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
@@ -315,70 +320,18 @@ export default function ReservationCalendarPage() {
   
   // Function to get reservation color and style based on status and type
   const getReservationStyle = (status: string, isStart: boolean, isEnd: boolean, reservationType?: string) => {
-    let bgColor, textColor, borderColor;
-    
-    // Spare cars get distinct orange-based color scheme
-    if (reservationType === 'replacement') {
-      switch (status.toLowerCase()) {
-        case "confirmed":
-          bgColor = "bg-orange-100";
-          textColor = "text-orange-900";
-          borderColor = "border-orange-400";
-          break;
-        case "pending":
-          bgColor = "bg-orange-50";
-          textColor = "text-orange-700";
-          borderColor = "border-orange-300";
-          break;
-        case "cancelled":
-          bgColor = "bg-orange-50";
-          textColor = "text-orange-400";
-          borderColor = "border-orange-200";
-          break;
-        case "completed":
-          bgColor = "bg-orange-200";
-          textColor = "text-orange-900";
-          borderColor = "border-orange-500";
-          break;
-        default:
-          bgColor = "bg-orange-50";
-          textColor = "text-orange-600";
-          borderColor = "border-orange-200";
-      }
-    } else {
-      // Regular rentals keep the original color scheme
-      switch (status.toLowerCase()) {
-        case "confirmed":
-          bgColor = "bg-green-100";
-          textColor = "text-green-800";
-          borderColor = "border-green-300";
-          break;
-        case "pending":
-          bgColor = "bg-amber-100";
-          textColor = "text-amber-800";
-          borderColor = "border-amber-300";
-          break;
-        case "cancelled":
-          bgColor = "bg-gray-100";
-          textColor = "text-gray-500";
-          borderColor = "border-gray-300";
-          break;
-        case "completed":
-          bgColor = "bg-blue-100";
-          textColor = "text-blue-800";
-          borderColor = "border-blue-300";
-          break;
-        default:
-          bgColor = "bg-gray-100";
-          textColor = "text-gray-800";
-          borderColor = "border-gray-300";
-      }
-    }
+    // Use custom styling system first, fallback to default
+    const customClass = getCustomReservationStyle(status, isStart, isEnd, reservationType);
     
     const roundedLeft = isStart ? "rounded-l-md" : "";
     const roundedRight = isEnd ? "rounded-r-md" : "";
     
-    return `${bgColor} ${textColor} ${borderColor} border ${roundedLeft} ${roundedRight}`;
+    return `${customClass} ${roundedLeft} ${roundedRight}`;
+  };
+  
+  // Function to get custom inline styles for reservations
+  const getReservationStyleObject = (status: string, reservationType?: string) => {
+    return getCustomReservationStyleObject(status, reservationType);
   };
   
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -456,7 +409,11 @@ export default function ReservationCalendarPage() {
             <CardTitle>Reservation Schedule</CardTitle>
             <CardDescription>View and manage vehicle reservations</CardDescription>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setColorDialogOpen(true)}>
+              <Palette className="h-4 w-4 mr-1" />
+              Colors
+            </Button>
             <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
           </div>
         </CardHeader>
@@ -1249,6 +1206,12 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Color Coding Dialog */}
+      <ColorCodingDialog
+        open={colorDialogOpen}
+        onOpenChange={setColorDialogOpen}
+      />
     </div>
   );
 }

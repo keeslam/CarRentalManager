@@ -42,7 +42,9 @@ import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
+import { getCustomMaintenanceStyle, getCustomMaintenanceStyleObject } from "@/lib/calendar-styling";
+import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit, Trash2, Palette } from "lucide-react";
 
 // Calendar view options
 type CalendarView = "month";
@@ -98,6 +100,9 @@ export default function MaintenanceCalendar() {
   // Delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
+  
+  // Color coding dialog
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
   
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
@@ -357,18 +362,13 @@ export default function MaintenanceCalendar() {
 
   // Get event type styling
   const getEventTypeStyle = (type: string) => {
-    switch (type) {
-      case 'apk_due':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'warranty_expiring':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'scheduled_maintenance':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_service':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    // Use custom styling system first, fallback to default
+    return getCustomMaintenanceStyle(type);
+  };
+  
+  // Function to get custom inline styles for maintenance events
+  const getMaintenanceStyleObject = (type: string) => {
+    return getCustomMaintenanceStyleObject(type);
   };
 
   const getEventIcon = (type: string) => {
@@ -507,7 +507,11 @@ export default function MaintenanceCalendar() {
             <CardTitle>Maintenance Schedule</CardTitle>
             <CardDescription>View and manage vehicle maintenance events</CardDescription>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setColorDialogOpen(true)}>
+              <Palette className="h-4 w-4 mr-1" />
+              Colors
+            </Button>
             <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
           </div>
         </CardHeader>
@@ -977,6 +981,12 @@ export default function MaintenanceCalendar() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Color Coding Dialog */}
+      <ColorCodingDialog
+        open={colorDialogOpen}
+        onOpenChange={setColorDialogOpen}
+      />
     </div>
   );
 }
