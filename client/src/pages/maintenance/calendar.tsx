@@ -641,6 +641,7 @@ export default function MaintenanceCalendar() {
                                 <HoverCardTrigger asChild>
                                   <div
                                     className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${getEventTypeStyle(event.type)} group`}
+                                    style={getMaintenanceStyleObject(event.type)}
                                     data-testid={`event-${event.id}-${event.type}`}
                                   >
                                     <div className="flex items-center justify-between">
@@ -792,7 +793,10 @@ export default function MaintenanceCalendar() {
                           <div className="flex items-center gap-2">
                             {getEventIcon(event.type)}
                             <h4 className="font-semibold">{event.title}</h4>
-                            <Badge className={getEventTypeStyle(event.type)}>
+                            <Badge 
+                              className={getEventTypeStyle(event.type)}
+                              style={getMaintenanceStyleObject(event.type)}
+                            >
                               {event.type.replace('_', ' ')}
                             </Badge>
                           </div>

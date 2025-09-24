@@ -582,6 +582,7 @@ export default function ReservationCalendarPage() {
                                 <HoverCardTrigger asChild>
                                   <div 
                                     className={`px-2 py-1.5 text-sm truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay, res.type)}`}
+                                    style={getReservationStyleObject(res.status, res.type)}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       console.log('Main reservation item clicked for:', res.id);
@@ -592,7 +593,10 @@ export default function ReservationCalendarPage() {
                                     <div className="space-y-1">
                                       <div className="flex justify-between items-center">
                                         <div className="truncate flex items-center">
-                                          <span className={`px-1.5 py-0.5 rounded text-xs font-semibold mr-1 ${res.placeholderSpare ? 'bg-orange-100 text-orange-800' : 'bg-primary-100 text-primary-800'}`}>
+                                          <span 
+                                            className={`px-1.5 py-0.5 rounded text-xs font-semibold mr-1 ${res.placeholderSpare ? 'bg-orange-100 text-orange-800' : 'bg-primary-100 text-primary-800'}`}
+                                            style={res.placeholderSpare ? getCustomTBDStyle() : {}}
+                                          >
                                             {res.placeholderSpare ? 'TBD' : formatLicensePlate(res.vehicle?.licensePlate || '')}
                                           </span>
                                           {res.type === 'replacement' && (
@@ -601,10 +605,20 @@ export default function ReservationCalendarPage() {
                                             </span>
                                           )}
                                           {isPickupDay && 
-                                            <span className="ml-1 inline-block bg-green-200 text-green-800 text-[10px] px-1 rounded-sm font-medium">out</span>
+                                            <span 
+                                              className="ml-1 inline-block bg-green-200 text-green-800 text-[10px] px-1 rounded-sm font-medium"
+                                              style={getCustomIndicatorStyle('pickup')}
+                                            >
+                                              out
+                                            </span>
                                           }
                                           {isReturnDay && 
-                                            <span className="ml-1 inline-block bg-blue-200 text-blue-800 text-[10px] px-1 rounded-sm font-medium">in</span>
+                                            <span 
+                                              className="ml-1 inline-block bg-blue-200 text-blue-800 text-[10px] px-1 rounded-sm font-medium"
+                                              style={getCustomIndicatorStyle('return')}
+                                            >
+                                              in
+                                            </span>
                                           }
                                         </div>
                                       
