@@ -1556,8 +1556,8 @@ export async function registerRoutes(app: Express): Promise<void> {
           throw new Error(`Invalid date format in maintenance or rental ${reservationId}`);
         }
         
-        if (maintenanceStart >= maintenanceEnd) {
-          throw new Error(`Invalid maintenance period: start date must be before end date`);
+        if (maintenanceStart > maintenanceEnd) {
+          throw new Error(`Invalid maintenance period: end date cannot be before start date`);
         }
         
         let overlapStart: Date;
