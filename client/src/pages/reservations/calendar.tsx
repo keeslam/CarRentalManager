@@ -31,6 +31,7 @@ import {
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
+import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
@@ -855,6 +856,13 @@ export default function ReservationCalendarPage() {
               </svg>
             </div>
           )}
+          
+          {/* Calendar Legend */}
+          <CalendarLegend 
+            categories={['reservation-status', 'reservation-type', 'indicators']}
+            title="Reservation Calendar Legend"
+            compact
+          />
         </CardContent>
       </Card>
       

@@ -43,6 +43,7 @@ import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
+import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { getCustomMaintenanceStyle, getCustomMaintenanceStyleObject } from "@/lib/calendar-styling";
 import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit, Trash2, Palette } from "lucide-react";
 
@@ -765,6 +766,13 @@ export default function MaintenanceCalendar() {
               ))}
             </div>
           </div>
+          
+          {/* Calendar Legend */}
+          <CalendarLegend 
+            categories={['maintenance-type', 'maintenance-priority']}
+            title="Maintenance Calendar Legend"
+            compact
+          />
         </CardContent>
       </Card>
       
