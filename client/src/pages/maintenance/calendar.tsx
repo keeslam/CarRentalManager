@@ -27,10 +27,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
-import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit, Trash2 } from "lucide-react";
 
 // Calendar view options
 type CalendarView = "month";
@@ -62,6 +74,7 @@ interface MaintenanceEvent {
 export default function MaintenanceCalendar() {
   // Query client for cache invalidation
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const [view, setView] = useState<CalendarView>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -82,6 +95,10 @@ export default function MaintenanceCalendar() {
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   
+  // Delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
+  
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
     console.log('handleViewMaintenanceEvent called with:', reservation);
@@ -94,6 +111,56 @@ export default function MaintenanceCalendar() {
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
     console.log('Edit dialog should be open now');
+  };
+
+  const handleDeleteMaintenance = async (reservation: Reservation) => {
+    try {
+      const response = await apiRequest("DELETE", `/api/reservations/${reservation.id}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete maintenance reservation');
+      }
+
+      // Create descriptive vehicle info for toast
+      const vehicleInfo = reservation.vehicle 
+        ? `${reservation.vehicle.brand} ${reservation.vehicle.model} (${displayLicensePlate(reservation.vehicle.licensePlate)})`
+        : `Vehicle ${reservation.vehicleId}`;
+
+      // Show success toast
+      toast({
+        title: "Maintenance deleted",
+        description: `Maintenance for ${vehicleInfo} has been deleted successfully.`,
+      });
+
+      // Invalidate all relevant queries to refresh the calendar
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/reservations/range', {
+          startDate: format(dateRanges.start, "yyyy-MM-dd"),
+          endDate: format(dateRanges.end, "yyyy-MM-dd")
+        }]
+      });
+
+      // Close dialogs if open
+      setDeleteDialogOpen(false);
+      setDayDialogOpen(false);
+      setViewDialogOpen(false);
+      setEditDialogOpen(false);
+      setSelectedReservation(null);
+      setReservationToDelete(null);
+      
+    } catch (error) {
+      console.error('Error deleting maintenance:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete maintenance reservation",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleCloseDialogs = () => {
@@ -737,31 +804,60 @@ export default function MaintenanceCalendar() {
                         </div>
                         <div className="flex gap-2">
                           {isMaintenanceBlock && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={async () => {
-                                try {
-                                  const response = await fetch('/api/reservations');
-                                  const allReservations = await response.json();
-                                  const actualReservation = allReservations.find((r: any) => 
-                                    r.vehicleId === event.vehicleId && 
-                                    r.type === 'maintenance_block' &&
-                                    r.startDate === event.date
-                                  );
-                                  
-                                  if (actualReservation) {
-                                    handleEditMaintenance(actualReservation);
-                                    closeDayDialog();
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch('/api/reservations');
+                                    const allReservations = await response.json();
+                                    const actualReservation = allReservations.find((r: any) => 
+                                      r.vehicleId === event.vehicleId && 
+                                      r.type === 'maintenance_block' &&
+                                      r.startDate === event.date
+                                    );
+                                    
+                                    if (actualReservation) {
+                                      handleEditMaintenance(actualReservation);
+                                      closeDayDialog();
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to fetch reservation:', error);
                                   }
-                                } catch (error) {
-                                  console.error('Failed to fetch reservation:', error);
-                                }
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch('/api/reservations');
+                                    const allReservations = await response.json();
+                                    const actualReservation = allReservations.find((r: any) => 
+                                      r.vehicleId === event.vehicleId && 
+                                      r.type === 'maintenance_block' &&
+                                      r.startDate === event.date
+                                    );
+                                    
+                                    if (actualReservation) {
+                                      setReservationToDelete(actualReservation);
+                                      setDeleteDialogOpen(true);
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to fetch reservation:', error);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-${event.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </>
                           )}
                           <Link href={`/vehicles/${event.vehicleId}`}>
                             <Button size="sm" variant="outline">
@@ -845,6 +941,42 @@ export default function MaintenanceCalendar() {
           setSelectedReservation(null);
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Maintenance</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this maintenance reservation for{' '}
+              {reservationToDelete?.vehicle ? (
+                <>
+                  <strong>
+                    {reservationToDelete.vehicle.brand} {reservationToDelete.vehicle.model}
+                  </strong>{' '}
+                  ({displayLicensePlate(reservationToDelete.vehicle.licensePlate)})
+                </>
+              ) : (
+                <strong>Vehicle {reservationToDelete?.vehicleId}</strong>
+              )}
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (reservationToDelete) {
+                  handleDeleteMaintenance(reservationToDelete);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
