@@ -1270,6 +1270,7 @@ export default function ReservationCalendarPage() {
         onOpenChange={setListDialogOpen}
       />
 
+
       {/* Color Coding Dialog */}
       <ColorCodingDialog
         open={colorDialogOpen}

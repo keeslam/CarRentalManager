@@ -328,7 +328,7 @@ export function ReservationForm({
   }, [isOpenEndedWatch, form, startDateWatch, selectedStartDate]);
   
   useEffect(() => {
-    if (vehicleIdWatch && startDateWatch && !editMode) {
+    if (vehicleIdWatch && startDateWatch) {
       // Skip conflict checking for open-ended rentals
       if (isOpenEndedWatch) {
         setHasOverlap(false);
@@ -353,7 +353,7 @@ export function ReservationForm({
       
       checkConflicts();
     }
-  }, [vehicleIdWatch, startDateWatch, endDateWatch, isOpenEndedWatch, editMode, initialData?.id]);
+  }, [vehicleIdWatch, startDateWatch, endDateWatch, isOpenEndedWatch, initialData?.id]);
   
   // Format customer options for searchable combobox
   const customerOptions = useMemo(() => {
@@ -903,7 +903,7 @@ export function ReservationForm({
                     <Checkbox
                       data-testid="checkbox-show-all-vehicles"
                       checked={showAllVehicles}
-                      onCheckedChange={setShowAllVehicles}
+                      onCheckedChange={(checked) => setShowAllVehicles(checked === true)}
                     />
                     <label htmlFor="show-all-vehicles" className="text-sm text-muted-foreground cursor-pointer">
                       Show all vehicles (for long-term rentals)
