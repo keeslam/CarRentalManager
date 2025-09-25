@@ -13,6 +13,103 @@ import filteredVehiclesRoutes from "./routes/filtered-vehicles.js";
 import emailTemplatesRoutes from "./routes/email-templates.js";
 import emailLogsRoutes from "./routes/email-logs.js";
 
+// Graceful shutdown implementation
+let server: any = null;
+let backupScheduler: any = null;
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) {
+    console.log(`🔄 Shutdown already in progress, ignoring ${signal}`);
+    return;
+  }
+  
+  isShuttingDown = true;
+  console.log(`🛑 ${signal} received, starting graceful shutdown...`);
+  
+  const shutdownTimeout = setTimeout(() => {
+    console.error('❌ Forced shutdown - graceful shutdown timed out');
+    process.exit(1);
+  }, 10000); // 10 second timeout
+  
+  try {
+    // Stop accepting new requests
+    if (server) {
+      console.log('🔄 Stopping HTTP server...');
+      await new Promise<void>((resolve) => {
+        server.close((err: any) => {
+          if (err) {
+            console.error('❌ Error closing HTTP server:', err);
+          } else {
+            console.log('✅ HTTP server closed');
+          }
+          resolve();
+        });
+      });
+    }
+    
+    // Stop backup scheduler
+    if (backupScheduler) {
+      console.log('🔄 Stopping backup scheduler...');
+      backupScheduler.stop();
+      console.log('✅ Backup scheduler stopped');
+    }
+    
+    // Close database connections
+    try {
+      console.log('🔄 Closing database connections...');
+      // Note: DatabaseStorage uses drizzle which manages connections automatically
+      // No explicit close method needed for connection pooling
+      console.log('✅ Database connections handled by connection pooling');
+    } catch (dbError) {
+      console.error('⚠️ Error with database cleanup:', dbError);
+    }
+    
+    clearTimeout(shutdownTimeout);
+    console.log('✅ Graceful shutdown completed');
+    process.exit(0);
+    
+  } catch (error) {
+    clearTimeout(shutdownTimeout);
+    console.error('❌ Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Add process error handlers
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', error.message);
+  console.error('Stack trace:', error.stack);
+  
+  // Always perform graceful shutdown for fatal errors
+  gracefulShutdown('UNCAUGHT_EXCEPTION').catch(() => {
+    process.exit(1);
+  });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED PROMISE REJECTION at:', promise);
+  console.error('Reason:', reason);
+  
+  // Log and perform graceful shutdown for fatal errors
+  gracefulShutdown('UNHANDLED_REJECTION').catch(() => {
+    process.exit(1);
+  });
+});
+
+// Signal handlers for graceful shutdown
+process.on('SIGTERM', () => {
+  gracefulShutdown('SIGTERM').catch(() => {
+    process.exit(1);
+  });
+});
+
+process.on('SIGINT', () => {
+  gracefulShutdown('SIGINT').catch(() => {
+    process.exit(1);
+  });
+});
+
 // ESM __dirname fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -204,11 +301,11 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // Initialize backup scheduler
-const backupScheduler = new BackupScheduler();
+backupScheduler = new BackupScheduler();
 backupScheduler.start();
 
 // Main startup
-app.listen(port, '0.0.0.0', async () => {
+server = app.listen(port, '0.0.0.0', async () => {
   console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
   console.log(`🌐 API Server:    http://0.0.0.0:${port}`);
   console.log(`📱 Frontend:     http://localhost:${port}/`);
