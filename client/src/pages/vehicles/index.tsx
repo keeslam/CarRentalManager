@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -240,11 +241,11 @@ export default function VehiclesIndex() {
                 <line x1="14" x2="14" y1="11" y2="17"/>
               </svg>
             </Button>
-            <Link href={`/reservations/add?vehicleId=${vehicle.id}`}>
+            <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
               <Button variant="outline" size="sm">
                 Reserve
               </Button>
-            </Link>
+            </ReservationAddDialog>
           </div>
         );
       },

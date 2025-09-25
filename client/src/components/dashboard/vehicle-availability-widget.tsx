@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { Vehicle } from "@shared/schema";
 
 export function VehicleAvailabilityWidget() {
@@ -91,7 +92,7 @@ export function VehicleAvailabilityWidget() {
                   <div className="text-xs text-gray-500">{vehicle.brand} {vehicle.model}</div>
                 </div>
                 <div>
-                  <Link href={`/reservations/add?vehicleId=${vehicle.id}`}>
+                  <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
                     <Button variant="ghost" size="icon" className="text-primary-600 hover:bg-primary-50 rounded">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus">
                         <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
@@ -102,7 +103,7 @@ export function VehicleAvailabilityWidget() {
                         <line x1="16" x2="22" y1="19" y2="19" />
                       </svg>
                     </Button>
-                  </Link>
+                  </ReservationAddDialog>
                 </div>
               </div>
             ))

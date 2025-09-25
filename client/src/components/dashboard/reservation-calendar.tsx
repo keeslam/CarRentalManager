@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   HoverCard,
@@ -181,15 +182,16 @@ export function ReservationCalendar() {
       <CardHeader className="px-4 py-3 border-b flex-row justify-between items-center space-y-0">
         <CardTitle className="text-base font-medium text-gray-800">Reservation Calendar</CardTitle>
         <div className="flex space-x-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={() => navigate('/reservations/add')}
-          >
-            <PlusCircle className="mr-1 h-3 w-3" />
-            New Reservation
-          </Button>
+          <ReservationAddDialog>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="h-8 text-xs"
+            >
+              <PlusCircle className="mr-1 h-3 w-3" />
+              New Reservation
+            </Button>
+          </ReservationAddDialog>
           <Link href="/reservations/calendar">
             <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
               Full Calendar
@@ -274,14 +276,17 @@ export function ReservationCalendar() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <Button
-                                onClick={() => navigate(`/reservations/add?date=${safeFormat(day, 'yyyy-MM-dd', '1970-01-01')}`)}
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
+                              <ReservationAddDialog
+                                initialStartDate={safeFormat(day, 'yyyy-MM-dd', undefined)}
                               >
-                                <PlusCircle className="h-3.5 w-3.5" />
-                              </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
+                                >
+                                  <PlusCircle className="h-3.5 w-3.5" />
+                                </Button>
+                              </ReservationAddDialog>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>

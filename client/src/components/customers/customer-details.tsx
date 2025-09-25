@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation } from "@shared/schema";
@@ -131,7 +132,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               Edit
             </Button>
           </Link>
-          <Link href={`/reservations/add?customerId=${customerId}`}>
+          <ReservationAddDialog initialCustomerId={customerId.toString()}>
             <Button>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
                 <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
@@ -143,7 +144,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               </svg>
               New Reservation
             </Button>
-          </Link>
+          </ReservationAddDialog>
         </div>
       </div>
       
@@ -401,7 +402,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                   <CardTitle>Reservation History</CardTitle>
                   <CardDescription>All reservations for this customer</CardDescription>
                 </div>
-                <Link href={`/reservations/add?customerId=${customerId}`}>
+                <ReservationAddDialog initialCustomerId={customerId.toString()}>
                   <Button size="sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
                       <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
@@ -413,7 +414,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                     </svg>
                     New Reservation
                   </Button>
-                </Link>
+                </ReservationAddDialog>
               </div>
             </CardHeader>
             <CardContent>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Link, useLocation } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
@@ -1716,7 +1717,7 @@ Autolease Lam`;
                   <CardTitle>Reservation History</CardTitle>
                   <CardDescription>All reservations for this vehicle</CardDescription>
                 </div>
-                <Link href={`/reservations/add?vehicleId=${vehicleId}`}>
+                <ReservationAddDialog initialVehicleId={vehicleId}>
                   <Button size="sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
                       <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
@@ -1728,7 +1729,7 @@ Autolease Lam`;
                     </svg>
                     New Reservation
                   </Button>
-                </Link>
+                </ReservationAddDialog>
               </div>
             </CardHeader>
             <CardContent>

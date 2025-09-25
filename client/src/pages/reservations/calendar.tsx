@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { ReservationListDialog } from "@/components/reservations/reservation-list-dialog";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
@@ -395,7 +396,7 @@ export default function ReservationCalendarPage() {
             </svg>
             List View
           </Button>
-          <Link href="/reservations/add">
+          <ReservationAddDialog>
             <Button>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
                 <line x1="12" x2="12" y1="5" y2="19" />
@@ -403,7 +404,7 @@ export default function ReservationCalendarPage() {
               </svg>
               New Reservation
             </Button>
-          </Link>
+          </ReservationAddDialog>
         </div>
       </div>
       

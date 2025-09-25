@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -72,11 +73,11 @@ export default function CustomersIndex() {
                 View
               </Button>
             </Link>
-            <Link href={`/reservations/add?customerId=${customer.id}`}>
+            <ReservationAddDialog initialCustomerId={customer.id.toString()}>
               <Button variant="outline" size="sm">
                 New Reservation
               </Button>
-            </Link>
+            </ReservationAddDialog>
           </div>
         );
       },
