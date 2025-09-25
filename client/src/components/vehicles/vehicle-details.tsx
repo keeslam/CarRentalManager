@@ -296,11 +296,36 @@ Autolease Lam`;
   // Format customer options for searchable combobox
   const customerOptions = useMemo(() => {
     if (!customers) return [];
-    return customers.map(customer => ({
-      value: customer.id.toString(),
-      label: customer.name,
-      description: customer.email || customer.phone || undefined,
-    }));
+    return customers.map(customer => {
+      // Build a detailed description like vehicles show license plate
+      const contactInfo = [];
+      if (customer.phone) contactInfo.push(customer.phone);
+      if (customer.email) contactInfo.push(customer.email);
+      
+      const locationInfo = [];
+      if (customer.city) locationInfo.push(customer.city);
+      if (customer.postalCode) locationInfo.push(customer.postalCode);
+      
+      let description = contactInfo.join(' • ');
+      if (locationInfo.length > 0) {
+        description += description ? ` • ${locationInfo.join(' ')}` : locationInfo.join(' ');
+      }
+      
+      // Add company name as a tag if available
+      const tags = [];
+      if (customer.companyName) {
+        tags.push(customer.companyName);
+      } else if (customer.debtorNumber) {
+        tags.push(`#${customer.debtorNumber}`);
+      }
+      
+      return {
+        value: customer.id.toString(),
+        label: customer.name,
+        description: description || undefined,
+        tags: tags.length > 0 ? tags : undefined,
+      };
+    });
   }, [customers]);
 
   // Get today's date for form defaults
