@@ -1,14 +1,13 @@
 # Coolify deployment configuration using Nixpacks
 [variables]
-NIXPACKS_NODE_VERSION = "20"
+NIXPACKS_NODE_VERSION = "18"
 
 [phases.setup]
-nixPkgs = ["nodejs-20", "postgresql"]
+nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
 cmds = [
-  "npm ci",
-  "npm install"
+  "npm ci"
 ]
 
 [phases.build]
@@ -18,9 +17,9 @@ cmds = [
   "cp -r dist/public/* dist/server/public/"
 ]
 
-# Add database migration phase
+# Add database migration phase  
 [phases.migrate]
-cmds = ["npm run db:push --force"]
+cmds = ["npm run db:push -- --force"]
 dependsOn = ["build"]
 
 [start]
