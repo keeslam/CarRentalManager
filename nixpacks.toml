@@ -3,7 +3,7 @@
 NIXPACKS_NODE_VERSION = "20"
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs-20", "postgresql"]
 
 [phases.install]
 cmds = [
@@ -18,5 +18,10 @@ cmds = [
   "cp -r dist/public/* dist/server/public/"
 ]
 
+# Add database migration phase
+[phases.migrate]
+cmds = ["npm run db:push --force"]
+dependsOn = ["build"]
+
 [start]
-cmd = "node migrate-production.js && npm start"
+cmd = "npm start"
