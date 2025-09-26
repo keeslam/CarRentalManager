@@ -1,9 +1,9 @@
 # Coolify deployment configuration using Nixpacks
 [variables]
-NIXPACKS_NODE_VERSION = "18"
+NIXPACKS_NODE_VERSION = "22"
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs-22_x"]
 
 [phases.install]
 cmds = [
