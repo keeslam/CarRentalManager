@@ -17,10 +17,5 @@ cmds = [
   "cp -r dist/public/* dist/server/public/"
 ]
 
-# Add database migration phase  
-[phases.migrate]
-cmds = ["npm run db:push -- --force"]
-dependsOn = ["build"]
-
 [start]
-cmd = "npm start"
+cmd = "node startup-migration.js && npm start"
