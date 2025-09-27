@@ -37,6 +37,7 @@ import { Vehicle, Reservation } from "@shared/schema";
 import { Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatLicensePlate } from "@/lib/format-utils";
+import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 
 interface MaintenanceListDialogProps {
   open: boolean;
@@ -76,6 +77,10 @@ const getUrgencyText = (days: number): string => {
 
 export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // State for maintenance edit dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedMaintenanceReservation, setSelectedMaintenanceReservation] = useState<Reservation | null>(null);
 
   // Fetch APK expiring vehicles
   const { data: apkVehicles = [], isLoading: apkLoading, error: apkError } = useQuery<Vehicle[]>({
@@ -449,7 +454,15 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" data-testid={`button-edit-${reservation.id}`}>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => {
+                                      setSelectedMaintenanceReservation(reservation);
+                                      setEditDialogOpen(true);
+                                    }}
+                                    data-testid={`button-edit-${reservation.id}`}
+                                  >
                                     <Edit className="h-4 w-4 mr-1" />
                                     Edit
                                   </Button>
@@ -560,6 +573,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
           </Tabs>
         </div>
       </DialogContent>
+
+      {/* Maintenance Edit Dialog */}
+      <MaintenanceEditDialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setSelectedMaintenanceReservation(null);
+          }
+        }}
+        reservation={selectedMaintenanceReservation}
+      />
     </Dialog>
   );
 }
