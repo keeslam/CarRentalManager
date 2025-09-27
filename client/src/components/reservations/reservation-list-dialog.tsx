@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,8 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedViewReservationId, setSelectedViewReservationId] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Get current date
@@ -255,11 +258,17 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
             >
               View
             </Button>
-            <Link href={`/reservations/edit/${reservation.id}`}>
-              <Button variant="outline" size="sm" data-testid={`edit-reservation-${reservation.id}`}>
-                Edit
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              data-testid={`edit-reservation-${reservation.id}`}
+              onClick={() => {
+                setSelectedEditReservationId(reservation.id);
+                setEditDialogOpen(true);
+              }}
+            >
+              Edit
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" data-testid={`delete-reservation-${reservation.id}`}>
@@ -425,6 +434,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
         reservationId={selectedReservation?.id || 0}
+        initialStatus={selectedReservation?.status || "pending"}
         onStatusChanged={() => {
           // Refresh the data after status change
           queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
@@ -437,8 +447,28 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         onOpenChange={setViewDialogOpen}
         reservationId={selectedViewReservationId}
         onEdit={(reservationId) => {
-          // TODO: Open edit dialog when implemented
-          console.log('Edit reservation:', reservationId);
+          setSelectedEditReservationId(reservationId);
+          setViewDialogOpen(false);
+          setEditDialogOpen(true);
+        }}
+      />
+
+      {/* Reservation Edit Dialog */}
+      <ReservationEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        reservationId={selectedEditReservationId}
+        onSuccess={(updatedReservation) => {
+          // Refresh the data after successful edit using unified invalidation
+          invalidateRelatedQueries('reservations', {
+            id: updatedReservation.id,
+            vehicleId: updatedReservation.vehicleId,
+            customerId: updatedReservation.customerId
+          });
+          toast({
+            title: "Reservation updated",
+            description: "The reservation has been successfully updated",
+          });
         }}
       />
     </>
