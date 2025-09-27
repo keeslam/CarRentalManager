@@ -34,10 +34,10 @@ import {
   Clock
 } from "lucide-react";
 import { Vehicle, Reservation } from "@shared/schema";
-import { Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 
 interface MaintenanceListDialogProps {
   open: boolean;
@@ -81,6 +81,10 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
   // State for maintenance edit dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedMaintenanceReservation, setSelectedMaintenanceReservation] = useState<Reservation | null>(null);
+  
+  // State for vehicle view dialog
+  const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
   // Fetch APK expiring vehicles
   const { data: apkVehicles = [], isLoading: apkLoading, error: apkError } = useQuery<Vehicle[]>({
@@ -276,12 +280,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
-                                  <Link href={`/vehicles/${vehicle.id}`}>
-                                    <Button size="sm" variant="outline" data-testid={`button-view-${vehicle.id}`}>
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      View
-                                    </Button>
-                                  </Link>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => {
+                                      setSelectedVehicleId(vehicle.id);
+                                      setVehicleViewDialogOpen(true);
+                                    }}
+                                    data-testid={`button-view-${vehicle.id}`}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -362,12 +372,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
-                                  <Link href={`/vehicles/${vehicle.id}`}>
-                                    <Button size="sm" variant="outline" data-testid={`button-view-${vehicle.id}`}>
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      View
-                                    </Button>
-                                  </Link>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => {
+                                      setSelectedVehicleId(vehicle.id);
+                                      setVehicleViewDialogOpen(true);
+                                    }}
+                                    data-testid={`button-view-${vehicle.id}`}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -467,12 +483,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                                     Edit
                                   </Button>
                                   {reservation.vehicle && (
-                                    <Link href={`/vehicles/${reservation.vehicle.id}`}>
-                                      <Button size="sm" variant="outline" data-testid={`button-view-vehicle-${reservation.vehicle.id}`}>
-                                        <Eye className="h-4 w-4 mr-1" />
-                                        Vehicle
-                                      </Button>
-                                    </Link>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => {
+                                        setSelectedVehicleId(reservation.vehicle.id);
+                                        setVehicleViewDialogOpen(true);
+                                      }}
+                                      data-testid={`button-view-vehicle-${reservation.vehicle.id}`}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      Vehicle
+                                    </Button>
                                   )}
                                 </div>
                               </TableCell>
@@ -584,6 +606,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
           }
         }}
         reservation={selectedMaintenanceReservation}
+      />
+
+      {/* Vehicle View Dialog */}
+      <VehicleViewDialog
+        open={vehicleViewDialogOpen}
+        onOpenChange={(open) => {
+          setVehicleViewDialogOpen(open);
+          if (!open) {
+            setSelectedVehicleId(null);
+          }
+        }}
+        vehicleId={selectedVehicleId}
       />
     </Dialog>
   );
