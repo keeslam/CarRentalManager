@@ -86,9 +86,12 @@ export function SpareVehicleDialog({
       
       if (!startDate) return [];
       
+      // Backend requires both startDate and endDate - use startDate as endDate if not provided for single-day availability
+      const effectiveEndDate = endDate || startDate;
+      
       const params = new URLSearchParams({
         startDate,
-        endDate: endDate || "",
+        endDate: effectiveEndDate,
         excludeVehicleId: originalReservation?.vehicleId?.toString() || "",
       });
       
