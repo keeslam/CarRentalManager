@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
+import { MaintenanceListDialog } from "@/components/maintenance/maintenance-list-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -104,6 +105,9 @@ export default function MaintenanceCalendar() {
   
   // Color coding dialog
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
+  
+  // Maintenance list dialog
+  const [maintenanceListDialogOpen, setMaintenanceListDialogOpen] = useState(false);
   
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
@@ -291,12 +295,12 @@ export default function MaintenanceCalendar() {
       
       events.push({
         id: reservation.id + 20000, // Avoid ID conflicts
-        vehicleId: reservation.vehicleId,
+        vehicleId: reservation.vehicleId!, // Using ! since we already checked vehicle exists
         vehicle,
         type: 'scheduled_maintenance' as const,
         date: reservation.startDate,
         startDate: reservation.startDate,
-        endDate: reservation.endDate,
+        endDate: reservation.endDate || undefined,
         title: 'Scheduled Maintenance',
         description: reservation.notes || `Scheduled maintenance for ${vehicle.brand} ${vehicle.model}`,
         needsSpareVehicle: false
@@ -479,19 +483,21 @@ export default function MaintenanceCalendar() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Maintenance Calendar</h1>
         <div className="flex gap-2">
-          <Link href="/maintenance">
-            <Button variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list mr-2">
-                <line x1="8" x2="21" y1="6" y2="6" />
-                <line x1="8" x2="21" y1="12" y2="12" />
-                <line x1="8" x2="21" y1="18" y2="18" />
-                <line x1="3" x2="3" y1="6" y2="6" />
-                <line x1="3" x2="3" y1="12" y2="12" />
-                <line x1="3" x2="3" y1="18" y2="18" />
-              </svg>
-              List View
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            onClick={() => setMaintenanceListDialogOpen(true)}
+            data-testid="button-maintenance-list-view"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-list mr-2">
+              <line x1="8" x2="21" y1="6" y2="6" />
+              <line x1="8" x2="21" y1="12" y2="12" />
+              <line x1="8" x2="21" y1="18" y2="18" />
+              <line x1="3" x2="3" y1="6" y2="6" />
+              <line x1="3" x2="3" y1="12" y2="12" />
+              <line x1="3" x2="3" y1="18" y2="18" />
+            </svg>
+            List View
+          </Button>
           <Button onClick={() => setIsScheduleDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Schedule Maintenance
@@ -936,23 +942,24 @@ export default function MaintenanceCalendar() {
       {/* Maintenance Edit Dialog */}
       <MaintenanceEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        reservation={selectedReservation}
-        onSuccess={() => {
-          // Invalidate all relevant queries to refresh the calendar
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-          queryClient.invalidateQueries({ 
-            queryKey: ['/api/reservations/range', {
-              startDate: format(dateRanges.start, "yyyy-MM-dd"),
-              endDate: format(dateRanges.end, "yyyy-MM-dd")
-            }]
-          });
-          setEditDialogOpen(false);
-          setSelectedReservation(null);
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setSelectedReservation(null);
+            // Invalidate all relevant queries to refresh the calendar
+            queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+            queryClient.invalidateQueries({ 
+              queryKey: ['/api/reservations/range', {
+                startDate: format(dateRanges.start, "yyyy-MM-dd"),
+                endDate: format(dateRanges.end, "yyyy-MM-dd")
+              }]
+            });
+          }
         }}
+        reservation={selectedReservation}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -995,6 +1002,12 @@ export default function MaintenanceCalendar() {
       <ColorCodingDialog
         open={colorDialogOpen}
         onOpenChange={setColorDialogOpen}
+      />
+
+      {/* Maintenance List Dialog */}
+      <MaintenanceListDialog
+        open={maintenanceListDialogOpen}
+        onOpenChange={setMaintenanceListDialogOpen}
       />
     </div>
   );
