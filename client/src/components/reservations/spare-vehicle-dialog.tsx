@@ -25,13 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -220,43 +214,16 @@ export function SpareVehicleDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Available Spare Vehicles</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-spare-vehicle">
-                        <SelectValue placeholder="Select a spare vehicle" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingVehicles ? (
-                        <div className="p-2 text-center text-sm text-gray-500">
-                          Loading available vehicles...
-                        </div>
-                      ) : availableVehicles && availableVehicles.length > 0 ? (
-                        availableVehicles.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {formatLicensePlate(vehicle.licensePlate)}
-                              </Badge>
-                              <span>
-                                {vehicle.brand} {vehicle.model}
-                              </span>
-                              {vehicle.vehicleType && (
-                                <span className="text-xs text-gray-500">
-                                  ({vehicle.vehicleType})
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-center text-sm text-gray-500">
-                          <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
-                          No spare vehicles available for the selected dates
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <VehicleSelector
+                      vehicles={availableVehicles || []}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select a spare vehicle"
+                      disabled={isLoadingVehicles || !availableVehicles || availableVehicles.length === 0}
+                      className="w-full"
+                    />
+                  </FormControl>
                   <FormDescription>
                     Only vehicles available during the replacement period are shown.
                   </FormDescription>
