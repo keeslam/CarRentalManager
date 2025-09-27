@@ -21,7 +21,7 @@ console.log('🔄 Starting database migration...');
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
+  ssl: false  // Disable SSL for production database that doesn't support it
 });
 
 const db = drizzle(pool);
