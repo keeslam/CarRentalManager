@@ -45,7 +45,7 @@ import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck } fro
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertReservationSchema } from "@shared/schema";
+import { insertReservationSchema, insertReservationSchemaBase } from "@shared/schema";
 import { 
   Form, 
   FormControl, 
@@ -254,7 +254,7 @@ Autolease Lam`;
   }, [isApkReminderOpen, vehicle, customersWithReservations, apkTemplate]);
 
   // New reservation form schema
-  const newReservationSchema = insertReservationSchema.extend({
+  const newReservationSchema = insertReservationSchemaBase.extend({
     vehicleId: z.number().min(1, "Vehicle is required"),
     customerId: z.union([
       z.number().min(1, "Please select a customer"),
