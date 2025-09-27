@@ -38,6 +38,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
+import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
 
 interface MaintenanceListDialogProps {
   open: boolean;
@@ -85,6 +86,10 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
   // State for vehicle view dialog
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  
+  // State for spare vehicle assignment dialog
+  const [spareDialogOpen, setSpareDialogOpen] = useState(false);
+  const [selectedSpareAssignment, setSelectedSpareAssignment] = useState<any>(null);
 
   // Fetch APK expiring vehicles
   const { data: apkVehicles = [], isLoading: apkLoading, error: apkError } = useQuery<Vehicle[]>({
@@ -578,7 +583,14 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Button size="sm" data-testid={`button-assign-${assignment.id}`}>
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => {
+                                      setSelectedSpareAssignment(assignment);
+                                      setSpareDialogOpen(true);
+                                    }}
+                                    data-testid={`button-assign-${assignment.id}`}
+                                  >
                                     <Plus className="h-4 w-4 mr-1" />
                                     Assign
                                   </Button>
@@ -618,6 +630,22 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
           }
         }}
         vehicleId={selectedVehicleId}
+      />
+
+      {/* Spare Vehicle Assignment Dialog */}
+      <SpareVehicleDialog
+        open={spareDialogOpen}
+        onOpenChange={(open) => {
+          setSpareDialogOpen(open);
+          if (!open) {
+            setSelectedSpareAssignment(null);
+          }
+        }}
+        originalReservation={selectedSpareAssignment}
+        onSuccess={() => {
+          setSpareDialogOpen(false);
+          setSelectedSpareAssignment(null);
+        }}
       />
     </Dialog>
   );
