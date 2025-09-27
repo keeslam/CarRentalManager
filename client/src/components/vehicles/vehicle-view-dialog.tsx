@@ -44,7 +44,7 @@ export function VehicleViewDialog({
             ) : error ? (
               "Vehicle Details"
             ) : vehicle ? (
-              `Vehicle Details - ${vehicle.brand} ${vehicle.model} (${formatLicensePlate(vehicle.licensePlate)})`
+              `Vehicle Details - ${vehicle.brand} ${vehicle.model} (${vehicle.licensePlate ? formatLicensePlate(vehicle.licensePlate) : 'No License Plate'})`
             ) : (
               "Vehicle Details"
             )}
