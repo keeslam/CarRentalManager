@@ -9,6 +9,7 @@ import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +55,8 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
   const [vehicleGrouping, setVehicleGrouping] = useState("none");
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedViewReservationId, setSelectedViewReservationId] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Get current date
@@ -241,11 +244,17 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         const reservation = row.original;
         return (
           <div className="flex space-x-2">
-            <Link href={`/reservations/${reservation.id}`}>
-              <Button variant="outline" size="sm" data-testid={`view-reservation-${reservation.id}`}>
-                View
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              data-testid={`view-reservation-${reservation.id}`}
+              onClick={() => {
+                setSelectedViewReservationId(reservation.id);
+                setViewDialogOpen(true);
+              }}
+            >
+              View
+            </Button>
             <Link href={`/reservations/edit/${reservation.id}`}>
               <Button variant="outline" size="sm" data-testid={`edit-reservation-${reservation.id}`}>
                 Edit
@@ -416,7 +425,21 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
         reservationId={selectedReservation?.id || 0}
-        onStatusChange={(id: number, status: string) => updateStatusMutation.mutate({ id, status })}
+        onStatusChanged={() => {
+          // Refresh the data after status change
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+        }}
+      />
+
+      {/* Reservation View Dialog */}
+      <ReservationViewDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        reservationId={selectedViewReservationId}
+        onEdit={(reservationId) => {
+          // TODO: Open edit dialog when implemented
+          console.log('Edit reservation:', reservationId);
+        }}
       />
     </>
   );
