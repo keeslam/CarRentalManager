@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
+import { VehicleEditDialog } from "@/components/vehicles/vehicle-edit-dialog";
+import { VehicleDeleteDialog } from "@/components/vehicles/vehicle-delete-dialog";
+import { VehicleAddDialog } from "@/components/vehicles/vehicle-add-dialog";
+import { VehicleBulkImportDialog } from "@/components/vehicles/vehicle-bulk-import-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -15,30 +19,16 @@ import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("default");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const vehiclesPerPage = 10; // Show 10 vehicles per page
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [_, navigate] = useLocation();
   
   // Debounce search query to prevent excessive filtering on every keystroke
   useEffect(() => {
@@ -53,77 +43,16 @@ export default function VehiclesIndex() {
     queryKey: ["/api/vehicles"],
   });
   
-  const deleteVehicleMutation = useMutation({
-    mutationFn: async (vehicleId: number) => {
-      const response = await fetch(`/api/vehicles/${vehicleId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete vehicle: ${response.status} ${response.statusText}`);
-      }
-      
-      // Try to parse JSON response, but don't fail if there isn't one
-      try {
-        return await response.json();
-      } catch (e) {
-        // Return an object with success=true if no valid JSON
-        return { success: true };
-      }
-    },
-    onSuccess: async () => {
-      toast({
-        title: "Vehicle deleted",
-        description: `Vehicle ${formatLicensePlate(vehicleToDelete?.licensePlate || '')} has been successfully deleted.`,
-      });
-      
-      // Use unified invalidation system to update all vehicle-related data
-      await invalidateRelatedQueries('vehicles');
-      setVehicleToDelete(null);
-    },
-    onError: (error) => {
-      console.error("Error deleting vehicle:", error);
-      
-      let errorMessage = "Failed to delete vehicle. Please try again.";
-      
-      // Check if the error contains a message about foreign key violation
-      if (error instanceof Error && error.message.includes("constraint")) {
-        errorMessage = "Cannot delete vehicle as it has related records (reservations, etc.) that need to be deleted first.";
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  const handleDeleteClick = (vehicle: Vehicle) => {
-    setVehicleToDelete(vehicle);
-    setDeleteDialogOpen(true);
+  // Dialog handlers
+  const handleViewClick = (vehicleId: number) => {
+    setSelectedVehicleId(vehicleId);
+    setVehicleViewDialogOpen(true);
   };
   
-  const handleConfirmDelete = () => {
-    if (vehicleToDelete) {
-      deleteVehicleMutation.mutate(vehicleToDelete.id);
-    }
-    setDeleteDialogOpen(false);
-  };
-  
-  const handleEditClick = (vehicle: Vehicle) => {
-    // Navigate to the edit page for this vehicle
-    navigate(`/vehicles/${vehicle.id}/edit`);
-  };
-  
-  const handleViewClick = (vehicle: Vehicle) => {
-    // Invalidate the specific vehicle query to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
-    // Navigate to the vehicle details page
-    navigate(`/vehicles/${vehicle.id}`);
+  // Handle successful operations from dialogs
+  const handleDialogSuccess = () => {
+    // Refresh the vehicles list after any dialog operation
+    queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
   };
   
   // Pagination functions
@@ -213,36 +142,28 @@ export default function VehiclesIndex() {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => handleViewClick(vehicle)}
+              onClick={() => handleViewClick(vehicle.id)}
+              data-testid={`button-view-vehicle-${vehicle.id}`}
             >
               View
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => handleEditClick(vehicle)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                <path d="m15 5 4 4"/>
-              </svg>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-red-500"
-              onClick={() => handleDeleteClick(vehicle)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2">
-                <path d="M3 6h18"/>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                <line x1="10" x2="10" y1="11" y2="17"/>
-                <line x1="14" x2="14" y1="11" y2="17"/>
-              </svg>
-            </Button>
+            <VehicleEditDialog 
+              vehicleId={vehicle.id}
+              onSuccess={handleDialogSuccess}
+            />
+            <VehicleDeleteDialog 
+              vehicleId={vehicle.id}
+              vehicleBrand={vehicle.brand}
+              vehicleModel={vehicle.model}
+              vehicleLicensePlate={vehicle.licensePlate}
+              onSuccess={handleDialogSuccess}
+            />
             <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                data-testid={`button-reserve-vehicle-${vehicle.id}`}
+              >
                 Reserve
               </Button>
             </ReservationAddDialog>
@@ -389,55 +310,18 @@ export default function VehiclesIndex() {
   
   return (
     <div className="space-y-6">
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this vehicle?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {vehicleToDelete && (
-                <>
-                  This will permanently delete the vehicle <strong>{vehicleToDelete.brand} {vehicleToDelete.model}</strong> with license plate <strong>{formatLicensePlate(vehicleToDelete.licensePlate)}</strong> and all associated data.
-                  <br /><br />
-                  This action cannot be undone.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Vehicle View Dialog */}
+      <VehicleViewDialog 
+        open={vehicleViewDialogOpen}
+        onOpenChange={setVehicleViewDialogOpen}
+        vehicleId={selectedVehicleId}
+      />
       
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Vehicle Management</h1>
         <div className="flex space-x-2">
-          <Link href="/vehicles/bulk-import">
-            <Button variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-download mr-2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" x2="12" y1="15" y2="3" />
-              </svg>
-              Bulk Import
-            </Button>
-          </Link>
-          <Link href="/vehicles/add">
-            <Button>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
-                <line x1="12" x2="12" y1="5" y2="19" />
-                <line x1="5" x2="19" y1="12" y2="12" />
-              </svg>
-              Add Vehicle
-            </Button>
-          </Link>
+          <VehicleBulkImportDialog onSuccess={handleDialogSuccess} />
+          <VehicleAddDialog onSuccess={handleDialogSuccess} />
         </div>
       </div>
       

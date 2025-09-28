@@ -24,7 +24,7 @@ export function VehicleViewDialog({
 }: VehicleViewDialogProps) {
   // Fetch vehicle data for the dialog title
   const { data: vehicle, isLoading, error } = useQuery<Vehicle>({
-    queryKey: ['/api/vehicles', vehicleId],
+    queryKey: [`/api/vehicles/${vehicleId}`],
     enabled: open && vehicleId !== null,
   });
 
