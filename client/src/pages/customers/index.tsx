@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { CustomerAddDialog } from "@/components/customers/customer-add-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -12,10 +13,16 @@ import { formatPhoneNumber } from "@/lib/format-utils";
 
 export default function CustomersIndex() {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
   
   const { data: customers, isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
+
+  const handleCustomerAdded = () => {
+    // Refresh the customers list when a new customer is added
+    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+  };
   
   // Filter customers based on search query
   const filteredCustomers = customers?.filter(customer => {
@@ -88,15 +95,7 @@ export default function CustomersIndex() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Customer Management</h1>
-        <Link href="/customers/add">
-          <Button>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
-              <line x1="12" x2="12" y1="5" y2="19" />
-              <line x1="5" x2="19" y1="12" y2="12" />
-            </svg>
-            Add Customer
-          </Button>
-        </Link>
+        <CustomerAddDialog onSuccess={handleCustomerAdded} />
       </div>
       
       <Card>
