@@ -321,20 +321,17 @@ export default function MaintenanceCalendar() {
       const searchText = notes.toLowerCase();
       
       if (maintenanceType === 'apk_inspection') {
-        // APK inspection keywords
-        return searchText.includes('apk') || 
+        // APK inspection keywords - using specific terms to avoid false positives
+        return searchText.includes('apk_inspection') ||
+               searchText.includes('apk') || 
                searchText.includes('keuring') || 
-               searchText.includes('inspection') || 
-               searchText.includes('test') ||
-               searchText.includes('controle') ||
                searchText.includes('rdw');
       } else if (maintenanceType === 'warranty_service') {
-        // Warranty service keywords
-        return searchText.includes('warranty') || 
+        // Warranty service keywords - using specific terms only
+        return searchText.includes('warranty_service') ||
+               searchText.includes('warranty') || 
                searchText.includes('garantie') || 
                searchText.includes('garanti') ||
-               searchText.includes('service') ||
-               searchText.includes('onderhoud') ||
                searchText.includes('recall');
       }
       
@@ -1178,7 +1175,7 @@ export default function MaintenanceCalendar() {
         initialVehicleId={selectedVehicleIdForSchedule || undefined}
         initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
         onSuccess={() => {
-          // Invalidate all relevant queries to refresh the calendar
+          // Comprehensive cache invalidation to ensure immediate UI updates
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
@@ -1189,8 +1186,27 @@ export default function MaintenanceCalendar() {
               endDate: format(dateRanges.end, "yyyy-MM-dd")
             }]
           });
+          
+          // Also invalidate the current range for immediate update
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/reservations/range', {
+              startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
+              endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
+            }]
+          });
+          
+          // Close the day dialog to immediately reflect changes
+          closeDayDialog();
+          
+          // Force calendar to refresh by updating current date
           setCurrentDate(new Date(currentDate));
           setEditingReservation(null);
+          
+          // Show success message
+          toast({
+            title: "Maintenance Scheduled",
+            description: "The maintenance has been scheduled and reminders have been updated.",
+          });
         }}
       />
 
