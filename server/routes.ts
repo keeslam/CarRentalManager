@@ -2179,6 +2179,39 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Update spare vehicle status
+  app.patch("/api/reservations/:id/spare-status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.id);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const { spareVehicleStatus } = req.body;
+      const validStatuses = ['assigned', 'ready', 'picked_up', 'returned'];
+      
+      if (!spareVehicleStatus || !validStatuses.includes(spareVehicleStatus)) {
+        return res.status(400).json({ 
+          message: "Invalid spare vehicle status. Must be one of: " + validStatuses.join(', ') 
+        });
+      }
+
+      const updatedReservation = await storage.updateReservation(reservationId, { 
+        spareVehicleStatus,
+        updatedBy: (req as any).user?.username 
+      });
+
+      if (!updatedReservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      res.json(updatedReservation);
+    } catch (error) {
+      console.error("Error updating spare vehicle status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ==================== PLACEHOLDER SPARE VEHICLE ROUTES ====================
   
   // Create a placeholder spare vehicle reservation

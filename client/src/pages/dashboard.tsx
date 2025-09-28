@@ -1,7 +1,7 @@
 import { VehicleAvailabilityWidget } from "@/components/dashboard/vehicle-availability-widget";
 import { ApkExpirationWidget } from "@/components/dashboard/apk-expiration-widget";
 import { WarrantyExpirationWidget } from "@/components/dashboard/warranty-expiration-widget";
-import { PendingSpareAssignmentWidget } from "@/components/dashboard/pending-spare-assignment-widget";
+import { SpareVehicleAssignmentsWidget } from "@/components/dashboard/spare-vehicle-assignments-widget";
 import { UpcomingReservations } from "@/components/dashboard/upcoming-reservations";
 import { RecentExpenses } from "@/components/dashboard/recent-expenses";
 import { ReservationCalendar } from "@/components/dashboard/reservation-calendar";
@@ -18,7 +18,7 @@ export default function Dashboard() {
         <VehicleAvailabilityWidget />
         <ApkExpirationWidget />
         <WarrantyExpirationWidget />
-        <PendingSpareAssignmentWidget />
+        <SpareVehicleAssignmentsWidget />
       </div>
       
       {/* Reservations and Expenses */}
