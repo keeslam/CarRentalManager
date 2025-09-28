@@ -304,39 +304,40 @@ export default function MaintenanceCalendar() {
 
   // Helper function to check if maintenance is already scheduled for a vehicle
   const isMaintenanceScheduled = (vehicleId: number, maintenanceType: 'apk_inspection' | 'warranty_service'): boolean => {
-    if (!maintenanceBlocks) return false;
+    if (!maintenanceBlocks) {
+      return false;
+    }
     
-    return maintenanceBlocks.some(block => {
+    const found = maintenanceBlocks.some(block => {
       if (block.vehicleId !== vehicleId) return false;
       
-      // Get current date to check if the scheduled maintenance is relevant (not in the past)
-      const today = startOfDay(new Date());
-      const blockStartDate = parseISO(block.startDate);
-      
-      // Only consider future or current maintenance blocks
-      if (isBefore(blockStartDate, today)) return false;
+      // For reminder suppression, we want to consider ALL maintenance blocks (past, present, future)
+      // The goal is to suppress reminders if maintenance has already been scheduled/completed
       
       // Check maintenance type from reservation notes with comprehensive keyword matching
       const notes = (block.notes?.toLowerCase() || '').trim();
       const searchText = notes.toLowerCase();
       
+      let matches = false;
       if (maintenanceType === 'apk_inspection') {
         // APK inspection keywords - using specific terms to avoid false positives
-        return searchText.includes('apk_inspection') ||
-               searchText.includes('apk') || 
-               searchText.includes('keuring') || 
-               searchText.includes('rdw');
+        matches = searchText.includes('apk_inspection') ||
+                 searchText.includes('apk') || 
+                 searchText.includes('keuring') || 
+                 searchText.includes('rdw');
       } else if (maintenanceType === 'warranty_service') {
         // Warranty service keywords - using specific terms only
-        return searchText.includes('warranty_service') ||
-               searchText.includes('warranty') || 
-               searchText.includes('garantie') || 
-               searchText.includes('garanti') ||
-               searchText.includes('recall');
+        matches = searchText.includes('warranty_service') ||
+                 searchText.includes('warranty') || 
+                 searchText.includes('garantie') || 
+                 searchText.includes('garanti') ||
+                 searchText.includes('recall');
       }
       
-      return false;
+      return matches;
     });
+    
+    return found;
   };
 
   // Create maintenance events from vehicle data and scheduled maintenance
