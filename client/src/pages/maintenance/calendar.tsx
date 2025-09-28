@@ -280,6 +280,28 @@ export default function MaintenanceCalendar() {
       reservations.filter(r => r.type === 'maintenance_block')
   });
 
+  // Helper function to shift weekend dates to next Monday
+  const shiftWeekendToMonday = (date: Date): { shiftedDate: Date; wasShifted: boolean } => {
+    const dayOfWeek = getDay(date); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    if (dayOfWeek === 0) { // Sunday -> shift to Monday (+1 day)
+      return {
+        shiftedDate: addDays(date, 1),
+        wasShifted: true
+      };
+    } else if (dayOfWeek === 6) { // Saturday -> shift to Monday (+2 days)
+      return {
+        shiftedDate: addDays(date, 2), 
+        wasShifted: true
+      };
+    } else {
+      return {
+        shiftedDate: date,
+        wasShifted: false
+      };
+    }
+  };
+
   // Create maintenance events from vehicle data and scheduled maintenance
   const maintenanceEvents: MaintenanceEvent[] = useMemo(() => {
     const events: MaintenanceEvent[] = [];
@@ -294,48 +316,51 @@ export default function MaintenanceCalendar() {
       const today = startOfDay(new Date());
       
       // Always create 2 months before reminder (show in backlog if past)
-      const isOverdue2m = isBefore(twoMonthsBefore, today);
+      const { shiftedDate: shifted2m, wasShifted: wasShifted2m } = shiftWeekendToMonday(twoMonthsBefore);
+      const isOverdue2m = isBefore(shifted2m, today);
       events.push({
         id: `apk_reminder_2m_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'apk_reminder_2m' as const,
-        date: format(twoMonthsBefore, 'yyyy-MM-dd'),
-        title: isOverdue2m ? 'APK Reminder (2 months) - OVERDUE' : 'APK Reminder (2 months)',
+        date: format(shifted2m, 'yyyy-MM-dd'),
+        title: isOverdue2m ? 'APK Reminder (2 months) - OVERDUE' : 'APK Reminder (2 months)' + (wasShifted2m ? ' (Moved from weekend)' : ''),
         description: isOverdue2m 
-          ? `APK inspection reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}` 
-          : `APK inspection due in 2 months for ${vehicle.brand} ${vehicle.model}`,
+          ? `APK inspection reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}` + (wasShifted2m ? ' (Originally scheduled for weekend)' : '')
+          : `APK inspection due in 2 months for ${vehicle.brand} ${vehicle.model}` + (wasShifted2m ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: false,
         priority: isOverdue2m ? 'urgent' : 'low',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
       
       // Always create 1 month before reminder (show in backlog if past)
-      const isOverdue1m = isBefore(oneMonthBefore, today);
+      const { shiftedDate: shifted1m, wasShifted: wasShifted1m } = shiftWeekendToMonday(oneMonthBefore);
+      const isOverdue1m = isBefore(shifted1m, today);
       events.push({
         id: `apk_reminder_1m_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'apk_reminder_1m' as const,
-        date: format(oneMonthBefore, 'yyyy-MM-dd'),
-        title: isOverdue1m ? 'APK Reminder (1 month) - OVERDUE' : 'APK Reminder (1 month)',
+        date: format(shifted1m, 'yyyy-MM-dd'),
+        title: isOverdue1m ? 'APK Reminder (1 month) - OVERDUE' : 'APK Reminder (1 month)' + (wasShifted1m ? ' (Moved from weekend)' : ''),
         description: isOverdue1m
-          ? `APK inspection reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}`
-          : `APK inspection due in 1 month for ${vehicle.brand} ${vehicle.model}`,
+          ? `APK inspection reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}` + (wasShifted1m ? ' (Originally scheduled for weekend)' : '')
+          : `APK inspection due in 1 month for ${vehicle.brand} ${vehicle.model}` + (wasShifted1m ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: false,
         priority: isOverdue1m ? 'urgent' : 'medium',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
       
       // Actual due date
+      const { shiftedDate: shiftedDue, wasShifted: wasShiftedDue } = shiftWeekendToMonday(dueDate);
       events.push({
         id: `apk_due_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'apk_due' as const,
-        date: vehicle.apkDate,
-        title: 'APK Inspection Due',
-        description: `APK inspection required for ${vehicle.brand} ${vehicle.model}`,
+        date: format(shiftedDue, 'yyyy-MM-dd'),
+        title: 'APK Inspection Due' + (wasShiftedDue ? ' (Moved from weekend)' : ''),
+        description: `APK inspection required for ${vehicle.brand} ${vehicle.model}` + (wasShiftedDue ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: true,
         priority: 'urgent',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
@@ -352,48 +377,51 @@ export default function MaintenanceCalendar() {
       const today = startOfDay(new Date());
       
       // Always create 2 months before reminder (show in backlog if past)
-      const isOverdue2m = isBefore(twoMonthsBefore, today);
+      const { shiftedDate: shifted2m, wasShifted: wasShifted2m } = shiftWeekendToMonday(twoMonthsBefore);
+      const isOverdue2m = isBefore(shifted2m, today);
       events.push({
         id: `warranty_reminder_2m_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'warranty_reminder_2m' as const,
-        date: format(twoMonthsBefore, 'yyyy-MM-dd'),
-        title: isOverdue2m ? 'Warranty Reminder (2 months) - OVERDUE' : 'Warranty Reminder (2 months)',
+        date: format(shifted2m, 'yyyy-MM-dd'),
+        title: isOverdue2m ? 'Warranty Reminder (2 months) - OVERDUE' : 'Warranty Reminder (2 months)' + (wasShifted2m ? ' (Moved from weekend)' : ''),
         description: isOverdue2m
-          ? `Warranty reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}`
-          : `Warranty expires in 2 months for ${vehicle.brand} ${vehicle.model}`,
+          ? `Warranty reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}` + (wasShifted2m ? ' (Originally scheduled for weekend)' : '')
+          : `Warranty expires in 2 months for ${vehicle.brand} ${vehicle.model}` + (wasShifted2m ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: false,
         priority: isOverdue2m ? 'urgent' : 'low',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
       
       // Always create 1 month before reminder (show in backlog if past)
-      const isOverdue1m = isBefore(oneMonthBefore, today);
+      const { shiftedDate: shifted1m, wasShifted: wasShifted1m } = shiftWeekendToMonday(oneMonthBefore);
+      const isOverdue1m = isBefore(shifted1m, today);
       events.push({
         id: `warranty_reminder_1m_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'warranty_reminder_1m' as const,
-        date: format(oneMonthBefore, 'yyyy-MM-dd'),
-        title: isOverdue1m ? 'Warranty Reminder (1 month) - OVERDUE' : 'Warranty Reminder (1 month)',
+        date: format(shifted1m, 'yyyy-MM-dd'),
+        title: isOverdue1m ? 'Warranty Reminder (1 month) - OVERDUE' : 'Warranty Reminder (1 month)' + (wasShifted1m ? ' (Moved from weekend)' : ''),
         description: isOverdue1m
-          ? `Warranty reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}`
-          : `Warranty expires in 1 month for ${vehicle.brand} ${vehicle.model}`,
+          ? `Warranty reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}` + (wasShifted1m ? ' (Originally scheduled for weekend)' : '')
+          : `Warranty expires in 1 month for ${vehicle.brand} ${vehicle.model}` + (wasShifted1m ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: false,
         priority: isOverdue1m ? 'urgent' : 'medium',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
       
       // Actual expiry date
+      const { shiftedDate: shiftedExpiry, wasShifted: wasShiftedExpiry } = shiftWeekendToMonday(parseISO(vehicle.warrantyEndDate));
       events.push({
         id: `warranty_expiring_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'warranty_expiring' as const,
-        date: vehicle.warrantyEndDate,
-        title: 'Warranty Expiring',
-        description: `Warranty expires for ${vehicle.brand} ${vehicle.model}`,
+        date: format(shiftedExpiry, 'yyyy-MM-dd'),
+        title: 'Warranty Expiring' + (wasShiftedExpiry ? ' (Moved from weekend)' : ''),
+        description: `Warranty expires for ${vehicle.brand} ${vehicle.model}` + (wasShiftedExpiry ? ' (Moved from weekend to Monday)' : ''),
         needsSpareVehicle: false,
         priority: 'high',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
