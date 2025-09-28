@@ -302,6 +302,46 @@ export default function MaintenanceCalendar() {
     }
   };
 
+  // Helper function to check if maintenance is already scheduled for a vehicle
+  const isMaintenanceScheduled = (vehicleId: number, maintenanceType: 'apk_inspection' | 'warranty_service'): boolean => {
+    if (!maintenanceBlocks) return false;
+    
+    return maintenanceBlocks.some(block => {
+      if (block.vehicleId !== vehicleId) return false;
+      
+      // Get current date to check if the scheduled maintenance is relevant (not in the past)
+      const today = startOfDay(new Date());
+      const blockStartDate = parseISO(block.startDate);
+      
+      // Only consider future or current maintenance blocks
+      if (isBefore(blockStartDate, today)) return false;
+      
+      // Check maintenance type from reservation notes with comprehensive keyword matching
+      const notes = (block.notes?.toLowerCase() || '').trim();
+      const searchText = notes.toLowerCase();
+      
+      if (maintenanceType === 'apk_inspection') {
+        // APK inspection keywords
+        return searchText.includes('apk') || 
+               searchText.includes('keuring') || 
+               searchText.includes('inspection') || 
+               searchText.includes('test') ||
+               searchText.includes('controle') ||
+               searchText.includes('rdw');
+      } else if (maintenanceType === 'warranty_service') {
+        // Warranty service keywords
+        return searchText.includes('warranty') || 
+               searchText.includes('garantie') || 
+               searchText.includes('garanti') ||
+               searchText.includes('service') ||
+               searchText.includes('onderhoud') ||
+               searchText.includes('recall');
+      }
+      
+      return false;
+    });
+  };
+
   // Create maintenance events from vehicle data and scheduled maintenance
   const maintenanceEvents: MaintenanceEvent[] = useMemo(() => {
     const events: MaintenanceEvent[] = [];
@@ -432,13 +472,13 @@ export default function MaintenanceCalendar() {
     // Check every vehicle for APK and warranty dates to create complete reminders
     if (vehicles) {
       vehicles.forEach(vehicle => {
-        // Create APK events if vehicle has APK date
-        if (vehicle.apkDate) {
+        // Create APK events if vehicle has APK date AND no APK maintenance is scheduled
+        if (vehicle.apkDate && !isMaintenanceScheduled(vehicle.id, 'apk_inspection')) {
           addApkEvents(vehicle);
         }
         
-        // Create warranty events if vehicle has warranty end date
-        if (vehicle.warrantyEndDate) {
+        // Create warranty events if vehicle has warranty end date AND no warranty service is scheduled
+        if (vehicle.warrantyEndDate && !isMaintenanceScheduled(vehicle.id, 'warranty_service')) {
           addWarrantyEvents(vehicle);
         }
       });
