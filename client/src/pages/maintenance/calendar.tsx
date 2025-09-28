@@ -40,6 +40,7 @@ import {
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { MaintenanceListDialog } from "@/components/maintenance/maintenance-list-dialog";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -108,6 +109,10 @@ export default function MaintenanceCalendar() {
   
   // Maintenance list dialog
   const [maintenanceListDialogOpen, setMaintenanceListDialogOpen] = useState(false);
+  
+  // Vehicle view dialog
+  const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
@@ -878,12 +883,17 @@ export default function MaintenanceCalendar() {
                               </Button>
                             </>
                           )}
-                          <Link href={`/vehicles/${event.vehicleId}`}>
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View Vehicle
-                            </Button>
-                          </Link>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedVehicleId(event.vehicleId);
+                              setVehicleViewDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Vehicle
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -1008,6 +1018,18 @@ export default function MaintenanceCalendar() {
       <MaintenanceListDialog
         open={maintenanceListDialogOpen}
         onOpenChange={setMaintenanceListDialogOpen}
+      />
+
+      {/* Vehicle View Dialog */}
+      <VehicleViewDialog
+        open={vehicleViewDialogOpen}
+        onOpenChange={(open) => {
+          setVehicleViewDialogOpen(open);
+          if (!open) {
+            setSelectedVehicleId(null);
+          }
+        }}
+        vehicleId={selectedVehicleId}
       />
     </div>
   );
