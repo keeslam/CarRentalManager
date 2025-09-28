@@ -282,14 +282,19 @@ export function ExpenseForm({
       // Call custom onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
-      } else if (!editMode) {
-        // Navigate back to expenses page only if not in dialog mode (no onSuccess callback)
-        navigate("/expenses");
+        // Skip all navigation when onSuccess is provided (dialog mode)
+        return;
       }
       
       console.log("Created expense with response:", result);
       
-      // Always navigate to the vehicle expenses page when a vehicle ID is available
+      // Navigation logic only for non-dialog mode (when no onSuccess callback)
+      if (!editMode) {
+        // Navigate back to expenses page
+        navigate("/expenses");
+      }
+      
+      // Navigate to the vehicle expenses page when a vehicle ID is available
       if (expenseVehicleId) {
         navigate(`/expenses/vehicle/${expenseVehicleId}`);
       } else if (result && result.id) {
