@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { CustomerEditDialog } from "./customer-edit-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation } from "@shared/schema";
@@ -124,14 +125,13 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
           <p className="text-gray-600">Customer since {formatDate(customer.createdAt?.toString() || "")}</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/customers/${customerId}/edit`}>
-            <Button variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-2">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-              </svg>
-              Edit
-            </Button>
-          </Link>
+          <CustomerEditDialog 
+            customerId={customerId}
+            onSuccess={() => {
+              // Refresh customer data after successful edit
+              queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+            }}
+          />
           <ReservationAddDialog initialCustomerId={customerId.toString()}>
             <Button>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus mr-2">
@@ -463,7 +463,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
                               <span>{formatDate(reservation.startDate)}</span> - 
-                              <span> {formatDate(reservation.endDate)}</span>
+                              <span> {reservation.endDate ? formatDate(reservation.endDate) : "TBD"}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
