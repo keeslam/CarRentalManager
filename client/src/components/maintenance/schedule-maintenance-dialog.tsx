@@ -251,11 +251,21 @@ export function ScheduleMaintenanceDialog({
     onSuccess: (result) => {
       if (result === null) return; // Spare vehicle dialog will handle this
       
-      // Invalidate related queries to refresh the calendar
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+      // Use aggressive cache invalidation that catches all query variations
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.startsWith('/api/vehicles') || 
+                 key?.startsWith('/api/reservations') || 
+                 key?.startsWith('/api/placeholder-reservations');
+        }
+      });
+      
+      // Force immediate refetch of critical data
+      queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
       
       toast({
         title: editingReservation ? "Maintenance updated" : "Maintenance scheduled",
@@ -401,12 +411,22 @@ export function ScheduleMaintenanceDialog({
       return { success: true };
     },
     onSuccess: () => {
-      // Invalidate related queries to refresh the calendar and placeholder lists
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations'] });
+      // Use aggressive cache invalidation that catches all query variations
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.startsWith('/api/vehicles') || 
+                 key?.startsWith('/api/reservations') || 
+                 key?.startsWith('/api/placeholder-reservations');
+        }
+      });
+      
+      // Force immediate refetch of critical data
+      queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
+      queryClient.refetchQueries({ queryKey: ['/api/placeholder-reservations'] });
       
       toast({
         title: "Maintenance scheduled",

@@ -779,14 +779,26 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
         initialVehicleId={selectedVehicleIdForSchedule || undefined}
         initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
         onSuccess={() => {
-          // Comprehensive cache invalidation to ensure immediate UI updates
+          // Use more aggressive cache invalidation that catches all query variations
+          queryClient.invalidateQueries({ 
+            predicate: (query) => {
+              const key = query.queryKey[0] as string;
+              return key?.startsWith('/api/vehicles') || 
+                     key?.startsWith('/api/reservations') || 
+                     key?.startsWith('/api/placeholder-reservations');
+            }
+          });
+          
+          // Also do specific invalidation as backup
           queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
           queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
           queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
           queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
+          
+          // Force immediate refetch of the data this component depends on
+          queryClient.refetchQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+          queryClient.refetchQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
+          queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
           
           // Show success message
           toast({
