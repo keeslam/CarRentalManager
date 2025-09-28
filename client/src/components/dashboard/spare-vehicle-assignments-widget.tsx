@@ -32,9 +32,13 @@ export function SpareVehicleAssignmentsWidget() {
     new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
 
-  // Sort assigned spares by start date and filter active ones
-  const activeAssigned = [...(assignedSpares ?? [])]
-    .filter(spare => spare.vehicleId && spare.status !== 'cancelled')
+  // Sort assigned spares by start date and filter upcoming ones (not yet picked up)
+  const upcomingAssigned = [...(assignedSpares ?? [])]
+    .filter(spare => 
+      spare.vehicleId && 
+      spare.status !== 'cancelled' && 
+      (!spare.spareVehicleStatus || spare.spareVehicleStatus === 'assigned' || spare.spareVehicleStatus === 'ready')
+    )
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
   // Update spare vehicle status
@@ -123,10 +127,10 @@ export function SpareVehicleAssignmentsWidget() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="assigned" className="relative">
-                Assigned Vehicles
-                {activeAssigned.length > 0 && (
+                Upcoming Pickups
+                {upcomingAssigned.length > 0 && (
                   <Badge variant="secondary" className="ml-2 px-1 py-0 text-xs">
-                    {activeAssigned.length}
+                    {upcomingAssigned.length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -181,7 +185,7 @@ export function SpareVehicleAssignmentsWidget() {
             
             <TabsContent value="assigned" className="p-4 space-y-3">
               <div className="text-sm text-gray-600 mb-3">
-                Assigned spare vehicles and their readiness status
+                Assigned spare vehicles awaiting pickup
               </div>
               
               <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -192,13 +196,13 @@ export function SpareVehicleAssignmentsWidget() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                     </svg>
                   </div>
-                ) : activeAssigned.length === 0 ? (
+                ) : upcomingAssigned.length === 0 ? (
                   <div className="text-center py-4 text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <Car className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    No spare vehicles currently assigned
+                    <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                    No upcoming pickups needed
                   </div>
                 ) : (
-                  activeAssigned.map(spare => (
+                  upcomingAssigned.map(spare => (
                     <div key={spare.id} className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-md">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-3">
