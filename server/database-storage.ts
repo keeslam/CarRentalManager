@@ -6,7 +6,8 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
-  customNotifications, type CustomNotification, type InsertCustomNotification
+  customNotifications, type CustomNotification, type InsertCustomNotification,
+  backupSettings, type BackupSettings, type InsertBackupSettings
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
