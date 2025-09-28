@@ -75,6 +75,8 @@ interface ScheduleMaintenanceDialogProps {
   onSuccess?: () => void;
   editingReservation?: any; // Reservation being edited, null for new reservations
   initialDate?: string; // Initial date to pre-select when scheduling new maintenance
+  initialVehicleId?: number; // Initial vehicle to pre-select
+  initialMaintenanceType?: ScheduleMaintenanceFormData["maintenanceType"]; // Initial maintenance type to pre-select
 }
 
 export function ScheduleMaintenanceDialog({
@@ -83,6 +85,8 @@ export function ScheduleMaintenanceDialog({
   onSuccess,
   editingReservation,
   initialDate,
+  initialVehicleId,
+  initialMaintenanceType,
 }: ScheduleMaintenanceDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -100,8 +104,8 @@ export function ScheduleMaintenanceDialog({
   const form = useForm<ScheduleMaintenanceFormData>({
     resolver: zodResolver(scheduleMaintenanceSchema),
     defaultValues: {
-      vehicleId: "",
-      maintenanceType: "breakdown",
+      vehicleId: initialVehicleId?.toString() || "",
+      maintenanceType: initialMaintenanceType || "breakdown",
       scheduledDate: initialDate || new Date().toISOString().split('T')[0], // Use initialDate if provided, otherwise today
       estimatedDuration: "",
       priority: "high", // Default to high priority for unplanned maintenance
@@ -133,8 +137,8 @@ export function ScheduleMaintenanceDialog({
     } else {
       // Reset to default values for new maintenance
       form.reset({
-        vehicleId: "",
-        maintenanceType: "breakdown",
+        vehicleId: initialVehicleId?.toString() || "",
+        maintenanceType: initialMaintenanceType || "breakdown",
         scheduledDate: initialDate || new Date().toISOString().split('T')[0],
         estimatedDuration: "",
         priority: "high",
@@ -143,7 +147,7 @@ export function ScheduleMaintenanceDialog({
         needsSpareVehicle: false,
       });
     }
-  }, [editingReservation, initialDate, form]);
+  }, [editingReservation, initialDate, initialVehicleId, initialMaintenanceType, form]);
 
   // Get selected date for filtering (after form is defined)
   const scheduledDate = form.watch('scheduledDate');

@@ -96,6 +96,8 @@ export default function MaintenanceCalendar() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<string | null>(null);
+  const [selectedVehicleIdForSchedule, setSelectedVehicleIdForSchedule] = useState<number | null>(null);
+  const [selectedMaintenanceTypeForSchedule, setSelectedMaintenanceTypeForSchedule] = useState<string | null>(null);
   
   // Day dialog for maintenance events
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
@@ -197,6 +199,19 @@ export default function MaintenanceCalendar() {
     console.log('Closing maintenance day dialog');
     setDayDialogOpen(false);
     setSelectedDay(null);
+  };
+  
+  // Function to open schedule dialog from a maintenance event
+  const openScheduleFromEvent = (event: { date: string; vehicleId: number; type: string }) => {
+    const maintenanceTypeMap: Record<string, string> = {
+      'apk_due': 'apk_inspection',
+      'warranty_expiring': 'warranty_service',
+    };
+    
+    setSelectedScheduleDate(event.date);
+    setSelectedVehicleIdForSchedule(event.vehicleId);
+    setSelectedMaintenanceTypeForSchedule(maintenanceTypeMap[event.type] || 'breakdown');
+    setIsScheduleDialogOpen(true);
   };
   
   // Calculate date ranges for month view
@@ -900,6 +915,24 @@ export default function MaintenanceCalendar() {
                               </Button>
                             </>
                           )}
+                          {(event.type === 'apk_due' || event.type === 'warranty_expiring') && (
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              onClick={() => {
+                                openScheduleFromEvent({
+                                  date: event.date,
+                                  vehicleId: event.vehicleId,
+                                  type: event.type
+                                });
+                                closeDayDialog();
+                              }}
+                              data-testid={`button-schedule-${event.type}-${event.vehicleId}`}
+                            >
+                              <Wrench className="h-4 w-4 mr-1" />
+                              Schedule Maintenance
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -948,11 +981,15 @@ export default function MaintenanceCalendar() {
           setIsScheduleDialogOpen(open);
           if (!open) {
             setEditingReservation(null);
-            setSelectedScheduleDate(null); // Clear selected date when dialog closes
+            setSelectedScheduleDate(null);
+            setSelectedVehicleIdForSchedule(null);
+            setSelectedMaintenanceTypeForSchedule(null);
           }
         }}
         editingReservation={editingReservation}
         initialDate={selectedScheduleDate || undefined}
+        initialVehicleId={selectedVehicleIdForSchedule || undefined}
+        initialMaintenanceType={(selectedMaintenanceTypeForSchedule as any) || undefined}
         onSuccess={() => {
           // Invalidate all relevant queries to refresh the calendar
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
