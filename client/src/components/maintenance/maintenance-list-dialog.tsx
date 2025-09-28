@@ -191,6 +191,44 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
     }
   };
   
+  // Helper function to check if active maintenance is already scheduled for a vehicle
+  const isMaintenanceScheduled = (vehicleId: number, maintenanceType: 'apk_inspection' | 'warranty_service'): boolean => {
+    if (!maintenanceReservations || maintenanceReservations.length === 0) return false;
+    
+    const today = new Date();
+    
+    return maintenanceReservations.some(reservation => {
+      if (reservation.vehicleId !== vehicleId) return false;
+      
+      // Only consider active maintenance (not cancelled/completed and not in the past)
+      if (reservation.status === 'cancelled' || reservation.status === 'completed') return false;
+      
+      // Check if maintenance is in the future or current
+      const endDate = reservation.endDate ? new Date(reservation.endDate) : new Date(reservation.startDate);
+      if (endDate < today) return false;
+      
+      // Check maintenance type from reservation notes
+      const notes = (reservation.notes?.toLowerCase() || '').trim();
+      
+      if (maintenanceType === 'apk_inspection') {
+        // APK inspection keywords
+        return notes.includes('apk_inspection') ||
+               notes.includes('apk') || 
+               notes.includes('keuring') || 
+               notes.includes('rdw');
+      } else if (maintenanceType === 'warranty_service') {
+        // Warranty service keywords
+        return notes.includes('warranty_service') ||
+               notes.includes('warranty') || 
+               notes.includes('garantie') || 
+               notes.includes('garanti') ||
+               notes.includes('recall');
+      }
+      
+      return false;
+    });
+  };
+  
   // Create unified search filter
   const filterItems = (items: any[], searchFields: string[]) => {
     if (!searchTerm) return items;
@@ -204,9 +242,12 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
     );
   };
 
-  // Apply search filters
-  const filteredApkVehicles = filterItems(apkVehicles, ['licensePlate', 'brand', 'model']);
-  const filteredWarrantyVehicles = filterItems(warrantyVehicles, ['licensePlate', 'brand', 'model']);
+  // Apply search filters and maintenance scheduling filters
+  const availableApkVehicles = apkVehicles.filter(vehicle => !isMaintenanceScheduled(vehicle.id, 'apk_inspection'));
+  const availableWarrantyVehicles = warrantyVehicles.filter(vehicle => !isMaintenanceScheduled(vehicle.id, 'warranty_service'));
+  
+  const filteredApkVehicles = filterItems(availableApkVehicles, ['licensePlate', 'brand', 'model']);
+  const filteredWarrantyVehicles = filterItems(availableWarrantyVehicles, ['licensePlate', 'brand', 'model']);
   const filteredMaintenanceReservations = filterItems(maintenanceReservations, [
     'vehicle.licensePlate', 
     'vehicle.brand', 
