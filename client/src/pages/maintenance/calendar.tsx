@@ -98,7 +98,7 @@ export default function MaintenanceCalendar() {
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<string | null>(null);
   const [selectedVehicleIdForSchedule, setSelectedVehicleIdForSchedule] = useState<number | null>(null);
-  const [selectedMaintenanceTypeForSchedule, setSelectedMaintenanceTypeForSchedule] = useState<string | null>(null);
+  const [selectedMaintenanceTypeForSchedule, setSelectedMaintenanceTypeForSchedule] = useState<"breakdown" | "tire_replacement" | "brake_service" | "engine_repair" | "transmission_repair" | "electrical_issue" | "air_conditioning" | "battery_replacement" | "oil_change" | "regular_maintenance" | "apk_inspection" | "warranty_service" | "accident_damage" | "other" | null>(null);
   
   // Day dialog for maintenance events
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
@@ -204,7 +204,7 @@ export default function MaintenanceCalendar() {
   
   // Function to open schedule dialog from a maintenance event
   const openScheduleFromEvent = (event: { date: string; vehicleId: number; type: string }) => {
-    const maintenanceTypeMap: Record<string, string> = {
+    const maintenanceTypeMap: Record<string, "apk_inspection" | "warranty_service"> = {
       'apk_due': 'apk_inspection',
       'apk_reminder_2m': 'apk_inspection',
       'apk_reminder_1m': 'apk_inspection',
@@ -293,37 +293,39 @@ export default function MaintenanceCalendar() {
       const oneMonthBefore = subMonths(dueDate, 1);
       const today = startOfDay(new Date());
       
-      // 2 months before reminder
-      if (!isBefore(twoMonthsBefore, today)) {
-        events.push({
-          id: `apk_reminder_2m_${vehicle.id}`,
-          vehicleId: vehicle.id,
-          vehicle,
-          type: 'apk_reminder_2m' as const,
-          date: format(twoMonthsBefore, 'yyyy-MM-dd'),
-          title: 'APK Reminder (2 months)',
-          description: `APK inspection due in 2 months for ${vehicle.brand} ${vehicle.model}`,
-          needsSpareVehicle: false,
-          priority: 'low',
-          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
-        });
-      }
+      // Always create 2 months before reminder (show in backlog if past)
+      const isOverdue2m = isBefore(twoMonthsBefore, today);
+      events.push({
+        id: `apk_reminder_2m_${vehicle.id}`,
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'apk_reminder_2m' as const,
+        date: format(twoMonthsBefore, 'yyyy-MM-dd'),
+        title: isOverdue2m ? 'APK Reminder (2 months) - OVERDUE' : 'APK Reminder (2 months)',
+        description: isOverdue2m 
+          ? `APK inspection reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}` 
+          : `APK inspection due in 2 months for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false,
+        priority: isOverdue2m ? 'urgent' : 'low',
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+      });
       
-      // 1 month before reminder
-      if (!isBefore(oneMonthBefore, today)) {
-        events.push({
-          id: `apk_reminder_1m_${vehicle.id}`,
-          vehicleId: vehicle.id,
-          vehicle,
-          type: 'apk_reminder_1m' as const,
-          date: format(oneMonthBefore, 'yyyy-MM-dd'),
-          title: 'APK Reminder (1 month)',
-          description: `APK inspection due in 1 month for ${vehicle.brand} ${vehicle.model}`,
-          needsSpareVehicle: false,
-          priority: 'medium',
-          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
-        });
-      }
+      // Always create 1 month before reminder (show in backlog if past)
+      const isOverdue1m = isBefore(oneMonthBefore, today);
+      events.push({
+        id: `apk_reminder_1m_${vehicle.id}`,
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'apk_reminder_1m' as const,
+        date: format(oneMonthBefore, 'yyyy-MM-dd'),
+        title: isOverdue1m ? 'APK Reminder (1 month) - OVERDUE' : 'APK Reminder (1 month)',
+        description: isOverdue1m
+          ? `APK inspection reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}`
+          : `APK inspection due in 1 month for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false,
+        priority: isOverdue1m ? 'urgent' : 'medium',
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+      });
       
       // Actual due date
       events.push({
@@ -349,37 +351,39 @@ export default function MaintenanceCalendar() {
       const oneMonthBefore = subMonths(dueDate, 1);
       const today = startOfDay(new Date());
       
-      // 2 months before reminder
-      if (!isBefore(twoMonthsBefore, today)) {
-        events.push({
-          id: `warranty_reminder_2m_${vehicle.id}`,
-          vehicleId: vehicle.id,
-          vehicle,
-          type: 'warranty_reminder_2m' as const,
-          date: format(twoMonthsBefore, 'yyyy-MM-dd'),
-          title: 'Warranty Reminder (2 months)',
-          description: `Warranty expires in 2 months for ${vehicle.brand} ${vehicle.model}`,
-          needsSpareVehicle: false,
-          priority: 'low',
-          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
-        });
-      }
+      // Always create 2 months before reminder (show in backlog if past)
+      const isOverdue2m = isBefore(twoMonthsBefore, today);
+      events.push({
+        id: `warranty_reminder_2m_${vehicle.id}`,
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'warranty_reminder_2m' as const,
+        date: format(twoMonthsBefore, 'yyyy-MM-dd'),
+        title: isOverdue2m ? 'Warranty Reminder (2 months) - OVERDUE' : 'Warranty Reminder (2 months)',
+        description: isOverdue2m
+          ? `Warranty reminder was due 2 months ago for ${vehicle.brand} ${vehicle.model}`
+          : `Warranty expires in 2 months for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false,
+        priority: isOverdue2m ? 'urgent' : 'low',
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+      });
       
-      // 1 month before reminder
-      if (!isBefore(oneMonthBefore, today)) {
-        events.push({
-          id: `warranty_reminder_1m_${vehicle.id}`,
-          vehicleId: vehicle.id,
-          vehicle,
-          type: 'warranty_reminder_1m' as const,
-          date: format(oneMonthBefore, 'yyyy-MM-dd'),
-          title: 'Warranty Reminder (1 month)',
-          description: `Warranty expires in 1 month for ${vehicle.brand} ${vehicle.model}`,
-          needsSpareVehicle: false,
-          priority: 'medium',
-          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
-        });
-      }
+      // Always create 1 month before reminder (show in backlog if past)
+      const isOverdue1m = isBefore(oneMonthBefore, today);
+      events.push({
+        id: `warranty_reminder_1m_${vehicle.id}`,
+        vehicleId: vehicle.id,
+        vehicle,
+        type: 'warranty_reminder_1m' as const,
+        date: format(oneMonthBefore, 'yyyy-MM-dd'),
+        title: isOverdue1m ? 'Warranty Reminder (1 month) - OVERDUE' : 'Warranty Reminder (1 month)',
+        description: isOverdue1m
+          ? `Warranty reminder was due 1 month ago for ${vehicle.brand} ${vehicle.model}`
+          : `Warranty expires in 1 month for ${vehicle.brand} ${vehicle.model}`,
+        needsSpareVehicle: false,
+        priority: isOverdue1m ? 'urgent' : 'medium',
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+      });
       
       // Actual expiry date
       events.push({
@@ -396,11 +400,21 @@ export default function MaintenanceCalendar() {
       });
     };
     
-    // Generate APK events with advance reminders
-    apkExpiringVehicles.forEach(addApkEvents);
-    
-    // Generate warranty events with advance reminders
-    warrantyExpiringVehicles.forEach(addWarrantyEvents);
+    // Generate APK and warranty events with advance reminders for ALL vehicles
+    // Check every vehicle for APK and warranty dates to create complete reminders
+    if (vehicles) {
+      vehicles.forEach(vehicle => {
+        // Create APK events if vehicle has APK date
+        if (vehicle.apkDate) {
+          addApkEvents(vehicle);
+        }
+        
+        // Create warranty events if vehicle has warranty end date
+        if (vehicle.warrantyEndDate) {
+          addWarrantyEvents(vehicle);
+        }
+      });
+    }
     
     // Scheduled maintenance events (potentially multi-day)
     maintenanceBlocks.forEach(reservation => {
