@@ -8,6 +8,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,7 +41,8 @@ import {
   Eye,
   Edit,
   Plus,
-  Clock
+  Clock,
+  Trash2
 } from "lucide-react";
 import { Vehicle, Reservation } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,6 +50,9 @@ import { formatLicensePlate } from "@/lib/format-utils";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 interface MaintenanceListDialogProps {
   open: boolean;
@@ -90,6 +104,12 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
   // State for spare vehicle assignment dialog
   const [spareDialogOpen, setSpareDialogOpen] = useState(false);
   const [selectedSpareAssignment, setSelectedSpareAssignment] = useState<any>(null);
+  
+  // State for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
+  
+  const { toast } = useToast();
 
   // Fetch APK expiring vehicles
   const { data: apkVehicles = [], isLoading: apkLoading, error: apkError } = useQuery<Vehicle[]>({
@@ -125,6 +145,46 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
     (reservation) => reservation.type === "maintenance_block"
   );
 
+  // Delete maintenance function
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleDeleteMaintenance = async (reservation: Reservation) => {
+    if (!reservation || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      await apiRequest("DELETE", `/api/reservations/${reservation.id}`);
+
+      // Comprehensive cache invalidation to refresh all parts of the app
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
+
+      toast({
+        title: "Maintenance Deleted",
+        description: "The maintenance reservation has been successfully deleted.",
+      });
+
+      // Close dialogs
+      setDeleteDialogOpen(false);
+      setReservationToDelete(null);
+      
+    } catch (error) {
+      console.error('Error deleting maintenance:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete maintenance reservation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   // Create unified search filter
   const filterItems = (items: any[], searchFields: string[]) => {
     if (!searchTerm) return items;
@@ -487,6 +547,19 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                                     <Edit className="h-4 w-4 mr-1" />
                                     Edit
                                   </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => {
+                                      setReservationToDelete(reservation);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    data-testid={`button-delete-${reservation.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
                                   {reservation.vehicle && (
                                     <Button 
                                       size="sm" 
@@ -647,6 +720,44 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
           setSelectedSpareAssignment(null);
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Maintenance</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this maintenance reservation for{' '}
+              {reservationToDelete?.vehicle ? (
+                <>
+                  <strong>
+                    {reservationToDelete.vehicle.brand} {reservationToDelete.vehicle.model}
+                  </strong>{' '}
+                  ({formatLicensePlate(reservationToDelete.vehicle.licensePlate)})
+                </>
+              ) : (
+                <strong>Vehicle {reservationToDelete?.vehicleId}</strong>
+              )}
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (reservationToDelete) {
+                  handleDeleteMaintenance(reservationToDelete);
+                }
+              }}
+              disabled={isDeleting || !reservationToDelete}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
