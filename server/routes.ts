@@ -1197,6 +1197,26 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Delete customer
+  app.delete("/api/customers/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      const success = await storage.deleteCustomer(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete customer", error });
+    }
+  });
+
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
   app.get("/api/reservations/range", async (req, res) => {

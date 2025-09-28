@@ -359,6 +359,14 @@ export class DatabaseStorage implements IStorage {
     return updatedCustomer || undefined;
   }
 
+  async deleteCustomer(id: number): Promise<boolean> {
+    const deletedRows = await db
+      .delete(customers)
+      .where(eq(customers.id, id));
+    
+    return deletedRows.rowCount > 0;
+  }
+
   // Reservation methods
   async getAllReservations(searchQuery?: string): Promise<Reservation[]> {
     let reservationsData;
