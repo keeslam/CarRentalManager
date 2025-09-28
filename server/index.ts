@@ -278,14 +278,7 @@ app.use('/api/*', (_req, res) => {
   });
 });
 
-// Set up Vite dev server AFTER API routes are registered
-if (process.env.NODE_ENV !== 'production') {
-  console.log('🔄 Development mode - Setting up Vite dev server');
-  const { createServer } = await import("http");
-  const { setupVite } = await import("./vite");
-  const server = createServer(app);
-  await setupVite(app, server);
-}
+// Vite dev server will be set up after the main server is created
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -334,6 +327,13 @@ async function startServer() {
       // Create HTTPS server
       server = https.createServer(sslOptions, app);
       
+      // Set up Vite dev server for HTTPS
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔄 Development mode - Setting up Vite dev server for HTTPS');
+        const { setupVite } = await import("./vite");
+        await setupVite(app, server);
+      }
+      
       server.listen(port, '0.0.0.0', async () => {
         console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
         console.log(`🔒 HTTPS Server:  https://0.0.0.0:${port}`);
@@ -351,15 +351,15 @@ async function startServer() {
     } catch (error) {
       console.error('❌ Failed to start HTTPS server:', error);
       console.log('🔄 Falling back to HTTP mode...');
-      startHTTPServer();
+      await startHTTPServer();
     }
   } else {
-    startHTTPServer();
+    await startHTTPServer();
   }
 }
 
 // HTTP server fallback
-function startHTTPServer() {
+async function startHTTPServer() {
   server = app.listen(port, '0.0.0.0', async () => {
     console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
     console.log(`🌐 HTTP Server:   http://0.0.0.0:${port}`);
@@ -373,6 +373,13 @@ function startHTTPServer() {
     await initializeDefaultAdmin();
     displayDeploymentInfo();
   });
+  
+  // Set up Vite dev server for HTTP
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔄 Development mode - Setting up Vite dev server for HTTP');
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+  }
 }
 
 // Start the server
