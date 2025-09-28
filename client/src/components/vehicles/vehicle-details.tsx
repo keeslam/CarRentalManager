@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ExpenseViewDialog } from "@/components/expenses/expense-view-dialog";
+import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
@@ -1412,18 +1414,20 @@ Autolease Lam`;
                 <CardTitle>Expense History</CardTitle>
                 <CardDescription>All expenses related to this vehicle</CardDescription>
                 <div className="flex justify-end space-x-2">
-                  <Link href={`/expenses/vehicle/${vehicleId}`}>
-                    <Button size="sm" variant="outline">View All Expenses</Button>
-                  </Link>
-                  <Link href={`/expenses/add?vehicleId=${vehicleId}`}>
-                    <Button size="sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
-                        <line x1="12" x2="12" y1="5" y2="19" />
-                        <line x1="5" x2="19" y1="12" y2="12" />
-                      </svg>
-                      Add Expense
-                    </Button>
-                  </Link>
+                  <ExpenseViewDialog 
+                    vehicleId={vehicleId}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
+                      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                    }}
+                  />
+                  <ExpenseAddDialog 
+                    vehicleId={vehicleId}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
+                      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                    }}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
