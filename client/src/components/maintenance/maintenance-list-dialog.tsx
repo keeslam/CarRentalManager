@@ -195,7 +195,7 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           <Tabs defaultValue="apk" className="h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="apk" className="flex items-center gap-2">

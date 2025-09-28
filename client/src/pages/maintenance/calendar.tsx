@@ -689,16 +689,19 @@ export default function MaintenanceCalendar() {
                                             <Edit className="h-3 w-3" />
                                           </Button>
                                         )}
-                                        <Link href={`/vehicles/${event.vehicleId}`}>
-                                          <Button 
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-4 w-4 p-0"
-                                            data-testid={`button-view-${event.vehicleId}`}
-                                          >
-                                            <Eye className="h-3 w-3" />
-                                          </Button>
-                                        </Link>
+                                        <Button 
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-4 w-4 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedVehicleId(event.vehicleId);
+                                            setVehicleViewDialogOpen(true);
+                                          }}
+                                          data-testid={`button-view-${event.vehicleId}`}
+                                        >
+                                          <Eye className="h-3 w-3" />
+                                        </Button>
                                       </div>
                                     </div>
                                     <div className="truncate mt-1">{event.title}</div>
@@ -753,12 +756,18 @@ export default function MaintenanceCalendar() {
                                             Edit
                                           </Button>
                                         )}
-                                        <Link href={`/vehicles/${event.vehicleId}`}>
-                                          <Button size="sm" variant="outline" data-testid={`hover-view-${event.vehicleId}`}>
-                                            <Eye className="h-3 w-3 mr-1" />
-                                            View Vehicle
-                                          </Button>
-                                        </Link>
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline" 
+                                          onClick={() => {
+                                            setSelectedVehicleId(event.vehicleId);
+                                            setVehicleViewDialogOpen(true);
+                                          }}
+                                          data-testid={`hover-view-${event.vehicleId}`}
+                                        >
+                                          <Eye className="h-3 w-3 mr-1" />
+                                          View Vehicle
+                                        </Button>
                                       </div>
                                     </div>
                                   </div>
