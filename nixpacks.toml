@@ -3,7 +3,7 @@
 NIXPACKS_NODE_VERSION = "20"
 
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_20", "postgresql"]
 
 [phases.install]
 cmds = [
