@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { CustomerAddDialog } from "@/components/customers/customer-add-dialog";
+import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
+import { CustomerDeleteDialog } from "@/components/customers/customer-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -75,16 +77,25 @@ export default function CustomersIndex() {
         
         return (
           <div className="flex justify-end gap-2">
-            <Link href={`/customers/${customer.id}`}>
-              <Button variant="ghost" size="sm">
+            <CustomerViewDialog customerId={customer.id}>
+              <Button variant="ghost" size="sm" data-testid={`button-view-customer-${customer.id}`}>
                 View
               </Button>
-            </Link>
+            </CustomerViewDialog>
             <ReservationAddDialog initialCustomerId={customer.id.toString()}>
               <Button variant="outline" size="sm">
                 New Reservation
               </Button>
             </ReservationAddDialog>
+            <CustomerDeleteDialog 
+              customerId={customer.id} 
+              customerName={customer.name}
+              onSuccess={handleCustomerAdded}
+            >
+              <Button variant="destructive" size="sm" data-testid={`button-delete-customer-${customer.id}`}>
+                Delete
+              </Button>
+            </CustomerDeleteDialog>
           </div>
         );
       },
