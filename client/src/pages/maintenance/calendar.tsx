@@ -63,10 +63,10 @@ type MaintenanceFilters = {
 };
 
 interface MaintenanceEvent {
-  id: number;
+  id: string | number;
   vehicleId: number;
   vehicle: Vehicle;
-  type: 'apk_due' | 'warranty_expiring' | 'scheduled_maintenance' | 'in_service';
+  type: 'apk_due' | 'apk_reminder_2m' | 'apk_reminder_1m' | 'warranty_expiring' | 'warranty_reminder_2m' | 'warranty_reminder_1m' | 'scheduled_maintenance' | 'in_service';
   date: string;
   startDate?: string;
   endDate?: string;
@@ -74,6 +74,7 @@ interface MaintenanceEvent {
   description: string;
   needsSpareVehicle?: boolean;
   currentReservations?: Reservation[];
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
 }
 
 export default function MaintenanceCalendar() {
@@ -205,7 +206,11 @@ export default function MaintenanceCalendar() {
   const openScheduleFromEvent = (event: { date: string; vehicleId: number; type: string }) => {
     const maintenanceTypeMap: Record<string, string> = {
       'apk_due': 'apk_inspection',
+      'apk_reminder_2m': 'apk_inspection',
+      'apk_reminder_1m': 'apk_inspection',
       'warranty_expiring': 'warranty_service',
+      'warranty_reminder_2m': 'warranty_service',
+      'warranty_reminder_1m': 'warranty_service',
     };
     
     setSelectedScheduleDate(event.date);
@@ -279,34 +284,123 @@ export default function MaintenanceCalendar() {
   const maintenanceEvents: MaintenanceEvent[] = useMemo(() => {
     const events: MaintenanceEvent[] = [];
     
-    // APK due events (single date)
-    apkExpiringVehicles.forEach(vehicle => {
+    // Helper function to add APK events with advance reminders
+    const addApkEvents = (vehicle: Vehicle) => {
+      if (!vehicle.apkDate) return;
+      
+      const dueDate = parseISO(vehicle.apkDate);
+      const twoMonthsBefore = subMonths(dueDate, 2);
+      const oneMonthBefore = subMonths(dueDate, 1);
+      const today = startOfDay(new Date());
+      
+      // 2 months before reminder
+      if (!isBefore(twoMonthsBefore, today)) {
+        events.push({
+          id: `apk_reminder_2m_${vehicle.id}`,
+          vehicleId: vehicle.id,
+          vehicle,
+          type: 'apk_reminder_2m' as const,
+          date: format(twoMonthsBefore, 'yyyy-MM-dd'),
+          title: 'APK Reminder (2 months)',
+          description: `APK inspection due in 2 months for ${vehicle.brand} ${vehicle.model}`,
+          needsSpareVehicle: false,
+          priority: 'low',
+          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+        });
+      }
+      
+      // 1 month before reminder
+      if (!isBefore(oneMonthBefore, today)) {
+        events.push({
+          id: `apk_reminder_1m_${vehicle.id}`,
+          vehicleId: vehicle.id,
+          vehicle,
+          type: 'apk_reminder_1m' as const,
+          date: format(oneMonthBefore, 'yyyy-MM-dd'),
+          title: 'APK Reminder (1 month)',
+          description: `APK inspection due in 1 month for ${vehicle.brand} ${vehicle.model}`,
+          needsSpareVehicle: false,
+          priority: 'medium',
+          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+        });
+      }
+      
+      // Actual due date
       events.push({
-        id: vehicle.id,
+        id: `apk_due_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'apk_due' as const,
-        date: vehicle.apkDate || '',
+        date: vehicle.apkDate,
         title: 'APK Inspection Due',
         description: `APK inspection required for ${vehicle.brand} ${vehicle.model}`,
         needsSpareVehicle: true,
+        priority: 'urgent',
         currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
-    });
+    };
     
-    // Warranty expiring events (single date)
-    warrantyExpiringVehicles.forEach(vehicle => {
+    // Helper function to add warranty events with advance reminders
+    const addWarrantyEvents = (vehicle: Vehicle) => {
+      if (!vehicle.warrantyEndDate) return;
+      
+      const dueDate = parseISO(vehicle.warrantyEndDate);
+      const twoMonthsBefore = subMonths(dueDate, 2);
+      const oneMonthBefore = subMonths(dueDate, 1);
+      const today = startOfDay(new Date());
+      
+      // 2 months before reminder
+      if (!isBefore(twoMonthsBefore, today)) {
+        events.push({
+          id: `warranty_reminder_2m_${vehicle.id}`,
+          vehicleId: vehicle.id,
+          vehicle,
+          type: 'warranty_reminder_2m' as const,
+          date: format(twoMonthsBefore, 'yyyy-MM-dd'),
+          title: 'Warranty Reminder (2 months)',
+          description: `Warranty expires in 2 months for ${vehicle.brand} ${vehicle.model}`,
+          needsSpareVehicle: false,
+          priority: 'low',
+          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+        });
+      }
+      
+      // 1 month before reminder
+      if (!isBefore(oneMonthBefore, today)) {
+        events.push({
+          id: `warranty_reminder_1m_${vehicle.id}`,
+          vehicleId: vehicle.id,
+          vehicle,
+          type: 'warranty_reminder_1m' as const,
+          date: format(oneMonthBefore, 'yyyy-MM-dd'),
+          title: 'Warranty Reminder (1 month)',
+          description: `Warranty expires in 1 month for ${vehicle.brand} ${vehicle.model}`,
+          needsSpareVehicle: false,
+          priority: 'medium',
+          currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+        });
+      }
+      
+      // Actual expiry date
       events.push({
-        id: vehicle.id + 10000, // Avoid ID conflicts
+        id: `warranty_expiring_${vehicle.id}`,
         vehicleId: vehicle.id,
         vehicle,
         type: 'warranty_expiring' as const,
-        date: vehicle.warrantyEndDate || '',
+        date: vehicle.warrantyEndDate,
         title: 'Warranty Expiring',
         description: `Warranty expires for ${vehicle.brand} ${vehicle.model}`,
-        needsSpareVehicle: false
+        needsSpareVehicle: false,
+        priority: 'high',
+        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
       });
-    });
+    };
+    
+    // Generate APK events with advance reminders
+    apkExpiringVehicles.forEach(addApkEvents);
+    
+    // Generate warranty events with advance reminders
+    warrantyExpiringVehicles.forEach(addWarrantyEvents);
     
     // Scheduled maintenance events (potentially multi-day)
     maintenanceBlocks.forEach(reservation => {
@@ -315,7 +409,7 @@ export default function MaintenanceCalendar() {
       if (!vehicle) return; // Skip if vehicle not found
       
       events.push({
-        id: reservation.id + 20000, // Avoid ID conflicts
+        id: `scheduled_maintenance_${reservation.id}`, // Avoid ID conflicts
         vehicleId: reservation.vehicleId!, // Using ! since we already checked vehicle exists
         vehicle,
         type: 'scheduled_maintenance' as const,
@@ -324,7 +418,8 @@ export default function MaintenanceCalendar() {
         endDate: reservation.endDate || undefined,
         title: 'Scheduled Maintenance',
         description: reservation.notes || `Scheduled maintenance for ${vehicle.brand} ${vehicle.model}`,
-        needsSpareVehicle: false
+        needsSpareVehicle: false,
+        priority: 'high'
       });
     });
     
@@ -398,7 +493,13 @@ export default function MaintenanceCalendar() {
     switch (type) {
       case 'apk_due':
         return <AlertTriangle className="w-3 h-3" />;
+      case 'apk_reminder_2m':
+      case 'apk_reminder_1m':
+        return <Calendar className="w-3 h-3" />;
       case 'warranty_expiring':
+        return <Clock className="w-3 h-3" />;
+      case 'warranty_reminder_2m':
+      case 'warranty_reminder_1m':
         return <Clock className="w-3 h-3" />;
       case 'scheduled_maintenance':
         return <Wrench className="w-3 h-3" />;
@@ -417,7 +518,7 @@ export default function MaintenanceCalendar() {
   }, [vehicles]);
   
   // Extract unique event types for filtering
-  const eventTypes = ['apk_due', 'warranty_expiring', 'scheduled_maintenance', 'in_service'];
+  const eventTypes = ['apk_due', 'apk_reminder_2m', 'apk_reminder_1m', 'warranty_expiring', 'warranty_reminder_2m', 'warranty_reminder_1m', 'scheduled_maintenance', 'in_service'];
   
   // Functions to navigate between months
   const navigatePrevious = () => {
@@ -588,7 +689,11 @@ export default function MaintenanceCalendar() {
                 <SelectContent>
                   <SelectItem value="all">All Events</SelectItem>
                   <SelectItem value="apk_due">APK Due</SelectItem>
+                  <SelectItem value="apk_reminder_2m">APK Reminder (2 months)</SelectItem>
+                  <SelectItem value="apk_reminder_1m">APK Reminder (1 month)</SelectItem>
                   <SelectItem value="warranty_expiring">Warranty Expiring</SelectItem>
+                  <SelectItem value="warranty_reminder_2m">Warranty Reminder (2 months)</SelectItem>
+                  <SelectItem value="warranty_reminder_1m">Warranty Reminder (1 month)</SelectItem>
                   <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
                 </SelectContent>
               </Select>
@@ -915,7 +1020,7 @@ export default function MaintenanceCalendar() {
                               </Button>
                             </>
                           )}
-                          {(event.type === 'apk_due' || event.type === 'warranty_expiring') && (
+                          {(event.type.includes('apk') || event.type.includes('warranty')) && (
                             <Button 
                               size="sm" 
                               variant="default"
@@ -989,7 +1094,7 @@ export default function MaintenanceCalendar() {
         editingReservation={editingReservation}
         initialDate={selectedScheduleDate || undefined}
         initialVehicleId={selectedVehicleIdForSchedule || undefined}
-        initialMaintenanceType={(selectedMaintenanceTypeForSchedule as any) || undefined}
+        initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
         onSuccess={() => {
           // Invalidate all relevant queries to refresh the calendar
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });

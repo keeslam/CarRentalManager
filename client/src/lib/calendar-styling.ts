@@ -111,8 +111,12 @@ export function getCustomMaintenanceStyle(type: string): string {
   
   // Map maintenance types to rule IDs
   const typeToRuleId: { [key: string]: string } = {
-    'apk_due': 'maint-breakdown',
-    'warranty_expiring': 'maint-routine',
+    'apk_due': 'maint-apk-due',
+    'apk_reminder_2m': 'maint-apk-2m',
+    'apk_reminder_1m': 'maint-apk-1m',
+    'warranty_expiring': 'maint-warranty-due',
+    'warranty_reminder_2m': 'maint-warranty-2m',
+    'warranty_reminder_1m': 'maint-warranty-1m',
     'scheduled_maintenance': 'maint-routine',
     'in_service': 'maint-inspection',
     'breakdown': 'maint-breakdown',
@@ -132,8 +136,16 @@ export function getCustomMaintenanceStyle(type: string): string {
   switch (type) {
     case 'apk_due':
       return 'bg-red-100 text-red-800 border-red-200 border';
+    case 'apk_reminder_2m':
+      return 'bg-red-50 text-red-600 border-red-100 border';
+    case 'apk_reminder_1m':
+      return 'bg-red-100 text-red-700 border-red-200 border';
     case 'warranty_expiring':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200 border';
+    case 'warranty_reminder_2m':
+      return 'bg-yellow-50 text-yellow-600 border-yellow-100 border';
+    case 'warranty_reminder_1m':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200 border';
     case 'scheduled_maintenance':
       return 'bg-blue-100 text-blue-800 border-blue-200 border';
     case 'in_service':
@@ -151,8 +163,12 @@ export function getCustomMaintenanceStyleObject(type: string): React.CSSProperti
   
   // Map maintenance types to rule IDs
   const typeToRuleId: { [key: string]: string } = {
-    'apk_due': 'maint-breakdown',
-    'warranty_expiring': 'maint-routine', 
+    'apk_due': 'maint-apk-due',
+    'apk_reminder_2m': 'maint-apk-2m',
+    'apk_reminder_1m': 'maint-apk-1m',
+    'warranty_expiring': 'maint-warranty-due',
+    'warranty_reminder_2m': 'maint-warranty-2m',
+    'warranty_reminder_1m': 'maint-warranty-1m', 
     'scheduled_maintenance': 'maint-routine',
     'in_service': 'maint-inspection',
     'breakdown': 'maint-breakdown',
