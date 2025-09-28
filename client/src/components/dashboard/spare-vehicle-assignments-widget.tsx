@@ -22,20 +22,32 @@ export function SpareVehicleAssignmentsWidget() {
     queryKey: ["/api/placeholder-reservations/needing-assignment"],
   });
 
-  // Get assigned spare vehicles (replacement reservations)
-  const { data: assignedSpares, isLoading: isLoadingAssigned } = useQuery<(Reservation & { vehicle?: any; customer?: any })[]>({
-    queryKey: ["/api/reservations", { type: "replacement", includeVehicle: true, includeCustomer: true }],
+  // Get all reservations to filter for assigned spare vehicles
+  const { data: allReservations, isLoading: isLoadingAssigned } = useQuery<Reservation[]>({
+    queryKey: ["/api/reservations"],
   });
+
+  // Get all vehicles for displaying vehicle details
+  const { data: allVehicles } = useQuery<any[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  // Create a map of vehicles by ID for easy lookup
+  const vehicleMap = (allVehicles ?? []).reduce((map: any, vehicle: any) => {
+    map[vehicle.id] = vehicle;
+    return map;
+  }, {});
 
   // Sort pending assignments by start date (closest first)
   const sortedPending = [...(pendingAssignments ?? [])].sort((a, b) => 
     new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
 
-  // Sort assigned spares by start date and filter upcoming ones (not yet picked up)
-  const upcomingAssigned = [...(assignedSpares ?? [])]
+  // Filter all reservations for assigned spare vehicles (not yet picked up)
+  const upcomingAssigned = [...(allReservations ?? [])]
     .filter(spare => 
-      spare.vehicleId && 
+      spare.type === 'replacement' &&  // Must be a replacement reservation
+      spare.vehicleId &&  // Must have a vehicle assigned (not TBD anymore)
       spare.status !== 'cancelled' && 
       (!spare.spareVehicleStatus || spare.spareVehicleStatus === 'assigned' || spare.spareVehicleStatus === 'ready')
     )
@@ -209,15 +221,18 @@ export function SpareVehicleAssignmentsWidget() {
                           {getStatusIcon(spare.spareVehicleStatus ?? undefined)}
                           <div>
                             <div className="font-medium text-sm">
-                              {spare.vehicle ? `${spare.vehicle.brand} ${spare.vehicle.model}` : 'Unknown Vehicle'}
-                              {spare.vehicle?.licensePlate && (
+                              {spare.vehicleId && vehicleMap[spare.vehicleId] 
+                                ? `${vehicleMap[spare.vehicleId].brand} ${vehicleMap[spare.vehicleId].model}`
+                                : `Spare Vehicle (ID: ${spare.vehicleId})`
+                              }
+                              {spare.vehicleId && vehicleMap[spare.vehicleId]?.licensePlate && (
                                 <span className="ml-2 text-xs text-gray-500">
-                                  {formatLicensePlate(spare.vehicle.licensePlate)}
+                                  {formatLicensePlate(vehicleMap[spare.vehicleId].licensePlate)}
                                 </span>
                               )}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {formatDate(spare.startDate)}
+                              Service dates: {formatDate(spare.startDate)}
                               {spare.endDate && ` - ${formatDate(spare.endDate)}`}
                             </div>
                           </div>
