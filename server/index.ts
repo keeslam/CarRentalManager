@@ -278,7 +278,7 @@ app.use('/api/*', (_req, res) => {
   });
 });
 
-// Vite dev server will be set up after the main server is created
+// Vite will be set up after server creation
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -374,7 +374,7 @@ async function startHTTPServer() {
     displayDeploymentInfo();
   });
   
-  // Set up Vite dev server for HTTP
+  // Set up Vite dev server for HTTP after server creation
   if (process.env.NODE_ENV !== 'production') {
     console.log('🔄 Development mode - Setting up Vite dev server for HTTP');
     const { setupVite } = await import("./vite");
