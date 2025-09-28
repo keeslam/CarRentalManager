@@ -101,9 +101,9 @@ export function ReservationCalendar() {
     return { start, end, days, rangeText };
   }, [currentDate]);
   
-  // Fetch reservations for the current month view
-  const startDate = format(dateRanges.start, "yyyy-MM-dd");
-  const endDate = format(dateRanges.end, "yyyy-MM-dd");
+  // Fetch reservations for the full calendar view (including adjacent month dates)
+  const startDate = format(dateRanges.days[0], "yyyy-MM-dd");
+  const endDate = format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd");
   
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/range", startDate, endDate],

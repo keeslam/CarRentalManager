@@ -197,13 +197,13 @@ export default function ReservationCalendarPage() {
     queryKey: ["/api/vehicles"],
   });
   
-  // Fetch reservations for the current date range
+  // Fetch reservations for the full calendar view (including adjacent month dates)
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: [
       "/api/reservations/range", 
       {
-        startDate: format(dateRanges.start, "yyyy-MM-dd"),
-        endDate: format(dateRanges.end, "yyyy-MM-dd")
+        startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
+        endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
       }
     ],
   });

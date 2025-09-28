@@ -155,8 +155,8 @@ export default function MaintenanceCalendar() {
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ 
         queryKey: ['/api/reservations/range', {
-          startDate: format(dateRanges.start, "yyyy-MM-dd"),
-          endDate: format(dateRanges.end, "yyyy-MM-dd")
+          startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
+          endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
         }]
       });
 
@@ -241,13 +241,13 @@ export default function MaintenanceCalendar() {
     queryKey: ['/api/vehicles/warranty-expiring'],
   });
 
-  // Fetch reservations for the current date range
+  // Fetch reservations for the full calendar view (including adjacent month dates)
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: [
       "/api/reservations/range", 
       {
-        startDate: format(dateRanges.start, "yyyy-MM-dd"),
-        endDate: format(dateRanges.end, "yyyy-MM-dd")
+        startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
+        endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
       }
     ],
   });
