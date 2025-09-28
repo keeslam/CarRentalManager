@@ -48,6 +48,7 @@ import { Vehicle, Reservation } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
+import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
 import { apiRequest } from "@/lib/queryClient";
@@ -108,6 +109,11 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
   // State for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
+  
+  // State for schedule maintenance dialog
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [selectedVehicleIdForSchedule, setSelectedVehicleIdForSchedule] = useState<number | null>(null);
+  const [selectedMaintenanceTypeForSchedule, setSelectedMaintenanceTypeForSchedule] = useState<"apk_inspection" | "warranty_service" | null>(null);
   
   const { toast } = useToast();
 
@@ -347,6 +353,19 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                                 <div className="flex gap-2">
                                   <Button 
                                     size="sm" 
+                                    variant="default" 
+                                    onClick={() => {
+                                      setSelectedVehicleIdForSchedule(vehicle.id);
+                                      setSelectedMaintenanceTypeForSchedule("apk_inspection");
+                                      setIsScheduleDialogOpen(true);
+                                    }}
+                                    data-testid={`button-schedule-apk-${vehicle.id}`}
+                                  >
+                                    <Wrench className="h-4 w-4 mr-1" />
+                                    Schedule
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
                                     variant="outline" 
                                     onClick={() => {
                                       setSelectedVehicleId(vehicle.id);
@@ -437,6 +456,19 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="default" 
+                                    onClick={() => {
+                                      setSelectedVehicleIdForSchedule(vehicle.id);
+                                      setSelectedMaintenanceTypeForSchedule("warranty_service");
+                                      setIsScheduleDialogOpen(true);
+                                    }}
+                                    data-testid={`button-schedule-warranty-${vehicle.id}`}
+                                  >
+                                    <Wrench className="h-4 w-4 mr-1" />
+                                    Schedule
+                                  </Button>
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
@@ -691,6 +723,36 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
           }
         }}
         reservation={selectedMaintenanceReservation}
+      />
+
+      {/* Schedule Maintenance Dialog */}
+      <ScheduleMaintenanceDialog
+        open={isScheduleDialogOpen}
+        onOpenChange={(open) => {
+          setIsScheduleDialogOpen(open);
+          if (!open) {
+            setSelectedVehicleIdForSchedule(null);
+            setSelectedMaintenanceTypeForSchedule(null);
+          }
+        }}
+        initialVehicleId={selectedVehicleIdForSchedule || undefined}
+        initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
+        onSuccess={() => {
+          // Comprehensive cache invalidation to ensure immediate UI updates
+          queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
+          
+          // Show success message
+          toast({
+            title: "Maintenance Scheduled",
+            description: "The maintenance has been scheduled successfully.",
+          });
+        }}
       />
 
       {/* Vehicle View Dialog */}
