@@ -2,6 +2,8 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import https from 'https';
+import http from 'http';
 import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
@@ -304,19 +306,74 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 backupScheduler = new BackupScheduler();
 backupScheduler.start();
 
-// Main startup
-server = app.listen(port, '0.0.0.0', async () => {
-  console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
-  console.log(`🌐 API Server:    http://0.0.0.0:${port}`);
-  console.log(`📱 Frontend:     http://localhost:${port}/`);
-  console.log(`🔍 Health check: http://localhost:${port}/health`);
-  console.log(`🐳 Docker mode:  ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
-  console.log(`💾 Backup Scheduler: ✅ (Nightly at 2:00 AM)`);
-  console.log('=======================================\n');
-  
-  // Initialize default admin user for deployment
-  await initializeDefaultAdmin();
-  
-  // Display deployment information
-  displayDeploymentInfo();
-});
+// SSL/HTTPS Configuration
+const sslKeyPath = process.env.SSL_KEY_PATH;
+const sslCertPath = process.env.SSL_CERT_PATH;
+const enableHTTPS = process.env.ENABLE_HTTPS === 'true' && sslKeyPath && sslCertPath;
+
+// Server startup function
+async function startServer() {
+  if (enableHTTPS) {
+    // Check if certificate files exist
+    if (!fs.existsSync(sslKeyPath!) || !fs.existsSync(sslCertPath!)) {
+      console.error('❌ SSL certificate files not found!');
+      console.error(`Key path: ${sslKeyPath}`);
+      console.error(`Cert path: ${sslCertPath}`);
+      console.log('🔄 Falling back to HTTP mode...');
+      startHTTPServer();
+      return;
+    }
+
+    try {
+      // Read SSL certificate files
+      const sslOptions = {
+        key: fs.readFileSync(sslKeyPath!),
+        cert: fs.readFileSync(sslCertPath!)
+      };
+
+      // Create HTTPS server
+      server = https.createServer(sslOptions, app);
+      
+      server.listen(port, '0.0.0.0', async () => {
+        console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
+        console.log(`🔒 HTTPS Server:  https://0.0.0.0:${port}`);
+        console.log(`📱 Frontend:      https://localhost:${port}/`);
+        console.log(`🔍 Health check:  https://localhost:${port}/health`);
+        console.log(`🔐 SSL Mode:      ✅ (Using ZeroSSL certificates)`);
+        console.log(`🐳 Docker mode:   ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
+        console.log(`💾 Backup Scheduler: ✅ (Nightly at 2:00 AM)`);
+        console.log('=======================================\n');
+        
+        await initializeDefaultAdmin();
+        displayDeploymentInfo();
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to start HTTPS server:', error);
+      console.log('🔄 Falling back to HTTP mode...');
+      startHTTPServer();
+    }
+  } else {
+    startHTTPServer();
+  }
+}
+
+// HTTP server fallback
+function startHTTPServer() {
+  server = app.listen(port, '0.0.0.0', async () => {
+    console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
+    console.log(`🌐 HTTP Server:   http://0.0.0.0:${port}`);
+    console.log(`📱 Frontend:      http://localhost:${port}/`);
+    console.log(`🔍 Health check:  http://localhost:${port}/health`);
+    console.log(`🔓 SSL Mode:      ❌ (HTTP only)`);
+    console.log(`🐳 Docker mode:   ${process.env.NODE_ENV === 'production' ? '✅' : '❌'}`);
+    console.log(`💾 Backup Scheduler: ✅ (Nightly at 2:00 AM)`);
+    console.log('=======================================\n');
+    
+    await initializeDefaultAdmin();
+    displayDeploymentInfo();
+  });
+}
+
+// Start the server
+startServer();
