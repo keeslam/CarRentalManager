@@ -74,6 +74,7 @@ interface ScheduleMaintenanceDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   editingReservation?: any; // Reservation being edited, null for new reservations
+  initialDate?: string; // Initial date to pre-select when scheduling new maintenance
 }
 
 export function ScheduleMaintenanceDialog({
@@ -81,6 +82,7 @@ export function ScheduleMaintenanceDialog({
   onOpenChange,
   onSuccess,
   editingReservation,
+  initialDate,
 }: ScheduleMaintenanceDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -100,7 +102,7 @@ export function ScheduleMaintenanceDialog({
     defaultValues: {
       vehicleId: "",
       maintenanceType: "breakdown",
-      scheduledDate: new Date().toISOString().split('T')[0], // Default to today
+      scheduledDate: initialDate || new Date().toISOString().split('T')[0], // Use initialDate if provided, otherwise today
       estimatedDuration: "",
       priority: "high", // Default to high priority for unplanned maintenance
       description: "",
@@ -133,7 +135,7 @@ export function ScheduleMaintenanceDialog({
       form.reset({
         vehicleId: "",
         maintenanceType: "breakdown",
-        scheduledDate: new Date().toISOString().split('T')[0],
+        scheduledDate: initialDate || new Date().toISOString().split('T')[0],
         estimatedDuration: "",
         priority: "high",
         description: "",
@@ -141,7 +143,7 @@ export function ScheduleMaintenanceDialog({
         needsSpareVehicle: false,
       });
     }
-  }, [editingReservation, form]);
+  }, [editingReservation, initialDate, form]);
 
   // Get selected date for filtering (after form is defined)
   const scheduledDate = form.watch('scheduledDate');
@@ -995,7 +997,7 @@ export function ScheduleMaintenanceDialog({
                         id={`specific-${reservation.id}`}
                         name={`spare-option-${reservation.id}`}
                         value="specific"
-                        checked={spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd'}
+                        checked={Boolean(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd')}
                         onChange={() => {
                           // If switching to specific vehicle but no vehicle selected, clear the assignment
                           if (spareVehicleAssignments[reservation.id] === 'tbd') {

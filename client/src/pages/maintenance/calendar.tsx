@@ -95,6 +95,7 @@ export default function MaintenanceCalendar() {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState<string | null>(null);
   
   // Day dialog for maintenance events
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
@@ -503,7 +504,10 @@ export default function MaintenanceCalendar() {
             </svg>
             List View
           </Button>
-          <Button onClick={() => setIsScheduleDialogOpen(true)}>
+          <Button onClick={() => {
+            setSelectedScheduleDate(null); // No pre-selected date from header button
+            setIsScheduleDialogOpen(true);
+          }}>
             <Plus className="mr-2 h-4 w-4" />
             Schedule Maintenance
           </Button>
@@ -601,8 +605,10 @@ export default function MaintenanceCalendar() {
                               console.log('Maintenance date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
                               openDayDialog(day);
                             } else {
-                              // If no events, open schedule dialog
-                              console.log('Maintenance date box clicked - no events, opening schedule dialog');
+                              // If no events, open schedule dialog with selected date
+                              const dateStr = safeFormat(day, 'yyyy-MM-dd', '');
+                              console.log('Maintenance date box clicked - no events, opening schedule dialog for:', dateStr);
+                              setSelectedScheduleDate(dateStr);
                               setIsScheduleDialogOpen(true);
                             }
                           }
@@ -617,6 +623,8 @@ export default function MaintenanceCalendar() {
                               className="h-5 w-5 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 shadow-sm p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                const dateStr = safeFormat(day, 'yyyy-MM-dd', '');
+                                setSelectedScheduleDate(dateStr);
                                 setIsScheduleDialogOpen(true);
                               }}
                             >
@@ -917,6 +925,8 @@ export default function MaintenanceCalendar() {
                   <Button 
                     className="mt-4" 
                     onClick={() => {
+                      const dateStr = selectedDay ? safeFormat(selectedDay, 'yyyy-MM-dd', '') : null;
+                      setSelectedScheduleDate(dateStr);
                       closeDayDialog();
                       setIsScheduleDialogOpen(true);
                     }}
@@ -938,9 +948,11 @@ export default function MaintenanceCalendar() {
           setIsScheduleDialogOpen(open);
           if (!open) {
             setEditingReservation(null);
+            setSelectedScheduleDate(null); // Clear selected date when dialog closes
           }
         }}
         editingReservation={editingReservation}
+        initialDate={selectedScheduleDate || undefined}
         onSuccess={() => {
           // Invalidate all relevant queries to refresh the calendar
           queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
