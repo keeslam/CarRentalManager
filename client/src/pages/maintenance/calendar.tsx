@@ -976,9 +976,20 @@ export default function MaintenanceCalendar() {
                                             onClick={(e) => {
                                               e.preventDefault();
                                               e.stopPropagation();
-                                              // Use the event ID directly - it's the reservation ID for scheduled maintenance
-                                              setSelectedMaintenanceReservationId(typeof event.id === 'string' ? parseInt(event.id) : event.id);
-                                              setMaintenanceReservationDialogOpen(true);
+                                              
+                                              // For scheduled maintenance, the event ID is the reservation ID
+                                              const reservationId = typeof event.id === 'string' ? parseInt(event.id) : event.id;
+                                              
+                                              if (reservationId && !isNaN(reservationId) && reservationId > 0) {
+                                                setSelectedMaintenanceReservationId(reservationId);
+                                                setMaintenanceReservationDialogOpen(true);
+                                              } else {
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Cannot find maintenance reservation details",
+                                                  variant: "destructive"
+                                                });
+                                              }
                                             }}
                                             data-testid={`hover-view-maintenance-${event.vehicleId}`}
                                           >
