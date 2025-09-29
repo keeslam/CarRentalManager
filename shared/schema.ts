@@ -195,6 +195,11 @@ export const reservations = pgTable("reservations", {
   updatedBy: text("updated_by"),
   createdByUser: integer("created_by_user_id").references(() => users.id),
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
+  
+  // Soft delete tracking
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: text("deleted_by"),
+  deletedByUser: integer("deleted_by_user_id").references(() => users.id),
 });
 
 // Base schema that can be extended by frontend forms
@@ -204,6 +209,9 @@ export const insertReservationSchemaBase = createInsertSchema(reservations).omit
   updatedAt: true,
   createdByUser: true,
   updatedByUser: true,
+  deletedAt: true,
+  deletedBy: true,
+  deletedByUser: true,
 })
 .extend({
   totalPrice: z.number().optional().or(

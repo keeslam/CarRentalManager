@@ -2495,7 +2495,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     },
   });
 
-  // Delete reservation
+  // Delete reservation (soft delete with user tracking)
   app.delete("/api/reservations/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -2503,15 +2503,32 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
       
-      // Check if reservation exists
+      // Check if reservation exists and is not already deleted
       const reservation = await storage.getReservation(id);
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
-      const success = await storage.deleteReservation(id);
-      if (success) {
-        res.status(200).json({ message: "Reservation deleted successfully" });
+      // Check if already deleted
+      if (reservation.deletedAt) {
+        return res.status(410).json({ message: "Reservation already deleted" });
+      }
+      
+      // Perform soft delete with user tracking
+      const user = req.user;
+      const softDeleteData = {
+        deletedAt: new Date(),
+        deletedBy: user ? user.username : null,
+        deletedByUser: user ? user.id : null,
+        updatedBy: user ? user.username : null // Also track who made the update
+      };
+      
+      const updatedReservation = await storage.updateReservation(id, softDeleteData);
+      if (updatedReservation) {
+        res.status(200).json({ 
+          message: "Reservation deleted successfully",
+          deletedBy: user ? user.username : 'Unknown'
+        });
       } else {
         res.status(500).json({ message: "Failed to delete reservation" });
       }
