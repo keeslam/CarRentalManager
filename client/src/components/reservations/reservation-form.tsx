@@ -771,39 +771,36 @@ export function ReservationForm({
     // Remove the isOpenEnded field as it's not part of the backend schema
     delete submissionData.isOpenEnded;
     
-    try {
-      // Update vehicle mileage whenever mileage data is provided
-      if (vehicleIdWatch) {
-        const vehicleUpdateData: { id: number, departureMileage?: number, currentMileage?: number } = {
-          id: Number(vehicleIdWatch)
-        };
-        
-        // Update current mileage if start mileage is provided
-        if (submissionData.startMileage) {
-          vehicleUpdateData.currentMileage = Number(submissionData.startMileage);
-        }
-        
-        // Update departure mileage if departure mileage is provided  
-        if (submissionData.departureMileage) {
-          vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
-        }
-        
-        // First create/update the reservation
-        const reservationResult = await createReservationMutation.mutateAsync(submissionData);
-        
-        // Then update the vehicle mileage if we have any mileage data
-        if (vehicleUpdateData.currentMileage !== undefined || vehicleUpdateData.departureMileage !== undefined) {
-          await updateVehicleMutation.mutateAsync(vehicleUpdateData);
-        }
-        
-        return reservationResult;
-      } else {
-        // No vehicle ID, just create/update the reservation
-        return await createReservationMutation.mutateAsync(submissionData);
+    // Update vehicle mileage whenever mileage data is provided
+    if (vehicleIdWatch) {
+      const vehicleUpdateData: { id: number, departureMileage?: number, currentMileage?: number } = {
+        id: Number(vehicleIdWatch)
+      };
+      
+      // Update current mileage if start mileage is provided
+      if (submissionData.startMileage) {
+        vehicleUpdateData.currentMileage = Number(submissionData.startMileage);
       }
-    } catch (error) {
-      console.error("Error submitting reservation:", error);
-      throw error;
+      
+      // Update departure mileage if departure mileage is provided  
+      if (submissionData.departureMileage) {
+        vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
+      }
+      
+      // First create/update the reservation - use mutate instead of mutateAsync 
+      // to let the mutation's onError handler deal with errors properly
+      createReservationMutation.mutate(submissionData, {
+        onSuccess: (reservationResult) => {
+          // Then update the vehicle mileage if we have any mileage data
+          if (vehicleUpdateData.currentMileage !== undefined || vehicleUpdateData.departureMileage !== undefined) {
+            updateVehicleMutation.mutate(vehicleUpdateData);
+          }
+        }
+      });
+    } else {
+      // No vehicle ID, just create/update the reservation
+      // Use mutate instead of mutateAsync to prevent unhandled promise rejections
+      createReservationMutation.mutate(submissionData);
     }
   };
   
