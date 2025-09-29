@@ -127,9 +127,19 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       break;
 
     case 'reservations':
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      // Invalidate ALL reservation queries including calendar range queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.startsWith('/api/reservations');
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles-with-reservations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/filtered-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/reservations', data.id] });
       }

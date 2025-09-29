@@ -1500,6 +1500,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const reservation = await storage.createReservation(dataWithTracking);
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.reservations.created(reservation);
+      
       // If there's a file, create a document record linked to the vehicle
       // and update the reservation with the damage check path
       if (req.file) {
