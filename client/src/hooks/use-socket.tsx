@@ -121,6 +121,7 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
 
     case 'customers':
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/with-reservations'] });
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/customers', data.id] });
       }
@@ -151,12 +152,14 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
 
     case 'expenses':
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/expenses', data.id] });
       }
-      // Also invalidate related vehicles data
+      // Also invalidate related vehicles data and vehicle-specific expenses
       if (data?.vehicleId) {
         queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.vehicleId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/expenses/vehicle', data.vehicleId] });
       }
       break;
 
@@ -165,16 +168,26 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/documents', data.id] });
       }
-      // Also invalidate related vehicles data
+      // Also invalidate related vehicles data and vehicle-specific documents
       if (data?.vehicleId) {
         queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.vehicleId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/documents/vehicle', data.vehicleId] });
       }
       break;
 
     case 'notifications':
+      // Invalidate all notification-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/user'] });
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/notifications', data.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications', data.id] });
+      }
+      // Invalidate type-specific notifications if type is available
+      if (data?.type) {
+        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/type', data.type] });
       }
       break;
 

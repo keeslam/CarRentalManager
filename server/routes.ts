@@ -675,6 +675,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         };
         
         const vehicle = await storage.createVehicle(dataWithTracking);
+        
+        // Broadcast real-time update to all connected clients
+        realtimeEvents.vehicles.created(vehicle);
+        
         res.status(201).json(vehicle);
       } catch (parseError) {
         console.error("Validation error:", parseError);
@@ -799,6 +803,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Vehicle not found" });
       }
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.vehicles.updated(vehicle);
+      
       res.json(vehicle);
     } catch (error) {
       console.error("Error updating vehicle:", error);
@@ -866,6 +873,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         };
         
         const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
+        
+        // Broadcast real-time update to all connected clients
+        realtimeEvents.vehicles.updated(updatedVehicle);
+        
         return res.json(updatedVehicle);
       } else {
         return res.status(400).json({ message: "No valid mileage data provided" });
@@ -1009,6 +1020,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         lastAction: historyNote
       };
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.vehicles.updated(vehicleWithAudit);
+      
       res.json(vehicleWithAudit);
     } catch (error) {
       console.error("Error in toggle-registration endpoint:", error);
@@ -1029,6 +1043,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!deleted) {
         return res.status(404).json({ message: "Vehicle not found" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.vehicles.deleted({ id });
       
       res.json({ success: true, message: "Vehicle successfully deleted" });
     } catch (error) {
@@ -1156,6 +1173,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       };
       
       const customer = await storage.createCustomer(dataWithTracking);
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.customers.created(customer);
+      
       res.status(201).json(customer);
     } catch (error) {
       res.status(400).json({ message: "Invalid customer data", error });
@@ -1201,6 +1222,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Customer not found" });
       }
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.customers.updated(customer);
+      
       res.json(customer);
     } catch (error) {
       res.status(400).json({ message: "Invalid customer data", error });
@@ -1220,6 +1244,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!success) {
         return res.status(404).json({ message: "Customer not found" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.customers.deleted({ id });
       
       res.status(204).send();
     } catch (error) {
@@ -1829,6 +1856,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.reservations.updated(reservation);
+      
       res.json(reservation);
     } catch (error) {
       console.error("Error updating reservation:", error);
@@ -1899,6 +1929,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.reservations.updated(reservation);
       
       return res.status(200).json(reservation);
     } catch (error) {
@@ -1980,6 +2013,9 @@ export async function registerRoutes(app: Express): Promise<void> {
           damageCheckPath: getRelativePath(req.file.path)
         });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.reservations.updated(reservation);
       
       res.json(reservation);
     } catch (error) {
@@ -2538,6 +2574,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const updatedReservation = await storage.updateReservation(id, softDeleteData);
       if (updatedReservation) {
+        // Broadcast real-time update to all connected clients
+        realtimeEvents.reservations.deleted({ id });
+        
         res.status(200).json({ 
           message: "Reservation deleted successfully",
           deletedBy: user ? user.username : 'Unknown'
@@ -2642,6 +2681,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       const success = await storage.deleteExpense(id);
       
       if (success) {
+        // Broadcast real-time update to all connected clients
+        realtimeEvents.expenses.deleted({ id });
+        
         res.status(200).json({ message: "Expense deleted successfully" });
       } else {
         res.status(500).json({ message: "Failed to delete expense" });
@@ -2676,6 +2718,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Create expense record
       const expense = await storage.createExpense(dataWithTracking);
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.expenses.created(expense);
       
       res.status(201).json(expense);
     } catch (error) {
@@ -2726,6 +2771,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         ...additionalData
       });
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.expenses.created(expense);
+      
       console.log("Expense created successfully:", expense);
       res.status(201).json(expense);
     } catch (error) {
@@ -2775,6 +2823,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Expense not found" });
       }
       
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.expenses.updated(expense);
+      
       res.json(expense);
     } catch (error) {
       console.error("Error updating expense:", error);
@@ -2822,6 +2873,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.expenses.updated(expense);
       
       res.json(expense);
     } catch (error) {
@@ -3089,6 +3143,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
       
       const document = await storage.createDocument(documentData);
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.documents.created(document);
+      
       res.status(201).json(document);
     } catch (error) {
       console.error("Error uploading document:", error);
@@ -3131,6 +3189,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!updatedDocument) {
         return res.status(404).json({ message: "Failed to update document" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.documents.updated(updatedDocument);
       
       res.json(updatedDocument);
     } catch (error) {
@@ -3360,6 +3421,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!success) {
         return res.status(500).json({ message: "Failed to delete document record" });
       }
+
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.documents.deleted({ id });
 
       res.json({ message: "Document deleted successfully" });
     } catch (error) {
@@ -4114,6 +4178,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       notificationData.isRead = false;
       
       const notification = await storage.createCustomNotification(notificationData);
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.notifications.created(notification);
+      
       res.status(201).json(notification);
     } catch (error) {
       console.error("Error creating custom notification:", error);
@@ -4152,6 +4220,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!updatedNotification) {
         return res.status(404).json({ message: "Failed to update notification" });
       }
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.notifications.updated(updatedNotification);
       
       res.json(updatedNotification);
     } catch (error) {
@@ -4225,6 +4296,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!deleted) {
         return res.status(404).json({ message: "Notification not found" });
       }
+
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.notifications.deleted({ id });
 
       res.status(200).json({ message: "Notification deleted successfully" });
     } catch (error) {
