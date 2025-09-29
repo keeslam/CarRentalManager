@@ -39,6 +39,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { SocketProvider } from "@/hooks/use-socket";
 import { ProtectedRoute } from "@/components/protected-route";
 
 function AppRoutes() {
@@ -98,9 +99,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <SocketProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </SocketProvider>
   );
 }
 

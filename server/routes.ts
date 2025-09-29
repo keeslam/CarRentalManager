@@ -28,6 +28,7 @@ import multer from "multer";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
+import { realtimeEvents } from "./realtime-events";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -211,6 +212,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Don't send password back to client
       const { password, ...userWithoutPassword } = newUser;
       
+      // Broadcast real-time update
+      realtimeEvents.users.created(userWithoutPassword);
+      
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -302,6 +306,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         // Don't send password back to client
         const { password: _, ...userWithoutPassword } = updatedUser;
         
+        // Broadcast real-time update
+        realtimeEvents.users.updated(userWithoutPassword);
+        
         res.json(userWithoutPassword);
       } else {
         // Update user without password change
@@ -313,6 +320,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         // Don't send password back to client
         const { password: _, ...userWithoutPassword } = updatedUser;
+        
+        // Broadcast real-time update
+        realtimeEvents.users.updated(userWithoutPassword);
         
         res.json(userWithoutPassword);
       }

@@ -5,6 +5,8 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 import express, { Request, Response, NextFunction } from "express";
+import { Server as SocketIOServer } from 'socket.io';
+import { setSocketInstance } from "./realtime-events";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 import { BackupScheduler } from "./backupScheduler";
@@ -17,6 +19,7 @@ import emailLogsRoutes from "./routes/email-logs.js";
 
 // Graceful shutdown implementation
 let server: any = null;
+let io: SocketIOServer | null = null;
 let backupScheduler: any = null;
 let isShuttingDown = false;
 
@@ -35,6 +38,13 @@ async function gracefulShutdown(signal: string) {
   }, 10000); // 10 second timeout
   
   try {
+    // Close WebSocket connections
+    if (io) {
+      console.log('🔄 Closing WebSocket connections...');
+      io.close();
+      console.log('✅ WebSocket connections closed');
+    }
+    
     // Stop accepting new requests
     if (server) {
       console.log('🔄 Stopping HTTP server...');
@@ -127,6 +137,37 @@ app.use(express.urlencoded({ extended: false }));
 
 // Setup authentication
 const { requireAuth } = setupAuth(app);
+
+// Real-time WebSocket event system
+function setupSocketIO(server: any) {
+  io = new SocketIOServer(server, {
+    cors: {
+      origin: "*", // In production, restrict to your domain
+      methods: ["GET", "POST", "PATCH", "DELETE"]
+    }
+  });
+
+  // Set the socket instance for the realtime-events module
+  setSocketInstance(io);
+
+  io.on('connection', (socket) => {
+    console.log(`👤 User connected: ${socket.id}`);
+
+    // Send welcome message
+    socket.emit('connected', { 
+      message: 'Connected to Car Rental Manager',
+      timestamp: new Date().toISOString()
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`👤 User disconnected: ${socket.id}`);
+    });
+  });
+
+  console.log('🔗 Socket.IO server initialized for real-time updates');
+  return io;
+}
+
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -327,6 +368,9 @@ async function startServer() {
       // Create HTTPS server
       server = https.createServer(sslOptions, app);
       
+      // Setup Socket.IO for real-time updates
+      setupSocketIO(server);
+      
       // Set up Vite dev server for HTTPS
       if (process.env.NODE_ENV !== 'production') {
         console.log('🔄 Development mode - Setting up Vite dev server for HTTPS');
@@ -360,7 +404,12 @@ async function startServer() {
 
 // HTTP server fallback
 async function startHTTPServer() {
-  server = app.listen(port, '0.0.0.0', async () => {
+  server = http.createServer(app);
+  
+  // Setup Socket.IO for real-time updates
+  setupSocketIO(server);
+  
+  server.listen(port, '0.0.0.0', async () => {
     console.log('\n🎉 CAR RENTAL MANAGER STARTED SUCCESSFULLY!');
     console.log(`🌐 HTTP Server:   http://0.0.0.0:${port}`);
     console.log(`📱 Frontend:      http://localhost:${port}/`);
