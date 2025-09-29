@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User } from "../shared/schema";
+import { User, UserRole, insertUserSchema } from "../shared/schema";
 import { pool } from "./db";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
@@ -21,33 +21,14 @@ declare global {
 const scryptAsync = promisify(scrypt);
 
 export async function hashPassword(password: string) {
-  // For development only: special case for the hardcoded test password
-  if (password === "password") {
-    console.log("Using plain text password for test account");
-    return "password";
-  }
-
-  // Normal case - hash the password
+  // Always hash passwords properly - no development exceptions
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
-  // Remove password logging for security - never log passwords or hashes
-  
-  // For development only: allow plain text password comparison
-  // In a real app, you would never store passwords in plain text
-  if (stored === "password" && process.env.NODE_ENV === "development") {
-    return supplied === "password";
-  }
-  
-  // Check if it's a bcrypt hash (starts with $2a$, $2b$, etc.)
-  if (stored.startsWith('$2') && process.env.NODE_ENV === "development") {
-    return supplied === "password"; // Simple comparison for fixed password in our test data
-  }
-  
-  // Otherwise, assume it's our scrypt format (hash.salt)
+  // Always use proper password comparison - no development exceptions
   try {
     const [hashed, salt] = stored.split(".");
     const hashedBuf = Buffer.from(hashed, "hex");
@@ -105,37 +86,9 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        if (process.env.NODE_ENV === "development") {
-          console.log("Login attempt for username:", username);
-        }
-        
         const user = await storage.getUserByUsername(username);
         if (!user) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("User not found:", username);
-            
-            // For testing purposes: allow login with known users with default password
-            if (username === "admin1" || username === "kees" || username === "keeslam") {
-              const allUsers = await storage.getAllUsers();
-              const testUser = allUsers.find(u => u.username === username);
-              if (testUser && password === "password") {
-                return done(null, testUser);
-              }
-            }
-          }
-          
           return done(null, false, { message: "Incorrect username" });
-        }
-        
-        // Development bypasses - only in development mode
-        if (process.env.NODE_ENV === "development") {
-          if (username === "admin" && (password === "password" || password === "admin123")) {
-            return done(null, user);
-          }
-          
-          if ((username === "admin1" || username === "kees" || username === "keeslam") && password === "password") {
-            return done(null, user);
-          }
         }
         
         const passwordMatches = await comparePasswords(password, user.password);
@@ -144,9 +97,6 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Incorrect password" });
         }
         
-        if (process.env.NODE_ENV === "development") {
-          console.log("Successfully authenticated:", username);
-        }
         return done(null, user);
       } catch (error) {
         console.error("Authentication error:", error);
@@ -186,30 +136,56 @@ export function setupAuth(app: Express) {
     next();
   };
 
-  // Register authentication routes
-  app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
+  // Admin authentication middleware
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    if (req.user?.role !== UserRole.ADMIN) {
+      return res.status(403).json({ message: "Not authorized. Admin access required." });
+    }
+    
+    next();
+  };
+
+  // Register authentication routes (admin only)
+  app.post("/api/register", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Validate request body using Zod schema
+      const userData = insertUserSchema.parse(req.body);
+      
       // Check if user already exists
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Add audit trail (user is guaranteed to exist due to requireAdmin middleware)
+      const currentUser = req.user!;
+      const enrichedUserData = {
+        ...userData,
+        createdBy: currentUser.username,
+        updatedBy: currentUser.username
+      };
+
       // Hash password and create user
-      const hashedPassword = await hashPassword(req.body.password);
+      const hashedPassword = await hashPassword(userData.password);
       const user = await storage.createUser({
-        ...req.body,
+        ...enrichedUserData,
         password: hashedPassword,
       });
 
-      // Log user in
-      req.login(user, (err: any) => {
-        if (err) return next(err);
-        // Return user without password
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
-      });
+      // Return user without password (don't auto-login to preserve admin session)
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
     } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid input data", 
+          error: error.message 
+        });
+      }
       next(error);
     }
   });
