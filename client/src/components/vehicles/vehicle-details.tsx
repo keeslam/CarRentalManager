@@ -80,6 +80,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [templateContent, setTemplateContent] = useState("");
   const [editableEmails, setEditableEmails] = useState<{ [customerId: number]: string }>({});
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+  const [viewReservationDialogOpen, setViewReservationDialogOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const queryClient = useQueryClient();
@@ -1816,11 +1818,17 @@ Autolease Lam`;
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end space-x-2">
-                              <Link href={`/reservations/${reservation.id}`}>
-                                <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800">
-                                  View
-                                </Button>
-                              </Link>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary-600 hover:text-primary-800"
+                                onClick={() => {
+                                  setSelectedReservation(reservation);
+                                  setViewReservationDialogOpen(true);
+                                }}
+                              >
+                                View
+                              </Button>
                               
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -2286,6 +2294,109 @@ Autolease Lam`;
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* View Reservation Dialog */}
+      <Dialog open={viewReservationDialogOpen} onOpenChange={setViewReservationDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Reservation Details</DialogTitle>
+            <DialogDescription>
+              View complete reservation information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReservation && (
+            <div className="space-y-6">
+              {/* Reservation Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Reservation ID</Label>
+                  <p className="text-sm font-medium">#{selectedReservation.id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <div className="mt-1">
+                    <StatusBadge status={selectedReservation.status} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Customer</Label>
+                <p className="text-sm font-medium">
+                  {selectedReservation.customer?.name || 'Unknown Customer'}
+                </p>
+                {selectedReservation.customer?.email && (
+                  <p className="text-xs text-gray-500">{selectedReservation.customer.email}</p>
+                )}
+              </div>
+
+              {/* Date Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Start Date</Label>
+                  <p className="text-sm font-medium">{formatDate(selectedReservation.startDate)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">End Date</Label>
+                  <p className="text-sm font-medium">
+                    {selectedReservation.endDate && selectedReservation.endDate !== "undefined" 
+                      ? formatDate(selectedReservation.endDate) 
+                      : "Open-ended"
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Total Price</Label>
+                <p className="text-lg font-semibold text-green-600">
+                  {formatCurrency(selectedReservation.totalPrice)}
+                </p>
+              </div>
+
+              {/* Notes */}
+              {selectedReservation.notes && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Notes</Label>
+                  <p className="text-sm mt-1 p-2 bg-gray-50 rounded border">
+                    {selectedReservation.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Reservation Type */}
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Type</Label>
+                <p className="text-sm font-medium capitalize">
+                  {selectedReservation.type === 'maintenance_block' ? 'Maintenance' : 
+                   selectedReservation.type === 'replacement' ? 'Replacement Vehicle' : 
+                   'Standard Rental'}
+                </p>
+              </div>
+
+              {/* Creation Info */}
+              <div className="text-xs text-gray-500 border-t pt-4">
+                <p>Created by {selectedReservation.createdBy || 'Unknown'} on {formatDate(selectedReservation.createdAt.toString())}</p>
+                {selectedReservation.updatedBy && (
+                  <p>Last updated by {selectedReservation.updatedBy} on {formatDate(selectedReservation.updatedAt.toString())}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setViewReservationDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
