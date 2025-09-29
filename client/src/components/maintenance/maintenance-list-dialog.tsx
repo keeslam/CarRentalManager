@@ -571,6 +571,7 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                           <TableHead>End Date</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Description</TableHead>
+                          <TableHead>Scheduled By</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -604,6 +605,19 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               <TableCell className="max-w-xs">
                                 <div className="truncate text-sm">
                                   {reservation.notes?.split('\n')[0] || 'No description'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div className="font-medium">{reservation.createdBy || 'System'}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {reservation.createdAt ? format(new Date(reservation.createdAt), "dd MMM yyyy") : ''}
+                                  </div>
+                                  {reservation.updatedBy && reservation.updatedBy !== reservation.createdBy && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      Updated by {reservation.updatedBy}
+                                    </div>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>

@@ -11,7 +11,7 @@ import {
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull } from "drizzle-orm";
 import { IStorage } from "./storage";
 
 // Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
@@ -413,23 +413,26 @@ export class DatabaseStorage implements IStorage {
         
         reservationsData = await db.select()
           .from(reservations)
-          .where(or(...conditions))
+          .where(and(or(...conditions), isNull(reservations.deletedAt)))
           .limit(10);
       } else {
         // If no matching vehicles or customers, check if search matches a date
         reservationsData = await db.select()
           .from(reservations)
           .where(
-            or(
-              sql`UPPER(${reservations.startDate}) LIKE ${`%${sanitizedQuery}%`}`,
-              sql`UPPER(${reservations.endDate}) LIKE ${`%${sanitizedQuery}%`}`,
-              sql`UPPER(${reservations.status}) LIKE ${`%${sanitizedQuery}%`}`
+            and(
+              or(
+                sql`UPPER(${reservations.startDate}) LIKE ${`%${sanitizedQuery}%`}`,
+                sql`UPPER(${reservations.endDate}) LIKE ${`%${sanitizedQuery}%`}`,
+                sql`UPPER(${reservations.status}) LIKE ${`%${sanitizedQuery}%`}`
+              ),
+              isNull(reservations.deletedAt)
             )
           )
           .limit(10);
       }
     } else {
-      reservationsData = await db.select().from(reservations);
+      reservationsData = await db.select().from(reservations).where(isNull(reservations.deletedAt));
     }
     
     const result: Reservation[] = [];
@@ -450,7 +453,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReservation(id: number): Promise<Reservation | undefined> {
-    const [reservation] = await db.select().from(reservations).where(eq(reservations.id, id));
+    const [reservation] = await db.select().from(reservations).where(and(eq(reservations.id, id), isNull(reservations.deletedAt)));
     
     if (!reservation) {
       return undefined;
@@ -531,9 +534,12 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(reservations)
       .where(
-        sql`(${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
-            OR (${reservations.startDate} >= ${startDate} AND ${reservations.startDate} <= ${endDate})
-            OR (${reservations.endDate} >= ${startDate} AND ${reservations.endDate} <= ${endDate})`
+        and(
+          sql`(${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
+              OR (${reservations.startDate} >= ${startDate} AND ${reservations.startDate} <= ${endDate})
+              OR (${reservations.endDate} >= ${startDate} AND ${reservations.endDate} <= ${endDate})`,
+          isNull(reservations.deletedAt)
+        )
       );
     
     const result: Reservation[] = [];
@@ -589,7 +595,7 @@ export class DatabaseStorage implements IStorage {
     const reservationsData = await db
       .select()
       .from(reservations)
-      .where(eq(reservations.vehicleId, vehicleId))
+      .where(and(eq(reservations.vehicleId, vehicleId), isNull(reservations.deletedAt)))
       .orderBy(desc(reservations.startDate));
     
     const result: Reservation[] = [];
@@ -614,7 +620,7 @@ export class DatabaseStorage implements IStorage {
     const reservationsData = await db
       .select()
       .from(reservations)
-      .where(eq(reservations.customerId, customerId))
+      .where(and(eq(reservations.customerId, customerId), isNull(reservations.deletedAt)))
       .orderBy(desc(reservations.startDate));
     
     const result: Reservation[] = [];
