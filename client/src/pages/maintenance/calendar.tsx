@@ -973,7 +973,9 @@ export default function MaintenanceCalendar() {
                                           <Button 
                                             size="sm" 
                                             variant="outline" 
-                                            onClick={async () => {
+                                            onClick={async (e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
                                               try {
                                                 const response = await fetch('/api/reservations');
                                                 const allReservations = await response.json();
@@ -1000,7 +1002,9 @@ export default function MaintenanceCalendar() {
                                           <Button 
                                             size="sm" 
                                             variant="outline" 
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
                                               openScheduleFromEvent({
                                                 date: event.date,
                                                 vehicleId: event.vehicleId,
