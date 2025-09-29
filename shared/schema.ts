@@ -15,6 +15,7 @@ export const UserPermission = {
   MANAGE_VEHICLES: 'manage_vehicles',
   MANAGE_CUSTOMERS: 'manage_customers',
   MANAGE_RESERVATIONS: 'manage_reservations',
+  MANAGE_MAINTENANCE: 'manage_maintenance',
   MANAGE_EXPENSES: 'manage_expenses',
   MANAGE_DOCUMENTS: 'manage_documents',
   VIEW_DASHBOARD: 'view_dashboard',
