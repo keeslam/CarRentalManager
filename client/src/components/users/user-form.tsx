@@ -151,6 +151,13 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
 
   // Available permissions based on UserPermission enum
   const availablePermissions = Object.values(UserPermission);
+  
+  // Helper function to format permission labels
+  const formatPermissionLabel = (permission: string) => {
+    return permission
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
 
   return (
     <Card>
@@ -312,12 +319,13 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
                             >
                               <FormControl>
                                 <Checkbox
-                                  checked={field.value?.includes(permission)}
+                                  checked={field.value?.includes(permission) || false}
                                   onCheckedChange={(checked) => {
+                                    const currentPermissions = field.value || [];
                                     return checked
-                                      ? field.onChange([...field.value, permission])
+                                      ? field.onChange([...currentPermissions, permission])
                                       : field.onChange(
-                                          field.value?.filter(
+                                          currentPermissions.filter(
                                             (value) => value !== permission
                                           )
                                         );
@@ -326,7 +334,7 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
                               </FormControl>
                               <div className="space-y-1 leading-none">
                                 <FormLabel className="text-sm font-medium">
-                                  {permission}
+                                  {formatPermissionLabel(permission)}
                                 </FormLabel>
                               </div>
                             </FormItem>
