@@ -41,6 +41,7 @@ import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-mai
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { MaintenanceListDialog } from "@/components/maintenance/maintenance-list-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -117,6 +118,10 @@ export default function MaintenanceCalendar() {
   // Vehicle view dialog
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  
+  // Maintenance reservation view dialog
+  const [maintenanceReservationDialogOpen, setMaintenanceReservationDialogOpen] = useState(false);
+  const [selectedMaintenanceReservationId, setSelectedMaintenanceReservationId] = useState<number | null>(null);
   
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
@@ -964,18 +969,50 @@ export default function MaintenanceCalendar() {
                                             Edit
                                           </Button>
                                         )}
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          onClick={() => {
-                                            setSelectedVehicleId(event.vehicleId);
-                                            setVehicleViewDialogOpen(true);
-                                          }}
-                                          data-testid={`hover-view-${event.vehicleId}`}
-                                        >
-                                          <Eye className="h-3 w-3 mr-1" />
-                                          View Vehicle
-                                        </Button>
+                                        {event.type === 'scheduled_maintenance' ? (
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            onClick={async () => {
+                                              try {
+                                                const response = await fetch('/api/reservations');
+                                                const allReservations = await response.json();
+                                                const actualReservation = allReservations.find((r: any) => 
+                                                  r.vehicleId === event.vehicleId && 
+                                                  r.type === 'maintenance_block' &&
+                                                  r.startDate === event.date
+                                                );
+                                                
+                                                if (actualReservation) {
+                                                  setSelectedMaintenanceReservationId(actualReservation.id);
+                                                  setMaintenanceReservationDialogOpen(true);
+                                                }
+                                              } catch (error) {
+                                                console.error('Failed to fetch reservation:', error);
+                                              }
+                                            }}
+                                            data-testid={`hover-view-maintenance-${event.vehicleId}`}
+                                          >
+                                            <Wrench className="h-3 w-3 mr-1" />
+                                            View Maintenance
+                                          </Button>
+                                        ) : (
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            onClick={() => {
+                                              openScheduleFromEvent({
+                                                date: event.date,
+                                                vehicleId: event.vehicleId,
+                                                type: event.type
+                                              });
+                                            }}
+                                            data-testid={`hover-schedule-${event.vehicleId}`}
+                                          >
+                                            <Wrench className="h-3 w-3 mr-1" />
+                                            Schedule Maintenance
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -1118,17 +1155,48 @@ export default function MaintenanceCalendar() {
                               Schedule Maintenance
                             </Button>
                           )}
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedVehicleId(event.vehicleId);
-                              setVehicleViewDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View Vehicle
-                          </Button>
+                          {event.type === 'scheduled_maintenance' ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/reservations');
+                                  const allReservations = await response.json();
+                                  const actualReservation = allReservations.find((r: any) => 
+                                    r.vehicleId === event.vehicleId && 
+                                    r.type === 'maintenance_block' &&
+                                    r.startDate === event.date
+                                  );
+                                  
+                                  if (actualReservation) {
+                                    setSelectedMaintenanceReservationId(actualReservation.id);
+                                    setMaintenanceReservationDialogOpen(true);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to fetch reservation:', error);
+                                }
+                              }}
+                            >
+                              <Wrench className="h-4 w-4 mr-1" />
+                              View Maintenance
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                openScheduleFromEvent({
+                                  date: event.date,
+                                  vehicleId: event.vehicleId,
+                                  type: event.type
+                                });
+                              }}
+                            >
+                              <Wrench className="h-4 w-4 mr-1" />
+                              Schedule Maintenance
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -1292,6 +1360,18 @@ export default function MaintenanceCalendar() {
           }
         }}
         vehicleId={selectedVehicleId}
+      />
+
+      {/* Maintenance Reservation View Dialog */}
+      <ReservationViewDialog
+        open={maintenanceReservationDialogOpen}
+        onOpenChange={(open) => {
+          setMaintenanceReservationDialogOpen(open);
+          if (!open) {
+            setSelectedMaintenanceReservationId(null);
+          }
+        }}
+        reservationId={selectedMaintenanceReservationId}
       />
     </div>
   );
