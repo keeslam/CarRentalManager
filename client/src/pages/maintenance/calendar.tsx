@@ -977,8 +977,15 @@ export default function MaintenanceCalendar() {
                                               e.preventDefault();
                                               e.stopPropagation();
                                               
-                                              // For scheduled maintenance, the event ID is the reservation ID
-                                              const reservationId = typeof event.id === 'string' ? parseInt(event.id) : event.id;
+                                              // For scheduled maintenance, extract the reservation ID from the event ID
+                                              let reservationId: number;
+                                              if (typeof event.id === 'string') {
+                                                // Extract the number from strings like "scheduled_maintenance_60"
+                                                const match = event.id.match(/\d+$/);
+                                                reservationId = match ? parseInt(match[0]) : 0;
+                                              } else {
+                                                reservationId = event.id;
+                                              }
                                               
                                               if (reservationId && !isNaN(reservationId) && reservationId > 0) {
                                                 setSelectedMaintenanceReservationId(reservationId);
@@ -1162,9 +1169,20 @@ export default function MaintenanceCalendar() {
                               size="sm" 
                               variant="outline"
                               onClick={() => {
-                                // Use the event ID directly - it's the reservation ID for scheduled maintenance
-                                setSelectedMaintenanceReservationId(typeof event.id === 'string' ? parseInt(event.id) : event.id);
-                                setMaintenanceReservationDialogOpen(true);
+                                // Extract the reservation ID from the event ID  
+                                let reservationId: number;
+                                if (typeof event.id === 'string') {
+                                  // Extract the number from strings like "scheduled_maintenance_60"
+                                  const match = event.id.match(/\d+$/);
+                                  reservationId = match ? parseInt(match[0]) : 0;
+                                } else {
+                                  reservationId = event.id;
+                                }
+                                
+                                if (reservationId && reservationId > 0) {
+                                  setSelectedMaintenanceReservationId(reservationId);
+                                  setMaintenanceReservationDialogOpen(true);
+                                }
                               }}
                             >
                               <Wrench className="h-4 w-4 mr-1" />
