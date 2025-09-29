@@ -127,12 +127,18 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
 
   // Form submission handler
   function onSubmit(data: UserFormValues) {
+    console.log("Form submitted with data:", data);
+    console.log("Is edit mode:", isEdit);
+    console.log("Form errors:", form.formState.errors);
+    
     if (isEdit) {
       // If updating and password is empty, remove it from the data
       if (!data.password) {
         const { password, ...dataWithoutPassword } = data;
+        console.log("Updating user without password:", dataWithoutPassword);
         updateUserMutation.mutate(dataWithoutPassword);
       } else {
+        console.log("Updating user with password:", data);
         updateUserMutation.mutate(data);
       }
     } else {
@@ -145,6 +151,7 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
         });
         return;
       }
+      console.log("Creating new user:", data);
       createUserMutation.mutate(data);
     }
   }
