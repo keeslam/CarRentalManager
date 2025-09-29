@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertReservationSchemaBase } from "@shared/schema";
@@ -490,6 +490,7 @@ export function ReservationForm({
   
   // Create or update reservation mutation
   const createReservationMutation = useMutation({
+    mutationKey: ["/api/reservations"], // This enables automatic comprehensive cache invalidation
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       // Create FormData for file upload
       const formData = new FormData();
@@ -544,23 +545,19 @@ export function ReservationForm({
         saveToRecent('recentCustomers', form.watch("customerId").toString());
       }
       
-      // Invalidate all relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      // Use comprehensive cache invalidation - this will invalidate ALL reservation queries
+      // including /api/reservations/range that the calendar uses
+      await invalidateByPrefix('/api/reservations');
+      await invalidateByPrefix('/api/vehicles');
       
-      // If we're in edit mode, make sure we invalidate the specific reservation details
-      if (editMode && initialData?.id) {
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/reservations/${initialData.id}`] 
-        });
-      }
-      
-      // Also invalidate vehicle-specific reservation queries
-      if (vehicleIdWatch) {
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/reservations/vehicle/${vehicleIdWatch}`] 
-        });
-      }
+      // Force immediate refetch of critical calendar queries
+      await queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes('/api/reservations/range') || 
+                 key?.includes('/api/vehicles/available');
+        }
+      });
       
       // Show success message
       toast({
