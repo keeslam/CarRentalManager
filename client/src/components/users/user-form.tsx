@@ -36,8 +36,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const userFormSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().optional(),
-  email: z.string().email("Please enter a valid email address").optional().nullable(),
-  fullName: z.string().optional().nullable(),
+  email: z.string().email("Please enter a valid email address").or(z.literal("")).optional().nullable(),
+  fullName: z.string().or(z.literal("")).optional().nullable(),
   role: z.string().default(UserRole.USER),
   permissions: z.array(z.string()).default([]),
   active: z.boolean().default(true),
