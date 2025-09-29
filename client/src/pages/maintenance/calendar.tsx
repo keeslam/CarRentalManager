@@ -973,25 +973,12 @@ export default function MaintenanceCalendar() {
                                           <Button 
                                             size="sm" 
                                             variant="outline" 
-                                            onClick={async (e) => {
+                                            onClick={(e) => {
                                               e.preventDefault();
                                               e.stopPropagation();
-                                              try {
-                                                const response = await fetch('/api/reservations');
-                                                const allReservations = await response.json();
-                                                const actualReservation = allReservations.find((r: any) => 
-                                                  r.vehicleId === event.vehicleId && 
-                                                  r.type === 'maintenance_block' &&
-                                                  r.startDate === event.date
-                                                );
-                                                
-                                                if (actualReservation) {
-                                                  setSelectedMaintenanceReservationId(actualReservation.id);
-                                                  setMaintenanceReservationDialogOpen(true);
-                                                }
-                                              } catch (error) {
-                                                console.error('Failed to fetch reservation:', error);
-                                              }
+                                              // Use the event ID directly - it's the reservation ID for scheduled maintenance
+                                              setSelectedMaintenanceReservationId(typeof event.id === 'string' ? parseInt(event.id) : event.id);
+                                              setMaintenanceReservationDialogOpen(true);
                                             }}
                                             data-testid={`hover-view-maintenance-${event.vehicleId}`}
                                           >
@@ -1163,23 +1150,10 @@ export default function MaintenanceCalendar() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={async () => {
-                                try {
-                                  const response = await fetch('/api/reservations');
-                                  const allReservations = await response.json();
-                                  const actualReservation = allReservations.find((r: any) => 
-                                    r.vehicleId === event.vehicleId && 
-                                    r.type === 'maintenance_block' &&
-                                    r.startDate === event.date
-                                  );
-                                  
-                                  if (actualReservation) {
-                                    setSelectedMaintenanceReservationId(actualReservation.id);
-                                    setMaintenanceReservationDialogOpen(true);
-                                  }
-                                } catch (error) {
-                                  console.error('Failed to fetch reservation:', error);
-                                }
+                              onClick={() => {
+                                // Use the event ID directly - it's the reservation ID for scheduled maintenance
+                                setSelectedMaintenanceReservationId(typeof event.id === 'string' ? parseInt(event.id) : event.id);
+                                setMaintenanceReservationDialogOpen(true);
                               }}
                             >
                               <Wrench className="h-4 w-4 mr-1" />
