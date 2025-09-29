@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
 import { ExpenseViewDialog } from "@/components/expenses/expense-view-dialog";
 import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
@@ -82,6 +83,8 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
   const [viewReservationDialogOpen, setViewReservationDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [editReservationDialogOpen, setEditReservationDialogOpen] = useState(false);
+  const [editReservationId, setEditReservationId] = useState<number | null>(null);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const queryClient = useQueryClient();
@@ -1829,6 +1832,18 @@ Autolease Lam`;
                               >
                                 View
                               </Button>
+
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-blue-600 hover:text-blue-800"
+                                onClick={() => {
+                                  setEditReservationId(reservation.id);
+                                  setEditReservationDialogOpen(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
                               
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -2397,6 +2412,25 @@ Autolease Lam`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Reservation Dialog */}
+      <ReservationEditDialog
+        open={editReservationDialogOpen}
+        onOpenChange={setEditReservationDialogOpen}
+        reservationId={editReservationId}
+        onSuccess={(reservation) => {
+          toast({
+            title: "Reservation updated",
+            description: "The reservation has been successfully updated."
+          });
+          // Refresh vehicle data and related queries
+          queryClient.invalidateQueries({ queryKey: vehicleQueryKey });
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}/reservations`] });
+          setEditReservationDialogOpen(false);
+          setEditReservationId(null);
+        }}
+      />
     </div>
   );
 }
