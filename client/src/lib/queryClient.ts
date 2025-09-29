@@ -65,14 +65,54 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false, // Don't auto-refresh on a timer
       refetchOnWindowFocus: true, // Refetch when window gets focus
-      staleTime: 60000, // Data becomes stale after 60 seconds (allows automatic refetching)
+      staleTime: 30000, // Reduced to 30 seconds for fresher data
+      gcTime: 300000, // Keep unused data for 5 minutes
       retry: false,
     },
     mutations: {
       retry: false,
+      // Global mutation observer for automatic cache invalidation
+      onSuccess: (data, variables, context, mutation) => {
+        const mutationKey = mutation.options.mutationKey?.[0] as string;
+        if (mutationKey) {
+          autoInvalidateCache(mutationKey, data);
+        }
+      },
     },
   },
 });
+
+/**
+ * Automatic cache invalidation based on mutation patterns
+ * This eliminates the need for manual cache invalidation in most cases
+ */
+function autoInvalidateCache(mutationKey: string, data?: any) {
+  // Extract the API path and method from mutation key
+  const apiPath = mutationKey.toLowerCase();
+  
+  // Smart invalidation based on API patterns
+  if (apiPath.includes('users')) {
+    invalidateByPrefix('/api/users');
+  } else if (apiPath.includes('vehicles')) {
+    invalidateRelatedQueries('vehicles', data);
+  } else if (apiPath.includes('customers')) {
+    invalidateRelatedQueries('customers', data);
+  } else if (apiPath.includes('reservations')) {
+    invalidateRelatedQueries('reservations', data);
+  } else if (apiPath.includes('expenses')) {
+    invalidateRelatedQueries('expenses', data);
+  } else if (apiPath.includes('documents')) {
+    invalidateRelatedQueries('documents', data);
+  } else if (apiPath.includes('notifications')) {
+    invalidateRelatedQueries('notifications', data);
+  }
+  
+  // Always invalidate dashboard data for any changes
+  invalidateByPrefix('/api/reservations/upcoming');
+  invalidateByPrefix('/api/expenses/recent');
+  invalidateByPrefix('/api/vehicles/apk-expiring');
+  invalidateByPrefix('/api/vehicles/warranty-expiring');
+}
 
 /**
  * Prefix-based invalidation utility to invalidate all queries with a matching prefix
@@ -85,6 +125,35 @@ export function invalidateByPrefix(prefix: string) {
     }
   });
 }
+
+/**
+ * Enhanced API request function that supports automatic cache invalidation
+ * Pass a mutationKey to enable automatic cache refresh on success
+ */
+export async function apiRequestWithCache(
+  method: string,
+  url: string,
+  data?: unknown,
+  mutationKey?: string
+): Promise<Response> {
+  const response = await apiRequest(method, url, data);
+  
+  // Trigger automatic cache invalidation if mutationKey is provided
+  if (mutationKey) {
+    autoInvalidateCache(mutationKey, data);
+  }
+  
+  return response;
+}
+
+/**
+ * Disable automatic cache invalidation for specific mutations
+ * Use this when you want to handle cache invalidation manually
+ */
+export const createMutationWithoutAutoCache = (options: any) => ({
+  ...options,
+  mutationKey: undefined, // Prevents automatic cache invalidation
+});
 
 /**
  * Comprehensive invalidation system for all entity types and their relationships
