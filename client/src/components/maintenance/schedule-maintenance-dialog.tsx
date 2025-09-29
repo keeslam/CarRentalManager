@@ -59,7 +59,7 @@ const scheduleMaintenanceSchema = z.object({
   ], {
     required_error: "Please select a maintenance type",
   }),
-  scheduledDate: z.string().min(1, "Scheduled date is required"),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date (YYYY-MM-DD)").min(1, "Scheduled date is required"),
   estimatedDuration: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   description: z.string().optional(),
@@ -204,16 +204,27 @@ export function ScheduleMaintenanceDialog({
 
   const scheduleMaintenanceMutation = useMutation({
     mutationFn: async (data: ScheduleMaintenanceFormData) => {
+      // Validate and sanitize the scheduled date
+      const startDate = data.scheduledDate?.trim();
+      if (!startDate || startDate === 'undefined') {
+        throw new Error('Please select a valid scheduled date');
+      }
+      
       const payload = {
         vehicleId: parseInt(data.vehicleId),
         customerId: null, // No customer for maintenance blocks
-        startDate: data.scheduledDate,
-        endDate: data.scheduledDate, // Same day by default
+        startDate: startDate,
+        endDate: startDate, // Same day by default - always use startDate, never undefined
         status: "confirmed",
         type: "maintenance_block",
         notes: `${data.maintenanceType}: ${data.description || ''}\n${data.notes || ''}`.trim(),
         totalPrice: 0,
       };
+      
+      // Final safety check - never send undefined values
+      if (payload.endDate === 'undefined' || !payload.endDate) {
+        payload.endDate = payload.startDate;
+      }
       
       console.log('Sending payload:', payload);
       

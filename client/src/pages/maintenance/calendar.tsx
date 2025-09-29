@@ -208,7 +208,7 @@ export default function MaintenanceCalendar() {
   };
   
   // Function to open schedule dialog from a maintenance event
-  const openScheduleFromEvent = (event: { date: string; vehicleId: number; type: string }) => {
+  const openScheduleFromEvent = (event: { date?: string; startDate?: string; vehicleId: number; type: string }) => {
     const maintenanceTypeMap: Record<string, "apk_inspection" | "warranty_service"> = {
       'apk_due': 'apk_inspection',
       'apk_reminder_2m': 'apk_inspection',
@@ -218,7 +218,11 @@ export default function MaintenanceCalendar() {
       'warranty_reminder_1m': 'warranty_service',
     };
     
-    setSelectedScheduleDate(event.date);
+    // Use startDate if available, fallback to date - never pass undefined
+    const scheduleDate = event.startDate || event.date;
+    if (scheduleDate && scheduleDate !== 'undefined') {
+      setSelectedScheduleDate(scheduleDate);
+    }
     setSelectedVehicleIdForSchedule(event.vehicleId);
     setSelectedMaintenanceTypeForSchedule(maintenanceTypeMap[event.type] || 'breakdown');
     setIsScheduleDialogOpen(true);
@@ -1153,6 +1157,7 @@ export default function MaintenanceCalendar() {
                               onClick={() => {
                                 openScheduleFromEvent({
                                   date: event.date,
+                                  startDate: event.startDate,
                                   vehicleId: event.vehicleId,
                                   type: event.type
                                 });
@@ -1195,6 +1200,7 @@ export default function MaintenanceCalendar() {
                               onClick={() => {
                                 openScheduleFromEvent({
                                   date: event.date,
+                                  startDate: event.startDate,
                                   vehicleId: event.vehicleId,
                                   type: event.type
                                 });
