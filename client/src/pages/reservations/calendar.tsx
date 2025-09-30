@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,9 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Calendar view options
 type CalendarView = "month";
@@ -55,6 +57,7 @@ type VehicleFilters = {
 export default function ReservationCalendarPage() {
   // Query client for cache invalidation
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Navigation
   const [_, navigate] = useLocation();
@@ -115,6 +118,40 @@ export default function ReservationCalendarPage() {
     setViewDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedReservation(null);
+  };
+  
+  // Delete mutation
+  const deleteReservationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/reservations/${id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete reservation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reservation deleted",
+        description: "The reservation has been deleted successfully.",
+      });
+      // Invalidate all reservation queries to refresh the calendar
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleDeleteReservation = (reservation: Reservation) => {
+    if (window.confirm(`Are you sure you want to delete this reservation for ${reservation.customer?.name || 'this customer'}?`)) {
+      deleteReservationMutation.mutate(reservation.id);
+    }
   };
   
   // Day dialog handlers
@@ -1203,6 +1240,19 @@ export default function ReservationCalendarPage() {
                         >
                           <Edit className="mr-1 h-3 w-3" />
                           Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            handleDeleteReservation(reservation);
+                            closeDayDialog();
+                          }}
+                          data-testid={`button-delete-${reservation.id}`}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
                         </Button>
                       </div>
                     </div>
