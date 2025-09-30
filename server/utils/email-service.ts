@@ -9,6 +9,13 @@ export interface EmailOptions {
   text?: string;
 }
 
+export interface EmailError {
+  success: false;
+  error: string;
+  userMessage: string;
+  suggestion?: string;
+}
+
 interface EmailConfig {
   provider: string;
   fromEmail: string;
@@ -19,6 +26,11 @@ interface EmailConfig {
   smtpUser?: string;
   smtpPassword?: string;
   smtpSecure?: boolean;
+  useOAuth2?: boolean;
+  oauth2ClientId?: string;
+  oauth2ClientSecret?: string;
+  oauth2RefreshToken?: string;
+  oauth2AccessToken?: string;
 }
 
 let cachedConfig: EmailConfig | null = null;
@@ -54,7 +66,12 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
       smtpPort: value.smtpPort ? parseInt(value.smtpPort) : 587,
       smtpUser: value.smtpUser,
       smtpPassword: value.smtpPassword,
-      smtpSecure: value.smtpPort === '465'
+      smtpSecure: value.smtpPort === '465',
+      useOAuth2: value.useOAuth2 || false,
+      oauth2ClientId: value.oauth2ClientId,
+      oauth2ClientSecret: value.oauth2ClientSecret,
+      oauth2RefreshToken: value.oauth2RefreshToken,
+      oauth2AccessToken: value.oauth2AccessToken
     };
 
     // Validate config
@@ -64,8 +81,16 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
     }
 
     if (config.provider === 'smtp') {
-      if (!config.smtpHost || !config.smtpUser || !config.smtpPassword) {
-        console.error('❌ SMTP configuration incomplete');
+      if (!config.smtpHost || !config.smtpUser) {
+        console.error('❌ SMTP configuration incomplete - missing host or user');
+        return null;
+      }
+      // Check authentication: either password OR OAuth2 credentials
+      const hasBasicAuth = !!config.smtpPassword;
+      const hasOAuth2 = config.useOAuth2 && config.oauth2ClientId && config.oauth2ClientSecret && config.oauth2RefreshToken;
+      
+      if (!hasBasicAuth && !hasOAuth2) {
+        console.error('❌ SMTP configuration incomplete - need either password or OAuth2 credentials');
         return null;
       }
     } else if (config.provider === 'mailersend' || config.provider === 'sendgrid') {
@@ -86,17 +111,103 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
   }
 }
 
+function getSmtpErrorMessage(error: any): { userMessage: string; suggestion?: string } {
+  const errorString = error.message || error.toString();
+  const errorCode = error.code;
+  const responseCode = error.responseCode;
+
+  // Microsoft/Outlook basic auth disabled
+  if (errorString.includes('basic authentication is disabled') || responseCode === 535) {
+    return {
+      userMessage: 'Your email provider has disabled basic authentication (username + password).',
+      suggestion: 'For Microsoft/Outlook accounts: Enable OAuth2 in settings or use an App Password. For other providers: Check if they require App Passwords or special authentication.'
+    };
+  }
+
+  // Authentication failed
+  if (errorCode === 'EAUTH' || responseCode === 535 || errorString.includes('Invalid login')) {
+    return {
+      userMessage: 'Email authentication failed. Your username or password is incorrect.',
+      suggestion: 'Double-check your email address and password. For Gmail/Outlook, you may need to use an App Password instead of your regular password.'
+    };
+  }
+
+  // Connection refused
+  if (errorCode === 'ECONNREFUSED') {
+    return {
+      userMessage: 'Cannot connect to the email server. The server refused the connection.',
+      suggestion: 'Check if the SMTP host and port are correct. Common ports: 587 (TLS), 465 (SSL), 25 (unencrypted).'
+    };
+  }
+
+  // Connection timeout
+  if (errorCode === 'ETIMEDOUT' || errorCode === 'ESOCKET') {
+    return {
+      userMessage: 'Connection to email server timed out.',
+      suggestion: 'Check your internet connection and firewall settings. The SMTP server may be temporarily unavailable.'
+    };
+  }
+
+  // TLS/SSL errors
+  if (errorString.includes('self signed certificate') || errorString.includes('certificate')) {
+    return {
+      userMessage: 'SSL/TLS certificate validation failed.',
+      suggestion: 'The server may be using a self-signed certificate. Contact your email provider or system administrator.'
+    };
+  }
+
+  // DNS errors
+  if (errorCode === 'ENOTFOUND') {
+    return {
+      userMessage: 'Email server not found. The hostname could not be resolved.',
+      suggestion: 'Check if the SMTP host address is correct. Example: smtp.gmail.com'
+    };
+  }
+
+  // Recipient/sender errors
+  if (responseCode === 550 || responseCode === 553) {
+    return {
+      userMessage: 'Email was rejected by the server.',
+      suggestion: 'Check if the recipient email address is valid and your sender email is authorized to send from this server.'
+    };
+  }
+
+  // Generic error
+  return {
+    userMessage: 'Failed to send email due to an unexpected error.',
+    suggestion: 'Check all your email settings and try again. Contact support if the problem persists.'
+  };
+}
+
 async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<boolean> {
   try {
-    const transporter = nodemailer.createTransport({
+    const transportOptions: any = {
       host: config.smtpHost,
       port: config.smtpPort,
       secure: config.smtpSecure,
-      auth: {
+    };
+
+    // OAuth2 authentication
+    if (config.useOAuth2 && config.oauth2ClientId && config.oauth2ClientSecret && config.oauth2RefreshToken) {
+      transportOptions.auth = {
+        type: 'OAuth2',
+        user: config.smtpUser,
+        clientId: config.oauth2ClientId,
+        clientSecret: config.oauth2ClientSecret,
+        refreshToken: config.oauth2RefreshToken,
+        accessToken: config.oauth2AccessToken,
+      };
+      console.log('🔐 Using OAuth2 authentication for:', config.smtpUser);
+    } 
+    // Basic authentication
+    else {
+      transportOptions.auth = {
         user: config.smtpUser,
         pass: config.smtpPassword,
-      },
-    });
+      };
+    }
+
+    const transporter = nodemailer.createTransport(transportOptions);
 
     const mailOptions = {
       from: `"${config.fromName}" <${config.fromEmail}>`,
@@ -109,8 +220,13 @@ async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ SMTP email sent:', info.messageId);
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    const { userMessage, suggestion } = getSmtpErrorMessage(error);
     console.error('❌ SMTP email error:', error);
+    console.error('💡 User message:', userMessage);
+    if (suggestion) {
+      console.error('💡 Suggestion:', suggestion);
+    }
     return false;
   }
 }
