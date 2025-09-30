@@ -548,7 +548,32 @@ export class DatabaseStorage implements IStorage {
     // Fetch vehicle and customer data for each reservation
     for (const reservation of reservationsData) {
       const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
-      const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
+      let customer = null;
+      
+      // For maintenance blocks, try to find customer from active open-ended rental
+      if (reservation.type === 'maintenance_block' && !reservation.customerId && reservation.vehicleId) {
+        const [activeRental] = await db.select()
+          .from(reservations)
+          .where(
+            and(
+              eq(reservations.vehicleId, reservation.vehicleId),
+              eq(reservations.type, 'standard'),
+              eq(reservations.status, 'confirmed'),
+              isNull(reservations.endDate), // Open-ended rental
+              isNull(reservations.deletedAt)
+            )
+          )
+          .limit(1);
+        
+        if (activeRental && activeRental.customerId) {
+          const [rentalCustomer] = await db.select().from(customers).where(eq(customers.id, activeRental.customerId));
+          customer = rentalCustomer;
+        }
+      } else if (reservation.customerId) {
+        // Normal reservation with direct customer assignment
+        const [directCustomer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
+        customer = directCustomer;
+      }
       
       result.push({
         ...reservation,
