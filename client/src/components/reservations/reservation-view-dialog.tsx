@@ -268,8 +268,7 @@ export function ReservationViewDialog({
                 </div>
               </div>
 
-              {/* Customer details - only show for non-maintenance reservations */}
-              {reservation.type !== 'maintenance_block' && (
+              {/* Customer details */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
                 <div className="bg-gray-50 p-4 rounded-md">
@@ -340,11 +339,10 @@ export function ReservationViewDialog({
                       </Link>
                     </div>
                   ) : (
-                    <p className="text-gray-500">Customer information unavailable</p>
+                    <p className="text-gray-500">No customer assigned to this reservation</p>
                   )}
                 </div>
               </div>
-              )}
 
               {/* Contract and Document Actions */}
               <div>
