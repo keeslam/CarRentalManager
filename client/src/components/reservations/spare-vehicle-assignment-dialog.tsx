@@ -124,7 +124,7 @@ export function SpareVehicleAssignmentDialog({
       const results = [];
       
       for (const assignment of data.assignments) {
-        const response = await apiRequest('POST', `/api/placeholder-reservations/${assignment.placeholderReservationId}/assign`, {
+        const response = await apiRequest('POST', `/api/placeholder-reservations/${assignment.placeholderReservationId}/assign-vehicle`, {
           vehicleId: assignment.vehicleId,
         });
         
