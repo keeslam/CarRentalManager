@@ -104,6 +104,34 @@ export function ReservationViewDialog({
     enabled: !!reservation?.customerId && open,
   });
 
+  // For maintenance blocks, fetch active rentals for the vehicle to find the customer
+  const { data: vehicleReservations } = useQuery<Reservation[]>({
+    queryKey: [`/api/reservations/vehicle/${reservation?.vehicleId}`],
+    enabled: !!reservation?.vehicleId && reservation?.type === 'maintenance_block' && open,
+  });
+
+  // Find active open-ended rental for this vehicle (for maintenance blocks)
+  const activeRentalCustomerId = (() => {
+    if (reservation?.type !== 'maintenance_block' || !vehicleReservations) return null;
+    
+    const activeRental = vehicleReservations.find(
+      r => r.type === 'standard' && 
+      r.status === 'confirmed' && 
+      !r.endDate // Open-ended rental
+    );
+    
+    return activeRental?.customerId || null;
+  })();
+
+  // Fetch the customer from active rental (for maintenance blocks)
+  const { data: rentalCustomer } = useQuery<Customer>({
+    queryKey: [`/api/customers/${activeRentalCustomerId}`],
+    enabled: !!activeRentalCustomerId && open,
+  });
+
+  // Use rental customer for maintenance blocks if available, otherwise use direct customer
+  const displayCustomer = reservation?.type === 'maintenance_block' && rentalCustomer ? rentalCustomer : customer;
+
   // Fetch active replacement reservation if this is an original reservation
   const { data: activeReplacement } = useQuery<Reservation>({
     queryKey: [`/api/reservations/${reservationId}/active-replacement`],
@@ -270,69 +298,74 @@ export function ReservationViewDialog({
 
               {/* Customer details */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  Customer
+                  {reservation.type === 'maintenance_block' && displayCustomer && (
+                    <span className="ml-2 text-xs text-gray-400 font-normal">(from active rental)</span>
+                  )}
+                </h3>
                 <div className="bg-gray-50 p-4 rounded-md">
-                  {customer ? (
+                  {displayCustomer ? (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                       <div>
                         <h4 className="font-medium flex items-center gap-2">
-                          {customer.debtorNumber && (
+                          {displayCustomer.debtorNumber && (
                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                              {customer.debtorNumber}
+                              {displayCustomer.debtorNumber}
                             </span>
                           )}
-                          <span>{customer.name}</span>
-                          {customer.companyName && (
+                          <span>{displayCustomer.name}</span>
+                          {displayCustomer.companyName && (
                             <span className="text-gray-500 text-sm font-normal">
-                              ({customer.companyName})
+                              ({displayCustomer.companyName})
                             </span>
                           )}
                         </h4>
                         
                         <div className="mt-2 grid grid-cols-1 gap-1">
                           {/* Contact information */}
-                          {(customer.phone || customer.email) && (
+                          {(displayCustomer.phone || displayCustomer.email) && (
                             <div className="flex flex-col text-sm">
-                              {customer.phone && (
+                              {displayCustomer.phone && (
                                 <div className="flex items-center gap-1">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
                                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                                   </svg>
-                                  <span>{customer.phone}</span>
+                                  <span>{displayCustomer.phone}</span>
                                 </div>
                               )}
-                              {customer.email && (
+                              {displayCustomer.email && (
                                 <div className="flex items-center gap-1">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
                                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                                     <polyline points="22,6 12,13 2,6"/>
                                   </svg>
-                                  <span>{customer.email}</span>
+                                  <span>{displayCustomer.email}</span>
                                 </div>
                               )}
                             </div>
                           )}
                           
                           {/* Address information */}
-                          {(customer.address || customer.city || customer.postalCode || customer.country) && (
+                          {(displayCustomer.address || displayCustomer.city || displayCustomer.postalCode || displayCustomer.country) && (
                             <div className="flex items-start gap-1 text-sm">
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 mt-0.5">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                                 <circle cx="12" cy="10" r="3"/>
                               </svg>
                               <span>
-                                {customer.address && <span>{customer.address}</span>}
-                                {customer.address && (customer.postalCode || customer.city) && <span>, </span>}
-                                {customer.postalCode && <span>{customer.postalCode} </span>}
-                                {customer.city && <span>{customer.city}</span>}
-                                {(customer.address || customer.postalCode || customer.city) && customer.country && <span>, </span>}
-                                {customer.country && <span>{customer.country}</span>}
+                                {displayCustomer.address && <span>{displayCustomer.address}</span>}
+                                {displayCustomer.address && (displayCustomer.postalCode || displayCustomer.city) && <span>, </span>}
+                                {displayCustomer.postalCode && <span>{displayCustomer.postalCode} </span>}
+                                {displayCustomer.city && <span>{displayCustomer.city}</span>}
+                                {(displayCustomer.address || displayCustomer.postalCode || displayCustomer.city) && displayCustomer.country && <span>, </span>}
+                                {displayCustomer.country && <span>{displayCustomer.country}</span>}
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
-                      <Link href={`/customers/${customer.id}`}>
+                      <Link href={`/customers/${displayCustomer.id}`}>
                         <Button variant="ghost" size="sm" className="mt-2 sm:mt-0">
                           View Customer
                         </Button>
