@@ -292,15 +292,7 @@ export function SpareVehicleAssignmentDialog({
                                           key={vehicle.id} 
                                           value={vehicle.id.toString()}
                                         >
-                                          <div className="flex items-center gap-2">
-                                            <span className="bg-primary-100 text-primary-800 px-1.5 py-0.5 rounded text-xs font-semibold">
-                                              {formatLicensePlate(vehicle.licensePlate)}
-                                            </span>
-                                            <span>{vehicle.brand} {vehicle.model}</span>
-                                            {vehicle.vehicleType && (
-                                              <span className="text-gray-500 text-xs">({vehicle.vehicleType})</span>
-                                            )}
-                                          </div>
+                                          {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
                                         </SelectItem>
                                       ))
                                     )}
