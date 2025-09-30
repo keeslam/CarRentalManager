@@ -552,6 +552,7 @@ export class DatabaseStorage implements IStorage {
       
       // For maintenance blocks, try to find customer from active open-ended rental
       if (reservation.type === 'maintenance_block' && !reservation.customerId && reservation.vehicleId) {
+        console.log(`🔍 Looking for active rental for maintenance block ${reservation.id} on vehicle ${reservation.vehicleId}`);
         const [activeRental] = await db.select()
           .from(reservations)
           .where(
@@ -565,9 +566,14 @@ export class DatabaseStorage implements IStorage {
           )
           .limit(1);
         
+        console.log(`📋 Found active rental:`, activeRental);
+        
         if (activeRental && activeRental.customerId) {
           const [rentalCustomer] = await db.select().from(customers).where(eq(customers.id, activeRental.customerId));
           customer = rentalCustomer;
+          console.log(`✅ Found customer from active rental:`, customer?.name);
+        } else {
+          console.log(`❌ No active rental found for vehicle ${reservation.vehicleId}`);
         }
       } else if (reservation.customerId) {
         // Normal reservation with direct customer assignment
