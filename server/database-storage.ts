@@ -558,8 +558,8 @@ export class DatabaseStorage implements IStorage {
             and(
               eq(reservations.vehicleId, reservation.vehicleId),
               eq(reservations.type, 'standard'),
-              eq(reservations.status, 'confirmed'),
-              isNull(reservations.endDate), // Open-ended rental
+              sql`(${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined')`,
+              sql`${reservations.status} IN ('confirmed', 'pending')`,
               isNull(reservations.deletedAt)
             )
           )
