@@ -26,11 +26,6 @@ interface EmailConfig {
   smtpUser?: string;
   smtpPassword?: string;
   smtpSecure?: boolean;
-  useOAuth2?: boolean;
-  oauth2ClientId?: string;
-  oauth2ClientSecret?: string;
-  oauth2RefreshToken?: string;
-  oauth2AccessToken?: string;
 }
 
 let cachedConfig: EmailConfig | null = null;
@@ -66,12 +61,7 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
       smtpPort: value.smtpPort ? parseInt(value.smtpPort) : 587,
       smtpUser: value.smtpUser,
       smtpPassword: value.smtpPassword,
-      smtpSecure: value.smtpPort === '465',
-      useOAuth2: value.useOAuth2 || false,
-      oauth2ClientId: value.oauth2ClientId,
-      oauth2ClientSecret: value.oauth2ClientSecret,
-      oauth2RefreshToken: value.oauth2RefreshToken,
-      oauth2AccessToken: value.oauth2AccessToken
+      smtpSecure: value.smtpPort === '465'
     };
 
     // Validate config
@@ -81,16 +71,8 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
     }
 
     if (config.provider === 'smtp') {
-      if (!config.smtpHost || !config.smtpUser) {
-        console.error('❌ SMTP configuration incomplete - missing host or user');
-        return null;
-      }
-      // Check authentication: either password OR OAuth2 credentials
-      const hasBasicAuth = !!config.smtpPassword;
-      const hasOAuth2 = config.useOAuth2 && config.oauth2ClientId && config.oauth2ClientSecret && config.oauth2RefreshToken;
-      
-      if (!hasBasicAuth && !hasOAuth2) {
-        console.error('❌ SMTP configuration incomplete - need either password or OAuth2 credentials');
+      if (!config.smtpHost || !config.smtpUser || !config.smtpPassword) {
+        console.error('❌ SMTP configuration incomplete');
         return null;
       }
     } else if (config.provider === 'mailersend' || config.provider === 'sendgrid') {
@@ -185,27 +167,11 @@ async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<
       host: config.smtpHost,
       port: config.smtpPort,
       secure: config.smtpSecure,
-    };
-
-    // OAuth2 authentication
-    if (config.useOAuth2 && config.oauth2ClientId && config.oauth2ClientSecret && config.oauth2RefreshToken) {
-      transportOptions.auth = {
-        type: 'OAuth2',
-        user: config.smtpUser,
-        clientId: config.oauth2ClientId,
-        clientSecret: config.oauth2ClientSecret,
-        refreshToken: config.oauth2RefreshToken,
-        accessToken: config.oauth2AccessToken,
-      };
-      console.log('🔐 Using OAuth2 authentication for:', config.smtpUser);
-    } 
-    // Basic authentication
-    else {
-      transportOptions.auth = {
+      auth: {
         user: config.smtpUser,
         pass: config.smtpPassword,
-      };
-    }
+      }
+    };
 
     const transporter = nodemailer.createTransport(transportOptions);
 

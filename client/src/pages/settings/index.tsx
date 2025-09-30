@@ -31,10 +31,6 @@ interface EmailSetting {
     smtpUser?: string;
     smtpPassword?: string;
     provider?: string;
-    useOAuth2?: boolean;
-    oauth2ClientId?: string;
-    oauth2ClientSecret?: string;
-    oauth2RefreshToken?: string;
   };
   category: string;
   description?: string;
@@ -55,10 +51,6 @@ export default function Settings() {
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPassword, setSmtpPassword] = useState("");
   const [provider, setProvider] = useState("mailersend");
-  const [useOAuth2, setUseOAuth2] = useState(false);
-  const [oauth2ClientId, setOauth2ClientId] = useState("");
-  const [oauth2ClientSecret, setOauth2ClientSecret] = useState("");
-  const [oauth2RefreshToken, setOauth2RefreshToken] = useState("");
   
   // Fetch email settings
   const { data: emailSettings, isLoading } = useQuery<EmailSetting[]>({
@@ -112,10 +104,6 @@ export default function Settings() {
     setSmtpUser("");
     setSmtpPassword("");
     setProvider("mailersend");
-    setUseOAuth2(false);
-    setOauth2ClientId("");
-    setOauth2ClientSecret("");
-    setOauth2RefreshToken("");
     setEditingEmail(null);
   };
   
@@ -130,10 +118,6 @@ export default function Settings() {
       setSmtpUser(setting.value.smtpUser || "");
       setSmtpPassword(setting.value.smtpPassword || "");
       setProvider(setting.value.provider || "mailersend");
-      setUseOAuth2(setting.value.useOAuth2 || false);
-      setOauth2ClientId(setting.value.oauth2ClientId || "");
-      setOauth2ClientSecret(setting.value.oauth2ClientSecret || "");
-      setOauth2RefreshToken(setting.value.oauth2RefreshToken || "");
     } else {
       resetForm();
     }
@@ -150,10 +134,6 @@ export default function Settings() {
       smtpUser,
       smtpPassword,
       provider,
-      useOAuth2,
-      oauth2ClientId,
-      oauth2ClientSecret,
-      oauth2RefreshToken,
     };
     
     saveEmailSettingMutation.mutate(emailData);
@@ -257,23 +237,7 @@ export default function Settings() {
                   
                   {provider === 'smtp' && (
                     <>
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-2">
-                        <h4 className="text-sm font-semibold text-blue-900">Microsoft/Outlook Users</h4>
-                        <p className="text-sm text-blue-800">
-                          Microsoft has disabled basic authentication. You have two options:
-                        </p>
-                        <div className="text-sm text-blue-800 space-y-1">
-                          <p><strong>Option 1 (Recommended):</strong> Use an App Password</p>
-                          <ul className="list-disc list-inside ml-2 space-y-0.5">
-                            <li>Go to account.microsoft.com → Security → Advanced security options</li>
-                            <li>Create a new App Password</li>
-                            <li>Use it in the SMTP Password field below (no OAuth2 needed)</li>
-                          </ul>
-                          <p className="mt-2"><strong>Option 2:</strong> Use OAuth2 (more complex, see below)</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
+                                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="smtpHost">SMTP Host</Label>
                           <Input
@@ -308,90 +272,17 @@ export default function Settings() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="smtpPassword">
-                            SMTP Password / App Password
-                            {useOAuth2 && <span className="text-gray-400 ml-1">(not needed with OAuth2)</span>}
-                          </Label>
+                          <Label htmlFor="smtpPassword">SMTP Password</Label>
                           <Input
                             id="smtpPassword"
                             type="password"
                             value={smtpPassword}
                             onChange={(e) => setSmtpPassword(e.target.value)}
-                            placeholder={useOAuth2 ? "OAuth2 is enabled" : "Your password or app password"}
-                            disabled={useOAuth2}
-                            className={useOAuth2 ? "bg-gray-100" : ""}
+                            placeholder="Enter your password"
                             data-testid="input-smtp-password"
                           />
-                          {!useOAuth2 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              For Microsoft/Outlook, use your App Password here
-                            </p>
-                          )}
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-md">
-                        <input
-                          type="checkbox"
-                          id="useOAuth2"
-                          checked={useOAuth2}
-                          onChange={(e) => setUseOAuth2(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300"
-                          data-testid="checkbox-use-oauth2"
-                        />
-                        <Label htmlFor="useOAuth2" className="text-sm font-medium">
-                          Use OAuth2 Authentication (for Microsoft/Outlook)
-                        </Label>
-                      </div>
-                      
-                      {useOAuth2 && (
-                        <div className="space-y-4 p-4 bg-gray-50 rounded-md">
-                          <p className="text-sm text-gray-600">
-                            OAuth2 is required for Microsoft 365/Outlook accounts that have basic authentication disabled.
-                          </p>
-                          <div>
-                            <Label htmlFor="oauth2ClientId">OAuth2 Client ID</Label>
-                            <Input
-                              id="oauth2ClientId"
-                              value={oauth2ClientId}
-                              onChange={(e) => setOauth2ClientId(e.target.value)}
-                              placeholder="Enter Client ID from Azure AD"
-                              data-testid="input-oauth2-client-id"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="oauth2ClientSecret">OAuth2 Client Secret</Label>
-                            <Input
-                              id="oauth2ClientSecret"
-                              type="password"
-                              value={oauth2ClientSecret}
-                              onChange={(e) => setOauth2ClientSecret(e.target.value)}
-                              placeholder="Enter Client Secret"
-                              data-testid="input-oauth2-client-secret"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="oauth2RefreshToken">OAuth2 Refresh Token</Label>
-                            <Textarea
-                              id="oauth2RefreshToken"
-                              value={oauth2RefreshToken}
-                              onChange={(e) => setOauth2RefreshToken(e.target.value)}
-                              placeholder="Enter Refresh Token"
-                              className="font-mono text-sm"
-                              rows={3}
-                              data-testid="input-oauth2-refresh-token"
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 space-y-1">
-                            <p>To set up OAuth2 for Microsoft 365:</p>
-                            <ol className="list-decimal list-inside space-y-1 ml-2">
-                              <li>Register an app in Azure AD</li>
-                              <li>Grant Mail.Send API permissions</li>
-                              <li>Generate a refresh token using OAuth2 flow</li>
-                            </ol>
-                          </div>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
