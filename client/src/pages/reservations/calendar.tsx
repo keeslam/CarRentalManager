@@ -131,8 +131,8 @@ export default function ReservationCalendarPage() {
       return response.json();
     },
     onSuccess: async () => {
-      // Aggressive cache invalidation - invalidate ALL reservation queries
-      await queryClient.invalidateQueries({ 
+      // Force reset ALL reservation caches to clear stale data
+      await queryClient.resetQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.includes('reservations');
