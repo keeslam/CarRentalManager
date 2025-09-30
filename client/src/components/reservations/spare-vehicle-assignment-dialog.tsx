@@ -21,19 +21,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Car, Calendar, User } from "lucide-react";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle } from "@shared/schema";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 
 // Form schema for vehicle assignments
 const assignmentSchema = z.object({
@@ -264,40 +258,22 @@ export function SpareVehicleAssignmentDialog({
                         </div>
 
                         {/* Vehicle Selection */}
-                        <div className="flex-shrink-0 w-64">
+                        <div className="flex-shrink-0 w-full md:w-80">
                           <FormField
                             control={form.control}
                             name={`assignments.${index}.vehicleId`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Select Vehicle</FormLabel>
-                                <Select
-                                  value={field.value > 0 ? field.value.toString() : undefined}
-                                  onValueChange={(value) => field.onChange(value ? parseInt(value) : 0)}
-                                  disabled={assignVehiclesMutation.isPending}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger data-testid={`select-vehicle-${placeholder.id}`}>
-                                      <SelectValue placeholder="Choose vehicle..." />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {availableVehicles?.length === 0 ? (
-                                      <SelectItem value="" disabled>
-                                        No vehicles available
-                                      </SelectItem>
-                                    ) : (
-                                      availableVehicles?.map((vehicle: Vehicle) => (
-                                        <SelectItem 
-                                          key={vehicle.id} 
-                                          value={vehicle.id.toString()}
-                                        >
-                                          {formatLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
-                                        </SelectItem>
-                                      ))
-                                    )}
-                                  </SelectContent>
-                                </Select>
+                                <FormControl>
+                                  <VehicleSelector
+                                    vehicles={availableVehicles || []}
+                                    value={field.value > 0 ? field.value.toString() : ""}
+                                    onChange={(value) => field.onChange(value ? parseInt(value) : 0)}
+                                    placeholder="Choose vehicle..."
+                                    disabled={assignVehiclesMutation.isPending}
+                                  />
+                                </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
