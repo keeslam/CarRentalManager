@@ -7,7 +7,8 @@ import {
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification,
-  backupSettings, type BackupSettings, type InsertBackupSettings
+  backupSettings, type BackupSettings, type InsertBackupSettings,
+  appSettings, type AppSettings, type InsertAppSettings
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -1551,5 +1552,49 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedBlock || undefined;
+  }
+
+  // App Settings methods
+  async getAllAppSettings(): Promise<AppSettings[]> {
+    return await db.select().from(appSettings).orderBy(appSettings.category, appSettings.key);
+  }
+
+  async getAppSetting(id: number): Promise<AppSettings | undefined> {
+    const [setting] = await db.select().from(appSettings).where(eq(appSettings.id, id));
+    return setting || undefined;
+  }
+
+  async getAppSettingByKey(key: string): Promise<AppSettings | undefined> {
+    const [setting] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return setting || undefined;
+  }
+
+  async getAppSettingsByCategory(category: string): Promise<AppSettings[]> {
+    return await db.select().from(appSettings).where(eq(appSettings.category, category)).orderBy(appSettings.key);
+  }
+
+  async createAppSetting(insertSetting: InsertAppSettings): Promise<AppSettings> {
+    const [setting] = await db.insert(appSettings).values(insertSetting).returning();
+    return setting;
+  }
+
+  async updateAppSetting(id: number, settingData: Partial<InsertAppSettings>): Promise<AppSettings | undefined> {
+    const updateData = {
+      ...settingData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedSetting] = await db
+      .update(appSettings)
+      .set(updateData)
+      .where(eq(appSettings.id, id))
+      .returning();
+      
+    return updatedSetting || undefined;
+  }
+
+  async deleteAppSetting(id: number): Promise<boolean> {
+    const result = await db.delete(appSettings).where(eq(appSettings.id, id));
+    return result.rowCount > 0;
   }
 }

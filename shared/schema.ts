@@ -533,3 +533,25 @@ export const insertBackupSettingsSchema = createInsertSchema(backupSettings).omi
 
 export type BackupSettings = typeof backupSettings.$inferSelect;
 export type InsertBackupSettings = z.infer<typeof insertBackupSettingsSchema>;
+
+// App Settings table - for general application settings
+export const appSettings = pgTable("app_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(), // Setting identifier (e.g., 'email_config', 'smtp_config')
+  value: jsonb("value").$type<Record<string, any>>().default({}).notNull(), // Setting value as JSON
+  category: text("category").notNull().default("general"), // 'email', 'general', 'notifications', etc.
+  description: text("description"), // Human-readable description
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertAppSettingsSchema = createInsertSchema(appSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AppSettings = typeof appSettings.$inferSelect;
+export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;

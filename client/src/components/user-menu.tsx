@@ -119,6 +119,14 @@ export function UserMenu() {
                   <Database className="mr-2 h-4 w-4" />
                   Backup Management
                 </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  App Settings
+                </Link>
               </>
             )}
           </div>

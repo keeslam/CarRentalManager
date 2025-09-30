@@ -6,7 +6,8 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
-  customNotifications, type CustomNotification, type InsertCustomNotification
+  customNotifications, type CustomNotification, type InsertCustomNotification,
+  appSettings, type AppSettings, type InsertAppSettings
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -100,6 +101,15 @@ export interface IStorage {
   updateCustomNotification(id: number, notificationData: Partial<InsertCustomNotification>): Promise<CustomNotification | undefined>;
   markCustomNotificationAsRead(id: number): Promise<boolean>;
   deleteCustomNotification(id: number): Promise<boolean>;
+  
+  // App Settings methods
+  getAllAppSettings(): Promise<AppSettings[]>;
+  getAppSetting(id: number): Promise<AppSettings | undefined>;
+  getAppSettingByKey(key: string): Promise<AppSettings | undefined>;
+  getAppSettingsByCategory(category: string): Promise<AppSettings[]>;
+  createAppSetting(setting: InsertAppSettings): Promise<AppSettings>;
+  updateAppSetting(id: number, settingData: Partial<InsertAppSettings>): Promise<AppSettings | undefined>;
+  deleteAppSetting(id: number): Promise<boolean>;
   
 }
 

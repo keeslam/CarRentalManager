@@ -4808,6 +4808,99 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // App Settings Routes
+  app.get("/api/settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllAppSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching app settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/settings/category/:category", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { category } = req.params;
+      const settings = await storage.getAppSettingsByCategory(category);
+      res.json(settings);
+    } catch (error) {
+      console.error(`Error fetching settings for category ${req.params.category}:`, error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const setting = await storage.getAppSetting(id);
+      
+      if (!setting) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching setting:", error);
+      res.status(500).json({ error: "Failed to fetch setting" });
+    }
+  });
+
+  app.post("/api/settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const username = req.user?.username || 'Unknown';
+      const settingData = {
+        ...req.body,
+        createdBy: username,
+        updatedBy: username
+      };
+      
+      const newSetting = await storage.createAppSetting(settingData);
+      res.status(201).json(newSetting);
+    } catch (error) {
+      console.error("Error creating setting:", error);
+      res.status(500).json({ error: "Failed to create setting" });
+    }
+  });
+
+  app.patch("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const username = req.user?.username || 'Unknown';
+      const updateData = {
+        ...req.body,
+        updatedBy: username
+      };
+      
+      const updatedSetting = await storage.updateAppSetting(id, updateData);
+      
+      if (!updatedSetting) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      
+      res.json(updatedSetting);
+    } catch (error) {
+      console.error("Error updating setting:", error);
+      res.status(500).json({ error: "Failed to update setting" });
+    }
+  });
+
+  app.delete("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAppSetting(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting setting:", error);
+      res.status(500).json({ error: "Failed to delete setting" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
