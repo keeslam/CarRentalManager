@@ -257,6 +257,22 @@ export default function Settings() {
                   
                   {provider === 'smtp' && (
                     <>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-2">
+                        <h4 className="text-sm font-semibold text-blue-900">Microsoft/Outlook Users</h4>
+                        <p className="text-sm text-blue-800">
+                          Microsoft has disabled basic authentication. You have two options:
+                        </p>
+                        <div className="text-sm text-blue-800 space-y-1">
+                          <p><strong>Option 1 (Recommended):</strong> Use an App Password</p>
+                          <ul className="list-disc list-inside ml-2 space-y-0.5">
+                            <li>Go to account.microsoft.com → Security → Advanced security options</li>
+                            <li>Create a new App Password</li>
+                            <li>Use it in the SMTP Password field below (no OAuth2 needed)</li>
+                          </ul>
+                          <p className="mt-2"><strong>Option 2:</strong> Use OAuth2 (more complex, see below)</p>
+                        </div>
+                      </div>
+                      
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="smtpHost">SMTP Host</Label>
@@ -293,7 +309,7 @@ export default function Settings() {
                         </div>
                         <div>
                           <Label htmlFor="smtpPassword">
-                            SMTP Password
+                            SMTP Password / App Password
                             {useOAuth2 && <span className="text-gray-400 ml-1">(not needed with OAuth2)</span>}
                           </Label>
                           <Input
@@ -301,11 +317,16 @@ export default function Settings() {
                             type="password"
                             value={smtpPassword}
                             onChange={(e) => setSmtpPassword(e.target.value)}
-                            placeholder={useOAuth2 ? "OAuth2 is enabled" : "password"}
+                            placeholder={useOAuth2 ? "OAuth2 is enabled" : "Your password or app password"}
                             disabled={useOAuth2}
                             className={useOAuth2 ? "bg-gray-100" : ""}
                             data-testid="input-smtp-password"
                           />
+                          {!useOAuth2 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              For Microsoft/Outlook, use your App Password here
+                            </p>
+                          )}
                         </div>
                       </div>
                       
