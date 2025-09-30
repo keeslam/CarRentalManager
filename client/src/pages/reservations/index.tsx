@@ -59,8 +59,13 @@ export default function ReservationsIndex() {
       return await response.json();
     },
     onSuccess: async () => {
-      // Use unified invalidation system to update all related data
-      await invalidateRelatedQueries('reservations');
+      // Aggressive cache invalidation - invalidate ALL reservation queries
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('reservations');
+        }
+      });
       
       toast({
         title: "Reservation deleted",
