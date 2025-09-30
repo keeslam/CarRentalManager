@@ -686,7 +686,10 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(reservations.vehicleId, vehicleId),
           sql`${reservations.status} != 'cancelled'`,
-          sql`(${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})`
+          sql`(
+            (${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
+            OR (${reservations.startDate} <= ${endDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
+          )`
         )
       );
     
@@ -698,7 +701,10 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(reservations.vehicleId, vehicleId),
             sql`${reservations.status} != 'cancelled'`,
-            sql`(${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})`,
+            sql`(
+              (${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
+              OR (${reservations.startDate} <= ${endDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
+            )`,
             sql`${reservations.id} != ${excludeReservationId}`
           )
         );
