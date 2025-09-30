@@ -38,7 +38,7 @@ import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
 import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Calendar view options
@@ -130,14 +130,14 @@ export default function ReservationCalendarPage() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Use unified invalidation system to update all related data
+      await invalidateRelatedQueries('reservations');
+      
       toast({
         title: "Reservation deleted",
         description: "The reservation has been deleted successfully.",
       });
-      // Invalidate all reservation queries to refresh the calendar
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
     },
     onError: (error: Error) => {
       toast({
