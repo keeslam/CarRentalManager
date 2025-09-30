@@ -86,21 +86,27 @@ export function PendingSpareAssignmentWidget() {
               sortedAssignments?.map(placeholder => (
                 <div 
                   key={placeholder.id} 
-                  className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md"
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-md border-l-4 border-orange-500"
                 >
-                  <div className="flex items-center space-x-3">
-                    <CalendarDays className="w-4 h-4 text-orange-500" />
-                    <div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
                       <div 
                         className="font-medium text-sm"
                         data-testid={`text-spare-needed-${placeholder.id}`}
                       >
-                        TBD Spare Vehicle
+                        {placeholder.customer?.name || 'Unknown Customer'}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Needed: {formatDate(placeholder.startDate)}
-                        {placeholder.endDate && ` - ${formatDate(placeholder.endDate)}`}
+                      <span className="text-xs text-gray-400">#{placeholder.id}</span>
+                    </div>
+                    {(placeholder.customer?.phone || placeholder.customer?.email) && (
+                      <div className="text-xs text-gray-600">
+                        {placeholder.customer?.phone || placeholder.customer?.email}
                       </div>
+                    )}
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <CalendarDays className="w-3 h-3" />
+                      {formatDate(placeholder.startDate)}
+                      {placeholder.endDate && ` - ${formatDate(placeholder.endDate)}`}
                     </div>
                   </div>
                   <Button
@@ -108,7 +114,7 @@ export function PendingSpareAssignmentWidget() {
                     size="sm"
                     onClick={() => handleAssignClick(placeholder)}
                     data-testid={`button-assign-spare-${placeholder.id}`}
-                    className="text-xs"
+                    className="text-xs ml-2"
                   >
                     Assign
                   </Button>

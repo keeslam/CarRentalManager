@@ -1218,9 +1218,21 @@ export class DatabaseStorage implements IStorage {
     const cutoffDate = addDays(new Date(), daysAhead);
     const cutoffDateString = cutoffDate.toISOString().split('T')[0];
     
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: reservations.id,
+        vehicleId: reservations.vehicleId,
+        customerId: reservations.customerId,
+        startDate: reservations.startDate,
+        endDate: reservations.endDate,
+        status: reservations.status,
+        type: reservations.type,
+        placeholderSpare: reservations.placeholderSpare,
+        replacementForReservationId: reservations.replacementForReservationId,
+        customer: customers,
+      })
       .from(reservations)
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
       .where(
         and(
           eq(reservations.placeholderSpare, true),
@@ -1229,6 +1241,8 @@ export class DatabaseStorage implements IStorage {
           lte(reservations.startDate, cutoffDateString)
         )
       );
+    
+    return results as any;
   }
 
   async createPlaceholderReservation(originalReservationId: number, customerId: number, startDate: string, endDate?: string): Promise<Reservation> {
