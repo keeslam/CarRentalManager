@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { vehicles, customers, reservations, emailLogs } from '../../shared/schema.js';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
-import { sendEmail, EmailTemplates } from '../utils/mailersend-service.js';
+import { sendEmail, EmailTemplates } from '../utils/email-service.js';
 
 const router = Router();
 
@@ -112,7 +112,6 @@ router.post('/send', async (req, res) => {
 
       try {
         let emailContent;
-        let fromEmail = 'info@test-2p0347z2xo7lzdrn.mlsender.net'; // MailerSend verified domain
 
         switch (template) {
           case 'apk':
@@ -130,11 +129,12 @@ router.post('/send', async (req, res) => {
             );
             break;
           case 'custom':
-            emailContent = EmailTemplates.generalNotification(
+            emailContent = EmailTemplates.customMessage(
               customer?.name || 'Customer',
               vehicle.licensePlate || 'Unknown',
               customMessage
             );
+            emailContent.subject = customSubject; // Use custom subject for custom template
             break;
           default:
             throw new Error('Invalid template');
@@ -143,8 +143,6 @@ router.post('/send', async (req, res) => {
         const success = await sendEmail({
           to: selectedEmail,
           toName: customer?.name || undefined,
-          from: fromEmail,
-          fromName: 'Autolease Lam',
           subject: emailContent.subject,
           html: emailContent.html,
           text: emailContent.text,

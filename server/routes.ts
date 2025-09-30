@@ -29,6 +29,7 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
+import { clearEmailConfigCache } from "./utils/email-service";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -4856,6 +4857,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       };
       
       const newSetting = await storage.createAppSetting(settingData);
+      
+      // Clear email config cache if this is an email setting
+      if (newSetting.category === 'email') {
+        clearEmailConfigCache();
+      }
+      
       res.status(201).json(newSetting);
     } catch (error) {
       console.error("Error creating setting:", error);
@@ -4878,6 +4885,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ error: "Setting not found" });
       }
       
+      // Clear email config cache if this is an email setting
+      if (updatedSetting.category === 'email') {
+        clearEmailConfigCache();
+      }
+      
       res.json(updatedSetting);
     } catch (error) {
       console.error("Error updating setting:", error);
@@ -4888,10 +4900,20 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.delete("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Get setting before deleting to check if it's an email setting
+      const setting = await storage.getAppSetting(id);
+      const isEmailSetting = setting?.category === 'email';
+      
       const success = await storage.deleteAppSetting(id);
       
       if (!success) {
         return res.status(404).json({ error: "Setting not found" });
+      }
+      
+      // Clear email config cache if this was an email setting
+      if (isEmailSetting) {
+        clearEmailConfigCache();
       }
       
       res.json({ success: true });
