@@ -516,15 +516,32 @@ export default function CustomerCommunications() {
       sampleCustomer = sampleReservation?.customer;
     }
 
-    const processedContent = content
+    // Format license plate properly and add all placeholders including apkDate
+    const formattedPlate = sampleVehicle?.licensePlate 
+      ? formatLicensePlate(sampleVehicle.licensePlate) 
+      : "[License Plate]";
+    
+    const formattedApkDate = sampleVehicle?.apkDate 
+      ? new Date(sampleVehicle.apkDate).toLocaleDateString('nl-NL')
+      : "[APK Date]";
+
+    // Replace placeholders in both subject and content
+    const processedSubject = subject
       .replace(/\{customerName\}/g, sampleCustomer?.name || "[Customer Name]")
-      .replace(/\{vehiclePlate\}/g, sampleVehicle?.licensePlate || "[License Plate]")
+      .replace(/\{vehiclePlate\}/g, formattedPlate)
       .replace(/\{vehicleBrand\}/g, sampleVehicle?.brand || "[Brand]")
       .replace(/\{vehicleModel\}/g, sampleVehicle?.model || "[Model]")
-      .replace(/\{companyName\}/g, "Autolease Lam");
+      .replace(/\{apkDate\}/g, formattedApkDate);
+    
+    const processedContent = content
+      .replace(/\{customerName\}/g, sampleCustomer?.name || "[Customer Name]")
+      .replace(/\{vehiclePlate\}/g, formattedPlate)
+      .replace(/\{vehicleBrand\}/g, sampleVehicle?.brand || "[Brand]")
+      .replace(/\{vehicleModel\}/g, sampleVehicle?.model || "[Model]")
+      .replace(/\{apkDate\}/g, formattedApkDate);
 
     setEmailPreview({
-      subject,
+      subject: processedSubject,
       content: processedContent,
       recipients
     });
