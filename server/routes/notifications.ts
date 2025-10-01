@@ -20,15 +20,61 @@ function replacePlaceholders(text: string, data: {
     .replace(/\{apkDate\}/g, data.apkDate || '');
 }
 
-// Format license plate consistently (XX-XX-XX format)
+// Format license plate consistently using Dutch license plate patterns
 function formatLicensePlate(plate: string | null): string {
   if (!plate) return '';
-  // Remove all hyphens and spaces, then add hyphens in the correct positions
-  const clean = plate.replace(/[-\s]/g, '');
+  
+  // Remove all hyphens and spaces
+  const clean = plate.replace(/[-\s]/g, '').toUpperCase();
+  
   if (clean.length === 6) {
-    return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    // Detect pattern: digits (D) vs letters (L)
+    const pattern = clean.split('').map(c => /\d/.test(c) ? 'D' : 'L').join('');
+    
+    // Common Dutch license plate patterns:
+    // DD-LLL-D (e.g., 97-GRD-4)
+    if (pattern === 'DDLLLD') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 5)}-${clean.slice(5, 6)}`;
+    }
+    // DD-DD-LL (e.g., 12-34-AB)
+    else if (pattern === 'DDDDLL') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // LL-DD-DD (e.g., AB-12-34)
+    else if (pattern === 'LLDDDD') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // DD-LL-DD (e.g., 12-AB-34)
+    else if (pattern === 'DDLLDD') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // LL-LL-DD (e.g., AB-CD-12)
+    else if (pattern === 'LLLLDD') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // LL-DD-LL (e.g., AB-12-CD)
+    else if (pattern === 'LLDDLL') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // DD-LL-LL (e.g., 12-AB-CD)
+    else if (pattern === 'DDLLLL') {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
+    // LLL-DD-D (e.g., ABC-12-3)
+    else if (pattern === 'LLLDDD') {
+      return `${clean.slice(0, 3)}-${clean.slice(3, 5)}-${clean.slice(5, 6)}`;
+    }
+    // D-LLL-DD (e.g., 1-ABC-23)
+    else if (pattern === 'DLLLDD') {
+      return `${clean.slice(0, 1)}-${clean.slice(1, 4)}-${clean.slice(4, 6)}`;
+    }
+    // Default to XX-XX-XX if pattern not recognized
+    else {
+      return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+    }
   }
-  return plate; // Return original if not standard format
+  
+  return plate; // Return original if not 6 characters
 }
 
 const router = Router();
