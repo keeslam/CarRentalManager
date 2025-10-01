@@ -213,8 +213,16 @@ router.post('/send', async (req, res) => {
             break;
           case 'custom':
             // Replace placeholders in both subject and message
+            console.log('🔍 CUSTOM EMAIL DEBUG:');
+            console.log('  customSubject:', customSubject);
+            console.log('  customMessage:', customMessage);
+            console.log('  placeholderData:', placeholderData);
+            
             const processedSubject = replacePlaceholders(customSubject, placeholderData);
             const processedMessage = replacePlaceholders(customMessage, placeholderData);
+            
+            console.log('  processedSubject:', processedSubject);
+            console.log('  processedMessage:', processedMessage);
             
             // For custom templates, send ONLY the template content without any wrapper
             // Convert line breaks to HTML for proper formatting
@@ -225,11 +233,15 @@ router.post('/send', async (req, res) => {
               .map(line => `<p>${line}</p>`)
               .join('');
             
+            console.log('  htmlMessage:', htmlMessage);
+            
             emailContent = {
               subject: processedSubject,
               html: htmlMessage,
               text: processedMessage
             };
+            
+            console.log('  emailContent:', emailContent);
             break;
           default:
             throw new Error('Invalid template');
