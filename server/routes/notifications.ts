@@ -213,8 +213,17 @@ router.post('/send', async (req, res) => {
             break;
           case 'custom':
             // Replace placeholders in both subject and message
+            console.log('🔍 DEBUG - Before replacement:');
+            console.log('  customSubject:', customSubject);
+            console.log('  customMessage:', customMessage);
+            console.log('  placeholderData:', placeholderData);
+            
             const processedSubject = replacePlaceholders(customSubject, placeholderData);
             const processedMessage = replacePlaceholders(customMessage, placeholderData);
+            
+            console.log('✅ DEBUG - After replacement:');
+            console.log('  processedSubject:', processedSubject);
+            console.log('  processedMessage:', processedMessage);
             
             emailContent = EmailTemplates.customMessage(
               placeholderData.customerName,
