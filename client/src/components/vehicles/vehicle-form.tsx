@@ -28,6 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Mail } from "lucide-react";
 import { useLocation } from "wouter";
 
 // Utility function to handle null values for form inputs
@@ -64,6 +73,101 @@ const fuelTypes = ["Gasoline", "Diesel", "Electric", "Hybrid", "LPG", "CNG"];
 
 // Euro zone classifications
 const euroZones = ["Euro 3", "Euro 4", "Euro 5", "Euro 6", "Euro 6d"];
+
+// GPS Activation Dialog Component
+function GPSActivationDialog({ vehicleData }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string } }) {
+  const [isSwap, setIsSwap] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
+
+  const handleSendActivation = async () => {
+    if (!vehicleData.imei) {
+      toast({
+        title: "IMEI Required",
+        description: "Please enter an IMEI number before requesting activation.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const response = await apiRequest("POST", "/api/notifications/send-gps-activation", {
+        vehicleData: {
+          brand: vehicleData.brand,
+          model: vehicleData.model,
+          licensePlate: vehicleData.licensePlate,
+          imei: vehicleData.imei
+        },
+        isSwap
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send GPS activation email");
+      }
+
+      toast({
+        title: "GPS Activation Email Sent",
+        description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}.`
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to Send Email",
+        description: "Could not send GPS activation email. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="text-sm">
+          <span className="font-medium">Vehicle:</span> {vehicleData.brand} {vehicleData.model} ({vehicleData.licensePlate})
+        </div>
+        <div className="text-sm">
+          <span className="font-medium">IMEI:</span> {vehicleData.imei || 'Not set'}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border p-4">
+        <div className="space-y-0.5">
+          <Label>GPS Module Swap</Label>
+          <p className="text-sm text-muted-foreground">
+            Enable this if replacing an existing GPS module
+          </p>
+        </div>
+        <Switch
+          checked={isSwap}
+          onCheckedChange={setIsSwap}
+        />
+      </div>
+
+      <div className="rounded-md bg-muted p-4">
+        <p className="text-sm font-medium mb-2">Email Preview:</p>
+        <p className="text-sm text-muted-foreground">
+          {isSwap ? 
+            `Request to swap GPS module for ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). New IMEI: ${vehicleData.imei || 'N/A'}` :
+            `Request to activate GPS for ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). IMEI: ${vehicleData.imei || 'N/A'}`
+          }
+        </p>
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button
+          type="button"
+          onClick={handleSendActivation}
+          disabled={isSending || !vehicleData.imei}
+          data-testid="button-send-gps-activation"
+        >
+          {isSending ? "Sending..." : "Send Activation Request"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface VehicleFormProps {
   editMode?: boolean;
@@ -821,9 +925,35 @@ export function VehicleForm({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>IMEI Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
-                          </FormControl>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
+                            </FormControl>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button type="button" variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-gps-activation">
+                                  <Mail className="h-4 w-4 mr-1" />
+                                  Activate GPS
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[500px]">
+                                <DialogHeader>
+                                  <DialogTitle>Request GPS Activation</DialogTitle>
+                                  <DialogDescription>
+                                    Send an email to the GPS company to activate this GPS device
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <GPSActivationDialog 
+                                  vehicleData={{
+                                    brand: form.getValues('brand') || '',
+                                    model: form.getValues('model') || '',
+                                    licensePlate: form.getValues('licensePlate') || '',
+                                    imei: field.value || ''
+                                  }}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                           <FormDescription>
                             IMEI number for GPS device tracking
                           </FormDescription>

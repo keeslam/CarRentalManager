@@ -311,4 +311,66 @@ router.post('/send', async (req, res) => {
   }
 });
 
+// Send GPS activation email to GPS company
+router.post('/send-gps-activation', async (req, res) => {
+  try {
+    const { vehicleData, isSwap } = req.body;
+
+    if (!vehicleData || !vehicleData.imei) {
+      return res.status(400).json({ error: 'Vehicle data with IMEI is required' });
+    }
+
+    const { brand, model, licensePlate, imei } = vehicleData;
+    const formattedPlate = formatLicensePlate(licensePlate);
+
+    // Create email content based on swap status
+    const subject = isSwap 
+      ? `GPS Module Swap Request - ${brand} ${model} (${formattedPlate})`
+      : `GPS Activation Request - ${brand} ${model} (${formattedPlate})`;
+
+    const message = isSwap
+      ? `Dear GPS Provider,\n\nWe request a GPS module swap for the following vehicle:\n\nVehicle: ${brand} ${model}\nLicense Plate: ${formattedPlate}\nNew IMEI: ${imei}\n\nPlease activate the new GPS module at your earliest convenience.\n\nThank you.`
+      : `Dear GPS Provider,\n\nWe request GPS activation for the following vehicle:\n\nVehicle: ${brand} ${model}\nLicense Plate: ${formattedPlate}\nIMEI: ${imei}\n\nPlease activate this GPS device at your earliest convenience.\n\nThank you.`;
+
+    // Send email using GPS-purpose email configuration
+    const success = await sendEmail(
+      {
+        to: 'gps@company.com', // This should be configured in settings
+        subject: subject,
+        text: message
+      },
+      'gps' // Use GPS-purpose email configuration
+    );
+
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to send GPS activation email' });
+    }
+
+    // Log the email
+    try {
+      await db.insert(emailLogs).values({
+        template: 'gps',
+        subject: subject,
+        recipients: 1,
+        emailsSent: 1,
+        emailsFailed: 0,
+        failureReason: null,
+        vehicleIds: [],
+        sentAt: new Date().toISOString(),
+      });
+    } catch (logError) {
+      console.error('Failed to log GPS activation email:', logError);
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error sending GPS activation email:', error);
+    res.status(500).json({ 
+      error: 'Failed to send GPS activation email', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 export default router;
