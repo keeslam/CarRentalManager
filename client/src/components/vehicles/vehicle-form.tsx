@@ -75,7 +75,7 @@ const fuelTypes = ["Gasoline", "Diesel", "Electric", "Hybrid", "LPG", "CNG"];
 const euroZones = ["Euro 3", "Euro 4", "Euro 5", "Euro 6", "Euro 6d"];
 
 // GPS Activation Dialog Component
-function GPSActivationDialog({ vehicleData }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string } }) {
+function GPSActivationDialog({ vehicleData, onSuccess }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string }, onSuccess?: () => void }) {
   const [isSwap, setIsSwap] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
@@ -110,6 +110,11 @@ function GPSActivationDialog({ vehicleData }: { vehicleData: { brand: string; mo
         title: "GPS Activation Email Sent",
         description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}.`
       });
+      
+      // Close dialog on success
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       toast({
         title: "Failed to Send Email",
@@ -187,6 +192,7 @@ export function VehicleForm({
   customCancelButton
 }: VehicleFormProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isGpsDialogOpen, setIsGpsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
@@ -929,7 +935,7 @@ export function VehicleForm({
                             <FormControl>
                               <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
                             </FormControl>
-                            <Dialog>
+                            <Dialog open={isGpsDialogOpen} onOpenChange={setIsGpsDialogOpen}>
                               <DialogTrigger asChild>
                                 <Button type="button" variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-gps-activation">
                                   <Mail className="h-4 w-4 mr-1" />
@@ -950,6 +956,7 @@ export function VehicleForm({
                                     licensePlate: form.getValues('licensePlate') || '',
                                     imei: field.value || ''
                                   }}
+                                  onSuccess={() => setIsGpsDialogOpen(false)}
                                 />
                               </DialogContent>
                             </Dialog>
