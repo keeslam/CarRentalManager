@@ -321,8 +321,8 @@ router.post('/send-gps-activation', async (req, res) => {
     }
 
     // Fetch GPS recipient email from settings
-    const gpsRecipientSetting = await db.query.settings.findFirst({
-      where: (settings, { eq }) => eq(settings.key, 'gps_recipient_email')
+    const gpsRecipientSetting = await db.query.appSettings.findFirst({
+      where: (appSettings, { eq }) => eq(appSettings.key, 'gps_recipient_email')
     });
 
     const recipientEmail = gpsRecipientSetting?.value?.email;
