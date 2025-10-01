@@ -60,10 +60,13 @@ export default function Settings() {
   // Create/Update email setting mutation
   const saveEmailSettingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const endpoint = editingEmail 
-        ? `/api/settings/${editingEmail.id}` 
+      // Auto-detect if we should update existing setting or create new one
+      const existingSetting = editingEmail || emailSettings?.[0];
+      
+      const endpoint = existingSetting 
+        ? `/api/settings/${existingSetting.id}` 
         : '/api/settings';
-      const method = editingEmail ? 'PATCH' : 'POST';
+      const method = existingSetting ? 'PATCH' : 'POST';
       
       const response = await apiRequest(method, endpoint, {
         key: 'email_config',
