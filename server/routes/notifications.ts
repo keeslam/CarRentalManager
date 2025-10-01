@@ -235,13 +235,23 @@ router.post('/send', async (req, res) => {
             throw new Error('Invalid template');
         }
 
+        // Map template type to email purpose
+        let emailPurpose: 'apk' | 'maintenance' | 'gps' | 'custom' | undefined;
+        if (template === 'apk') {
+          emailPurpose = 'apk';
+        } else if (template === 'maintenance') {
+          emailPurpose = 'maintenance';
+        } else if (template === 'custom') {
+          emailPurpose = 'custom';
+        }
+        
         const success = await sendEmail({
           to: selectedEmail,
           toName: customer?.name || undefined,
           subject: emailContent.subject,
           html: emailContent.html,
           text: emailContent.text,
-        });
+        }, emailPurpose);
 
         if (success) {
           results.sent++;

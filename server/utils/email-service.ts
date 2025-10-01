@@ -28,16 +28,18 @@ interface EmailConfig {
   smtpSecure?: boolean;
 }
 
-let cachedConfig: EmailConfig | null = null;
-let configLastFetched: number = 0;
+// Cache for email configs by purpose
+const cachedConfigs: Map<string, { config: EmailConfig; timestamp: number }> = new Map();
 const CONFIG_CACHE_TTL = 60000; // Cache for 1 minute
 
-async function getEmailConfig(): Promise<EmailConfig | null> {
+async function getEmailConfig(purpose?: 'apk' | 'maintenance' | 'gps' | 'custom'): Promise<EmailConfig | null> {
   const now = Date.now();
+  const cacheKey = purpose || 'default';
   
   // Return cached config if still valid
-  if (cachedConfig && (now - configLastFetched < CONFIG_CACHE_TTL)) {
-    return cachedConfig;
+  const cached = cachedConfigs.get(cacheKey);
+  if (cached && (now - cached.timestamp < CONFIG_CACHE_TTL)) {
+    return cached.config;
   }
 
   try {
@@ -48,8 +50,22 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
       return null;
     }
 
-    // Get the first (or only) email configuration
-    const setting = emailSettings[0];
+    // Try to find config for specific purpose first
+    let setting = null;
+    if (purpose) {
+      setting = emailSettings.find(s => s.key === `email_${purpose}`);
+    }
+    
+    // Fall back to old email_config or default purpose
+    if (!setting) {
+      setting = emailSettings.find(s => s.key === 'email_config' || s.key === 'email_default');
+    }
+    
+    // If still not found, use first available
+    if (!setting) {
+      setting = emailSettings[0];
+    }
+    
     const value = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
 
     const config: EmailConfig = {
@@ -82,9 +98,8 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
       }
     }
 
-    cachedConfig = config;
-    configLastFetched = now;
-    console.log(`✅ Email config loaded: ${config.provider} (from: ${config.fromEmail})`);
+    cachedConfigs.set(cacheKey, { config, timestamp: now });
+    console.log(`✅ Email config loaded for ${purpose || 'default'}: ${config.provider} (from: ${config.fromEmail})`);
     
     return config;
   } catch (error) {
@@ -258,11 +273,11 @@ async function sendViaSendGrid(config: EmailConfig, options: EmailOptions): Prom
   }
 }
 
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  const config = await getEmailConfig();
+export async function sendEmail(options: EmailOptions, purpose?: 'apk' | 'maintenance' | 'gps' | 'custom'): Promise<boolean> {
+  const config = await getEmailConfig(purpose);
   
   if (!config) {
-    console.error('❌ Cannot send email: No valid email configuration found');
+    console.error(`❌ Cannot send email: No valid email configuration found for purpose: ${purpose || 'default'}`);
     return false;
   }
 
@@ -281,8 +296,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
 // Clear the cache - useful when settings are updated
 export function clearEmailConfigCache(): void {
-  cachedConfig = null;
-  configLastFetched = 0;
+  cachedConfigs.clear();
   console.log('🔄 Email config cache cleared');
 }
 
