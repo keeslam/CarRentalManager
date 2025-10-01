@@ -31,10 +31,19 @@ interface EmailSetting {
     smtpUser?: string;
     smtpPassword?: string;
     provider?: string;
+    purpose?: 'apk' | 'maintenance' | 'gps' | 'custom' | 'default';
   };
   category: string;
   description?: string;
 }
+
+const EMAIL_PURPOSES = [
+  { value: 'apk', label: 'APK Reminders', description: 'For sending APK inspection reminders' },
+  { value: 'maintenance', label: 'Maintenance Alerts', description: 'For maintenance notifications' },
+  { value: 'gps', label: 'GPS/IEI Information', description: 'For sending GPS and IEI numbers' },
+  { value: 'custom', label: 'Custom Messages', description: 'For custom email communications' },
+  { value: 'default', label: 'Default/General', description: 'Default email for all other purposes' },
+] as const;
 
 export default function Settings() {
   const { toast } = useToast();
@@ -51,6 +60,7 @@ export default function Settings() {
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPassword, setSmtpPassword] = useState("");
   const [provider, setProvider] = useState("mailersend");
+  const [purpose, setPurpose] = useState<'apk' | 'maintenance' | 'gps' | 'custom' | 'default'>('default');
   
   // Fetch email settings
   const { data: emailSettings, isLoading } = useQuery<EmailSetting[]>({
@@ -60,18 +70,19 @@ export default function Settings() {
   // Create/Update email setting mutation
   const saveEmailSettingMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Auto-detect if we should update existing setting or create new one
-      const existingSetting = editingEmail || emailSettings?.[0];
-      
-      const endpoint = existingSetting 
-        ? `/api/settings/${existingSetting.id}` 
+      const endpoint = editingEmail 
+        ? `/api/settings/${editingEmail.id}` 
         : '/api/settings';
-      const method = existingSetting ? 'PATCH' : 'POST';
+      const method = editingEmail ? 'PATCH' : 'POST';
+      
+      // Create unique key based on purpose
+      const purposeLabel = EMAIL_PURPOSES.find(p => p.value === data.purpose)?.label || 'Email';
+      const key = `email_${data.purpose}`;
       
       const response = await apiRequest(method, endpoint, {
-        key: 'email_config',
+        key: key,
         category: 'email',
-        description: 'Email configuration settings',
+        description: `${purposeLabel} configuration`,
         value: data,
       });
       
@@ -107,6 +118,7 @@ export default function Settings() {
     setSmtpUser("");
     setSmtpPassword("");
     setProvider("mailersend");
+    setPurpose('default');
     setEditingEmail(null);
   };
   
@@ -121,6 +133,7 @@ export default function Settings() {
       setSmtpUser(setting.value.smtpUser || "");
       setSmtpPassword(setting.value.smtpPassword || "");
       setProvider(setting.value.provider || "mailersend");
+      setPurpose(setting.value.purpose || 'default');
     } else {
       resetForm();
     }
@@ -137,6 +150,7 @@ export default function Settings() {
       smtpUser,
       smtpPassword,
       provider,
+      purpose,
     };
     
     saveEmailSettingMutation.mutate(emailData);
@@ -197,6 +211,23 @@ export default function Settings() {
                         <option value="sendgrid">SendGrid</option>
                         <option value="smtp">Custom SMTP</option>
                       </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="purpose">Email Purpose</Label>
+                      <select
+                        id="purpose"
+                        value={purpose}
+                        onChange={(e) => setPurpose(e.target.value as any)}
+                        className="w-full mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        data-testid="select-email-purpose"
+                      >
+                        {EMAIL_PURPOSES.map(p => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {EMAIL_PURPOSES.find(p => p.value === purpose)?.description}
+                      </p>
                     </div>
                   </div>
                   
@@ -317,34 +348,50 @@ export default function Settings() {
             <div className="text-center py-8 text-gray-500">Loading email settings...</div>
           ) : emailSettings && emailSettings.length > 0 ? (
             <div className="space-y-4">
-              {emailSettings.map((setting) => (
-                <div key={setting.id} className="border rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-medium">Email Configuration</h3>
-                      <Badge variant="outline">{setting.value.provider || 'mailersend'}</Badge>
+              {emailSettings.map((setting) => {
+                const purposeInfo = EMAIL_PURPOSES.find(p => p.value === setting.value.purpose) || EMAIL_PURPOSES[EMAIL_PURPOSES.length - 1];
+                return (
+                  <div key={setting.id} className="border rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-medium">{purposeInfo.label}</h3>
+                        <Badge variant="outline">{setting.value.provider || 'mailersend'}</Badge>
+                        <Badge 
+                          variant="secondary" 
+                          className={
+                            setting.value.purpose === 'apk' ? 'bg-blue-100 text-blue-800' :
+                            setting.value.purpose === 'maintenance' ? 'bg-green-100 text-green-800' :
+                            setting.value.purpose === 'gps' ? 'bg-purple-100 text-purple-800' :
+                            setting.value.purpose === 'custom' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800'
+                          }
+                        >
+                          {purposeInfo.value.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p className="text-xs text-gray-500 mb-1">{purposeInfo.description}</p>
+                        <p><strong>From:</strong> {setting.value.fromName} &lt;{setting.value.fromEmail}&gt;</p>
+                        {setting.value.apiKey && (
+                          <p><strong>API Key:</strong> {setting.value.apiKey.substring(0, 10)}...***</p>
+                        )}
+                        {setting.value.smtpHost && (
+                          <p><strong>SMTP:</strong> {setting.value.smtpHost}:{setting.value.smtpPort}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>From:</strong> {setting.value.fromName} &lt;{setting.value.fromEmail}&gt;</p>
-                      {setting.value.apiKey && (
-                        <p><strong>API Key:</strong> {setting.value.apiKey.substring(0, 10)}...***</p>
-                      )}
-                      {setting.value.smtpHost && (
-                        <p><strong>SMTP:</strong> {setting.value.smtpHost}:{setting.value.smtpPort}</p>
-                      )}
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenDialog(setting)}
+                      data-testid={`button-edit-email-${setting.id}`}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenDialog(setting)}
-                    data-testid={`button-edit-email-${setting.id}`}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
