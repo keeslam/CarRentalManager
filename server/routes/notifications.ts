@@ -4,6 +4,33 @@ import { vehicles, customers, reservations, emailLogs } from '../../shared/schem
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { sendEmail, EmailTemplates } from '../utils/email-service.js';
 
+// Helper function to replace placeholders in template strings
+function replacePlaceholders(text: string, data: {
+  customerName?: string;
+  vehiclePlate?: string;
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  apkDate?: string;
+}): string {
+  return text
+    .replace(/\{customerName\}/g, data.customerName || '')
+    .replace(/\{vehiclePlate\}/g, data.vehiclePlate || '')
+    .replace(/\{vehicleBrand\}/g, data.vehicleBrand || '')
+    .replace(/\{vehicleModel\}/g, data.vehicleModel || '')
+    .replace(/\{apkDate\}/g, data.apkDate || '');
+}
+
+// Format license plate consistently (XX-XX-XX format)
+function formatLicensePlate(plate: string | null): string {
+  if (!plate) return '';
+  // Remove all hyphens and spaces, then add hyphens in the correct positions
+  const clean = plate.replace(/[-\s]/g, '');
+  if (clean.length === 6) {
+    return `${clean.slice(0, 2)}-${clean.slice(2, 4)}-${clean.slice(4, 6)}`;
+  }
+  return plate; // Return original if not standard format
+}
+
 const router = Router();
 
 // Send notifications to customers
@@ -113,28 +140,42 @@ router.post('/send', async (req, res) => {
       try {
         let emailContent;
 
+        // Prepare placeholder data
+        const formattedPlate = formatLicensePlate(vehicle.licensePlate);
+        const placeholderData = {
+          customerName: customer?.name || 'Customer',
+          vehiclePlate: formattedPlate,
+          vehicleBrand: vehicle.brand || '',
+          vehicleModel: vehicle.model || '',
+          apkDate: vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : ''
+        };
+
         switch (template) {
           case 'apk':
             emailContent = EmailTemplates.apkReminder(
-              customer?.name || 'Customer',
-              vehicle.licensePlate || 'Unknown',
-              vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : 'Unknown'
+              placeholderData.customerName,
+              formattedPlate,
+              placeholderData.apkDate || 'Unknown'
             );
             break;
           case 'maintenance':
             emailContent = EmailTemplates.maintenanceReminder(
-              customer?.name || 'Customer',
-              vehicle.licensePlate || 'Unknown',
+              placeholderData.customerName,
+              formattedPlate,
               'Regular Service' // You could make this dynamic based on vehicle data
             );
             break;
           case 'custom':
+            // Replace placeholders in both subject and message
+            const processedSubject = replacePlaceholders(customSubject, placeholderData);
+            const processedMessage = replacePlaceholders(customMessage, placeholderData);
+            
             emailContent = EmailTemplates.customMessage(
-              customer?.name || 'Customer',
-              vehicle.licensePlate || 'Unknown',
-              customMessage
+              placeholderData.customerName,
+              formattedPlate,
+              processedMessage
             );
-            emailContent.subject = customSubject; // Use custom subject for custom template
+            emailContent.subject = processedSubject; // Use processed custom subject
             break;
           default:
             throw new Error('Invalid template');
