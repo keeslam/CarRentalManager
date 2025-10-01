@@ -108,7 +108,7 @@ function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleDa
 
       toast({
         title: "GPS Activation Email Sent",
-        description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}. GPS enabled and IMEI saved.`
+        description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}.`
       });
       
       // Auto-save the form with GPS enabled
@@ -962,13 +962,33 @@ export function VehicleForm({
                                     imei: field.value || ''
                                   }}
                                   onSuccess={() => setIsGpsDialogOpen(false)}
-                                  onAutoSave={() => {
+                                  onAutoSave={async () => {
                                     // Enable GPS toggle if not already enabled
                                     if (!form.getValues('gps')) {
                                       form.setValue('gps', true);
                                     }
-                                    // Trigger form submission to save
-                                    form.handleSubmit(onSubmit)();
+                                    
+                                    // Save directly using mutation without triggering onSuccess callback
+                                    if (editMode && initialData?.id) {
+                                      const formData = form.getValues();
+                                      
+                                      try {
+                                        const response = await apiRequest("PATCH", `/api/vehicles/${initialData.id}`, formData);
+                                        
+                                        if (response.ok) {
+                                          // Invalidate queries to refresh data
+                                          await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+                                          await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+                                          
+                                          toast({
+                                            title: "GPS Settings Saved",
+                                            description: "GPS has been enabled and IMEI has been saved.",
+                                          });
+                                        }
+                                      } catch (error) {
+                                        console.error("Failed to save GPS settings:", error);
+                                      }
+                                    }
                                   }}
                                 />
                               </DialogContent>
