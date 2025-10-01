@@ -75,7 +75,7 @@ const fuelTypes = ["Gasoline", "Diesel", "Electric", "Hybrid", "LPG", "CNG"];
 const euroZones = ["Euro 3", "Euro 4", "Euro 5", "Euro 6", "Euro 6d"];
 
 // GPS Activation Dialog Component
-function GPSActivationDialog({ vehicleData, onSuccess }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string }, onSuccess?: () => void }) {
+function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string }, onSuccess?: () => void, onAutoSave?: () => void }) {
   const [isSwap, setIsSwap] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
@@ -108,8 +108,13 @@ function GPSActivationDialog({ vehicleData, onSuccess }: { vehicleData: { brand:
 
       toast({
         title: "GPS Activation Email Sent",
-        description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}.`
+        description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}. GPS enabled and IMEI saved.`
       });
+      
+      // Auto-save the form with GPS enabled
+      if (onAutoSave) {
+        onAutoSave();
+      }
       
       // Close dialog on success
       if (onSuccess) {
@@ -957,6 +962,14 @@ export function VehicleForm({
                                     imei: field.value || ''
                                   }}
                                   onSuccess={() => setIsGpsDialogOpen(false)}
+                                  onAutoSave={() => {
+                                    // Enable GPS toggle if not already enabled
+                                    if (!form.getValues('gps')) {
+                                      form.setValue('gps', true);
+                                    }
+                                    // Trigger form submission to save
+                                    form.handleSubmit(onSubmit)();
+                                  }}
                                 />
                               </DialogContent>
                             </Dialog>
