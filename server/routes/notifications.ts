@@ -320,6 +320,19 @@ router.post('/send-gps-activation', async (req, res) => {
       return res.status(400).json({ error: 'Vehicle data with IMEI is required' });
     }
 
+    // Fetch GPS recipient email from settings
+    const gpsRecipientSetting = await db.query.settings.findFirst({
+      where: (settings, { eq }) => eq(settings.key, 'gps_recipient_email')
+    });
+
+    const recipientEmail = gpsRecipientSetting?.value?.email;
+    
+    if (!recipientEmail) {
+      return res.status(400).json({ 
+        error: 'GPS recipient email not configured. Please configure it in settings.' 
+      });
+    }
+
     const { brand, model, licensePlate, imei } = vehicleData;
     const formattedPlate = formatLicensePlate(licensePlate);
 
@@ -335,7 +348,7 @@ router.post('/send-gps-activation', async (req, res) => {
     // Send email using GPS-purpose email configuration
     const success = await sendEmail(
       {
-        to: 'gps@company.com', // This should be configured in settings
+        to: recipientEmail,
         subject: subject,
         text: message
       },

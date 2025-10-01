@@ -4831,6 +4831,22 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  app.get("/api/settings/key/:key", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const setting = await storage.getAppSettingByKey(key);
+      
+      if (!setting) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching setting by key:", error);
+      res.status(500).json({ error: "Failed to fetch setting" });
+    }
+  });
+
   app.get("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,10 +62,26 @@ export default function Settings() {
   const [provider, setProvider] = useState("mailersend");
   const [purpose, setPurpose] = useState<'apk' | 'maintenance' | 'gps' | 'custom' | 'default'>('default');
   
+  // GPS recipient email state
+  const [gpsRecipientEmail, setGpsRecipientEmail] = useState("");
+  
   // Fetch email settings
   const { data: emailSettings, isLoading } = useQuery<EmailSetting[]>({
     queryKey: ['/api/settings/category/email'],
   });
+  
+  // Fetch GPS recipient email setting
+  const { data: gpsRecipientSetting } = useQuery<any>({
+    queryKey: ['/api/settings/key/gps_recipient_email'],
+    retry: false,
+  });
+  
+  // Load GPS recipient email when fetched
+  useEffect(() => {
+    if (gpsRecipientSetting?.value?.email) {
+      setGpsRecipientEmail(gpsRecipientSetting.value.email);
+    }
+  }, [gpsRecipientSetting]);
   
   // Create/Update email setting mutation
   const saveEmailSettingMutation = useMutation({
@@ -108,6 +124,54 @@ export default function Settings() {
       });
     },
   });
+  
+  // Save GPS recipient email mutation
+  const saveGpsRecipientMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const endpoint = gpsRecipientSetting?.id 
+        ? `/api/settings/${gpsRecipientSetting.id}` 
+        : '/api/settings';
+      const method = gpsRecipientSetting?.id ? 'PATCH' : 'POST';
+      
+      const response = await apiRequest(method, endpoint, {
+        key: 'gps_recipient_email',
+        category: 'gps',
+        description: 'GPS company recipient email address',
+        value: { email },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save GPS recipient email');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "GPS Settings Saved",
+        description: "GPS recipient email has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/key/gps_recipient_email'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save GPS recipient email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleSaveGpsRecipient = () => {
+    if (!gpsRecipientEmail || !gpsRecipientEmail.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveGpsRecipientMutation.mutate(gpsRecipientEmail);
+  };
   
   const resetForm = () => {
     setFromEmail("");
@@ -400,6 +464,57 @@ export default function Settings() {
               <p className="text-sm mt-1">Click "Add Email Config" to configure your email service</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+      
+      {/* GPS Settings Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            GPS Activation Settings
+          </CardTitle>
+          <CardDescription>
+            Configure the GPS company's email address for activation requests
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="gpsRecipientEmail">GPS Company Email</Label>
+                <Input
+                  id="gpsRecipientEmail"
+                  type="email"
+                  value={gpsRecipientEmail}
+                  onChange={(e) => setGpsRecipientEmail(e.target.value)}
+                  placeholder="gps@company.com"
+                  className="mt-1"
+                  data-testid="input-gps-recipient-email"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This email will receive GPS activation and swap requests
+                </p>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleSaveGpsRecipient}
+                  disabled={saveGpsRecipientMutation.isPending}
+                  className="w-full"
+                  data-testid="button-save-gps-recipient"
+                >
+                  {saveGpsRecipientMutation.isPending ? "Saving..." : "Save GPS Email"}
+                </Button>
+              </div>
+            </div>
+            {gpsRecipientSetting?.value?.email && (
+              <div className="rounded-md bg-green-50 border border-green-200 p-3">
+                <p className="text-sm text-green-800">
+                  <strong>Current GPS Recipient:</strong> {gpsRecipientSetting.value.email}
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       
