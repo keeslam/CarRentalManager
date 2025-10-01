@@ -49,6 +49,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertReservationSchema, insertReservationSchemaBase } from "@shared/schema";
+import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { 
   Form, 
   FormControl, 
@@ -87,6 +88,7 @@ export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
   const [editReservationId, setEditReservationId] = useState<number | null>(null);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -594,14 +596,43 @@ Autolease Lam`;
             Back to Vehicles
           </Button>
 
-          <Link href={`/vehicles/${vehicleId}/edit`}>
-            <Button variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-2">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-              </svg>
-              Edit
-            </Button>
-          </Link>
+          <Dialog open={isEditVehicleDialogOpen} onOpenChange={setIsEditVehicleDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-edit-vehicle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-2">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                </svg>
+                Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Vehicle</DialogTitle>
+                <DialogDescription>
+                  Update the details for {vehicle?.brand} {vehicle?.model} ({formatLicensePlate(vehicle?.licensePlate || "")})
+                </DialogDescription>
+              </DialogHeader>
+              <VehicleForm 
+                initialData={vehicle}
+                editMode={true}
+                redirectToList={false}
+                onSuccess={() => {
+                  setIsEditVehicleDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                }}
+                customCancelButton={
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsEditVehicleDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                }
+              />
+            </DialogContent>
+          </Dialog>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
