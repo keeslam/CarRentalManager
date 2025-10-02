@@ -113,13 +113,13 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       break;
 
     case 'reservations':
-      // Invalidate AND refetch ALL reservation queries including calendar range queries
-      queryClient.invalidateQueries({ 
+      // Force immediate refetch of ALL reservation queries including calendar range queries
+      queryClient.refetchQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0] as string;
           return key?.startsWith('/api/reservations');
         },
-        refetchType: 'active' // Force active queries to refetch immediately
+        type: 'active' // Only refetch currently active queries
       });
       
       // Also refetch these specific queries that depend on reservation data
