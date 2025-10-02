@@ -248,6 +248,9 @@ export function ScheduleMaintenanceDialog({
       
       // Check if spare vehicles are needed
       if (result.needsSpareVehicle) {
+        console.log('🚗 Spare vehicles needed! Showing spare dialog...', result);
+        console.log('Conflicting reservations:', result.conflictingReservations);
+        console.log('Maintenance reservation ID:', result.maintenanceReservationId);
         setConflictingReservations(result.conflictingReservations);
         setMaintenanceData({
           ...result.maintenanceData,
