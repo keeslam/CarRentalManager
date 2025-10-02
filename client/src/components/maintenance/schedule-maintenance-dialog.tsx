@@ -586,7 +586,7 @@ export function ScheduleMaintenanceDialog({
     enabled: Boolean(showSpareDialog && maintenanceData?.startDate && maintenanceData?.vehicleId), // Ensure boolean return
   });
 
-  const handleSpareVehicleAssignment = () => {
+  const handleSpareVehicleAssignment = async () => {
     console.log('🎯 Handling spare vehicle assignment...');
     console.log('Spare vehicle assignments:', spareVehicleAssignments);
     console.log('Conflicting reservations:', conflictingReservations);
@@ -625,11 +625,18 @@ export function ScheduleMaintenanceDialog({
     }
 
     console.log('✅ All validations passed, creating placeholders...');
-    createMaintenanceWithSpareMutation.mutate({
-      maintenanceData,
-      conflictingReservations,
-      spareVehicleAssignments
-    });
+    
+    try {
+      await createMaintenanceWithSpareMutation.mutateAsync({
+        maintenanceData,
+        conflictingReservations,
+        spareVehicleAssignments
+      });
+      console.log('✅ Mutation completed successfully');
+    } catch (error) {
+      console.error('❌ Mutation failed:', error);
+      // Error is already handled by onError
+    }
   };
 
   const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string) => {
