@@ -1306,14 +1306,15 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Original reservation not found');
     }
 
-    // Check for duplicate placeholder
+    // Check for duplicate placeholder (only active, non-deleted ones)
     const [duplicate] = await db
       .select()
       .from(reservations)
       .where(
         and(
           eq(reservations.replacementForReservationId, originalReservationId),
-          eq(reservations.placeholderSpare, true)
+          eq(reservations.placeholderSpare, true),
+          isNull(reservations.deletedAt) // Only check non-deleted placeholders
         )
       );
 
