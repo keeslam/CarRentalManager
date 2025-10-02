@@ -185,6 +185,9 @@ async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<
       auth: {
         user: config.smtpUser,
         pass: config.smtpPassword,
+      },
+      tls: {
+        rejectUnauthorized: false // Allow certificate validation bypass for servers with certificate mismatches
       }
     };
 
