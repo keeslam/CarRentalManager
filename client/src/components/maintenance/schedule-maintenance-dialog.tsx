@@ -316,6 +316,8 @@ export function ScheduleMaintenanceDialog({
       startDate: string;
       endDate?: string;
     }) => {
+      console.log('🔄 Creating placeholder with data:', data);
+      
       const response = await apiRequest("POST", "/api/placeholder-reservations", {
         body: JSON.stringify(data),
         headers: {
@@ -323,12 +325,20 @@ export function ScheduleMaintenanceDialog({
         },
       });
 
+      console.log('📡 Placeholder response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Placeholder creation failed:', errorData);
         throw new Error(errorData.message || "Failed to create placeholder reservation");
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('✅ Placeholder created successfully:', result);
+      return result;
+    },
+    onError: (error) => {
+      console.error('❌ Placeholder mutation error:', error);
     }
   });
 
