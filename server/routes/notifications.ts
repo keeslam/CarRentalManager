@@ -127,14 +127,15 @@ router.post('/send', async (req, res) => {
         .from(vehicles)
         .leftJoin(reservations, eq(reservations.vehicleId, vehicles.id))
         .leftJoin(customers, eq(customers.id, reservations.customerId))
-        .where(
-          and(
-            inArray(vehicles.id, vehicleIds),
-            isNotNull(customers.email) // Only include customers with email addresses
-          )
-        );
+        .where(inArray(vehicles.id, vehicleIds));
+
+      // Filter out entries where customer has no valid email addresses
+      const filteredData = data.filter(item => {
+        const customer = item.customer;
+        return customer && (customer.email || customer.emailGeneral || customer.emailForMOT || customer.emailForInvoices);
+      });
       
-      vehicleData = data;
+      vehicleData = filteredData;
 
       // If customerIds are also provided, add those customers without vehicles
       if (customerIds && customerIds.length > 0) {
