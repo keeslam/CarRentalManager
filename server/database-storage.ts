@@ -251,13 +251,14 @@ export class DatabaseStorage implements IStorage {
   async getAvailableVehicles(): Promise<Vehicle[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get all vehicles that don't have a non-cancelled reservation that includes today
+    // Get all vehicles that don't have a non-cancelled, non-deleted reservation that includes today
     const reservedVehicleIds = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
       .where(
         and(
           sql`${reservations.status} != 'cancelled'`,
+          isNull(reservations.deletedAt),
           sql`${reservations.startDate} <= ${today}`,
           sql`${reservations.endDate} >= ${today}`
         )
@@ -707,6 +708,7 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(reservations.vehicleId, vehicleId),
             sql`${reservations.status} != 'cancelled'`,
+            isNull(reservations.deletedAt),
             sql`(
               (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
               OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
@@ -1434,13 +1436,14 @@ export class DatabaseStorage implements IStorage {
 
     const allVehicles = await vehicleQuery;
 
-    // Get conflicting reservations in the date range
+    // Get conflicting reservations in the date range (excluding soft-deleted)
     const conflictingReservations = await db
       .select()
       .from(reservations)
       .where(
         and(
           not(eq(reservations.status, 'cancelled')),
+          isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`,
           or(
             and(
