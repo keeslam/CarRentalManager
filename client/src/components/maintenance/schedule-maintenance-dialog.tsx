@@ -251,7 +251,7 @@ export function ScheduleMaintenanceDialog({
         setConflictingReservations(result.conflictingReservations);
         setMaintenanceData({
           ...result.maintenanceData,
-          maintenanceId: result.id // Store the created maintenance ID
+          maintenanceId: result.maintenanceReservationId // Store the created maintenance ID
         });
         setShowSpareDialog(true);
         return null; // Don't proceed with success yet
