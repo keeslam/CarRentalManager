@@ -50,20 +50,32 @@ async function getEmailConfig(purpose?: 'apk' | 'maintenance' | 'gps' | 'custom'
       return null;
     }
 
+    console.log(`🔍 Looking for email config with purpose: ${purpose || 'default'}`);
+    console.log(`📧 Available email settings keys: ${emailSettings.map(s => s.key).join(', ')}`);
+
     // Try to find config for specific purpose first
     let setting = null;
     if (purpose) {
       setting = emailSettings.find(s => s.key === `email_${purpose}`);
+      if (setting) {
+        console.log(`✅ Found specific config for purpose: email_${purpose}`);
+      } else {
+        console.warn(`⚠️ No config found for email_${purpose}, falling back to default`);
+      }
     }
     
     // Fall back to old email_config or default purpose
     if (!setting) {
       setting = emailSettings.find(s => s.key === 'email_config' || s.key === 'email_default');
+      if (setting) {
+        console.log(`📌 Using fallback config: ${setting.key}`);
+      }
     }
     
     // If still not found, use first available
     if (!setting) {
       setting = emailSettings[0];
+      console.log(`⚠️ Using first available config: ${setting.key}`);
     }
     
     const value = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
