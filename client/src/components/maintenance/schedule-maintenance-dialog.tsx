@@ -452,49 +452,58 @@ export function ScheduleMaintenanceDialog({
       return { success: true };
     },
     onSuccess: () => {
-      // Use aggressive cache invalidation that catches all query variations
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith('/api/vehicles') || 
-                 key?.startsWith('/api/reservations') || 
-                 key?.startsWith('/api/placeholder-reservations');
-        }
-      });
-      
-      // Force immediate refetch of critical data
-      queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-      queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
-      queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
-      queryClient.refetchQueries({ queryKey: ['/api/placeholder-reservations'] });
-      
+      // Show success message first
       toast({
         title: "Maintenance scheduled",
         description: "Maintenance scheduled and spare vehicles assigned to affected reservations.",
       });
       
-      // Reset all states with error handling
+      // Close dialogs immediately for better UX
+      setShowSpareDialog(false);
+      setConflictingReservations([]);
+      setMaintenanceData(null);
+      setSpareVehicleAssignments({});
+      onOpenChange(false);
+      
+      // Call parent onSuccess if provided
+      if (onSuccess && typeof onSuccess === 'function') {
+        try {
+          onSuccess();
+        } catch (error) {
+          console.warn('Error calling parent onSuccess:', error);
+        }
+      }
+      
+      // Reset form safely
       try {
-        setShowSpareDialog(false);
-        setConflictingReservations([]);
-        setMaintenanceData(null);
-        setSpareVehicleAssignments({});
-        
-        onSuccess?.();
-        
-        // Safely reset form
         if (form && typeof form.reset === 'function') {
           form.reset();
         }
-        
-        onOpenChange(false);
       } catch (error) {
-        // Silently handle cleanup errors - the operation was successful
-        console.warn('Error during cleanup:', error);
-        // Still close the dialog even if cleanup fails
-        onOpenChange(false);
+        console.warn('Error resetting form:', error);
       }
+      
+      // Handle cache invalidation asynchronously (don't block dialog closing)
+      setTimeout(() => {
+        try {
+          queryClient.invalidateQueries({ 
+            predicate: (query) => {
+              const key = query.queryKey[0] as string;
+              return key?.startsWith('/api/vehicles') || 
+                     key?.startsWith('/api/reservations') || 
+                     key?.startsWith('/api/placeholder-reservations');
+            }
+          });
+          
+          queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+          queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+          queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
+          queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
+          queryClient.refetchQueries({ queryKey: ['/api/placeholder-reservations'] });
+        } catch (error) {
+          console.warn('Error invalidating cache:', error);
+        }
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
