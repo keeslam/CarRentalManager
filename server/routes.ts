@@ -2604,7 +2604,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(410).json({ message: "Reservation already deleted" });
       }
       
-      // Perform soft delete with user tracking
       const user = req.user;
       const softDeleteData = {
         deletedAt: new Date(),
@@ -2613,6 +2612,51 @@ export async function registerRoutes(app: Express): Promise<void> {
         updatedBy: user ? user.username : null // Also track who made the update
       };
       
+      // If this is a maintenance block, also delete related replacement reservations
+      if (reservation.type === 'maintenance_block') {
+        console.log(`🔧 Deleting maintenance block ${id} - checking for related spare vehicle reservations...`);
+        
+        // Get all reservations to find related replacements
+        const allReservations = await storage.getAllReservations();
+        
+        // Find all customer rentals on the same vehicle that overlap with the maintenance
+        const maintenanceStart = new Date(reservation.startDate);
+        const maintenanceEnd = reservation.endDate ? new Date(reservation.endDate) : new Date('9999-12-31');
+        
+        const affectedRentals = allReservations.filter(r => 
+          r.id !== id && 
+          !r.deletedAt &&
+          r.vehicleId === reservation.vehicleId &&
+          r.type === 'standard' &&
+          r.customerId !== null
+        ).filter(r => {
+          const rentalStart = new Date(r.startDate);
+          const rentalEnd = r.endDate ? new Date(r.endDate) : new Date('9999-12-31');
+          return rentalStart <= maintenanceEnd && rentalEnd >= maintenanceStart;
+        });
+        
+        console.log(`📋 Found ${affectedRentals.length} customer rentals affected by this maintenance`);
+        
+        // Find all replacement reservations for these affected rentals
+        const affectedRentalIds = affectedRentals.map(r => r.id);
+        const replacementsToDelete = allReservations.filter(r =>
+          r.type === 'replacement' &&
+          r.replacementForReservationId !== null &&
+          affectedRentalIds.includes(r.replacementForReservationId) &&
+          !r.deletedAt
+        );
+        
+        console.log(`🚗 Found ${replacementsToDelete.length} spare vehicle reservations to delete`);
+        
+        // Delete all related replacement reservations
+        for (const replacement of replacementsToDelete) {
+          await storage.updateReservation(replacement.id, softDeleteData);
+          realtimeEvents.reservations.deleted({ id: replacement.id });
+          console.log(`✅ Deleted spare vehicle reservation ${replacement.id}`);
+        }
+      }
+      
+      // Delete the main reservation
       const updatedReservation = await storage.updateReservation(id, softDeleteData);
       if (updatedReservation) {
         // Broadcast real-time update to all connected clients
