@@ -105,14 +105,14 @@ router.post('/send', async (req, res) => {
       const customerData = await db
         .select()
         .from(customers)
-        .where(
-          and(
-            inArray(customers.id, customerIds),
-            isNotNull(customers.email)
-          )
-        );
+        .where(inArray(customers.id, customerIds));
 
-      vehicleData = customerData.map(customer => ({
+      // Filter out customers with no valid email addresses
+      const customersWithEmail = customerData.filter(customer => 
+        customer.email || customer.emailGeneral || customer.emailForMOT || customer.emailForInvoices
+      );
+
+      vehicleData = customersWithEmail.map(customer => ({
         vehicle: null, // No specific vehicle
         customer: customer
       }));
