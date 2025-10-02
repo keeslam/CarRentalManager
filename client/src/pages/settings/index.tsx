@@ -602,8 +602,14 @@ export default function Settings() {
             GPS Email Templates
           </CardTitle>
           <CardDescription>
-            Customize GPS activation and swap email messages. Use placeholders: {'{brand}'}, {'{model}'}, {'{licensePlate}'}, {'{imei}'}
+            Customize GPS activation and swap email messages sent to your GPS provider.
           </CardDescription>
+          <div className="mt-2 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+            <strong>Available Placeholders:</strong> <code className="mx-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">{'{brand}'}</code>
+            <code className="mx-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">{'{model}'}</code>
+            <code className="mx-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">{'{licensePlate}'}</code>
+            <code className="mx-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">{'{imei}'}</code>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
