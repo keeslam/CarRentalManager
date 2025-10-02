@@ -214,7 +214,17 @@ export default function CustomerCommunications() {
   });
 
   const handleSendNotifications = async () => {
-    if (selectedVehicles.length === 0) {
+    // Check if recipients are selected based on mode
+    if (communicationMode === 'custom' && selectedCustomers.length === 0) {
+      toast({
+        title: "No Customers Selected",
+        description: "Please select at least one customer",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (communicationMode !== 'custom' && selectedVehicles.length === 0) {
       toast({
         title: "No Vehicles Selected",
         description: "Please select at least one vehicle",
@@ -272,20 +282,30 @@ export default function CustomerCommunications() {
     setIsLoadingNotifications(true);
     
     try {
+      // Build request body based on communication mode
+      const requestBody: any = {
+        template: templateType,
+        customMessage: emailContent.trim(),
+        customSubject: emailSubject.trim(),
+        emailFieldSelection: "auto",
+        individualEmailSelections: {},
+      };
+
+      // For custom mode, send customerIds
+      if (communicationMode === 'custom') {
+        requestBody.customerIds = selectedCustomers.map(c => c.id);
+      } else {
+        // For APK/maintenance, send vehicleIds
+        requestBody.vehicleIds = selectedVehicles.map(v => v.id);
+      }
+
       const response = await fetch('/api/notifications/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          vehicleIds: selectedVehicles.map(v => v.id),
-          template: templateType,
-          customMessage: emailContent.trim(),
-          customSubject: emailSubject.trim(),
-          emailFieldSelection: "auto",
-          individualEmailSelections: {},
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -302,6 +322,7 @@ export default function CustomerCommunications() {
       // Reset form
       setSendDialogOpen(false);
       setSelectedVehicles([]);
+      setSelectedCustomers([]);
       setCustomMessage("");
       setCustomSubject("");
       setSearchQuery("");

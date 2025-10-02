@@ -82,10 +82,12 @@ const router = Router();
 // Send notifications to customers
 router.post('/send', async (req, res) => {
   try {
-    const { vehicleIds, template, customMessage, customSubject, emailFieldSelection, individualEmailSelections } = req.body;
+    const { vehicleIds, customerIds, template, customMessage, customSubject, emailFieldSelection, individualEmailSelections } = req.body;
     
-    if (!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) {
-      return res.status(400).json({ error: 'Vehicle IDs are required' });
+    // Must have either vehicleIds or customerIds
+    if ((!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) && 
+        (!customerIds || !Array.isArray(customerIds) || customerIds.length === 0)) {
+      return res.status(400).json({ error: 'Vehicle IDs or Customer IDs are required' });
     }
 
     if (!template || !['apk', 'maintenance', 'custom'].includes(template)) {
@@ -96,24 +98,47 @@ router.post('/send', async (req, res) => {
       return res.status(400).json({ error: 'Custom subject and message are required for custom template' });
     }
 
-    // Get vehicles with their associated customers through reservations
-    const vehicleData = await db
-      .select({
-        vehicle: vehicles,
-        customer: customers,
-      })
-      .from(vehicles)
-      .leftJoin(reservations, eq(reservations.vehicleId, vehicles.id))
-      .leftJoin(customers, eq(customers.id, reservations.customerId))
-      .where(
-        and(
-          inArray(vehicles.id, vehicleIds),
-          isNotNull(customers.email) // Only include customers with email addresses
-        )
-      );
+    let vehicleData: Array<{ vehicle: any | null; customer: any }> = [];
+
+    // If sending to specific customers directly (custom messages)
+    if (customerIds && customerIds.length > 0) {
+      const customerData = await db
+        .select()
+        .from(customers)
+        .where(
+          and(
+            inArray(customers.id, customerIds),
+            isNotNull(customers.email)
+          )
+        );
+
+      vehicleData = customerData.map(customer => ({
+        vehicle: null, // No specific vehicle
+        customer: customer
+      }));
+    } 
+    // If sending to customers through vehicles (APK, maintenance, or vehicle-specific custom messages)
+    else if (vehicleIds && vehicleIds.length > 0) {
+      const data = await db
+        .select({
+          vehicle: vehicles,
+          customer: customers,
+        })
+        .from(vehicles)
+        .leftJoin(reservations, eq(reservations.vehicleId, vehicles.id))
+        .leftJoin(customers, eq(customers.id, reservations.customerId))
+        .where(
+          and(
+            inArray(vehicles.id, vehicleIds),
+            isNotNull(customers.email) // Only include customers with email addresses
+          )
+        );
+      
+      vehicleData = data;
+    }
 
     if (vehicleData.length === 0) {
-      return res.status(400).json({ error: 'No vehicles found with customer email addresses' });
+      return res.status(400).json({ error: 'No recipients found with valid email addresses' });
     }
 
     const results = {
@@ -132,7 +157,7 @@ router.post('/send', async (req, res) => {
       const emailField = emailFieldSelection || 'auto';
       
       // Check if there's an individual email selection for this vehicle
-      const individualSelection = individualEmailSelections && individualEmailSelections[vehicle.id.toString()];
+      const individualSelection = vehicle && individualEmailSelections && individualEmailSelections[vehicle.id.toString()];
       
       if (individualSelection) {
         // Use individual selection if available
@@ -179,7 +204,8 @@ router.post('/send', async (req, res) => {
 
       if (!selectedEmail) {
         results.failed++;
-        results.errors.push(`No ${emailField === 'auto' ? 'suitable' : emailField} email for vehicle ${vehicle.licensePlate}`);
+        const identifier = vehicle ? `vehicle ${vehicle.licensePlate}` : `customer ${customer?.name || 'Unknown'}`;
+        results.errors.push(`No ${emailField === 'auto' ? 'suitable' : emailField} email for ${identifier}`);
         continue;
       }
 
@@ -187,13 +213,13 @@ router.post('/send', async (req, res) => {
         let emailContent;
 
         // Prepare placeholder data
-        const formattedPlate = formatLicensePlate(vehicle.licensePlate);
+        const formattedPlate = vehicle ? formatLicensePlate(vehicle.licensePlate) : '';
         const placeholderData = {
           customerName: customer?.name || 'Customer',
           vehiclePlate: formattedPlate,
-          vehicleBrand: vehicle.brand || '',
-          vehicleModel: vehicle.model || '',
-          apkDate: vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : ''
+          vehicleBrand: vehicle?.brand || '',
+          vehicleModel: vehicle?.model || '',
+          apkDate: vehicle?.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : ''
         };
 
         switch (template) {
@@ -257,7 +283,8 @@ router.post('/send', async (req, res) => {
           results.sent++;
         } else {
           results.failed++;
-          results.errors.push(`Failed to send to ${selectedEmail} for vehicle ${vehicle.licensePlate}`);
+          const identifier = vehicle ? `vehicle ${vehicle.licensePlate}` : `customer ${customer?.name || 'Unknown'}`;
+          results.errors.push(`Failed to send to ${selectedEmail} for ${identifier}`);
         }
       } catch (error) {
         results.failed++;
