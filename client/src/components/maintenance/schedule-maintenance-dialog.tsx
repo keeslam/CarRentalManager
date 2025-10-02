@@ -474,15 +474,27 @@ export function ScheduleMaintenanceDialog({
         description: "Maintenance scheduled and spare vehicles assigned to affected reservations.",
       });
       
-      // Reset all states
-      setShowSpareDialog(false);
-      setConflictingReservations([]);
-      setMaintenanceData(null);
-      setSpareVehicleAssignments({});
-      
-      onSuccess?.();
-      form.reset();
-      onOpenChange(false);
+      // Reset all states with error handling
+      try {
+        setShowSpareDialog(false);
+        setConflictingReservations([]);
+        setMaintenanceData(null);
+        setSpareVehicleAssignments({});
+        
+        onSuccess?.();
+        
+        // Safely reset form
+        if (form && typeof form.reset === 'function') {
+          form.reset();
+        }
+        
+        onOpenChange(false);
+      } catch (error) {
+        // Silently handle cleanup errors - the operation was successful
+        console.warn('Error during cleanup:', error);
+        // Still close the dialog even if cleanup fails
+        onOpenChange(false);
+      }
     },
     onError: (error: Error) => {
       toast({
