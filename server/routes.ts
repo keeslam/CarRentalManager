@@ -1266,6 +1266,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Missing startDate or endDate query parameters" });
       }
       
+      // Disable HTTP caching to ensure fresh data after deletions
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const reservations = await storage.getReservationsInDateRange(startDate, endDate);
       res.json(reservations);
     } catch (error) {
@@ -1276,12 +1281,20 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   app.get("/api/reservations/range/:startDate/:endDate", async (req, res) => {
     const { startDate, endDate } = req.params;
+    // Disable HTTP caching to ensure fresh data after deletions
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const reservations = await storage.getReservationsInDateRange(startDate, endDate);
     res.json(reservations);
   });
 
   // Get upcoming reservations
   app.get("/api/reservations/upcoming", async (req, res) => {
+    // Disable HTTP caching to ensure fresh data after deletions
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const reservations = await storage.getUpcomingReservations();
     res.json(reservations);
   });
@@ -1358,6 +1371,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get all reservations with optional search
   app.get("/api/reservations", async (req, res) => {
     try {
+      // Disable HTTP caching to ensure fresh data after deletions
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       const searchQuery = req.query.search as string | undefined;
       const reservations = await storage.getAllReservations(searchQuery);
       res.json(reservations);
@@ -1373,6 +1390,11 @@ export async function registerRoutes(app: Express): Promise<void> {
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid reservation ID" });
     }
+
+    // Disable HTTP caching to ensure fresh data after deletions
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     const reservation = await storage.getReservation(id);
     if (!reservation) {
