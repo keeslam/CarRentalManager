@@ -547,6 +547,11 @@ export function ScheduleMaintenanceDialog({
   });
 
   const handleSpareVehicleAssignment = () => {
+    console.log('🎯 Handling spare vehicle assignment...');
+    console.log('Spare vehicle assignments:', spareVehicleAssignments);
+    console.log('Conflicting reservations:', conflictingReservations);
+    console.log('Maintenance data:', maintenanceData);
+    
     // Check that all conflicting reservations have either a specific vehicle or TBD assigned
     const missingAssignments = conflictingReservations.filter(r => {
       const assignment = spareVehicleAssignments[r.id];
@@ -554,6 +559,7 @@ export function ScheduleMaintenanceDialog({
     });
     
     if (missingAssignments.length > 0) {
+      console.log('❌ Missing assignments for reservations:', missingAssignments);
       toast({
         title: "Missing Spare Vehicle Assignments",
         description: "Please choose either a specific vehicle or 'TBD' for all affected reservations.",
@@ -569,6 +575,7 @@ export function ScheduleMaintenanceDialog({
     });
 
     if (invalidSpecificAssignments.length > 0) {
+      console.log('❌ Invalid specific assignments:', invalidSpecificAssignments);
       toast({
         title: "Invalid Spare Vehicle Assignments",
         description: "Please select a specific vehicle for all reservations marked as 'specific vehicle'.",
@@ -577,6 +584,7 @@ export function ScheduleMaintenanceDialog({
       return;
     }
 
+    console.log('✅ All validations passed, creating placeholders...');
     createMaintenanceWithSpareMutation.mutate({
       maintenanceData,
       conflictingReservations,
