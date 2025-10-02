@@ -256,7 +256,15 @@ export function ScheduleMaintenanceDialog({
           ...result.maintenanceData,
           maintenanceId: result.maintenanceReservationId // Store the created maintenance ID
         });
-        setShowSpareDialog(true);
+        
+        // Close the maintenance dialog before showing spare dialog
+        onOpenChange(false);
+        
+        // Small delay to ensure smooth transition between dialogs
+        setTimeout(() => {
+          setShowSpareDialog(true);
+        }, 100);
+        
         return null; // Don't proceed with success yet
       }
 
