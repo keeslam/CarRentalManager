@@ -506,7 +506,12 @@ export class DatabaseStorage implements IStorage {
     const [updatedReservation] = await db
       .update(reservations)
       .set(dataToUpdate)
-      .where(eq(reservations.id, id))
+      .where(
+        and(
+          eq(reservations.id, id),
+          isNull(reservations.deletedAt)
+        )
+      )
       .returning();
     
     if (!updatedReservation) {
@@ -1354,11 +1359,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignVehicleToPlaceholder(reservationId: number, vehicleId: number, endDate?: string): Promise<Reservation | undefined> {
-    // Get the placeholder reservation
+    // Get the placeholder reservation (excluding soft-deleted)
     const [reservation] = await db
       .select()
       .from(reservations)
-      .where(eq(reservations.id, reservationId));
+      .where(
+        and(
+          eq(reservations.id, reservationId),
+          isNull(reservations.deletedAt)
+        )
+      );
 
     if (!reservation || !reservation.placeholderSpare || reservation.vehicleId != null || reservation.type !== 'replacement') {
       return undefined;
@@ -1559,7 +1569,12 @@ export class DatabaseStorage implements IStorage {
         status: 'completed',
         updatedAt: new Date()
       })
-      .where(eq(reservations.id, replacementReservationId))
+      .where(
+        and(
+          eq(reservations.id, replacementReservationId),
+          isNull(reservations.deletedAt)
+        )
+      )
       .returning();
 
     return updatedReservation || undefined;
@@ -1610,7 +1625,12 @@ export class DatabaseStorage implements IStorage {
         status: 'completed',
         updatedAt: new Date()
       })
-      .where(eq(reservations.id, blockReservationId))
+      .where(
+        and(
+          eq(reservations.id, blockReservationId),
+          isNull(reservations.deletedAt)
+        )
+      )
       .returning();
 
     return updatedBlock || undefined;
