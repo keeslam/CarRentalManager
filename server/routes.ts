@@ -1321,6 +1321,40 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(conflicts);
   });
 
+  // Check for conflicts using query parameters (used by reservation form)
+  app.get("/api/reservations/check-conflicts", async (req, res) => {
+    const vehicleId = parseInt(req.query.vehicleId as string);
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const excludeReservationId = req.query.excludeReservationId 
+      ? parseInt(req.query.excludeReservationId as string)
+      : null;
+    
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    if (!startDate) {
+      return res.status(400).json({ message: "Start date is required" });
+    }
+
+    // Handle "undefined" string or missing endDate - treat as open-ended rental
+    const effectiveEndDate = (!endDate || endDate === "undefined") ? startDate : endDate;
+
+    try {
+      const conflicts = await storage.checkReservationConflicts(
+        vehicleId, 
+        startDate, 
+        effectiveEndDate, 
+        isNaN(excludeReservationId) ? null : excludeReservationId
+      );
+      res.json(conflicts);
+    } catch (error) {
+      console.error("Error checking conflicts:", error);
+      res.status(500).json({ message: "Failed to check conflicts" });
+    }
+  });
+
   // Get all reservations with optional search
   app.get("/api/reservations", async (req, res) => {
     try {
@@ -1473,6 +1507,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         const parsedPrice = parseFloat(bodyData.totalPrice);
         bodyData.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
+      
+      // Handle endDate - fix "undefined" string to null for open-ended rentals
+      if (bodyData.endDate === "undefined" || bodyData.endDate === "" || bodyData.endDate === null) {
+        bodyData.endDate = null;
+      }
+      
       const reservationData = insertReservationSchema.parse(bodyData);
       
       // Add user tracking information
