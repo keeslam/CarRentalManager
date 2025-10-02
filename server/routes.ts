@@ -1338,8 +1338,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(400).json({ message: "Start date is required" });
     }
 
-    // Handle "undefined" string or missing endDate - treat as open-ended rental
-    const effectiveEndDate = (!endDate || endDate === "undefined") ? startDate : endDate;
+    // Handle "undefined" string or missing endDate - pass null for open-ended rentals
+    const effectiveEndDate = (!endDate || endDate === "undefined") ? null : endDate;
 
     try {
       const conflicts = await storage.checkReservationConflicts(

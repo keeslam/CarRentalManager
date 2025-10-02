@@ -676,9 +676,13 @@ export class DatabaseStorage implements IStorage {
   async checkReservationConflicts(
     vehicleId: number, 
     startDate: string, 
-    endDate: string, 
+    endDate: string | null, 
     excludeReservationId: number | null
   ): Promise<Reservation[]> {
+    // For open-ended rentals (null endDate), use a far-future date for conflict checking
+    // This ensures that an open-ended rental conflicts with all future reservations
+    const effectiveEndDate = endDate || '9999-12-31';
+    
     let query = db
       .select()
       .from(reservations)
@@ -687,8 +691,8 @@ export class DatabaseStorage implements IStorage {
           eq(reservations.vehicleId, vehicleId),
           sql`${reservations.status} != 'cancelled'`,
           sql`(
-            (${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
-            OR (${reservations.startDate} <= ${endDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
+            (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
+            OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
           )`
         )
       );
@@ -702,8 +706,8 @@ export class DatabaseStorage implements IStorage {
             eq(reservations.vehicleId, vehicleId),
             sql`${reservations.status} != 'cancelled'`,
             sql`(
-              (${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
-              OR (${reservations.startDate} <= ${endDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
+              (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
+              OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
             )`,
             sql`${reservations.id} != ${excludeReservationId}`
           )
