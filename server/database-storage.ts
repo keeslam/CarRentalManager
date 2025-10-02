@@ -600,7 +600,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           sql`${reservations.startDate} >= ${today}`,
-          sql`${reservations.status} != 'cancelled'`
+          sql`${reservations.status} != 'cancelled'`,
+          isNull(reservations.deletedAt)
         )
       )
       .orderBy(reservations.startDate)
@@ -690,6 +691,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(reservations.vehicleId, vehicleId),
           sql`${reservations.status} != 'cancelled'`,
+          isNull(reservations.deletedAt),
           sql`(
             (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
             OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
@@ -1239,7 +1241,8 @@ export class DatabaseStorage implements IStorage {
     const conditions = [
       eq(reservations.placeholderSpare, true),
       eq(reservations.type, 'replacement'),
-      sql`${reservations.vehicleId} IS NULL`
+      sql`${reservations.vehicleId} IS NULL`,
+      isNull(reservations.deletedAt)
     ];
 
     if (startDate) {
@@ -1279,7 +1282,8 @@ export class DatabaseStorage implements IStorage {
           eq(reservations.placeholderSpare, true),
           eq(reservations.type, 'replacement'),
           sql`${reservations.vehicleId} IS NULL`,
-          lte(reservations.startDate, cutoffDateString)
+          lte(reservations.startDate, cutoffDateString),
+          isNull(reservations.deletedAt)
         )
       );
     
