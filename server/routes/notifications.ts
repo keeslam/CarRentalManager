@@ -100,8 +100,8 @@ router.post('/send', async (req, res) => {
 
     let vehicleData: Array<{ vehicle: any | null; customer: any }> = [];
 
-    // If sending to specific customers directly (custom messages)
-    if (customerIds && customerIds.length > 0) {
+    // If sending to specific customers directly (custom messages without vehicles)
+    if (customerIds && customerIds.length > 0 && (!vehicleIds || vehicleIds.length === 0)) {
       const customerData = await db
         .select()
         .from(customers)
@@ -117,7 +117,7 @@ router.post('/send', async (req, res) => {
         customer: customer
       }));
     } 
-    // If sending to customers through vehicles (APK, maintenance, or vehicle-specific custom messages)
+    // If sending to customers with specific vehicles (custom messages with vehicle context)
     else if (vehicleIds && vehicleIds.length > 0) {
       const data = await db
         .select({
@@ -135,6 +135,29 @@ router.post('/send', async (req, res) => {
         );
       
       vehicleData = data;
+
+      // If customerIds are also provided, add those customers without vehicles
+      if (customerIds && customerIds.length > 0) {
+        const customerData = await db
+          .select()
+          .from(customers)
+          .where(inArray(customers.id, customerIds));
+
+        const customersWithEmail = customerData.filter(customer => 
+          customer.email || customer.emailGeneral || customer.emailForMOT || customer.emailForInvoices
+        );
+
+        // Add customers who don't already have vehicles in the list
+        const existingCustomerIds = new Set(vehicleData.map(d => d.customer?.id).filter(Boolean));
+        const additionalCustomers = customersWithEmail
+          .filter(customer => !existingCustomerIds.has(customer.id))
+          .map(customer => ({
+            vehicle: null,
+            customer: customer
+          }));
+
+        vehicleData = [...vehicleData, ...additionalCustomers];
+      }
     }
 
     if (vehicleData.length === 0) {

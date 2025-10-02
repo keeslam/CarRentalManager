@@ -291,11 +291,16 @@ export default function CustomerCommunications() {
         individualEmailSelections: {},
       };
 
-      // For custom mode, send customerIds
+      // For custom mode, send both customerIds and vehicleIds
       if (communicationMode === 'custom') {
-        requestBody.customerIds = selectedCustomers.map(c => c.id);
+        if (selectedCustomers.length > 0) {
+          requestBody.customerIds = selectedCustomers.map(c => c.id);
+        }
+        if (selectedVehicles.length > 0) {
+          requestBody.vehicleIds = selectedVehicles.map(v => v.id);
+        }
       } else {
-        // For APK/maintenance, send vehicleIds
+        // For APK/maintenance, send vehicleIds only
         requestBody.vehicleIds = selectedVehicles.map(v => v.id);
       }
 
@@ -1180,10 +1185,11 @@ export default function CustomerCommunications() {
 
         {/* Custom Message Tab */}
         <TabsContent value="custom" className="space-y-4">
+          {/* Template Selection & Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Custom Message Notifications</CardTitle>
-              <CardDescription>Send custom messages to selected customers</CardDescription>
+              <CardDescription>Send custom messages to customers and optionally include vehicle information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Template Selection */}
@@ -1219,92 +1225,172 @@ export default function CustomerCommunications() {
                 )}
               </div>
 
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="flex-1">
-                  <Label htmlFor="search-custom" className="text-sm font-medium sr-only">Search</Label>
-                  <Input
-                    id="search-custom"
-                    placeholder="Search by customer name, email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    data-testid="input-search-custom"
-                  />
-                </div>
-                <Select value={customerReservationFilter} onValueChange={(value: any) => setCustomerReservationFilter(value as 'all' | 'with-reservations' | 'without-reservations')}>
-                  <SelectTrigger className="w-48" data-testid="select-reservation-filter">
-                    <SelectValue placeholder="Filter by reservations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    <SelectItem value="with-reservations">With Reservations</SelectItem>
-                    <SelectItem value="without-reservations">Without Reservations</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between mb-4">
                 <Button 
-                  disabled={selectedCustomers.length === 0 || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
+                  disabled={(selectedCustomers.length === 0 && selectedVehicles.length === 0) || ((!selectedTemplateId || selectedTemplateId === "none") && (!customMessage.trim() || !customSubject.trim()))}
                   onClick={generateEmailPreview}
                   className="bg-green-600 hover:bg-green-700"
                   data-testid="button-preview-custom"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  Preview & Send to {selectedCustomers.length} customers
+                  Preview & Send
                 </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {filteredCustomers.slice(0, 50).map((customer: any) => {
-                  const isSelected = selectedCustomers.some(c => c.id === customer.id);
-                  
-                  return (
-                    <div
-                      key={customer.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedCustomers(prev => prev.filter(c => c.id !== customer.id));
-                        } else {
-                          setSelectedCustomers(prev => [...prev, customer]);
-                        }
-                      }}
-                      data-testid={`customer-card-${customer.id}`}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium text-sm">{customer.name}</div>
-                          {isSelected && (
-                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {customer.email || 'No email'}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {customer.firstName} {customer.lastName}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={customer.hasActiveReservation ? "default" : "outline"} className="text-xs">
-                            {customer.hasActiveReservation ? 'Active Reservation' : 'No Reservation'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {selectedCustomers.length > 0 && (
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="text-sm font-medium text-green-900">
-                    {selectedCustomers.length} customer(s) selected for notification
-                  </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedCustomers.length > 0 && selectedVehicles.length > 0 
+                    ? `${selectedCustomers.length} customer(s) + ${selectedVehicles.length} vehicle(s) selected`
+                    : selectedCustomers.length > 0 
+                    ? `${selectedCustomers.length} customer(s) selected`
+                    : selectedVehicles.length > 0
+                    ? `${selectedVehicles.length} vehicle(s) selected`
+                    : 'No recipients selected'}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
+
+          {/* Split View: Customers and Vehicles */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Customers Column */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Select Customers</CardTitle>
+                <CardDescription>Choose customers to send messages to</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search by customer name, email..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      data-testid="input-search-custom-customers"
+                    />
+                  </div>
+                  <Select value={customerReservationFilter} onValueChange={(value: any) => setCustomerReservationFilter(value as 'all' | 'with-reservations' | 'without-reservations')}>
+                    <SelectTrigger className="w-32" data-testid="select-reservation-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="with-reservations">With Res.</SelectItem>
+                      <SelectItem value="without-reservations">No Res.</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+                  {filteredCustomers.slice(0, 50).map((customer: any) => {
+                    const isSelected = selectedCustomers.some(c => c.id === customer.id);
+                    
+                    return (
+                      <div
+                        key={customer.id}
+                        className={`p-2 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                          isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedCustomers(prev => prev.filter(c => c.id !== customer.id));
+                          } else {
+                            setSelectedCustomers(prev => [...prev, customer]);
+                          }
+                        }}
+                        data-testid={`customer-card-${customer.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{customer.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {customer.email || 'No email'}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 ml-2" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {selectedCustomers.length > 0 && (
+                  <div className="p-2 bg-green-50 rounded-lg border border-green-200 text-center">
+                    <div className="text-sm font-medium text-green-900">
+                      {selectedCustomers.length} selected
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Vehicles Column */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Select Vehicles (Optional)</CardTitle>
+                <CardDescription>Choose vehicles to include in the message</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Input
+                    placeholder="Search by license plate, brand, model..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-search-custom-vehicles"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+                  {filteredVehicles.slice(0, 50).map((item: any) => {
+                    const vehicle = item.vehicle;
+                    const customer = item.customer;
+                    const isSelected = selectedVehicles.some(v => v.id === vehicle.id);
+                    
+                    return (
+                      <div
+                        key={vehicle.id}
+                        className={`p-2 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                          isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+                          } else {
+                            setSelectedVehicles(prev => [...prev, vehicle]);
+                          }
+                        }}
+                        data-testid={`vehicle-card-custom-${vehicle.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{formatLicensePlate(vehicle.licensePlate)}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {vehicle.brand} {vehicle.model}
+                            </div>
+                            {customer && (
+                              <div className="text-xs text-blue-600 truncate">
+                                Customer: {customer.name}
+                              </div>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0 ml-2" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {selectedVehicles.length > 0 && (
+                  <div className="p-2 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                    <div className="text-sm font-medium text-blue-900">
+                      {selectedVehicles.length} selected
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Custom Message Composition */}
           <Card>
