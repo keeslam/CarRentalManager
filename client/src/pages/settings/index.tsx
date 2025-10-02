@@ -65,6 +65,12 @@ export default function Settings() {
   // GPS recipient email state
   const [gpsRecipientEmail, setGpsRecipientEmail] = useState("");
   
+  // GPS email templates state
+  const [gpsActivationSubject, setGpsActivationSubject] = useState("");
+  const [gpsActivationMessage, setGpsActivationMessage] = useState("");
+  const [gpsSwapSubject, setGpsSwapSubject] = useState("");
+  const [gpsSwapMessage, setGpsSwapMessage] = useState("");
+  
   // Fetch email settings
   const { data: emailSettings, isLoading } = useQuery<EmailSetting[]>({
     queryKey: ['/api/settings/category/email'],
@@ -76,12 +82,28 @@ export default function Settings() {
     retry: false,
   });
   
+  // Fetch GPS email templates
+  const { data: gpsTemplatesSetting } = useQuery<any>({
+    queryKey: ['/api/settings/key/gps_email_templates'],
+    retry: false,
+  });
+  
   // Load GPS recipient email when fetched
   useEffect(() => {
     if (gpsRecipientSetting?.value?.email) {
       setGpsRecipientEmail(gpsRecipientSetting.value.email);
     }
   }, [gpsRecipientSetting]);
+  
+  // Load GPS email templates when fetched
+  useEffect(() => {
+    if (gpsTemplatesSetting?.value) {
+      setGpsActivationSubject(gpsTemplatesSetting.value.activationSubject || "");
+      setGpsActivationMessage(gpsTemplatesSetting.value.activationMessage || "");
+      setGpsSwapSubject(gpsTemplatesSetting.value.swapSubject || "");
+      setGpsSwapMessage(gpsTemplatesSetting.value.swapMessage || "");
+    }
+  }, [gpsTemplatesSetting]);
   
   // Create/Update email setting mutation
   const saveEmailSettingMutation = useMutation({
@@ -171,6 +193,60 @@ export default function Settings() {
       return;
     }
     saveGpsRecipientMutation.mutate(gpsRecipientEmail);
+  };
+  
+  // Save GPS email templates mutation
+  const saveGpsTemplatesMutation = useMutation({
+    mutationFn: async () => {
+      const endpoint = gpsTemplatesSetting?.id 
+        ? `/api/settings/${gpsTemplatesSetting.id}` 
+        : '/api/settings';
+      const method = gpsTemplatesSetting?.id ? 'PATCH' : 'POST';
+      
+      const response = await apiRequest(method, endpoint, {
+        key: 'gps_email_templates',
+        category: 'gps',
+        description: 'GPS email message templates',
+        value: {
+          activationSubject: gpsActivationSubject,
+          activationMessage: gpsActivationMessage,
+          swapSubject: gpsSwapSubject,
+          swapMessage: gpsSwapMessage,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save GPS email templates');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Templates Saved",
+        description: "GPS email templates have been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/key/gps_email_templates'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save GPS email templates. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleSaveGpsTemplates = () => {
+    if (!gpsActivationSubject.trim() || !gpsActivationMessage.trim() || 
+        !gpsSwapSubject.trim() || !gpsSwapMessage.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all GPS email template fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveGpsTemplatesMutation.mutate();
   };
   
   const resetForm = () => {
@@ -511,6 +587,101 @@ export default function Settings() {
               <div className="rounded-md bg-green-50 border border-green-200 p-3">
                 <p className="text-sm text-green-800">
                   <strong>Current GPS Recipient:</strong> {gpsRecipientSetting.value.email}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* GPS Email Templates Card */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            GPS Email Templates
+          </CardTitle>
+          <CardDescription>
+            Customize GPS activation and swap email messages. Use placeholders: {'{brand}'}, {'{model}'}, {'{licensePlate}'}, {'{imei}'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* GPS Activation Template */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <h4 className="font-medium text-sm">GPS Activation Email</h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="gpsActivationSubject">Subject</Label>
+                  <Input
+                    id="gpsActivationSubject"
+                    value={gpsActivationSubject}
+                    onChange={(e) => setGpsActivationSubject(e.target.value)}
+                    placeholder="GPS Activatie Verzoek - {brand} {model} ({licensePlate})"
+                    className="mt-1"
+                    data-testid="input-gps-activation-subject"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gpsActivationMessage">Message</Label>
+                  <Textarea
+                    id="gpsActivationMessage"
+                    value={gpsActivationMessage}
+                    onChange={(e) => setGpsActivationMessage(e.target.value)}
+                    placeholder="Enter GPS activation message template..."
+                    rows={6}
+                    className="mt-1 font-mono text-sm"
+                    data-testid="textarea-gps-activation-message"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* GPS Swap Template */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <h4 className="font-medium text-sm">GPS Module Swap Email</h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="gpsSwapSubject">Subject</Label>
+                  <Input
+                    id="gpsSwapSubject"
+                    value={gpsSwapSubject}
+                    onChange={(e) => setGpsSwapSubject(e.target.value)}
+                    placeholder="GPS Module Swap Verzoek - {brand} {model} ({licensePlate})"
+                    className="mt-1"
+                    data-testid="input-gps-swap-subject"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gpsSwapMessage">Message</Label>
+                  <Textarea
+                    id="gpsSwapMessage"
+                    value={gpsSwapMessage}
+                    onChange={(e) => setGpsSwapMessage(e.target.value)}
+                    placeholder="Enter GPS swap message template..."
+                    rows={6}
+                    className="mt-1 font-mono text-sm"
+                    data-testid="textarea-gps-swap-message"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <Button
+              onClick={handleSaveGpsTemplates}
+              disabled={saveGpsTemplatesMutation.isPending}
+              className="w-full"
+              data-testid="button-save-gps-templates"
+            >
+              {saveGpsTemplatesMutation.isPending ? "Saving..." : "Save GPS Email Templates"}
+            </Button>
+
+            {/* Current Templates Info */}
+            {gpsTemplatesSetting?.value && (
+              <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Templates Configured:</strong> Activation and Swap emails are customized
                 </p>
               </div>
             )}
