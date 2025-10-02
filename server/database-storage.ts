@@ -541,12 +541,10 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(reservations)
       .where(
-        and(
-          sql`(${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
-              OR (${reservations.startDate} >= ${startDate} AND ${reservations.startDate} <= ${endDate})
-              OR (${reservations.endDate} >= ${startDate} AND ${reservations.endDate} <= ${endDate})`,
-          isNull(reservations.deletedAt)
-        )
+        sql`((${reservations.startDate} <= ${endDate} AND ${reservations.endDate} >= ${startDate})
+            OR (${reservations.startDate} >= ${startDate} AND ${reservations.startDate} <= ${endDate})
+            OR (${reservations.endDate} >= ${startDate} AND ${reservations.endDate} <= ${endDate}))
+            AND ${reservations.deletedAt} IS NULL`
       );
     
     const result: Reservation[] = [];
