@@ -113,25 +113,43 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       break;
 
     case 'reservations':
-      // Invalidate ALL reservation queries including calendar range queries
+      // Invalidate AND refetch ALL reservation queries including calendar range queries
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0] as string;
           return key?.startsWith('/api/reservations');
-        }
+        },
+        refetchType: 'active' // Force active queries to refetch immediately
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles-with-reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/filtered-vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/available'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      
+      // Also refetch these specific queries that depend on reservation data
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/vehicles-with-reservations'],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/filtered-vehicles'],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/vehicles/available'],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/vehicles/apk-expiring'],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/vehicles/warranty-expiring'],
+        type: 'active'
+      });
       
       if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations', data.id] });
+        queryClient.refetchQueries({ queryKey: ['/api/reservations', data.id], type: 'active' });
       }
       // Also invalidate related vehicles data
       if (data?.vehicleId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.vehicleId] });
+        queryClient.refetchQueries({ queryKey: ['/api/vehicles', data.vehicleId], type: 'active' });
       }
       break;
 
