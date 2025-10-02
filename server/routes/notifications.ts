@@ -336,14 +336,14 @@ router.post('/send-gps-activation', async (req, res) => {
     const { brand, model, licensePlate, imei } = vehicleData;
     const formattedPlate = formatLicensePlate(licensePlate);
 
-    // Create email content based on swap status
+    // Create email content based on swap status (in Dutch)
     const subject = isSwap 
-      ? `GPS Module Swap Request - ${brand} ${model} (${formattedPlate})`
-      : `GPS Activation Request - ${brand} ${model} (${formattedPlate})`;
+      ? `GPS Module Swap Verzoek - ${brand} ${model} (${formattedPlate})`
+      : `GPS Activatie Verzoek - ${brand} ${model} (${formattedPlate})`;
 
     const message = isSwap
-      ? `Dear GPS Provider,\n\nWe request a GPS module swap for the following vehicle:\n\nVehicle: ${brand} ${model}\nLicense Plate: ${formattedPlate}\nNew IMEI: ${imei}\n\nPlease activate the new GPS module at your earliest convenience.\n\nThank you.`
-      : `Dear GPS Provider,\n\nWe request GPS activation for the following vehicle:\n\nVehicle: ${brand} ${model}\nLicense Plate: ${formattedPlate}\nIMEI: ${imei}\n\nPlease activate this GPS device at your earliest convenience.\n\nThank you.`;
+      ? `Beste GPS Leverancier,\n\nHierbij verzoeken wij om een GPS module swap voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nNieuwe IMEI: ${imei}\n\nGraag deze nieuwe GPS module z.s.m. activeren.\n\nMet vriendelijke groet`
+      : `Beste GPS Leverancier,\n\nHierbij verzoeken wij om GPS activatie voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nIMEI: ${imei}\n\nGraag deze GPS z.s.m. activeren.\n\nMet vriendelijke groet`;
 
     // Send email using GPS-purpose email configuration
     const success = await sendEmail(

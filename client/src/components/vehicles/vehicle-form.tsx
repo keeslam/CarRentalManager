@@ -156,11 +156,11 @@ function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleDa
       </div>
 
       <div className="rounded-md bg-muted p-4">
-        <p className="text-sm font-medium mb-2">Email Preview:</p>
+        <p className="text-sm font-medium mb-2">Email Voorbeeld:</p>
         <p className="text-sm text-muted-foreground">
           {isSwap ? 
-            `Request to swap GPS module for ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). New IMEI: ${vehicleData.imei || 'N/A'}` :
-            `Request to activate GPS for ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). IMEI: ${vehicleData.imei || 'N/A'}`
+            `Verzoek om GPS module swap voor ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). Nieuwe IMEI: ${vehicleData.imei || 'N.v.t.'}` :
+            `Verzoek om GPS activatie voor ${vehicleData.brand} ${vehicleData.model} (${vehicleData.licensePlate}). IMEI: ${vehicleData.imei || 'N.v.t.'}`
           }
         </p>
       </div>
