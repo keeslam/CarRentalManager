@@ -379,7 +379,7 @@ export function ScheduleMaintenanceDialog({
         const maintenanceStart = data.maintenanceData.startDate;
         const maintenanceEnd = data.maintenanceData.endDate || data.maintenanceData.startDate;
         const reservationStart = tbdAssignment.reservation.startDate;
-        const reservationEnd = tbdAssignment.reservation.endDate || tbdAssignment.reservation.startDate;
+        const reservationEnd = tbdAssignment.reservation.endDate;
         
         // Validate dates
         if (!maintenanceStart || !reservationStart) {
@@ -387,17 +387,28 @@ export function ScheduleMaintenanceDialog({
           continue;
         }
         
-        // Calculate intersection dates (overlap period)
-        const overlapStart = reservationStart > maintenanceStart ? reservationStart : maintenanceStart;
-        const overlapEnd = reservationEnd < maintenanceEnd ? reservationEnd : maintenanceEnd;
+        // Check if rental is open-ended (no end date)
+        const isOpenEnded = !reservationEnd || reservationEnd === null || reservationEnd === 'undefined';
         
-        // Only create placeholder if there's a valid overlap period
-        if (overlapStart <= overlapEnd) {
-          console.log('Creating placeholder reservation with data:', {
+        // Calculate intersection dates (overlap period)
+        // For open-ended rentals, the placeholder should cover the entire maintenance period
+        const overlapStart = reservationStart > maintenanceStart ? reservationStart : maintenanceStart;
+        const overlapEnd = isOpenEnded ? maintenanceEnd : (reservationEnd < maintenanceEnd ? reservationEnd : maintenanceEnd);
+        
+        // Check if there's any overlap
+        // For open-ended rentals: rental must start before or during maintenance
+        // For closed rentals: normal overlap check
+        const hasOverlap = isOpenEnded 
+          ? (reservationStart <= maintenanceEnd) 
+          : (overlapStart <= overlapEnd);
+        
+        if (hasOverlap) {
+          console.log('✅ Creating placeholder reservation with data:', {
             originalReservationId: reservationId,
             customerId: customerId,
             startDate: overlapStart,
-            endDate: overlapEnd
+            endDate: overlapEnd,
+            isOpenEnded
           });
           
           await createPlaceholderMutation.mutateAsync({
@@ -405,6 +416,14 @@ export function ScheduleMaintenanceDialog({
             customerId: customerId,
             startDate: overlapStart,
             endDate: overlapEnd
+          });
+        } else {
+          console.log('⚠️ No overlap detected:', {
+            maintenanceStart,
+            maintenanceEnd,
+            reservationStart,
+            reservationEnd,
+            isOpenEnded
           });
         }
       }
