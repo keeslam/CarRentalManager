@@ -52,31 +52,16 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
     socketInstance.on('connected', (data) => {
       console.log('✅ Real-time connection established:', data.message);
-      toast({
-        title: "Connected",
-        description: "Real-time updates enabled",
-        duration: 2000,
-      });
     });
 
     // Real-time data update handler
     socketInstance.on('data-update', (event) => {
       console.log('📡 Received real-time update:', event);
       
-      const { entityType, action, data, timestamp } = event;
-      
-      // Show toast notification for updates
-      const actionText = action === 'created' ? 'added' : 
-                        action === 'updated' ? 'updated' : 
-                        action === 'deleted' ? 'removed' : action;
-      
-      toast({
-        title: "Data Updated", 
-        description: `${entityType.slice(0, -1)} ${actionText}${data?.name ? `: ${data.name}` : ''}`,
-        duration: 3000,
-      });
+      const { entityType, action, data } = event;
 
       // Invalidate React Query cache for real-time updates
+      // This will automatically refetch active queries and update the UI
       invalidateQueries(entityType, action, data);
     });
 
