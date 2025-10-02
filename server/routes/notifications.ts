@@ -384,17 +384,46 @@ router.post('/send-gps-activation', async (req, res) => {
       });
     }
 
+    // Fetch GPS email templates from settings
+    const gpsTemplatesSetting = await db.query.appSettings.findFirst({
+      where: (appSettings, { eq }) => eq(appSettings.key, 'gps_email_templates')
+    });
+
     const { brand, model, licensePlate, imei } = vehicleData;
     const formattedPlate = formatLicensePlate(licensePlate);
 
-    // Create email content based on swap status (in Dutch)
-    const subject = isSwap 
-      ? `GPS Module Swap Verzoek - ${brand} ${model} (${formattedPlate})`
-      : `GPS Activatie Verzoek - ${brand} ${model} (${formattedPlate})`;
+    // Default templates (fallback in Dutch)
+    const defaultActivationSubject = `GPS Activatie Verzoek - ${brand} ${model} (${formattedPlate})`;
+    const defaultActivationMessage = `Beste GPS Leverancier,\n\nHierbij verzoeken wij om GPS activatie voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nIMEI: ${imei}\n\nGraag deze GPS z.s.m. activeren.\n\nMet vriendelijke groet`;
+    const defaultSwapSubject = `GPS Module Swap Verzoek - ${brand} ${model} (${formattedPlate})`;
+    const defaultSwapMessage = `Beste GPS Leverancier,\n\nHierbij verzoeken wij om een GPS module swap voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nNieuwe IMEI: ${imei}\n\nGraag deze nieuwe GPS module z.s.m. activeren.\n\nMet vriendelijke groet`;
 
-    const message = isSwap
-      ? `Beste GPS Leverancier,\n\nHierbij verzoeken wij om een GPS module swap voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nNieuwe IMEI: ${imei}\n\nGraag deze nieuwe GPS module z.s.m. activeren.\n\nMet vriendelijke groet`
-      : `Beste GPS Leverancier,\n\nHierbij verzoeken wij om GPS activatie voor het volgende voertuig:\n\nVoertuig: ${brand} ${model}\nKenteken: ${formattedPlate}\nIMEI: ${imei}\n\nGraag deze GPS z.s.m. activeren.\n\nMet vriendelijke groet`;
+    // Get templates or use defaults
+    let subjectTemplate = isSwap ? defaultSwapSubject : defaultActivationSubject;
+    let messageTemplate = isSwap ? defaultSwapMessage : defaultActivationMessage;
+
+    if (gpsTemplatesSetting?.value) {
+      subjectTemplate = isSwap 
+        ? (gpsTemplatesSetting.value.swapSubject || defaultSwapSubject)
+        : (gpsTemplatesSetting.value.activationSubject || defaultActivationSubject);
+      
+      messageTemplate = isSwap 
+        ? (gpsTemplatesSetting.value.swapMessage || defaultSwapMessage)
+        : (gpsTemplatesSetting.value.activationMessage || defaultActivationMessage);
+    }
+
+    // Replace placeholders in templates
+    const subject = subjectTemplate
+      .replace(/{brand}/g, brand)
+      .replace(/{model}/g, model)
+      .replace(/{licensePlate}/g, formattedPlate)
+      .replace(/{imei}/g, imei);
+
+    const message = messageTemplate
+      .replace(/{brand}/g, brand)
+      .replace(/{model}/g, model)
+      .replace(/{licensePlate}/g, formattedPlate)
+      .replace(/{imei}/g, imei);
 
     // Send email using GPS-purpose email configuration
     const success = await sendEmail(
