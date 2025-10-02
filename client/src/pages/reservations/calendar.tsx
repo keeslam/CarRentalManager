@@ -1087,6 +1087,17 @@ export default function ReservationCalendarPage() {
                   <ClipboardEdit className="mr-2 h-4 w-4" />
                   Change Status
                 </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleDeleteReservation(selectedReservation);
+                  }}
+                  data-testid="button-delete-reservation-dialog"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
               </div>
             </div>
           )}
