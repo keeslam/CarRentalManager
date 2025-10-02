@@ -109,7 +109,14 @@ export function ReservationCalendar() {
     queryKey: ["/api/reservations/range", startDate, endDate],
     queryFn: async () => {
       const url = `/api/reservations/range?startDate=${startDate}&endDate=${endDate}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Reservation range fetch error:", errorText);
