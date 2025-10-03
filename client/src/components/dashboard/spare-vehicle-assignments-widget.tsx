@@ -18,8 +18,9 @@ export function SpareVehicleAssignmentsWidget() {
   const queryClient = useQueryClient();
 
   // Get TBD spare vehicles (placeholder reservations needing assignment)
+  // Using 30 days lookahead to show all upcoming placeholders
   const { data: pendingAssignments, isLoading: isLoadingPending } = useQuery<Reservation[]>({
-    queryKey: ["/api/placeholder-reservations/needing-assignment"],
+    queryKey: ["/api/placeholder-reservations/needing-assignment?daysAhead=30"],
   });
 
   // Get all reservations to filter for assigned spare vehicles

@@ -11,8 +11,9 @@ export function PendingSpareAssignmentWidget() {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState<Reservation | null>(null);
 
+  // Using 30 days lookahead to show all upcoming placeholders
   const { data: pendingAssignments, isLoading } = useQuery<Reservation[]>({
-    queryKey: ["/api/placeholder-reservations/needing-assignment"],
+    queryKey: ["/api/placeholder-reservations/needing-assignment?daysAhead=30"],
   });
 
   // Sort by start date (closest first) - copy to avoid mutating cache
