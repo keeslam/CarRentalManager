@@ -54,6 +54,35 @@ type VehicleFilters = {
   availability: string;
 };
 
+// Helper function to parse maintenance type from notes
+const parseMaintenanceType = (notes: string | null | undefined): string | null => {
+  if (!notes) return null;
+  
+  // Notes format: "maintenanceType: description\nadditional notes"
+  const firstLine = notes.split('\n')[0];
+  const maintenanceTypeCode = firstLine.split(':')[0].trim();
+  
+  // Map maintenance type codes to user-friendly labels
+  const typeLabels: Record<string, string> = {
+    'breakdown': 'vehicle breakdown',
+    'tire_replacement': 'tire replacement',
+    'brake_service': 'brake service',
+    'engine_repair': 'engine repair',
+    'transmission_repair': 'transmission repair',
+    'electrical_issue': 'electrical issue',
+    'air_conditioning': 'air conditioning',
+    'battery_replacement': 'battery replacement',
+    'oil_change': 'oil change',
+    'regular_maintenance': 'regular maintenance',
+    'apk_inspection': 'APK inspection',
+    'warranty_service': 'warranty service',
+    'accident_damage': 'accident damage',
+    'other': 'maintenance'
+  };
+  
+  return typeLabels[maintenanceTypeCode] || null;
+};
+
 export default function ReservationCalendarPage() {
   // Query client for cache invalidation
   const queryClient = useQueryClient();
@@ -696,10 +725,15 @@ export default function ReservationCalendarPage() {
                                       <div className="flex justify-between items-center">
                                         <div className="text-sm text-gray-600 truncate font-medium">
                                           {res.type === 'maintenance_block' ? (
-                                            <span className="flex items-center gap-1 text-purple-700">
-                                              <Wrench className="w-3 h-3 text-purple-600" />
-                                              Coming in for service
-                                            </span>
+                                            (() => {
+                                              const maintenanceType = parseMaintenanceType(res.notes);
+                                              return (
+                                                <span className="flex items-center gap-1 text-purple-700">
+                                                  <Wrench className="w-3 h-3 text-purple-600" />
+                                                  Coming in for {maintenanceType || 'service'}
+                                                </span>
+                                              );
+                                            })()
                                           ) : res.type === 'replacement' && res.replacementForReservationId ? (
                                             (() => {
                                               // Find the original reservation to get vehicle details
