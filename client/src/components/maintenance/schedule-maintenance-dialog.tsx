@@ -421,12 +421,22 @@ export function ScheduleMaintenanceDialog({
             isOpenEnded
           });
           
-          await createPlaceholderMutation.mutateAsync({
-            originalReservationId: reservationId,
-            customerId: customerId,
-            startDate: overlapStart,
-            endDate: overlapEnd
-          });
+          try {
+            await createPlaceholderMutation.mutateAsync({
+              originalReservationId: reservationId,
+              customerId: customerId,
+              startDate: overlapStart,
+              endDate: overlapEnd
+            });
+          } catch (error: any) {
+            // If placeholder already exists (409 Conflict), that's okay - just skip it
+            if (error.message && error.message.includes('409') && error.message.includes('already exists')) {
+              console.log('ℹ️ Placeholder already exists for this reservation, skipping...');
+              continue;
+            }
+            // For other errors, rethrow
+            throw error;
+          }
         } else {
           console.log('⚠️ No overlap detected:', {
             maintenanceStart,
