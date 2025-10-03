@@ -336,10 +336,8 @@ export function ScheduleMaintenanceDialog({
       const result = await response.json();
       console.log('✅ Placeholder created successfully:', result);
       return result;
-    },
-    onError: (error) => {
-      console.error('❌ Placeholder mutation error:', error);
     }
+    // No onError - let the parent mutation handle all errors
   });
 
   // Mutation for handling spare vehicle assignments (maintenance already created)
