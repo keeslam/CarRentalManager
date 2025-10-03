@@ -696,9 +696,9 @@ export default function ReservationCalendarPage() {
                                       <div className="flex justify-between items-center">
                                         <div className="text-sm text-gray-600 truncate font-medium">
                                           {res.type === 'maintenance_block' ? (
-                                            <span className="flex items-center gap-1">
+                                            <span className="flex items-center gap-1 text-purple-700">
                                               <Wrench className="w-3 h-3 text-purple-600" />
-                                              Maintenance Service
+                                              Coming in for service
                                             </span>
                                           ) : res.type === 'replacement' && res.replacementForReservationId ? (
                                             (() => {
