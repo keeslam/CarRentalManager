@@ -700,6 +700,21 @@ export default function ReservationCalendarPage() {
                                               <Wrench className="w-3 h-3 text-purple-600" />
                                               Maintenance Service
                                             </span>
+                                          ) : res.type === 'replacement' && res.replacementForReservationId ? (
+                                            (() => {
+                                              // Find the original reservation to get vehicle details
+                                              const originalReservation = reservations?.find(r => r.id === res.replacementForReservationId);
+                                              const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
+                                              
+                                              if (originalVehicle) {
+                                                return (
+                                                  <span className="flex items-center gap-1 text-orange-700">
+                                                    Replacing {formatLicensePlate(originalVehicle.licensePlate)}
+                                                  </span>
+                                                );
+                                              }
+                                              return res.customer?.name || 'No customer';
+                                            })()
                                           ) : (
                                             res.customer?.name || 'No customer'
                                           )}
