@@ -308,37 +308,34 @@ export function ScheduleMaintenanceDialog({
     },
   });
 
-  // Mutation for creating placeholder reservations
-  const createPlaceholderMutation = useMutation({
-    mutationFn: async (data: {
-      originalReservationId: number;
-      customerId: number;
-      startDate: string;
-      endDate?: string;
-    }) => {
-      console.log('🔄 Creating placeholder with data:', data);
-      
-      const response = await apiRequest("POST", "/api/placeholder-reservations", {
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  // Helper function to create placeholder reservations (not a mutation to avoid nesting issues)
+  const createPlaceholder = async (data: {
+    originalReservationId: number;
+    customerId: number;
+    startDate: string;
+    endDate?: string;
+  }) => {
+    console.log('🔄 Creating placeholder with data:', data);
+    
+    const response = await apiRequest("POST", "/api/placeholder-reservations", {
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-      console.log('📡 Placeholder response status:', response.status);
+    console.log('📡 Placeholder response status:', response.status);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Placeholder creation failed:', errorData);
-        throw new Error(errorData.message || "Failed to create placeholder reservation");
-      }
-
-      const result = await response.json();
-      console.log('✅ Placeholder created successfully:', result);
-      return result;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Placeholder creation failed:', errorData);
+      throw new Error(errorData.message || "Failed to create placeholder reservation");
     }
-    // No onError - let the parent mutation handle all errors
-  });
+
+    const result = await response.json();
+    console.log('✅ Placeholder created successfully:', result);
+    return result;
+  };
 
   // Mutation for handling spare vehicle assignments (maintenance already created)
   const createMaintenanceWithSpareMutation = useMutation({
@@ -420,7 +417,7 @@ export function ScheduleMaintenanceDialog({
           });
           
           try {
-            await createPlaceholderMutation.mutateAsync({
+            await createPlaceholder({
               originalReservationId: reservationId,
               customerId: customerId,
               startDate: overlapStart,
