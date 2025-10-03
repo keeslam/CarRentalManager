@@ -37,7 +37,7 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2 } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench } from "lucide-react";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -648,6 +648,12 @@ export default function ReservationCalendarPage() {
                                           >
                                             {res.placeholderSpare ? 'TBD' : formatLicensePlate(res.vehicle?.licensePlate || '')}
                                           </span>
+                                          {res.type === 'maintenance_block' && (
+                                            <span className="ml-1 inline-flex items-center gap-1 bg-purple-300 text-purple-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-purple-400">
+                                              <Wrench className="w-2.5 h-2.5" />
+                                              MAINTENANCE
+                                            </span>
+                                          )}
                                           {res.type === 'replacement' && (
                                             <span className="ml-1 inline-block bg-orange-300 text-orange-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-orange-400">
                                               🚗 SPARE
@@ -689,8 +695,20 @@ export default function ReservationCalendarPage() {
                                       {/* Customer information and status */}
                                       <div className="flex justify-between items-center">
                                         <div className="text-sm text-gray-600 truncate font-medium">
-                                          {res.customer?.name || 'No customer'}
+                                          {res.type === 'maintenance_block' ? (
+                                            <span className="flex items-center gap-1">
+                                              <Wrench className="w-3 h-3 text-purple-600" />
+                                              Maintenance Service
+                                            </span>
+                                          ) : (
+                                            res.customer?.name || 'No customer'
+                                          )}
                                         </div>
+                                        {res.type === 'maintenance_block' && (
+                                          <span className="text-[10px] font-semibold text-purple-700 bg-purple-200 px-1 py-0.5 rounded border border-purple-300">
+                                            {formatReservationStatus(res.status).toUpperCase()}
+                                          </span>
+                                        )}
                                         {res.type === 'replacement' && (
                                           <span className="text-[10px] font-semibold text-orange-700 bg-orange-200 px-1 py-0.5 rounded border border-orange-300">
                                             {formatReservationStatus(res.status).toUpperCase()}
@@ -710,9 +728,16 @@ export default function ReservationCalendarPage() {
                                     {/* Header with status badge */}
                                     <div className="flex items-center justify-between border-b p-3">
                                       <h4 className="font-medium">
-                                        {res.type === 'replacement' ? 'Spare Vehicle Assignment' : 'Reservation Details'}
+                                        {res.type === 'maintenance_block' ? 'Maintenance Service' : 
+                                         res.type === 'replacement' ? 'Spare Vehicle Assignment' : 'Reservation Details'}
                                       </h4>
                                       <div className="flex gap-2">
+                                        {res.type === 'maintenance_block' && (
+                                          <Badge className="bg-purple-100 text-purple-800 border-purple-200" variant="outline">
+                                            <Wrench className="w-3 h-3 mr-1" />
+                                            MAINTENANCE
+                                          </Badge>
+                                        )}
                                         {res.type === 'replacement' && (
                                           <Badge className="bg-orange-100 text-orange-800 border-orange-200" variant="outline">
                                             SPARE CAR

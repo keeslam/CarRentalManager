@@ -14,8 +14,18 @@ export function getCustomReservationStyle(
   let styleClasses = '';
   let customStyle = '';
   
-  // Check for spare vehicle type first
-  if (reservationType === 'replacement') {
+  // Check for maintenance block type first - highest priority
+  if (reservationType === 'maintenance_block') {
+    const maintenanceRule = colorRules.find(rule => rule.id === 'maint-routine' && rule.enabled);
+    if (maintenanceRule) {
+      customStyle = `background-color: ${maintenanceRule.backgroundColor}; color: ${maintenanceRule.textColor}; border-color: ${maintenanceRule.borderColor};`;
+    } else {
+      // Fallback to default maintenance styling (purple/violet theme)
+      styleClasses = "bg-purple-100 text-purple-900 border-purple-400";
+    }
+  }
+  // Check for spare vehicle type
+  else if (reservationType === 'replacement') {
     const spareRule = colorRules.find(rule => rule.id === 'res-spare' && rule.enabled);
     if (spareRule) {
       customStyle = `background-color: ${spareRule.backgroundColor}; color: ${spareRule.textColor}; border-color: ${spareRule.borderColor};`;
@@ -76,8 +86,25 @@ export function getCustomReservationStyleObject(
 ): React.CSSProperties {
   const colorRules = getColorRules();
   
-  // Check for spare vehicle type first
-  if (reservationType === 'replacement') {
+  // Check for maintenance block type first - highest priority
+  if (reservationType === 'maintenance_block') {
+    const maintenanceRule = colorRules.find(rule => rule.id === 'maint-routine' && rule.enabled);
+    if (maintenanceRule) {
+      return {
+        backgroundColor: maintenanceRule.backgroundColor,
+        color: maintenanceRule.textColor,
+        borderColor: maintenanceRule.borderColor
+      };
+    }
+    // Fallback to default maintenance styling
+    return {
+      backgroundColor: '#f3e8ff', // purple-100
+      color: '#581c87',            // purple-900
+      borderColor: '#c084fc'       // purple-400
+    };
+  }
+  // Check for spare vehicle type
+  else if (reservationType === 'replacement') {
     const spareRule = colorRules.find(rule => rule.id === 'res-spare' && rule.enabled);
     if (spareRule) {
       return {
