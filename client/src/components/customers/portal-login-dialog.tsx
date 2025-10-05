@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -101,10 +101,26 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Clear generated password when closing dialog
+      // Clear generated password when closing dialog for security
       setGeneratedPassword(null);
     }
   };
+
+  // Security: Clear password from memory after 2 minutes
+  useEffect(() => {
+    if (generatedPassword) {
+      const timer = setTimeout(() => {
+        setGeneratedPassword(null);
+        toast({
+          title: "Password cleared",
+          description: "For security, the password has been cleared from the screen",
+          variant: "default",
+        });
+      }, 120000); // 2 minutes
+      
+      return () => clearTimeout(timer);
+    }
+  }, [generatedPassword, toast]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
