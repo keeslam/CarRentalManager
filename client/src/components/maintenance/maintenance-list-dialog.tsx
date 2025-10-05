@@ -568,7 +568,7 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                           <TableHead>Vehicle</TableHead>
                           <TableHead>License Plate</TableHead>
                           <TableHead>Start Date</TableHead>
-                          <TableHead>End Date</TableHead>
+                          <TableHead>Duration</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead>Scheduled By</TableHead>
@@ -595,12 +595,18 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                                 {format(parseISO(reservation.startDate), "dd MMM yyyy")}
                               </TableCell>
                               <TableCell>
-                                {reservation.endDate ? format(parseISO(reservation.endDate), "dd MMM yyyy") : "TBD"}
+                                {reservation.maintenanceDuration ? `${reservation.maintenanceDuration} ${reservation.maintenanceDuration === 1 ? 'day' : 'days'}` : 'TBD'}
                               </TableCell>
                               <TableCell>
-                                <Badge variant={reservation.status === "completed" ? "default" : "secondary"}>
-                                  {reservation.status}
-                                </Badge>
+                                {reservation.maintenanceStatus ? (
+                                  <Badge variant={reservation.maintenanceStatus === "in" ? "default" : "outline"} className={reservation.maintenanceStatus === "in" ? "bg-purple-500" : "bg-green-500 text-white"}>
+                                    {reservation.maintenanceStatus.toUpperCase()}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant={reservation.status === "completed" ? "default" : "secondary"}>
+                                    {reservation.status}
+                                  </Badge>
+                                )}
                               </TableCell>
                               <TableCell className="max-w-xs">
                                 <div className="truncate text-sm">
