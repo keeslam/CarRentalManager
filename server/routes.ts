@@ -1312,7 +1312,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // Generate random password
       const password = generateRandomPassword(8);
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await hashPassword(password);
 
       // Create customer user
       const customerUser = await storage.createCustomerUser({
@@ -1348,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // Generate new random password
       const password = generateRandomPassword(8);
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await hashPassword(password);
 
       // Update password
       await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
