@@ -126,10 +126,10 @@ export function ScheduleMaintenanceDialog({
       const descriptionPart = noteParts[1]?.split('\n')[0]?.trim() || "";
       const notesPart = editingReservation.notes?.split('\n')[1]?.trim() || "";
       
-      // Calculate duration from existing dates if available
+      // Calculate duration from existing dates if available (add 1 because start day counts as day 1)
       const duration = editingReservation.maintenanceDuration || 
         (editingReservation.startDate && editingReservation.endDate ? 
-          Math.max(1, Math.ceil((new Date(editingReservation.endDate).getTime() - new Date(editingReservation.startDate).getTime()) / (1000 * 60 * 60 * 24))) : 1);
+          Math.max(1, Math.ceil((new Date(editingReservation.endDate).getTime() - new Date(editingReservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1);
       
       form.reset({
         vehicleId: editingReservation.vehicleId?.toString() || "",

@@ -755,7 +755,7 @@ export default function ReservationCalendarPage() {
                                         </div>
                                         {res.type === 'maintenance_block' && (
                                           <span className="text-[10px] font-semibold text-purple-700 bg-purple-200 px-1 py-0.5 rounded border border-purple-300">
-                                            {formatReservationStatus(res.status).toUpperCase()}
+                                            {res.maintenanceStatus?.toUpperCase() || 'IN'}
                                           </span>
                                         )}
                                         {res.type === 'replacement' && (
@@ -794,6 +794,8 @@ export default function ReservationCalendarPage() {
                                         )}
                                         <Badge 
                                           className={`${
+                                            res.type === 'maintenance_block' ? 
+                                              (res.maintenanceStatus === 'in' ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-green-100 text-green-800 border-green-200') :
                                             res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
                                             res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
                                             res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
@@ -802,7 +804,7 @@ export default function ReservationCalendarPage() {
                                           }`}
                                           variant="outline"
                                         >
-                                          {formatReservationStatus(res.status)}
+                                          {res.type === 'maintenance_block' ? (res.maintenanceStatus?.toUpperCase() || 'IN') : formatReservationStatus(res.status)}
                                         </Badge>
                                       </div>
                                     </div>
@@ -861,21 +863,23 @@ export default function ReservationCalendarPage() {
                                       </div>
                                     </div>
                                     
-                                    {/* Price and mileage */}
-                                    <div className="px-3 py-1 flex items-start space-x-2">
-                                      <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
-                                      <div className="grid grid-cols-2 gap-2 text-xs">
-                                        {res.totalPrice && (
+                                    {/* Price and mileage - hide for maintenance */}
+                                    {res.type !== 'maintenance_block' && (
+                                      <div className="px-3 py-1 flex items-start space-x-2">
+                                        <CreditCard className="h-4 w-4 text-gray-500 mt-0.5" />
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          {res.totalPrice && (
+                                            <div>
+                                              <span className="text-gray-500">Price:</span> {formatCurrency(Number(res.totalPrice))}
+                                            </div>
+                                          )}
                                           <div>
-                                            <span className="text-gray-500">Price:</span> {formatCurrency(Number(res.totalPrice))}
+                                            <span className="text-gray-500">Status:</span>
+                                            <Badge className="ml-1 text-xs">{formatReservationStatus(res.status)}</Badge>
                                           </div>
-                                        )}
-                                        <div>
-                                          <span className="text-gray-500">Status:</span>
-                                          <Badge className="ml-1 text-xs">{formatReservationStatus(res.status)}</Badge>
                                         </div>
                                       </div>
-                                    </div>
+                                    )}
                                     
                                     {/* Notes if available */}
                                     {res.notes && (
