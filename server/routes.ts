@@ -1255,6 +1255,115 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== CUSTOMER PORTAL LOGIN ROUTES ====================
+  // Helper function to generate random password
+  function generateRandomPassword(length: number = 8): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  // Get customer portal login status
+  app.get("/api/customers/:id/portal-login", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const customerUser = await storage.getCustomerUserByCustomerId(customerId);
+      
+      res.json({
+        hasPortalAccess: !!customerUser,
+        email: customerUser?.email,
+        lastLogin: customerUser?.lastLogin,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get portal login status", error });
+    }
+  });
+
+  // Create customer portal login
+  app.post("/api/customers/:id/portal-login", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Check if portal login already exists
+      const existingUser = await storage.getCustomerUserByCustomerId(customerId);
+      if (existingUser) {
+        return res.status(400).json({ message: "Portal login already exists for this customer" });
+      }
+
+      // Generate random password
+      const password = generateRandomPassword(8);
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create customer user
+      const customerUser = await storage.createCustomerUser({
+        customerId,
+        email: customer.email,
+        password: hashedPassword,
+      });
+
+      res.status(201).json({
+        message: "Portal login created successfully",
+        email: customerUser.email,
+        password: password, // Return plain password once for staff to communicate to customer
+        customerId: customerUser.customerId,
+      });
+    } catch (error) {
+      console.error("Error creating portal login:", error);
+      res.status(500).json({ message: "Failed to create portal login", error });
+    }
+  });
+
+  // Reset customer portal password
+  app.post("/api/customers/:id/portal-login/reset", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      const customerUser = await storage.getCustomerUserByCustomerId(customerId);
+      if (!customerUser) {
+        return res.status(404).json({ message: "Portal login not found for this customer" });
+      }
+
+      // Generate new random password
+      const password = generateRandomPassword(8);
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update password
+      await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
+
+      res.json({
+        message: "Password reset successfully",
+        email: customerUser.email,
+        password: password, // Return plain password once for staff to communicate to customer
+      });
+    } catch (error) {
+      console.error("Error resetting portal password:", error);
+      res.status(500).json({ message: "Failed to reset password", error });
+    }
+  });
+
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
   app.get("/api/reservations/range", async (req, res) => {
