@@ -62,7 +62,7 @@ const scheduleMaintenanceSchema = z.object({
   }),
   scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date (YYYY-MM-DD)").min(1, "Date when vehicle comes in is required"),
   maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
-  maintenanceStatus: z.enum(["in", "out"]).default("in"),
+  maintenanceStatus: z.enum(["scheduled", "in", "out"]).default("scheduled"),
   description: z.string().optional(),
   notes: z.string().optional(),
   needsSpareVehicle: z.boolean().default(false),
@@ -1003,12 +1003,13 @@ export function ScheduleMaintenanceDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="scheduled">Scheduled (vehicle not yet arrived)</SelectItem>
                       <SelectItem value="in">In (vehicle is in maintenance)</SelectItem>
                       <SelectItem value="out">Out (maintenance completed)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Is the vehicle currently in maintenance or has it been completed?
+                    Current status of the maintenance
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

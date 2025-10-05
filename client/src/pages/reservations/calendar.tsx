@@ -795,7 +795,9 @@ export default function ReservationCalendarPage() {
                                         <Badge 
                                           className={`${
                                             res.type === 'maintenance_block' ? 
-                                              (res.maintenanceStatus === 'in' ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-green-100 text-green-800 border-green-200') :
+                                              (res.maintenanceStatus === 'scheduled' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                                               res.maintenanceStatus === 'in' ? 'bg-purple-100 text-purple-800 border-purple-200' : 
+                                               'bg-green-100 text-green-800 border-green-200') :
                                             res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
                                             res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
                                             res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
@@ -1116,13 +1118,21 @@ export default function ReservationCalendarPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Status</label>
-                    <p className="text-sm font-medium">
+                    <div className="text-sm font-medium mt-1">
                       {selectedReservation.maintenanceStatus ? (
-                        <Badge variant={selectedReservation.maintenanceStatus === "in" ? "default" : "outline"} className={selectedReservation.maintenanceStatus === "in" ? "bg-purple-500" : "bg-green-500 text-white"}>
+                        <Badge 
+                          variant={selectedReservation.maintenanceStatus === "in" ? "default" : "outline"} 
+                          className={
+                            selectedReservation.maintenanceStatus === "in" ? "bg-purple-500 text-white" :
+                            selectedReservation.maintenanceStatus === "out" ? "bg-green-500 text-white" :
+                            selectedReservation.maintenanceStatus === "scheduled" ? "bg-amber-500 text-white" :
+                            "bg-gray-500 text-white"
+                          }
+                        >
                           {selectedReservation.maintenanceStatus.toUpperCase()}
                         </Badge>
                       ) : 'Not set'}
-                    </p>
+                    </div>
                   </div>
                 </div>
               ) : (

@@ -191,7 +191,7 @@ export const reservations = pgTable("reservations", {
   
   // Maintenance-specific fields
   maintenanceDuration: integer("maintenance_duration"), // Duration in days for maintenance_block type
-  maintenanceStatus: text("maintenance_status"), // 'in' | 'out' for maintenance_block type
+  maintenanceStatus: text("maintenance_status"), // 'scheduled' | 'in' | 'out' for maintenance_block type
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),

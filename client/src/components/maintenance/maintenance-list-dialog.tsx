@@ -599,7 +599,14 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
                               </TableCell>
                               <TableCell>
                                 {reservation.maintenanceStatus ? (
-                                  <Badge variant={reservation.maintenanceStatus === "in" ? "default" : "outline"} className={reservation.maintenanceStatus === "in" ? "bg-purple-500" : "bg-green-500 text-white"}>
+                                  <Badge 
+                                    variant={reservation.maintenanceStatus === "in" ? "default" : "outline"} 
+                                    className={
+                                      reservation.maintenanceStatus === "scheduled" ? "bg-amber-500 text-white" :
+                                      reservation.maintenanceStatus === "in" ? "bg-purple-500 text-white" : 
+                                      "bg-green-500 text-white"
+                                    }
+                                  >
                                     {reservation.maintenanceStatus.toUpperCase()}
                                   </Badge>
                                 ) : (

@@ -48,7 +48,7 @@ const maintenanceEditSchema = z.object({
   customerId: z.string().optional(), // Optional customer
   startDate: z.string().min(1, "Date when vehicle comes in is required"),
   maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
-  maintenanceStatus: z.enum(["in", "out"]).default("in"),
+  maintenanceStatus: z.enum(["scheduled", "in", "out"]).default("scheduled"),
   notes: z.string().optional(),
 });
 
@@ -434,12 +434,13 @@ export function MaintenanceEditDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="scheduled">Scheduled (vehicle not yet arrived)</SelectItem>
                         <SelectItem value="in">In (vehicle is in maintenance)</SelectItem>
                         <SelectItem value="out">Out (maintenance completed)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Is the vehicle currently in maintenance or has it been completed?
+                      Current status of the maintenance
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
