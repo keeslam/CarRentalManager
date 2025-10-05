@@ -189,6 +189,10 @@ export const reservations = pgTable("reservations", {
   placeholderSpare: boolean("placeholder_spare").default(false).notNull(), // True when vehicleId is null and spare vehicle assignment is pending
   spareVehicleStatus: text("spare_vehicle_status").default("assigned"), // 'assigned', 'ready', 'picked_up', 'returned'
   
+  // Maintenance-specific fields
+  maintenanceDuration: integer("maintenance_duration"), // Duration in days for maintenance_block type
+  maintenanceStatus: text("maintenance_status"), // 'in' | 'out' for maintenance_block type
+  
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
