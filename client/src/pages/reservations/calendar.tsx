@@ -83,6 +83,32 @@ const parseMaintenanceType = (notes: string | null | undefined): string | null =
   return typeLabels[maintenanceTypeCode] || null;
 };
 
+// Helper function to find maintenance overlapping with a rental on a specific day
+// Uses a memoized map with pre-normalized dates for O(1) lookup performance
+const findMaintenanceForRental = (
+  rental: Reservation, 
+  day: Date, 
+  maintenanceMap: Map<number, (Reservation & { _normalizedStart: Date; _normalizedEnd: Date })[]>
+): Reservation | null => {
+  if (!rental.vehicleId) return null;
+  
+  const maintenanceRecords = maintenanceMap.get(rental.vehicleId) || [];
+  const dayStart = startOfDay(day);
+  
+  // Find the last (most recent) maintenance that overlaps with this day
+  // Maintenance is sorted by start date, so we return the last match for consistent badge selection
+  let lastMatch: Reservation | null = null;
+  
+  for (const maintenance of maintenanceRecords) {
+    // Use pre-normalized dates for fast comparison (no parsing needed)
+    if ((dayStart >= maintenance._normalizedStart) && (dayStart <= maintenance._normalizedEnd)) {
+      lastMatch = maintenance;
+    }
+  }
+  
+  return lastMatch;
+};
+
 export default function ReservationCalendarPage() {
   // Query client for cache invalidation
   const queryClient = useQueryClient();
@@ -278,6 +304,42 @@ export default function ReservationCalendarPage() {
       }
     ],
   });
+  
+  // Memoized maintenance map for O(1) lookups with pre-normalized dates (performance optimization)
+  const maintenanceByVehicle = useMemo(() => {
+    type NormalizedMaintenance = Reservation & { _normalizedStart: Date; _normalizedEnd: Date };
+    if (!reservations) return new Map<number, NormalizedMaintenance[]>();
+    
+    const map = new Map<number, NormalizedMaintenance[]>();
+    
+    reservations
+      .filter(res => res.type === 'maintenance_block' && res.vehicleId)
+      .forEach(maintenance => {
+        const vehicleId = maintenance.vehicleId!;
+        
+        // Pre-normalize dates for consistent comparisons
+        const mStart = parseISO(maintenance.startDate);
+        const mEnd = maintenance.endDate ? parseISO(maintenance.endDate) : mStart; // Null endDate = same day
+        
+        const normalized = {
+          ...maintenance,
+          _normalizedStart: startOfDay(mStart),
+          _normalizedEnd: startOfDay(mEnd)
+        };
+        
+        if (!map.has(vehicleId)) {
+          map.set(vehicleId, []);
+        }
+        map.get(vehicleId)!.push(normalized);
+      });
+    
+    // Sort each vehicle's maintenance by start date for consistent badge selection
+    map.forEach(maintenanceList => {
+      maintenanceList.sort((a, b) => a._normalizedStart.getTime() - b._normalizedStart.getTime());
+    });
+    
+    return map;
+  }, [reservations]);
   
   // Extract unique vehicle types for filtering
   const vehicleTypes = useMemo(() => {
@@ -562,11 +624,15 @@ export default function ReservationCalendarPage() {
                     
                     // Only get reservations starting or ending on this day
                     // Filter reservations based on selected vehicles
+                    // EXCLUDE maintenance blocks - they show as badge overlays on rentals, not separate blocks
                     const dayReservations = reservations?.filter(res => {
                       const startDate = safeParseDateISO(res.startDate);
                       const endDate = safeParseDateISO(res.endDate);
                       
                       if (!startDate) return false;
+                      
+                      // Exclude maintenance blocks - they're informational overlays only
+                      if (res.type === 'maintenance_block') return false;
                       
                       // Check if this day is a pickup or return day (only if endDate is valid)
                       const isPickupDay = isSameDay(day, startDate);
@@ -655,6 +721,23 @@ export default function ReservationCalendarPage() {
                               // Calculate rental duration only if both dates are valid
                               const rentalDuration = endDate ? differenceInDays(endDate, startDate) + 1 : 1;
                             
+                            // Check for overlapping maintenance on this day (using memoized map for performance)
+                            const overlappingMaintenance = findMaintenanceForRental(res, day, maintenanceByVehicle);
+                            
+                            // Get maintenance status badge color
+                            const getMaintenanceBadgeColor = (status: string | null | undefined) => {
+                              switch (status) {
+                                case 'scheduled':
+                                  return 'bg-amber-400 text-amber-900 border-amber-500';
+                                case 'in':
+                                  return 'bg-purple-400 text-purple-900 border-purple-500';
+                                case 'out':
+                                  return 'bg-green-400 text-green-900 border-green-500';
+                                default:
+                                  return 'bg-gray-400 text-gray-900 border-gray-500';
+                              }
+                            };
+                            
                             return (
                               <HoverCard key={res.id} openDelay={300} closeDelay={200}>
                                 <HoverCardTrigger asChild>
@@ -677,10 +760,12 @@ export default function ReservationCalendarPage() {
                                           >
                                             {res.placeholderSpare ? 'TBD' : formatLicensePlate(res.vehicle?.licensePlate || '')}
                                           </span>
-                                          {res.type === 'maintenance_block' && (
-                                            <span className="ml-1 inline-flex items-center gap-1 bg-purple-300 text-purple-900 text-[10px] px-1.5 py-0.5 rounded font-bold border border-purple-400">
+                                          {overlappingMaintenance && (
+                                            <span 
+                                              className={`ml-1 inline-flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded font-bold border ${getMaintenanceBadgeColor(overlappingMaintenance.maintenanceStatus)}`}
+                                              title={`Maintenance: ${parseMaintenanceType(overlappingMaintenance.notes) || 'service'} - ${overlappingMaintenance.maintenanceStatus || 'status unknown'}`}
+                                            >
                                               <Wrench className="w-2.5 h-2.5" />
-                                              MAINTENANCE
                                             </span>
                                           )}
                                           {res.type === 'replacement' && (
