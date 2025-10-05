@@ -614,5 +614,19 @@ export const insertExtensionRequestSchema = createInsertSchema(extensionRequests
   reviewedAt: true,
 });
 
+// Update schema for extension requests (allows status changes for staff review)
+export const updateExtensionRequestSchema = createInsertSchema(extensionRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  reservationId: true,
+  customerId: true,
+  vehicleId: true,
+  currentEndDate: true,
+  requestedEndDate: true,
+  reason: true,
+}).partial(); // All fields optional for updates
+
 export type ExtensionRequest = typeof extensionRequests.$inferSelect;
 export type InsertExtensionRequest = z.infer<typeof insertExtensionRequestSchema>;
+export type UpdateExtensionRequest = z.infer<typeof updateExtensionRequestSchema>;

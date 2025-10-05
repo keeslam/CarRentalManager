@@ -35,6 +35,7 @@ import ProfileEditPage from "@/pages/profile/edit";
 import ChangePasswordPage from "@/pages/profile/change-password";
 import BackupPage from "@/pages/admin/backup";
 import MaintenanceCalendar from "@/pages/maintenance/calendar";
+import ExtensionRequestsPage from "@/pages/extension-requests/index";
 import SettingsPage from "@/pages/settings/index";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -75,6 +76,7 @@ function AppRoutes() {
               <ProtectedRoute path="/reservations/edit/:id" component={ReservationEdit} />
               <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
               <ProtectedRoute path="/maintenance" component={MaintenanceCalendar} />
+              <ProtectedRoute path="/extension-requests" component={ExtensionRequestsPage} />
               <ProtectedRoute path="/expenses" component={ExpensesIndex} />
               <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
               <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />

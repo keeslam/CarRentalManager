@@ -9,7 +9,7 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
   customerUsers, type CustomerUser, type InsertCustomerUser,
-  extensionRequests, type ExtensionRequest, type InsertExtensionRequest
+  extensionRequests, type ExtensionRequest, type InsertExtensionRequest, type UpdateExtensionRequest
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -129,7 +129,7 @@ export interface IStorage {
   getExtensionRequestsByReservation(reservationId: number): Promise<ExtensionRequest[]>;
   getPendingExtensionRequests(): Promise<ExtensionRequest[]>;
   createExtensionRequest(request: InsertExtensionRequest): Promise<ExtensionRequest>;
-  updateExtensionRequest(id: number, requestData: Partial<InsertExtensionRequest>): Promise<ExtensionRequest | undefined>;
+  updateExtensionRequest(id: number, requestData: UpdateExtensionRequest): Promise<ExtensionRequest | undefined>;
   approveExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
   rejectExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
   deleteExtensionRequest(id: number): Promise<boolean>;

@@ -14,6 +14,7 @@ export function SidebarNav() {
     { href: "/customers", label: "Customers", icon: "people" },
     { href: "/reservations", label: "Reservations", icon: "event" },
     { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
+    { href: "/extension-requests", label: "Extensions", icon: "extension" },
     { href: "/expenses", label: "Expenses", icon: "euro" },
     { href: "/documents", label: "Documents", icon: "description" },
     { href: "/communications", label: "Communications", icon: "email" },
@@ -130,6 +131,16 @@ function getNavIcon(iconName: string, isActive: boolean) {
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-mail ${className}`}>
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
           <polyline points="22,6 12,13 2,6" />
+        </svg>
+      );
+    case "extension":
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-clock-arrow-up ${className}`}>
+          <path d="M13.228 21.925A10 10 0 1 1 21.994 12.338" />
+          <path d="M12 6v6l3.447 1.724" />
+          <path d="m19 15 1-1v6" />
+          <path d="m19 15 1 1" />
+          <path d="M20 21h-2" />
         </svg>
       );
     case "users_management":

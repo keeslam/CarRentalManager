@@ -5167,7 +5167,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.patch("/api/extension-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status, reviewNotes } = req.body;
+      const { status, staffNotes } = req.body;
       const username = req.user?.username || 'Unknown';
 
       if (!['approved', 'rejected'].includes(status)) {
@@ -5183,11 +5183,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Extension request has already been processed" });
       }
 
-      // Update extension request
+      // Update extension request including status
       const updatedRequest = await storage.updateExtensionRequest(id, {
+        status,
         reviewedBy: username,
         reviewedAt: new Date(),
-        staffNotes: reviewNotes
+        staffNotes: staffNotes
       });
 
       // If approved, update the reservation
