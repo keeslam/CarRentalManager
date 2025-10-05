@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Set up authentication routes and middleware
-  const { requireAuth } = setupAuth(app);
+  const { requireAuth, requireCustomerAuth } = setupAuth(app);
 
   // Initialize backup service
   const backupService = new BackupService();
@@ -5042,6 +5042,169 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error deleting setting:", error);
       res.status(500).json({ error: "Failed to delete setting" });
+    }
+  });
+
+  // ==================== CUSTOMER PORTAL ROUTES ====================
+  
+  // Get customer's active rentals
+  app.get("/api/customer/rentals", requireCustomerAuth, async (req, res) => {
+    try {
+      const customerUser = req.session.customerUser;
+      if (!customerUser) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const rentals = await storage.getReservationsByCustomer(customerUser.customerId);
+      
+      // Filter for active rentals (not deleted, not completed)
+      const activeRentals = rentals.filter((r: Reservation) => 
+        !r.deletedAt && 
+        r.type !== 'maintenance_block' &&
+        (r.endDate === null || new Date(r.endDate) >= new Date())
+      );
+
+      res.json(activeRentals);
+    } catch (error) {
+      console.error("Error fetching customer rentals:", error);
+      res.status(500).json({ error: "Failed to fetch rentals" });
+    }
+  });
+
+  // Create extension request
+  app.post("/api/customer/extension-requests", requireCustomerAuth, async (req, res) => {
+    try {
+      const customerUser = req.session.customerUser;
+      if (!customerUser) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { reservationId, requestedEndDate, reason } = req.body;
+
+      // Verify the reservation belongs to this customer
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation || reservation.customerId !== customerUser.customerId) {
+        return res.status(403).json({ error: "Not authorized to request extension for this rental" });
+      }
+
+      // Check if there's already a pending request for this reservation
+      const existingRequests = await storage.getExtensionRequestsByReservation(reservationId);
+      const hasPending = existingRequests.some(r => r.status === 'pending');
+      if (hasPending) {
+        return res.status(400).json({ error: "There is already a pending extension request for this rental" });
+      }
+
+      // Create extension request
+      const extensionRequest = await storage.createExtensionRequest({
+        reservationId,
+        customerId: customerUser.customerId,
+        vehicleId: reservation.vehicleId || null,
+        currentEndDate: reservation.endDate,
+        requestedEndDate,
+        reason
+      });
+
+      // Create notification for staff
+      await storage.createCustomNotification({
+        date: new Date().toISOString().split('T')[0],
+        title: 'Rental Extension Request',
+        description: `${customerUser.customerName} has requested to extend rental #${reservationId} until ${formatDate(requestedEndDate)}`,
+        type: 'extension_request',
+        link: `/reservations/${reservationId}`
+      });
+
+      // Send real-time notification via notifications channel
+      realtimeEvents.notifications.created(extensionRequest);
+
+      res.status(201).json(extensionRequest);
+    } catch (error) {
+      console.error("Error creating extension request:", error);
+      res.status(500).json({ error: "Failed to create extension request" });
+    }
+  });
+
+  // Get customer's extension requests
+  app.get("/api/customer/extension-requests", requireCustomerAuth, async (req, res) => {
+    try {
+      const customerUser = req.session.customerUser;
+      if (!customerUser) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const requests = await storage.getExtensionRequestsByCustomer(customerUser.customerId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching extension requests:", error);
+      res.status(500).json({ error: "Failed to fetch extension requests" });
+    }
+  });
+
+  // ==================== STAFF EXTENSION REQUEST MANAGEMENT ====================
+  
+  // Get all extension requests (staff only)
+  app.get("/api/extension-requests", requireAuth, async (req, res) => {
+    try {
+      const allRequests = await storage.getAllExtensionRequests();
+      res.json(allRequests);
+    } catch (error) {
+      console.error("Error fetching extension requests:", error);
+      res.status(500).json({ error: "Failed to fetch extension requests" });
+    }
+  });
+
+  // Get pending extension requests (staff only)
+  app.get("/api/extension-requests/pending", requireAuth, async (req, res) => {
+    try {
+      const pendingRequests = await storage.getPendingExtensionRequests();
+      res.json(pendingRequests);
+    } catch (error) {
+      console.error("Error fetching pending extension requests:", error);
+      res.status(500).json({ error: "Failed to fetch pending requests" });
+    }
+  });
+
+  // Approve/reject extension request (staff only)
+  app.patch("/api/extension-requests/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, reviewNotes } = req.body;
+      const username = req.user?.username || 'Unknown';
+
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be 'approved' or 'rejected'" });
+      }
+
+      const request = await storage.getExtensionRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: "Extension request not found" });
+      }
+
+      if (request.status !== 'pending') {
+        return res.status(400).json({ error: "Extension request has already been processed" });
+      }
+
+      // Update extension request
+      const updatedRequest = await storage.updateExtensionRequest(id, {
+        reviewedBy: username,
+        reviewedAt: new Date(),
+        staffNotes: reviewNotes
+      });
+
+      // If approved, update the reservation
+      if (status === 'approved' && request.reservationId) {
+        await storage.updateReservation(request.reservationId, {
+          endDate: request.requestedEndDate,
+          updatedBy: username
+        });
+      }
+
+      // Send real-time update via notifications channel
+      realtimeEvents.notifications.updated(updatedRequest);
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error updating extension request:", error);
+      res.status(500).json({ error: "Failed to update extension request" });
     }
   });
 

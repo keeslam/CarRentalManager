@@ -38,6 +38,8 @@ import MaintenanceCalendar from "@/pages/maintenance/calendar";
 import SettingsPage from "@/pages/settings/index";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import CustomerLogin from "@/pages/customer-portal/login";
+import CustomerDashboard from "@/pages/customer-portal/dashboard";
 import MainLayout from "@/layouts/MainLayout";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { SocketProvider } from "@/hooks/use-socket";
@@ -47,55 +49,66 @@ function AppRoutes() {
   const { user } = useAuth();
   
   return (
-    <MainLayout>
-      <Switch>
-        <ProtectedRoute path="/" component={Dashboard} />
-        <ProtectedRoute path="/vehicles" component={VehiclesIndex} />
-        <ProtectedRoute path="/vehicles/add" component={VehicleAdd} />
-        <ProtectedRoute path="/vehicles/bulk-import" component={VehicleBulkImport} />
-        <ProtectedRoute path="/vehicles/:id/edit" component={VehicleEdit} />
-        <ProtectedRoute path="/vehicles/:id" component={VehicleDetails} />
-        <ProtectedRoute path="/customers" component={CustomersIndex} />
-        <ProtectedRoute path="/customers/add" component={CustomerAdd} />
-        <ProtectedRoute path="/customers/:id/edit" component={CustomerEdit} />
-        <ProtectedRoute path="/customers/:id" component={CustomerDetails} />
-        <ProtectedRoute path="/reservations" component={ReservationCalendar} />
-        <ProtectedRoute path="/reservations/add" component={ReservationAdd} />
-        <ProtectedRoute path="/reservations/list" component={ReservationsIndex} />
-        <ProtectedRoute path="/reservations/edit/:id" component={ReservationEdit} />
-        <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
-        <ProtectedRoute path="/maintenance" component={MaintenanceCalendar} />
-        <ProtectedRoute path="/expenses" component={ExpensesIndex} />
-        <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
-        <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />
-        <ProtectedRoute path="/expenses/edit/:id" component={ExpenseAdd} />
-        <ProtectedRoute path="/expenses/:id" component={ExpenseDetails} />
-        <ProtectedRoute path="/documents" component={DocumentsIndex} />
-        <ProtectedRoute path="/documents/contract/:id" component={ContractViewer} />
-        <ProtectedRoute path="/documents/template-editor" component={TemplateEditor} />
-        <ProtectedRoute path="/reports" component={ReportsPage} />
-        <ProtectedRoute path="/notifications" component={NotificationsPage} />
-        <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
-        <ProtectedRoute path="/communications" component={CustomerCommunications} />
-        <Route path="/search-results">
-          {() => {
-            const { user } = useAuth();
-            return user ? <SearchResults /> : <Redirect to="/auth" />;
-          }}
-        </Route>
-        <ProtectedRoute path="/users" component={UsersIndex} />
-        <ProtectedRoute path="/users/add" component={UserAdd} />
-        <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
-        <ProtectedRoute path="/users/:id" component={UserDetails} />
-        <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
-        <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
-        <ProtectedRoute path="/admin/backup" component={BackupPage} />
-        <ProtectedRoute path="/settings" component={SettingsPage} />
-        <Route path="/auth" component={AuthPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </MainLayout>
+    <Switch>
+      {/* Customer Portal Routes - No MainLayout */}
+      <Route path="/customer/login" component={CustomerLogin} />
+      <Route path="/customer/dashboard" component={CustomerDashboard} />
+      
+      {/* Staff Routes - With MainLayout */}
+      <Route>
+        {() => (
+          <MainLayout>
+            <Switch>
+              <ProtectedRoute path="/" component={Dashboard} />
+              <ProtectedRoute path="/vehicles" component={VehiclesIndex} />
+              <ProtectedRoute path="/vehicles/add" component={VehicleAdd} />
+              <ProtectedRoute path="/vehicles/bulk-import" component={VehicleBulkImport} />
+              <ProtectedRoute path="/vehicles/:id/edit" component={VehicleEdit} />
+              <ProtectedRoute path="/vehicles/:id" component={VehicleDetails} />
+              <ProtectedRoute path="/customers" component={CustomersIndex} />
+              <ProtectedRoute path="/customers/add" component={CustomerAdd} />
+              <ProtectedRoute path="/customers/:id/edit" component={CustomerEdit} />
+              <ProtectedRoute path="/customers/:id" component={CustomerDetails} />
+              <ProtectedRoute path="/reservations" component={ReservationCalendar} />
+              <ProtectedRoute path="/reservations/add" component={ReservationAdd} />
+              <ProtectedRoute path="/reservations/list" component={ReservationsIndex} />
+              <ProtectedRoute path="/reservations/edit/:id" component={ReservationEdit} />
+              <ProtectedRoute path="/reservations/:id" component={ReservationDetails} />
+              <ProtectedRoute path="/maintenance" component={MaintenanceCalendar} />
+              <ProtectedRoute path="/expenses" component={ExpensesIndex} />
+              <ProtectedRoute path="/expenses/add" component={ExpenseAdd} />
+              <ProtectedRoute path="/expenses/vehicle/:id" component={VehicleExpensesPage} />
+              <ProtectedRoute path="/expenses/edit/:id" component={ExpenseAdd} />
+              <ProtectedRoute path="/expenses/:id" component={ExpenseDetails} />
+              <ProtectedRoute path="/documents" component={DocumentsIndex} />
+              <ProtectedRoute path="/documents/contract/:id" component={ContractViewer} />
+              <ProtectedRoute path="/documents/template-editor" component={TemplateEditor} />
+              <ProtectedRoute path="/reports" component={ReportsPage} />
+              <ProtectedRoute path="/notifications" component={NotificationsPage} />
+              <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
+              <ProtectedRoute path="/communications" component={CustomerCommunications} />
+              <Route path="/search-results">
+                {() => {
+                  const { user } = useAuth();
+                  return user ? <SearchResults /> : <Redirect to="/auth" />;
+                }}
+              </Route>
+              <ProtectedRoute path="/users" component={UsersIndex} />
+              <ProtectedRoute path="/users/add" component={UserAdd} />
+              <ProtectedRoute path="/users/:id/edit" component={UserEdit} />
+              <ProtectedRoute path="/users/:id" component={UserDetails} />
+              <ProtectedRoute path="/profile" component={ProfilePage} />
+              <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
+              <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
+              <ProtectedRoute path="/admin/backup" component={BackupPage} />
+              <ProtectedRoute path="/settings" component={SettingsPage} />
+              <Route path="/auth" component={AuthPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </MainLayout>
+        )}
+      </Route>
+    </Switch>
   );
 }
 
