@@ -1101,35 +1101,63 @@ export default function ReservationCalendarPage() {
               </div>
 
               {/* Dates and Duration */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
+              {/* Date and Duration Info - Different layout for maintenance */}
+              {selectedReservation.type === 'maintenance_block' ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Start Date</label>
+                    <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Duration</label>
+                    <p className="text-sm font-medium">
+                      {selectedReservation.maintenanceDuration ? `${selectedReservation.maintenanceDuration} ${selectedReservation.maintenanceDuration === 1 ? 'day' : 'days'}` : 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Status</label>
+                    <p className="text-sm font-medium">
+                      {selectedReservation.maintenanceStatus ? (
+                        <Badge variant={selectedReservation.maintenanceStatus === "in" ? "default" : "outline"} className={selectedReservation.maintenanceStatus === "in" ? "bg-purple-500" : "bg-green-500 text-white"}>
+                          {selectedReservation.maintenanceStatus.toUpperCase()}
+                        </Badge>
+                      ) : 'Not set'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">End Date</label>
-                  <p className="text-sm font-medium">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Start Date</label>
+                    <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">End Date</label>
+                    <p className="text-sm font-medium">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Duration</label>
+                    <p className="text-sm font-medium">
+                      {(() => {
+                        if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
+                        const startDate = safeParseDateISO(selectedReservation.startDate);
+                        const endDate = safeParseDateISO(selectedReservation.endDate);
+                        if (!startDate || !endDate) return 'Invalid dates';
+                        const duration = differenceInDays(endDate, startDate) + 1;
+                        return `${duration} ${duration === 1 ? 'day' : 'days'}`;
+                      })()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Duration</label>
-                  <p className="text-sm font-medium">
-                    {(() => {
-                      if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
-                      const startDate = safeParseDateISO(selectedReservation.startDate);
-                      const endDate = safeParseDateISO(selectedReservation.endDate);
-                      if (!startDate || !endDate) return 'Invalid dates';
-                      const duration = differenceInDays(endDate, startDate) + 1;
-                      return `${duration} ${duration === 1 ? 'day' : 'days'}`;
-                    })()}
-                  </p>
-                </div>
-              </div>
+              )}
 
-              {/* Price */}
-              <div>
-                <label className="text-sm font-medium text-gray-500">Total Price</label>
-                <p className="text-lg font-semibold">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
-              </div>
+              {/* Price - hide for maintenance */}
+              {selectedReservation.type !== 'maintenance_block' && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Total Price</label>
+                  <p className="text-lg font-semibold">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+                </div>
+              )}
 
               {/* Notes */}
               {selectedReservation.notes && (
