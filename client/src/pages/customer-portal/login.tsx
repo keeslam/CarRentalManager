@@ -54,7 +54,7 @@ export default function CustomerLogin() {
       });
 
       // Redirect to customer dashboard
-      navigate("/customer/dashboard");
+      navigate("/customer-portal/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast({

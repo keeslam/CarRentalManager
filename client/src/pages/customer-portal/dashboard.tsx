@@ -48,7 +48,7 @@ export default function CustomerDashboard() {
     },
     onSuccess: () => {
       queryClient.clear();
-      navigate("/customer/login");
+      navigate("/customer-portal/login");
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",
@@ -72,7 +72,7 @@ export default function CustomerDashboard() {
   }
 
   if (!customerUser) {
-    navigate("/customer/login");
+    navigate("/customer-portal/login");
     return null;
   }
 

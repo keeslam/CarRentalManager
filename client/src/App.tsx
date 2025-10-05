@@ -52,8 +52,8 @@ function AppRoutes() {
   return (
     <Switch>
       {/* Customer Portal Routes - No MainLayout */}
-      <Route path="/customer/login" component={CustomerLogin} />
-      <Route path="/customer/dashboard" component={CustomerDashboard} />
+      <Route path="/customer-portal/login" component={CustomerLogin} />
+      <Route path="/customer-portal/dashboard" component={CustomerDashboard} />
       
       {/* Staff Routes - With MainLayout */}
       <Route>
