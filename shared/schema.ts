@@ -192,6 +192,8 @@ export const reservations = pgTable("reservations", {
   // Maintenance-specific fields
   maintenanceDuration: integer("maintenance_duration"), // Duration in days for maintenance_block type
   maintenanceStatus: text("maintenance_status"), // 'scheduled' | 'in' | 'out' for maintenance_block type
+  spareAssignmentDecision: text("spare_assignment_decision"), // 'spare_assigned' | 'customer_arranging' | 'not_handled' for maintenance tracking
+  affectedRentalId: integer("affected_rental_id"), // FK to the rental that's affected by this maintenance
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),

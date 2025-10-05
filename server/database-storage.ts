@@ -688,6 +688,7 @@ export class DatabaseStorage implements IStorage {
     // This ensures that an open-ended rental conflicts with all future reservations
     const effectiveEndDate = endDate || '9999-12-31';
     
+    // Maintenance blocks should NOT cause conflicts since rentals continue during maintenance (monthly payment)
     let query = db
       .select()
       .from(reservations)
@@ -695,6 +696,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(reservations.vehicleId, vehicleId),
           sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`(
             (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
@@ -711,6 +713,7 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(reservations.vehicleId, vehicleId),
             sql`${reservations.status} != 'cancelled'`,
+            sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
             isNull(reservations.deletedAt),
             sql`(
               (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
@@ -1445,13 +1448,15 @@ export class DatabaseStorage implements IStorage {
 
     const allVehicles = await vehicleQuery;
 
-    // Get conflicting reservations in the date range (excluding soft-deleted)
+    // Get conflicting reservations in the date range (excluding soft-deleted and maintenance blocks)
+    // Maintenance blocks don't conflict since rentals continue during maintenance (monthly payment)
     const conflictingReservations = await db
       .select()
       .from(reservations)
       .where(
         and(
           not(eq(reservations.status, 'cancelled')),
+          not(eq(reservations.type, 'maintenance_block')), // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`,
           or(
