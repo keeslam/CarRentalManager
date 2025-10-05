@@ -1446,6 +1446,49 @@ Autolease Lam`
     }
   });
 
+  // Change customer portal password (for customer use)
+  app.post("/api/customer-portal/change-password", async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Missing current or new password" });
+      }
+
+      // Validate new password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters long" });
+      }
+
+      // Get customer user from session
+      if (!req.user || !req.user.customerUser) {
+        return res.status(401).json({ message: "Not authenticated as customer" });
+      }
+
+      const customerUserId = req.user.customerUser.id;
+      const customerUser = await storage.getCustomerUserById(customerUserId);
+
+      if (!customerUser) {
+        return res.status(404).json({ message: "Customer user not found" });
+      }
+
+      // Verify current password
+      const isValidPassword = await comparePasswords(currentPassword, customerUser.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedNewPassword = await hashPassword(newPassword);
+      await storage.updateCustomerUserPassword(customerUser.id, hashedNewPassword);
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing customer password:", error);
+      res.status(500).json({ message: "Failed to change password", error });
+    }
+  });
+
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
   app.get("/api/reservations/range", async (req, res) => {

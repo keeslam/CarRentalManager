@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Car, LogOut, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Car, LogOut, Calendar, Clock, AlertCircle, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { ExtensionRequestDialog } from "@/components/customer-portal/extension-request-dialog";
+import { ChangePasswordDialog } from "@/components/customer-portal/change-password-dialog";
 import type { Reservation } from "@shared/schema";
 
 interface CustomerUser {
@@ -28,6 +29,7 @@ export default function CustomerDashboard() {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedRental, setSelectedRental] = useState<Reservation | null>(null);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Fetch customer data
   const { data: customerUser, isLoading: isLoadingUser } = useQuery<CustomerUser>({
@@ -113,7 +115,18 @@ export default function CustomerDashboard() {
         {/* Account Information */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Account Information</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsChangePasswordOpen(true)}
+                data-testid="button-change-password"
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Change Password
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between">
@@ -225,6 +238,12 @@ export default function CustomerDashboard() {
           onOpenChange={(open: boolean) => !open && setSelectedRental(null)}
         />
       )}
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={isChangePasswordOpen}
+        onOpenChange={setIsChangePasswordOpen}
+      />
     </div>
   );
 }
