@@ -8,7 +8,9 @@ import {
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   backupSettings, type BackupSettings, type InsertBackupSettings,
-  appSettings, type AppSettings, type InsertAppSettings
+  appSettings, type AppSettings, type InsertAppSettings,
+  customerUsers, type CustomerUser, type InsertCustomerUser,
+  extensionRequests, type ExtensionRequest, type InsertExtensionRequest
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -1681,6 +1683,140 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAppSetting(id: number): Promise<boolean> {
     const result = await db.delete(appSettings).where(eq(appSettings.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Customer User methods (for portal authentication)
+  async getCustomerUser(id: number): Promise<CustomerUser | undefined> {
+    const [customerUser] = await db.select().from(customerUsers).where(eq(customerUsers.id, id));
+    return customerUser || undefined;
+  }
+
+  async getCustomerUserByEmail(email: string): Promise<CustomerUser | undefined> {
+    const [customerUser] = await db.select().from(customerUsers).where(eq(customerUsers.email, email));
+    return customerUser || undefined;
+  }
+
+  async getCustomerUserByCustomerId(customerId: number): Promise<CustomerUser | undefined> {
+    const [customerUser] = await db.select().from(customerUsers).where(eq(customerUsers.customerId, customerId));
+    return customerUser || undefined;
+  }
+
+  async createCustomerUser(insertCustomerUser: InsertCustomerUser): Promise<CustomerUser> {
+    const [customerUser] = await db.insert(customerUsers).values(insertCustomerUser).returning();
+    return customerUser;
+  }
+
+  async updateCustomerUser(id: number, customerUserData: Partial<InsertCustomerUser>): Promise<CustomerUser | undefined> {
+    const updateData = {
+      ...customerUserData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedCustomerUser] = await db
+      .update(customerUsers)
+      .set(updateData)
+      .where(eq(customerUsers.id, id))
+      .returning();
+      
+    return updatedCustomerUser || undefined;
+  }
+
+  async updateCustomerUserPassword(id: number, hashedPassword: string): Promise<boolean> {
+    const result = await db
+      .update(customerUsers)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(customerUsers.id, id));
+    return result.rowCount > 0;
+  }
+
+  async deleteCustomerUser(id: number): Promise<boolean> {
+    const result = await db.delete(customerUsers).where(eq(customerUsers.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Extension Request methods
+  async getAllExtensionRequests(): Promise<ExtensionRequest[]> {
+    return await db.select().from(extensionRequests).orderBy(desc(extensionRequests.createdAt));
+  }
+
+  async getExtensionRequest(id: number): Promise<ExtensionRequest | undefined> {
+    const [request] = await db.select().from(extensionRequests).where(eq(extensionRequests.id, id));
+    return request || undefined;
+  }
+
+  async getExtensionRequestsByCustomer(customerId: number): Promise<ExtensionRequest[]> {
+    return await db.select().from(extensionRequests)
+      .where(eq(extensionRequests.customerId, customerId))
+      .orderBy(desc(extensionRequests.createdAt));
+  }
+
+  async getExtensionRequestsByReservation(reservationId: number): Promise<ExtensionRequest[]> {
+    return await db.select().from(extensionRequests)
+      .where(eq(extensionRequests.reservationId, reservationId))
+      .orderBy(desc(extensionRequests.createdAt));
+  }
+
+  async getPendingExtensionRequests(): Promise<ExtensionRequest[]> {
+    return await db.select().from(extensionRequests)
+      .where(eq(extensionRequests.status, 'pending'))
+      .orderBy(desc(extensionRequests.createdAt));
+  }
+
+  async createExtensionRequest(insertRequest: InsertExtensionRequest): Promise<ExtensionRequest> {
+    const [request] = await db.insert(extensionRequests).values(insertRequest).returning();
+    return request;
+  }
+
+  async updateExtensionRequest(id: number, requestData: Partial<InsertExtensionRequest>): Promise<ExtensionRequest | undefined> {
+    const updateData = {
+      ...requestData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedRequest] = await db
+      .update(extensionRequests)
+      .set(updateData)
+      .where(eq(extensionRequests.id, id))
+      .returning();
+      
+    return updatedRequest || undefined;
+  }
+
+  async approveExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined> {
+    const [approvedRequest] = await db
+      .update(extensionRequests)
+      .set({
+        status: 'approved',
+        reviewedBy,
+        reviewedAt: new Date(),
+        staffNotes: staffNotes || null,
+        updatedAt: new Date()
+      })
+      .where(eq(extensionRequests.id, id))
+      .returning();
+      
+    return approvedRequest || undefined;
+  }
+
+  async rejectExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined> {
+    const [rejectedRequest] = await db
+      .update(extensionRequests)
+      .set({
+        status: 'rejected',
+        reviewedBy,
+        reviewedAt: new Date(),
+        staffNotes: staffNotes || null,
+        updatedAt: new Date()
+      })
+      .where(eq(extensionRequests.id, id))
+      .returning();
+      
+    return rejectedRequest || undefined;
+  }
+
+  async deleteExtensionRequest(id: number): Promise<boolean> {
+    const result = await db.delete(extensionRequests).where(eq(extensionRequests.id, id));
     return result.rowCount > 0;
   }
 }
