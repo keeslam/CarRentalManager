@@ -41,6 +41,7 @@ import { Loader2, Calendar, AlertTriangle, Wrench, Clock, Car, Filter } from "lu
 
 const scheduleMaintenanceSchema = z.object({
   vehicleId: z.string().min(1, "Please select a vehicle"),
+  customerId: z.string().optional(), // Optional customer
   maintenanceType: z.enum([
     "breakdown", 
     "tire_replacement", 
@@ -59,9 +60,9 @@ const scheduleMaintenanceSchema = z.object({
   ], {
     required_error: "Please select a maintenance type",
   }),
-  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date (YYYY-MM-DD)").min(1, "Scheduled date is required"),
-  estimatedDuration: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date (YYYY-MM-DD)").min(1, "Date when vehicle comes in is required"),
+  maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
+  maintenanceStatus: z.enum(["in", "out"]).default("in"),
   description: z.string().optional(),
   notes: z.string().optional(),
   needsSpareVehicle: z.boolean().default(false),
@@ -105,10 +106,11 @@ export function ScheduleMaintenanceDialog({
     resolver: zodResolver(scheduleMaintenanceSchema),
     defaultValues: {
       vehicleId: initialVehicleId?.toString() || "",
+      customerId: "",
       maintenanceType: initialMaintenanceType || "breakdown",
       scheduledDate: initialDate || new Date().toISOString().split('T')[0], // Use initialDate if provided, otherwise today
-      estimatedDuration: "",
-      priority: "high", // Default to high priority for unplanned maintenance
+      maintenanceDuration: 1, // Default 1 day
+      maintenanceStatus: "in",
       description: "",
       notes: "",
       needsSpareVehicle: false,
@@ -124,12 +126,18 @@ export function ScheduleMaintenanceDialog({
       const descriptionPart = noteParts[1]?.split('\n')[0]?.trim() || "";
       const notesPart = editingReservation.notes?.split('\n')[1]?.trim() || "";
       
+      // Calculate duration from existing dates if available
+      const duration = editingReservation.maintenanceDuration || 
+        (editingReservation.startDate && editingReservation.endDate ? 
+          Math.max(1, Math.ceil((new Date(editingReservation.endDate).getTime() - new Date(editingReservation.startDate).getTime()) / (1000 * 60 * 60 * 24))) : 1);
+      
       form.reset({
         vehicleId: editingReservation.vehicleId?.toString() || "",
+        customerId: editingReservation.customerId?.toString() || "",
         maintenanceType,
         scheduledDate: editingReservation.startDate || new Date().toISOString().split('T')[0],
-        estimatedDuration: "",
-        priority: "high",
+        maintenanceDuration: duration,
+        maintenanceStatus: editingReservation.maintenanceStatus || "in",
         description: descriptionPart,
         notes: notesPart,
         needsSpareVehicle: false,
@@ -138,10 +146,11 @@ export function ScheduleMaintenanceDialog({
       // Reset to default values for new maintenance
       form.reset({
         vehicleId: initialVehicleId?.toString() || "",
+        customerId: "",
         maintenanceType: initialMaintenanceType || "breakdown",
         scheduledDate: initialDate || new Date().toISOString().split('T')[0],
-        estimatedDuration: "",
-        priority: "high",
+        maintenanceDuration: 1,
+        maintenanceStatus: "in",
         description: "",
         notes: "",
         needsSpareVehicle: false,
@@ -165,6 +174,12 @@ export function ScheduleMaintenanceDialog({
         }]
       : ['/api/vehicles'],
     enabled: open, // Only fetch when dialog is open
+  });
+
+  // Fetch customers for optional selection
+  const { data: customers = [] } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    enabled: open,
   });
 
   // Fetch all reservations to filter out vehicles with maintenance (if filter is enabled)
@@ -210,21 +225,24 @@ export function ScheduleMaintenanceDialog({
         throw new Error('Please select a valid scheduled date');
       }
       
+      // Calculate end date from start date + duration
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setDate(endDateObj.getDate() + data.maintenanceDuration - 1); // -1 because start day counts as day 1
+      const endDate = endDateObj.toISOString().split('T')[0];
+      
       const payload = {
         vehicleId: parseInt(data.vehicleId),
-        customerId: null, // No customer for maintenance blocks
+        customerId: data.customerId ? parseInt(data.customerId) : null,
         startDate: startDate,
-        endDate: startDate, // Same day by default - always use startDate, never undefined
-        status: "confirmed",
+        endDate: endDate, // Calculated from duration
+        status: data.maintenanceStatus, // Use maintenance status ('in' or 'out')
         type: "maintenance_block",
         notes: `${data.maintenanceType}: ${data.description || ''}\n${data.notes || ''}`.trim(),
-        totalPrice: 0,
+        totalPrice: 0, // No price for maintenance
+        maintenanceDuration: data.maintenanceDuration,
+        maintenanceStatus: data.maintenanceStatus,
       };
-      
-      // Final safety check - never send undefined values
-      if (payload.endDate === 'undefined' || !payload.endDate) {
-        payload.endDate = payload.startDate;
-      }
       
       console.log('Sending payload:', payload);
       
@@ -747,6 +765,36 @@ export function ScheduleMaintenanceDialog({
               )}
             />
 
+            {/* Optional Customer Selection */}
+            <FormField
+              control={form.control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-customer">
+                        <SelectValue placeholder="Select customer (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="">None</SelectItem>
+                      {customers.map((customer: any) => (
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Who is bringing the vehicle in for maintenance?
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="maintenanceType"
@@ -917,15 +965,20 @@ export function ScheduleMaintenanceDialog({
 
               <FormField
                 control={form.control}
-                name="estimatedDuration"
+                name="maintenanceDuration"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated Duration</FormLabel>
+                    <FormLabel>Duration (days)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., 2 hours, 1 day"
+                        type="number"
+                        min="1"
+                        max="90"
+                        placeholder="Number of days"
                         {...field}
-                        data-testid="input-estimated-duration"
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        value={field.value}
+                        data-testid="input-maintenance-duration"
                       />
                     </FormControl>
                     <FormDescription>
@@ -939,23 +992,24 @@ export function ScheduleMaintenanceDialog({
 
             <FormField
               control={form.control}
-              name="priority"
+              name="maintenanceStatus"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Priority</FormLabel>
+                  <FormLabel>Status</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger data-testid="select-priority">
+                      <SelectTrigger data-testid="select-maintenance-status">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="in">In (vehicle is in maintenance)</SelectItem>
+                      <SelectItem value="out">Out (maintenance completed)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Is the vehicle currently in maintenance or has it been completed?
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
