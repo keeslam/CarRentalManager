@@ -107,7 +107,7 @@ export function MaintenanceEditDialog({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
       vehicleId: reservation?.vehicleId || undefined,
-      customerId: reservation?.customerId?.toString() || "",
+      customerId: reservation?.customerId?.toString() || "none",
       startDate: reservation?.startDate || "",
       maintenanceDuration: reservation?.maintenanceDuration || 
         (reservation?.startDate && reservation?.endDate ? 
@@ -170,7 +170,7 @@ export function MaintenanceEditDialog({
       
       form.reset({
         vehicleId: reservation.vehicleId || undefined,
-        customerId: reservation.customerId?.toString() || "",
+        customerId: reservation.customerId?.toString() || "none",
         startDate: reservation.startDate,
         maintenanceDuration: duration,
         maintenanceStatus: (reservation.maintenanceStatus === "in" || reservation.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
@@ -194,7 +194,7 @@ export function MaintenanceEditDialog({
           maintenanceId: reservation.id, // Reference existing maintenance to update
           maintenanceData: {
             vehicleId: data.vehicleId,
-            customerId: data.customerId ? parseInt(data.customerId) : null,
+            customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
             startDate: data.startDate,
             endDate: endDate,
             status: data.maintenanceStatus,
@@ -212,7 +212,7 @@ export function MaintenanceEditDialog({
         // No spare assignments, just update the maintenance reservation directly
         const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
           vehicleId: data.vehicleId,
-          customerId: data.customerId ? parseInt(data.customerId) : null,
+          customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
           startDate: data.startDate,
           endDate: endDate,
           status: data.maintenanceStatus,
@@ -377,7 +377,7 @@ export function MaintenanceEditDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-60">
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None (no customer)</SelectItem>
                         {customers.map((customer: any) => (
                           <SelectItem key={customer.id} value={customer.id.toString()}>
                             {customer.name}

@@ -133,7 +133,7 @@ export function ScheduleMaintenanceDialog({
       
       form.reset({
         vehicleId: editingReservation.vehicleId?.toString() || "",
-        customerId: editingReservation.customerId?.toString() || "",
+        customerId: editingReservation.customerId?.toString() || "none",
         maintenanceType,
         scheduledDate: editingReservation.startDate || new Date().toISOString().split('T')[0],
         maintenanceDuration: duration,
@@ -233,7 +233,7 @@ export function ScheduleMaintenanceDialog({
       
       const payload = {
         vehicleId: parseInt(data.vehicleId),
-        customerId: data.customerId ? parseInt(data.customerId) : null,
+        customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
         startDate: startDate,
         endDate: endDate, // Calculated from duration
         status: data.maintenanceStatus, // Use maintenance status ('in' or 'out')
@@ -779,7 +779,7 @@ export function ScheduleMaintenanceDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-60">
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None (no customer)</SelectItem>
                       {customers.map((customer: any) => (
                         <SelectItem key={customer.id} value={customer.id.toString()}>
                           {customer.name}
