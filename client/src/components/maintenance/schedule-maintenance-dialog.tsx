@@ -188,6 +188,54 @@ export function ScheduleMaintenanceDialog({
     enabled: open && excludeMaintenanceVehicles, // Only fetch when needed
   });
 
+  // Fetch all reservations to check for active rentals (for auto-filling customer)
+  const { data: activeReservations = [] } = useQuery<any[]>({
+    queryKey: ['/api/reservations'],
+    enabled: open && !editingReservation, // Only for new maintenance, not editing
+  });
+
+  // Watch vehicle and date for auto-filling customer
+  const watchedVehicleId = form.watch('vehicleId');
+  const watchedScheduledDate = form.watch('scheduledDate');
+
+  // Auto-fill customer when there's an active rental
+  useEffect(() => {
+    // Helper to check if a date falls within a range (supports open-ended rentals)
+    const dateInRange = (checkDate: string, startDate: string, endDate?: string | null) => {
+      const check = new Date(checkDate);
+      const start = new Date(startDate);
+      // For open-ended rentals (endDate is null/undefined), treat as far-future date
+      const end = endDate ? new Date(endDate) : new Date('2099-12-31');
+      
+      check.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      
+      return check >= start && check <= end;
+    };
+    
+    // Only auto-fill for new maintenance (not editing) and when both vehicle and date are selected
+    if (!editingReservation && watchedVehicleId && watchedScheduledDate && activeReservations.length > 0) {
+      const vehicleIdNum = parseInt(watchedVehicleId);
+      
+      // Find active rental for this vehicle on this date
+      const activeRental = activeReservations.find(reservation =>
+        reservation.vehicleId === vehicleIdNum &&
+        reservation.type === 'rental' &&
+        dateInRange(watchedScheduledDate, reservation.startDate, reservation.endDate)
+      );
+      
+      // If found, auto-fill the customer
+      if (activeRental && activeRental.customerId) {
+        const currentCustomerId = form.getValues('customerId');
+        // Only update if not already set (to avoid overriding user's manual selection)
+        if (!currentCustomerId || currentCustomerId === 'none' || currentCustomerId === '') {
+          form.setValue('customerId', activeRental.customerId.toString());
+        }
+      }
+    }
+  }, [watchedVehicleId, watchedScheduledDate, activeReservations, editingReservation, form]);
+
   // Helper function to check if a date falls within a range
   const dateInRange = (checkDate: string, startDate: string, endDate?: string) => {
     const check = new Date(checkDate);
