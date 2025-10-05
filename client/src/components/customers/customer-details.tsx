@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
+import { PortalLoginDialog } from "./portal-login-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation } from "@shared/schema";
@@ -328,7 +329,7 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
               </div>
               
               {/* Additional Information */}
-              <div>
+              <div className="border-b pb-4 mb-4">
                 <h3 className="text-lg font-medium mb-3">Additional Information</h3>
                 {customer.notes && (
                   <div>
@@ -336,6 +337,24 @@ export function CustomerDetails({ customerId }: CustomerDetailsProps) {
                     <p className="text-base">{customer.notes}</p>
                   </div>
                 )}
+              </div>
+              
+              {/* Portal Login Management */}
+              <div className="border-b pb-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium">Customer Portal Access</h3>
+                  <PortalLoginDialog customerId={customerId} customerEmail={customer.email || ""}>
+                    <Button variant="outline" size="sm" data-testid="button-manage-portal-login">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                      </svg>
+                      Manage Portal Login
+                    </Button>
+                  </PortalLoginDialog>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Give this customer access to the customer portal where they can view their rentals and request extensions.
+                </p>
               </div>
               
               {/* Tracking Information */}
