@@ -22,13 +22,12 @@ interface PortalLoginStatus {
 interface PasswordResponse {
   message: string;
   email: string;
-  password: string;
   customerId?: number;
 }
 
 export function PortalLoginDialog({ customerId, customerEmail, children }: PortalLoginDialogProps) {
   const [open, setOpen] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const { toast } = useToast();
 
   // Query portal login status
@@ -48,11 +47,11 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
       return await response.json() as PasswordResponse;
     },
     onSuccess: (data) => {
-      setGeneratedPassword(data.password);
+      setEmailSent(true);
       queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/portal-login`] });
       toast({
         title: "Portal login created",
-        description: "Customer can now access the portal with the generated password.",
+        description: data.message || "Login credentials have been sent to the customer's email.",
       });
     },
     onError: (error: Error) => {
@@ -75,10 +74,10 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
       return await response.json() as PasswordResponse;
     },
     onSuccess: (data) => {
-      setGeneratedPassword(data.password);
+      setEmailSent(true);
       toast({
         title: "Password reset",
-        description: "A new password has been generated for the customer.",
+        description: data.message || "New login credentials have been sent to the customer's email.",
       });
     },
     onError: (error: Error) => {
@@ -90,37 +89,13 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
     },
   });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Password copied to clipboard",
-    });
-  };
-
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Clear generated password when closing dialog for security
-      setGeneratedPassword(null);
+      // Clear email sent status when closing dialog
+      setEmailSent(false);
     }
   };
-
-  // Security: Clear password from memory after 2 minutes
-  useEffect(() => {
-    if (generatedPassword) {
-      const timer = setTimeout(() => {
-        setGeneratedPassword(null);
-        toast({
-          title: "Password cleared",
-          description: "For security, the password has been cleared from the screen",
-          variant: "default",
-        });
-      }, 120000); // 2 minutes
-      
-      return () => clearTimeout(timer);
-    }
-  }, [generatedPassword, toast]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -169,26 +144,18 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
               )}
             </div>
 
-            {/* Generated Password Alert */}
-            {generatedPassword && (
-              <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <AlertDescription className="space-y-3">
-                  <p className="text-sm font-medium">Password generated successfully!</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded text-lg font-mono border">
-                      {generatedPassword}
-                    </code>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(generatedPassword)}
-                      data-testid="button-copy-password"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    ⚠️ This password will only be shown once. Please save it or communicate it to the customer immediately.
+            {/* Email Sent Confirmation */}
+            {emailSent && (
+              <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <AlertDescription className="space-y-2">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    ✅ Email sent successfully!
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Login credentials have been sent to <strong>{customerEmail}</strong>
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    The customer will receive an email with their login details and can change their password after logging in.
                   </p>
                 </AlertDescription>
               </Alert>

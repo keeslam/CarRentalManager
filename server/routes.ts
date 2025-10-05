@@ -439,11 +439,26 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Update current user's password
   app.post("/api/users/change-password", requireAuth, async (req, res) => {
     try {
-      const { currentPassword, newPassword } = req.body;
-      
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current password and new password are required" });
+      // Validate request body with Zod
+      const changePasswordSchema = z.object({
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z.string()
+          .min(8, "New password must be at least 8 characters long")
+          .max(100, "New password is too long")
+          .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+          .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+          .regex(/[0-9]/, "Password must contain at least one number"),
+      });
+
+      const validationResult = changePasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.issues.map(i => i.message) 
+        });
       }
+
+      const { currentPassword, newPassword } = validationResult.data;
       
       // Get current user
       const user = await storage.getUser(req.user.id);
@@ -1256,14 +1271,28 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // ==================== CUSTOMER PORTAL LOGIN ROUTES ====================
-  // Helper function to generate random password
+  // Helper function to generate random password that meets strong password requirements
   function generateRandomPassword(length: number = 8): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    if (length < 8) length = 8; // Ensure minimum length
+    
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const allChars = uppercase + lowercase + numbers;
+    
+    // Ensure at least one of each required character type
     let password = '';
-    for (let i = 0; i < length; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    
+    // Fill the rest with random characters
+    for (let i = 3; i < length; i++) {
+      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
     }
-    return password;
+    
+    // Shuffle the password to avoid predictable patterns (uppercase first, etc.)
+    return password.split('').sort(() => Math.random() - 0.5).join('');
   }
 
   // Get customer portal login status
@@ -1360,9 +1389,8 @@ Autolease Lam`
       });
 
       res.status(201).json({
-        message: "Portal login created successfully and password sent to customer's email",
+        message: "Portal login created successfully. Login credentials have been sent to the customer's email.",
         email: customerUser.email,
-        password: password, // Return plain password once for staff to see confirmation
         customerId: customerUser.customerId,
       });
     } catch (error) {
@@ -1436,9 +1464,8 @@ Autolease Lam`
       });
 
       res.json({
-        message: "Password reset successfully and sent to customer's email",
+        message: "Password reset successfully. New login credentials have been sent to the customer's email.",
         email: customerUser.email,
-        password: password, // Return plain password once for staff to see confirmation
       });
     } catch (error) {
       console.error("Error resetting portal password:", error);
@@ -1449,16 +1476,26 @@ Autolease Lam`
   // Change customer portal password (for customer use)
   app.post("/api/customer-portal/change-password", async (req, res) => {
     try {
-      const { currentPassword, newPassword } = req.body;
+      // Validate request body with Zod
+      const changePasswordSchema = z.object({
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z.string()
+          .min(8, "New password must be at least 8 characters long")
+          .max(100, "New password is too long")
+          .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+          .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+          .regex(/[0-9]/, "Password must contain at least one number"),
+      });
 
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Missing current or new password" });
+      const validationResult = changePasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.issues.map(i => i.message) 
+        });
       }
 
-      // Validate new password strength
-      if (newPassword.length < 8) {
-        return res.status(400).json({ message: "New password must be at least 8 characters long" });
-      }
+      const { currentPassword, newPassword } = validationResult.data;
 
       // Get customer user from session
       if (!req.user || !req.user.customerUser) {
