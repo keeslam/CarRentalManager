@@ -96,7 +96,7 @@ export function ScheduleMaintenanceDialog({
   const [showSpareDialog, setShowSpareDialog] = useState(false);
   const [conflictingReservations, setConflictingReservations] = useState<any[]>([]);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
-  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd'}>({});
+  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd' | 'customer_arranging'}>({});
   
   // State for vehicle filtering
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
@@ -360,16 +360,22 @@ export function ScheduleMaintenanceDialog({
     mutationFn: async (data: { 
       maintenanceData: any; 
       conflictingReservations: any[]; 
-      spareVehicleAssignments: {[reservationId: number]: number | 'tbd'} 
+      spareVehicleAssignments: {[reservationId: number]: number | 'tbd' | 'customer_arranging'} 
     }) => {
-      // Separate TBD and specific assignments
+      // Separate into three categories: TBD, specific assignments, and customer arranging
       const tbdAssignments: any[] = [];
       const specificAssignments: any[] = [];
+      const customerArrangingAssignments: any[] = [];
 
       Object.entries(data.spareVehicleAssignments).forEach(([reservationId, assignment]) => {
         const reservation = data.conflictingReservations.find(r => r.id.toString() === reservationId);
         if (assignment === 'tbd') {
           tbdAssignments.push({
+            reservationId: parseInt(reservationId),
+            reservation
+          });
+        } else if (assignment === 'customer_arranging') {
+          customerArrangingAssignments.push({
             reservationId: parseInt(reservationId),
             reservation
           });
@@ -644,7 +650,8 @@ export function ScheduleMaintenanceDialog({
     // Check if specific vehicle assignments are valid (not just 'specific' radio selected)
     const invalidSpecificAssignments = conflictingReservations.filter(r => {
       const assignment = spareVehicleAssignments[r.id];
-      return assignment && assignment !== 'tbd' && (!assignment || isNaN(Number(assignment)));
+      // Valid assignments: TBD, customer_arranging, or a numeric vehicle ID
+      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && (!assignment || isNaN(Number(assignment)));
     });
 
     if (invalidSpecificAssignments.length > 0) {
@@ -672,10 +679,10 @@ export function ScheduleMaintenanceDialog({
     }
   };
 
-  const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string) => {
+  const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string | number) => {
     setSpareVehicleAssignments(prev => ({
       ...prev,
-      [reservationId]: spareVehicleId === 'tbd' ? 'tbd' : parseInt(spareVehicleId)
+      [reservationId]: spareVehicleId === 'tbd' ? 'tbd' : spareVehicleId === 'customer_arranging' ? 'customer_arranging' : parseInt(spareVehicleId as string)
     }));
   };
 
@@ -1139,9 +1146,54 @@ export function ScheduleMaintenanceDialog({
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Select Spare Vehicle:</label>
+                  <label className="text-sm font-medium">Transport Solution:</label>
                   <div className="mt-1 space-y-2">
-                    {/* TBD Option */}
+                    {/* Assign Spare - Now */}
+                    <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        id={`spare-now-${reservation.id}`}
+                        name={`spare-option-${reservation.id}`}
+                        value="spare-now"
+                        checked={Boolean(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd' && spareVehicleAssignments[reservation.id] !== 'customer_arranging')}
+                        onChange={() => {
+                          // Clear assignment to show dropdown
+                          if (availableVehicles.length > 0) {
+                            setSpareVehicleAssignments(prev => ({
+                              ...prev,
+                              [reservation.id]: availableVehicles[0].id
+                            }));
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600"
+                        disabled={availableVehicles.length === 0}
+                      />
+                      <div className="flex-1">
+                        <label htmlFor={`spare-now-${reservation.id}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <Car className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div className="font-medium text-blue-700">Assign Spare Vehicle Now</div>
+                            <div className="text-xs text-blue-600">Choose from available vehicles</div>
+                          </div>
+                        </label>
+                        {availableVehicles.length === 0 && (
+                          <div className="text-xs text-gray-500 mt-1">No vehicles available for this date</div>
+                        )}
+                        {(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd' && spareVehicleAssignments[reservation.id] !== 'customer_arranging') && (
+                          <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
+                            <VehicleSelector
+                              vehicles={availableVehicles}
+                              value={spareVehicleAssignments[reservation.id]?.toString() || ""}
+                              onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                              placeholder="Choose a spare vehicle..."
+                              disabled={availableVehicles.length === 0}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Assign Spare - Later (TBD) */}
                     <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer">
                       <input
                         type="radio"
@@ -1155,52 +1207,30 @@ export function ScheduleMaintenanceDialog({
                       <label htmlFor={`tbd-${reservation.id}`} className="flex items-center gap-2 text-sm cursor-pointer flex-1">
                         <Clock className="w-4 h-4 text-orange-500" />
                         <div>
-                          <div className="font-medium text-orange-700">TBD (To Be Determined)</div>
-                          <div className="text-xs text-orange-600">Assign spare vehicle later</div>
+                          <div className="font-medium text-orange-700">Assign Spare Later (TBD)</div>
+                          <div className="text-xs text-orange-600">Will choose spare vehicle later</div>
                         </div>
                       </label>
                     </div>
                     
-                    {/* Specific Vehicle Option */}
+                    {/* Customer Arranging Transport */}
                     <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer">
                       <input
                         type="radio"
-                        id={`specific-${reservation.id}`}
+                        id={`customer-arranging-${reservation.id}`}
                         name={`spare-option-${reservation.id}`}
-                        value="specific"
-                        checked={Boolean(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd')}
-                        onChange={() => {
-                          // If switching to specific vehicle but no vehicle selected, clear the assignment
-                          if (spareVehicleAssignments[reservation.id] === 'tbd') {
-                            setSpareVehicleAssignments(prev => {
-                              const updated = { ...prev };
-                              delete updated[reservation.id];
-                              return updated;
-                            });
-                          }
-                        }}
+                        value="customer_arranging"
+                        checked={spareVehicleAssignments[reservation.id] === 'customer_arranging'}
+                        onChange={() => handleSpareVehicleChange(reservation.id, 'customer_arranging')}
                         className="h-4 w-4 text-blue-600"
-                        disabled={availableVehicles.length === 0}
                       />
-                      <div className="flex-1">
-                        <label htmlFor={`specific-${reservation.id}`} className="text-sm font-medium cursor-pointer">
-                          Assign specific vehicle now
-                        </label>
-                        {availableVehicles.length === 0 && (
-                          <div className="text-xs text-gray-500 mt-1">No vehicles available for this date</div>
-                        )}
-                        {(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd') && (
-                          <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
-                            <VehicleSelector
-                              vehicles={availableVehicles}
-                              value={spareVehicleAssignments[reservation.id]?.toString() || ""}
-                              onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
-                              placeholder="Choose a spare vehicle..."
-                              disabled={availableVehicles.length === 0}
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <label htmlFor={`customer-arranging-${reservation.id}`} className="flex items-center gap-2 text-sm cursor-pointer flex-1">
+                        <AlertTriangle className="w-4 h-4 text-green-500" />
+                        <div>
+                          <div className="font-medium text-green-700">Customer Arranging Transport</div>
+                          <div className="text-xs text-green-600">Customer will arrange their own transportation</div>
+                        </div>
+                      </label>
                     </div>
                   </div>
                 </div>
