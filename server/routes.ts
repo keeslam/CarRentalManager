@@ -29,7 +29,7 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
-import { clearEmailConfigCache } from "./utils/email-service";
+import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -1321,10 +1321,48 @@ export async function registerRoutes(app: Express): Promise<void> {
         password: hashedPassword,
       });
 
+      // Send password to customer via email
+      const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+      await sendEmail({
+        to: customer.email,
+        toName: customer.name,
+        subject: "Your Customer Portal Access",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Welcome to the Customer Portal</h2>
+            <p>Dear ${customer.name},</p>
+            <p>Your customer portal account has been created. You can now view your rentals and request extensions online.</p>
+            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
+              <p style="margin: 8px 0 0 0;"><strong>Temporary Password:</strong> <code style="background-color: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+            </div>
+            <p><strong>Portal Access:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+            <p style="color: #dc2626;"><strong>Security Note:</strong> Please change your password after your first login for security.</p>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>Autolease Lam</p>
+          </div>
+        `,
+        text: `Dear ${customer.name},
+
+Your customer portal account has been created. You can now view your rentals and request extensions online.
+
+Login Email: ${customer.email}
+Temporary Password: ${password}
+
+Portal Access: ${portalUrl}
+
+Security Note: Please change your password after your first login for security.
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Autolease Lam`
+      });
+
       res.status(201).json({
-        message: "Portal login created successfully",
+        message: "Portal login created successfully and password sent to customer's email",
         email: customerUser.email,
-        password: password, // Return plain password once for staff to communicate to customer
+        password: password, // Return plain password once for staff to see confirmation
         customerId: customerUser.customerId,
       });
     } catch (error) {
@@ -1353,10 +1391,54 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Update password
       await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
 
+      // Get customer details for email
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Send new password to customer via email
+      const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+      await sendEmail({
+        to: customer.email,
+        toName: customer.name,
+        subject: "Your Customer Portal Password Has Been Reset",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Password Reset Confirmation</h2>
+            <p>Dear ${customer.name},</p>
+            <p>Your customer portal password has been reset as requested.</p>
+            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
+              <p style="margin: 8px 0 0 0;"><strong>New Password:</strong> <code style="background-color: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+            </div>
+            <p><strong>Portal Access:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+            <p style="color: #dc2626;"><strong>Security Note:</strong> Please change your password after logging in for security.</p>
+            <p>If you did not request this password reset, please contact us immediately.</p>
+            <p>Best regards,<br>Autolease Lam</p>
+          </div>
+        `,
+        text: `Dear ${customer.name},
+
+Your customer portal password has been reset as requested.
+
+Login Email: ${customer.email}
+New Password: ${password}
+
+Portal Access: ${portalUrl}
+
+Security Note: Please change your password after logging in for security.
+
+If you did not request this password reset, please contact us immediately.
+
+Best regards,
+Autolease Lam`
+      });
+
       res.json({
-        message: "Password reset successfully",
+        message: "Password reset successfully and sent to customer's email",
         email: customerUser.email,
-        password: password, // Return plain password once for staff to communicate to customer
+        password: password, // Return plain password once for staff to see confirmation
       });
     } catch (error) {
       console.error("Error resetting portal password:", error);
