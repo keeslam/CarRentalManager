@@ -45,8 +45,10 @@ const maintenanceEditSchema = z.object({
     z.number().min(1, "Please select a vehicle"),
     z.string().min(1, "Please select a vehicle").transform(val => parseInt(val)),
   ]),
-  startDate: z.string().min(1, "Please select a date"),
-  endDate: z.string().min(1, "Please select an end date"),
+  customerId: z.string().optional(), // Optional customer
+  startDate: z.string().min(1, "Date when vehicle comes in is required"),
+  maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
+  maintenanceStatus: z.enum(["in", "out"]).default("in"),
   notes: z.string().optional(),
 });
 
@@ -80,6 +82,11 @@ export function MaintenanceEditDialog({
     queryKey: ["/api/vehicles"],
   });
 
+  // Fetch customers for optional selection
+  const { data: customers = [] } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    enabled: open,
+  });
 
   // Parse the maintenance notes to extract structured data
   const parseMaintenanceNotes = (notes: string) => {
@@ -100,8 +107,12 @@ export function MaintenanceEditDialog({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
       vehicleId: reservation?.vehicleId || undefined,
+      customerId: reservation?.customerId?.toString() || "",
       startDate: reservation?.startDate || "",
-      endDate: reservation?.endDate || "",
+      maintenanceDuration: reservation?.maintenanceDuration || 
+        (reservation?.startDate && reservation?.endDate ? 
+          Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1),
+      maintenanceStatus: (reservation?.maintenanceStatus === "in" || reservation?.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
       notes: reservation?.notes || "",
     },
   });
@@ -109,12 +120,24 @@ export function MaintenanceEditDialog({
   // Watch form values for real-time overlap computation  
   const formVehicleId = form.watch("vehicleId");
   const formStartDate = form.watch("startDate");
-  const formEndDate = form.watch("endDate");
+  const formDuration = form.watch("maintenanceDuration");
+  
+  // Calculate end date from start date + duration
+  const calculateEndDate = (startDate: string, duration: number) => {
+    if (!startDate || !duration) return startDate;
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + duration - 1); // -1 because start day counts as day 1
+    return end.toISOString().split('T')[0];
+  };
+  
+  const formEndDate = formStartDate && formDuration ? calculateEndDate(formStartDate, formDuration) : "";
   
   // Use form values for overlap computation, fall back to reservation values
   const currentVehicleId = formVehicleId || reservation?.vehicleId;
   const currentStartDate = formStartDate || reservation?.startDate;
-  const currentEndDate = formEndDate || reservation?.endDate;
+  const currentEndDate = formEndDate || (reservation?.startDate && reservation?.maintenanceDuration ? 
+    calculateEndDate(reservation.startDate, reservation.maintenanceDuration) : reservation?.endDate) || "";
 
   // Fetch available spare vehicles for the maintenance period
   const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
@@ -141,10 +164,16 @@ export function MaintenanceEditDialog({
   useEffect(() => {
     if (reservation && open) {
       const parsed = parseMaintenanceNotes(reservation.notes || '');
+      const duration = reservation.maintenanceDuration || 
+        (reservation.startDate && reservation.endDate ? 
+          Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1);
+      
       form.reset({
         vehicleId: reservation.vehicleId || undefined,
+        customerId: reservation.customerId?.toString() || "",
         startDate: reservation.startDate,
-        endDate: reservation.endDate || "",
+        maintenanceDuration: duration,
+        maintenanceStatus: (reservation.maintenanceStatus === "in" || reservation.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
         notes: reservation.notes || "",
       });
     }
@@ -155,6 +184,9 @@ export function MaintenanceEditDialog({
     mutationFn: async (data: MaintenanceEditFormType) => {
       if (!reservation) throw new Error("No reservation to update");
       
+      // Calculate end date from start date + duration
+      const endDate = calculateEndDate(data.startDate, data.maintenanceDuration);
+      
       // If there are spare vehicle assignments, use the maintenance-with-spare endpoint
       if (spareVehicleAssignments.length > 0) {
         // Use maintenance-with-spare endpoint to update existing maintenance with spare assignments
@@ -162,13 +194,15 @@ export function MaintenanceEditDialog({
           maintenanceId: reservation.id, // Reference existing maintenance to update
           maintenanceData: {
             vehicleId: data.vehicleId,
-            customerId: null,
+            customerId: data.customerId ? parseInt(data.customerId) : null,
             startDate: data.startDate,
-            endDate: data.endDate,
-            status: "confirmed",
+            endDate: endDate,
+            status: data.maintenanceStatus,
             type: "maintenance_block",
             notes: data.notes || "",
             totalPrice: 0,
+            maintenanceDuration: data.maintenanceDuration,
+            maintenanceStatus: data.maintenanceStatus,
           },
           conflictingReservations: overlappingRentals.map(rental => rental.reservation.id), // Send all overlapping rentals (including open-ended)
           spareVehicleAssignments: spareVehicleAssignments,
@@ -178,13 +212,15 @@ export function MaintenanceEditDialog({
         // No spare assignments, just update the maintenance reservation directly
         const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
           vehicleId: data.vehicleId,
-          customerId: null,
+          customerId: data.customerId ? parseInt(data.customerId) : null,
           startDate: data.startDate,
-          endDate: data.endDate,
-          status: "confirmed",
+          endDate: endDate,
+          status: data.maintenanceStatus,
           type: "maintenance_block",
           notes: data.notes || "",
           totalPrice: 0,
+          maintenanceDuration: data.maintenanceDuration,
+          maintenanceStatus: data.maintenanceStatus,
         });
         return await response.json();
       }
@@ -327,20 +363,84 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* End Date */}
+              {/* Customer (Optional) */}
               <FormField
                 control={form.control}
-                name="endDate"
+                name="customerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End Date</FormLabel>
+                    <FormLabel>Customer (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-customer">
+                          <SelectValue placeholder="Select customer (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-60">
+                        <SelectItem value="">None</SelectItem>
+                        {customers.map((customer: any) => (
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Who is bringing the vehicle in for maintenance?
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Duration (days) */}
+              <FormField
+                control={form.control}
+                name="maintenanceDuration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (days)</FormLabel>
                     <FormControl>
                       <Input
-                        type="date"
+                        type="number"
+                        min="1"
+                        max="90"
+                        placeholder="Number of days"
                         {...field}
-                        data-testid="input-end-date"
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        value={field.value}
+                        data-testid="input-maintenance-duration"
                       />
                     </FormControl>
+                    <FormDescription>
+                      How long will the maintenance take?
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Status */}
+              <FormField
+                control={form.control}
+                name="maintenanceStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-maintenance-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="in">In (vehicle is in maintenance)</SelectItem>
+                        <SelectItem value="out">Out (maintenance completed)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Is the vehicle currently in maintenance or has it been completed?
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
