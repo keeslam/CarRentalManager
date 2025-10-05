@@ -18,6 +18,18 @@ declare global {
   }
 }
 
+// Extend express-session to include customerUser
+declare module 'express-session' {
+  interface SessionData {
+    customerUser?: {
+      id: number;
+      customerId: number;
+      email: string;
+      customerName: string;
+    };
+  }
+}
+
 const scryptAsync = promisify(scrypt);
 
 export async function hashPassword(password: string) {
@@ -221,6 +233,109 @@ export function setupAuth(app: Express) {
     res.json(userWithoutPassword);
   });
 
+  // Customer Portal Authentication Routes
+  app.post("/api/customer/login", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Find customer user by email
+      const customerUser = await storage.getCustomerUserByEmail(email);
+      if (!customerUser) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if portal is enabled
+      if (!customerUser.portalEnabled) {
+        return res.status(403).json({ message: "Portal access is disabled for this account" });
+      }
+      
+      // Verify password
+      const passwordMatches = await comparePasswords(password, customerUser.password);
+      if (!passwordMatches) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Update last login
+      await storage.updateCustomerUser(customerUser.id, { 
+        lastLogin: new Date() 
+      });
+      
+      // Get customer details
+      const customer = await storage.getCustomer(customerUser.customerId);
+      if (!customer) {
+        return res.status(500).json({ message: "Customer profile not found" });
+      }
+      
+      // Store customer session data
+      req.session.customerUser = {
+        id: customerUser.id,
+        customerId: customerUser.customerId,
+        email: customerUser.email,
+        customerName: customer.name
+      };
+      
+      // Return customer user data without password
+      const { password: _, ...customerUserWithoutPassword } = customerUser;
+      res.status(200).json({
+        ...customerUserWithoutPassword,
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email
+        }
+      });
+    } catch (error) {
+      console.error("Customer login error:", error);
+      next(error);
+    }
+  });
+
+  app.post("/api/customer/logout", (req: Request, res: Response) => {
+    if (req.session.customerUser) {
+      delete req.session.customerUser;
+    }
+    res.status(200).json({ message: "Logged out successfully" });
+  });
+
+  app.get("/api/customer/me", async (req: Request, res: Response) => {
+    const customerUser = req.session.customerUser;
+    
+    if (!customerUser) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      // Get fresh customer data
+      const customer = await storage.getCustomer(customerUser.customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
+      res.json({
+        id: customerUser.id,
+        customerId: customerUser.customerId,
+        email: customerUser.email,
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Customer authentication middleware
+  const requireCustomerAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.customerUser) {
+      return res.status(401).json({ message: "Customer authentication required" });
+    }
+    next();
+  };
+
   // Return the auth middleware
-  return { requireAuth };
+  return { requireAuth, requireCustomerAuth };
 }
