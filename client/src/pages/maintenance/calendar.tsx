@@ -1098,6 +1098,77 @@ export default function MaintenanceCalendar() {
                             <>
                               <Button 
                                 size="sm" 
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch('/api/reservations');
+                                    const allReservations = await response.json();
+                                    const actualReservation = allReservations.find((r: any) => 
+                                      r.vehicleId === event.vehicleId && 
+                                      r.type === 'maintenance_block' &&
+                                      r.startDate === event.date
+                                    );
+                                    
+                                    if (actualReservation) {
+                                      // Determine maintenance type from notes or event description
+                                      const notes = actualReservation.notes?.toLowerCase() || '';
+                                      const isApk = notes.includes('apk');
+                                      const isWarranty = notes.includes('warranty');
+                                      
+                                      // Calculate new date (1 year from today for APK, 2 years for warranty)
+                                      const today = new Date();
+                                      const updates: any = {
+                                        maintenanceStatus: 'ok',
+                                      };
+                                      
+                                      if (isApk) {
+                                        const newApkDate = new Date(today);
+                                        newApkDate.setFullYear(newApkDate.getFullYear() + 1);
+                                        updates.apkDate = format(newApkDate, 'yyyy-MM-dd');
+                                      } else if (isWarranty) {
+                                        const newWarrantyDate = new Date(today);
+                                        newWarrantyDate.setFullYear(newWarrantyDate.getFullYear() + 2);
+                                        updates.warrantyEndDate = format(newWarrantyDate, 'yyyy-MM-dd');
+                                      }
+                                      
+                                      // Update vehicle maintenance tracking
+                                      await apiRequest('PATCH', `/api/vehicles/${event.vehicleId}`, updates);
+                                      
+                                      // Delete the maintenance reservation
+                                      await apiRequest('DELETE', `/api/reservations/${actualReservation.id}`);
+                                      
+                                      // Refresh calendar
+                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+                                      
+                                      closeDayDialog();
+                                      
+                                      toast({
+                                        title: "Maintenance Completed",
+                                        description: `Vehicle maintenance tracking has been updated${isApk ? ' (APK renewed for 1 year)' : isWarranty ? ' (Warranty extended for 2 years)' : ''}.`,
+                                      });
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to complete maintenance:', error);
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to complete maintenance. Please try again.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                data-testid={`button-complete-${event.id}`}
+                              >
+                                <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Complete
+                              </Button>
+                              <Button 
+                                size="sm" 
                                 variant="outline"
                                 onClick={async () => {
                                   try {
