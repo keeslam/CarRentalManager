@@ -1315,25 +1315,6 @@ export default function MaintenanceCalendar() {
                               </Button>
                             </>
                           )}
-                          {(event.type.includes('apk') || event.type.includes('warranty')) && (
-                            <Button 
-                              size="sm" 
-                              variant="default"
-                              onClick={() => {
-                                openScheduleFromEvent({
-                                  date: event.date,
-                                  startDate: event.startDate,
-                                  vehicleId: event.vehicleId,
-                                  type: event.type
-                                });
-                                closeDayDialog();
-                              }}
-                              data-testid={`button-schedule-${event.type}-${event.vehicleId}`}
-                            >
-                              <Wrench className="h-4 w-4 mr-1" />
-                              Schedule Maintenance
-                            </Button>
-                          )}
                           {event.type === 'scheduled_maintenance' ? (
                             <Button 
                               size="sm" 
