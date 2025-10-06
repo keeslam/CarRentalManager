@@ -79,6 +79,7 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
       return await response.json() as PasswordResponse;
     },
     onSuccess: (data) => {
+      console.log("Reset password response:", data);
       setEmailSent(true);
       if (data.password) {
         setGeneratedPassword(data.password);
