@@ -54,7 +54,7 @@ import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock,
 type CalendarView = "month";
 
 // Calendar configuration
-const COLUMNS = 5;
+const COLUMNS = 4;
 
 // Type for filters
 type MaintenanceFilters = {
