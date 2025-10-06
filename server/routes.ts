@@ -1355,7 +1355,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       await sendEmail({
         to: customer.email,
         toName: customer.name,
-        subject: "Your Customer Portal Access",
+        subject: "Welcome to Your Customer Portal - Autolease Lam",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Welcome to the Customer Portal</h2>
@@ -1363,10 +1363,10 @@ export async function registerRoutes(app: Express): Promise<void> {
             <p>Your customer portal account has been created. You can now view your rentals and request extensions online.</p>
             <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
               <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
-              <p style="margin: 8px 0 0 0;"><strong>Temporary Password:</strong> <code style="background-color: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+              <p style="margin: 8px 0 0 0;"><strong>Access Code:</strong> ${password}</p>
             </div>
-            <p><strong>Portal Access:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
-            <p style="color: #dc2626;"><strong>Security Note:</strong> Please change your password after your first login for security.</p>
+            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+            <p style="color: #666666; font-size: 14px;">Please update your access code after your first login for security.</p>
             <p>If you have any questions, please don't hesitate to contact us.</p>
             <p>Best regards,<br>Autolease Lam</p>
           </div>
@@ -1376,17 +1376,17 @@ export async function registerRoutes(app: Express): Promise<void> {
 Your customer portal account has been created. You can now view your rentals and request extensions online.
 
 Login Email: ${customer.email}
-Temporary Password: ${password}
+Access Code: ${password}
 
-Portal Access: ${portalUrl}
+Portal Login: ${portalUrl}
 
-Security Note: Please change your password after your first login for security.
+Please update your access code after your first login for security.
 
 If you have any questions, please don't hesitate to contact us.
 
 Best regards,
 Autolease Lam`
-      });
+      }, 'custom');
 
       res.status(201).json({
         message: "Portal login created successfully. Login credentials have been sent to the customer's email.",
@@ -1430,38 +1430,38 @@ Autolease Lam`
       await sendEmail({
         to: customer.email,
         toName: customer.name,
-        subject: "Your Customer Portal Password Has Been Reset",
+        subject: "Your Portal Access Code - Autolease Lam",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Password Reset Confirmation</h2>
+            <h2 style="color: #2563eb;">Portal Access Update</h2>
             <p>Dear ${customer.name},</p>
-            <p>Your customer portal password has been reset as requested.</p>
+            <p>Your customer portal access code has been updated as requested.</p>
             <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
               <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
-              <p style="margin: 8px 0 0 0;"><strong>New Password:</strong> <code style="background-color: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+              <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
             </div>
-            <p><strong>Portal Access:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
-            <p style="color: #dc2626;"><strong>Security Note:</strong> Please change your password after logging in for security.</p>
-            <p>If you did not request this password reset, please contact us immediately.</p>
+            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+            <p style="color: #666666; font-size: 14px;">Please update your access code after logging in for security.</p>
+            <p>If you did not request this update, please contact us immediately.</p>
             <p>Best regards,<br>Autolease Lam</p>
           </div>
         `,
         text: `Dear ${customer.name},
 
-Your customer portal password has been reset as requested.
+Your customer portal access code has been updated as requested.
 
 Login Email: ${customer.email}
-New Password: ${password}
+New Access Code: ${password}
 
-Portal Access: ${portalUrl}
+Portal Login: ${portalUrl}
 
-Security Note: Please change your password after logging in for security.
+Please update your access code after logging in for security.
 
-If you did not request this password reset, please contact us immediately.
+If you did not request this update, please contact us immediately.
 
 Best regards,
 Autolease Lam`
-      });
+      }, 'custom');
 
       res.json({
         message: "Password reset successfully. New login credentials have been sent to the customer's email.",
