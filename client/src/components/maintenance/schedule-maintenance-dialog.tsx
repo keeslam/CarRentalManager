@@ -101,6 +101,9 @@ export function ScheduleMaintenanceDialog({
   // State for vehicle filtering
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [excludeMaintenanceVehicles, setExcludeMaintenanceVehicles] = useState(false);
+  
+  // State for tracking active customer from reservation
+  const [activeCustomer, setActiveCustomer] = useState<any>(null);
 
   const form = useForm<ScheduleMaintenanceFormData>({
     resolver: zodResolver(scheduleMaintenanceSchema),
@@ -117,8 +120,13 @@ export function ScheduleMaintenanceDialog({
     },
   });
 
-  // Reset form when editing reservation changes
+  // Reset form when editing reservation changes or dialog opens/closes
   useEffect(() => {
+    if (!open) {
+      // Reset active customer when dialog closes
+      setActiveCustomer(null);
+    }
+    
     if (editingReservation) {
       // Parse maintenance data from the reservation
       const noteParts = editingReservation.notes?.split(':') || [];
@@ -156,7 +164,7 @@ export function ScheduleMaintenanceDialog({
         needsSpareVehicle: false,
       });
     }
-  }, [editingReservation, initialDate, initialVehicleId, initialMaintenanceType, form]);
+  }, [open, editingReservation, initialDate, initialVehicleId, initialMaintenanceType, form]);
 
   // Get selected date for filtering (after form is defined)
   const scheduledDate = form.watch('scheduledDate');
@@ -221,20 +229,29 @@ export function ScheduleMaintenanceDialog({
       // Find active rental for this vehicle on this date
       const activeRental = activeReservations.find(reservation =>
         reservation.vehicleId === vehicleIdNum &&
-        reservation.type === 'rental' &&
+        (reservation.type === 'rental' || reservation.status === 'confirmed' || reservation.status === 'pending') &&
         dateInRange(watchedScheduledDate, reservation.startDate, reservation.endDate)
       );
       
-      // If found, auto-fill the customer
+      // If found, auto-fill the customer and set as active
       if (activeRental && activeRental.customerId) {
         const currentCustomerId = form.getValues('customerId');
         // Only update if not already set (to avoid overriding user's manual selection)
         if (!currentCustomerId || currentCustomerId === 'none' || currentCustomerId === '') {
           form.setValue('customerId', activeRental.customerId.toString());
+          // Find and set the active customer for display
+          const customer = customers.find(c => c.id === activeRental.customerId);
+          setActiveCustomer(customer);
         }
+      } else {
+        // No active rental, clear active customer
+        setActiveCustomer(null);
       }
+    } else if (editingReservation) {
+      // Clear active customer when editing
+      setActiveCustomer(null);
     }
-  }, [watchedVehicleId, watchedScheduledDate, activeReservations, editingReservation, form]);
+  }, [watchedVehicleId, watchedScheduledDate, activeReservations, editingReservation, customers, form]);
 
   // Helper function to check if a date falls within a range
   const dateInRange = (checkDate: string, startDate: string, endDate?: string) => {
@@ -826,25 +843,51 @@ export function ScheduleMaintenanceDialog({
               name="customerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer (Optional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-customer">
-                        <SelectValue placeholder="Select customer (optional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      <SelectItem value="none">None (no customer)</SelectItem>
-                      {customers.map((customer: any) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Who is bringing the vehicle in for maintenance?
-                  </FormDescription>
+                  <FormLabel>Customer</FormLabel>
+                  {activeCustomer ? (
+                    <div>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-blue-900">{activeCustomer.name}</div>
+                            {activeCustomer.email && (
+                              <div className="text-sm text-blue-700">{activeCustomer.email}</div>
+                            )}
+                            {activeCustomer.phone && (
+                              <div className="text-sm text-blue-700">{activeCustomer.phone}</div>
+                            )}
+                          </div>
+                          <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                            Active rental
+                          </div>
+                        </div>
+                      </div>
+                      <FormDescription className="mt-2">
+                        This vehicle has an active rental with this customer
+                      </FormDescription>
+                    </div>
+                  ) : (
+                    <>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-customer">
+                            <SelectValue placeholder="Select customer (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          <SelectItem value="none">None (no customer)</SelectItem>
+                          {customers.map((customer: any) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Who is bringing the vehicle in for maintenance?
+                      </FormDescription>
+                    </>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
