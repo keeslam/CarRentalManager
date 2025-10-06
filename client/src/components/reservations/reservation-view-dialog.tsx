@@ -32,6 +32,7 @@ import { UploadContractButton } from "@/components/documents/contract-upload-but
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
 import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
 import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
+import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 
 interface ReservationViewDialogProps {
   open: boolean;
@@ -400,12 +401,18 @@ export function ReservationViewDialog({
                     </>
                   )}
                   {reservation.type === 'maintenance_block' && reservation.vehicleId && (
-                    <Link href={`/vehicles/${reservation.vehicleId}`}>
+                    <ExpenseAddDialog 
+                      vehicleId={reservation.vehicleId}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation.vehicleId}`] });
+                      }}
+                    >
                       <Button variant="outline" size="sm">
                         <FileText className="mr-2 h-4 w-4" />
                         Add Expense
                       </Button>
-                    </Link>
+                    </ExpenseAddDialog>
                   )}
                   <Link href={`/vehicles/${reservation.vehicleId}/documents`}>
                     <Button variant="outline" size="sm">
