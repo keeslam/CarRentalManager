@@ -259,10 +259,17 @@ export function ReservationForm({
 
   // Determine which vehicles to show based on toggle and date selection
   const vehiclesToShow = useMemo(() => {
-    if (showAllVehicles || !startDateWatch) {
+    // If user explicitly wants to see all vehicles, show them
+    if (showAllVehicles) {
       return vehicles || [];
     }
     
+    // If no start date selected yet, show all vehicles (initial state)
+    if (!startDateWatch) {
+      return vehicles || [];
+    }
+    
+    // Once dates are selected, default to showing only available vehicles
     // For open-ended rentals, use available vehicles with just start date
     if (isOpenEndedWatch) {
       return availableVehicles || [];
@@ -273,7 +280,7 @@ export function ReservationForm({
       return availableVehicles || [];
     }
     
-    // Default to all vehicles if dates aren't fully selected
+    // If start date is set but end date isn't (non-open-ended), show all vehicles temporarily
     return vehicles || [];
   }, [vehicles, availableVehicles, showAllVehicles, startDateWatch, endDateWatch, isOpenEndedWatch]);
 
