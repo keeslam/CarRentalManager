@@ -30,6 +30,7 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
   const [open, setOpen] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [keepOpen, setKeepOpen] = useState(false);
   const { toast } = useToast();
 
   // Query portal login status
@@ -52,12 +53,30 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
       setEmailSent(true);
       if (data.password) {
         setGeneratedPassword(data.password);
+        // Copy password to clipboard automatically
+        navigator.clipboard.writeText(data.password);
+        toast({
+          title: "✅ Portal Login Created",
+          description: (
+            <div className="space-y-2 mt-2">
+              <p className="text-sm">Password has been copied to your clipboard:</p>
+              <code className="block bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded text-base font-mono font-bold">
+                {data.password}
+              </code>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Share this password with the customer via phone or in person if they didn't receive the email.
+              </p>
+            </div>
+          ),
+          duration: 15000, // Show for 15 seconds
+        });
+      } else {
+        toast({
+          title: "Portal login created",
+          description: data.message || "Login credentials have been sent to the customer's email.",
+        });
       }
       queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/portal-login`] });
-      toast({
-        title: "Portal login created",
-        description: data.message || "Login credentials have been sent to the customer's email.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -79,20 +98,32 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
       return await response.json() as PasswordResponse;
     },
     onSuccess: (data) => {
-      console.log("Reset password response:", data);
-      console.log("Has password?", !!data.password);
-      console.log("Password value:", data.password);
       setEmailSent(true);
       if (data.password) {
-        console.log("Setting generatedPassword to:", data.password);
         setGeneratedPassword(data.password);
+        // Copy password to clipboard automatically
+        navigator.clipboard.writeText(data.password);
+        toast({
+          title: "✅ Password Reset Successfully",
+          description: (
+            <div className="space-y-2 mt-2">
+              <p className="text-sm">New password has been copied to your clipboard:</p>
+              <code className="block bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded text-base font-mono font-bold">
+                {data.password}
+              </code>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Share this password with the customer via phone or in person if they didn't receive the email.
+              </p>
+            </div>
+          ),
+          duration: 15000, // Show for 15 seconds
+        });
       } else {
-        console.log("No password in response!");
+        toast({
+          title: "Password reset",
+          description: data.message || "New login credentials have been sent to the customer's email.",
+        });
       }
-      toast({
-        title: "Password reset",
-        description: data.message || "New login credentials have been sent to the customer's email.",
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -138,7 +169,6 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
           </div>
         ) : (
           <div className="space-y-4">
-            {console.log("Rendering dialog, generatedPassword:", generatedPassword)}
             {/* Current Status */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
