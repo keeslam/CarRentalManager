@@ -113,7 +113,7 @@ export function ScheduleMaintenanceDialog({
       maintenanceType: initialMaintenanceType || "breakdown",
       scheduledDate: initialDate || new Date().toISOString().split('T')[0], // Use initialDate if provided, otherwise today
       maintenanceDuration: 1, // Default 1 day
-      maintenanceStatus: "in",
+      maintenanceStatus: "scheduled",
       description: "",
       notes: "",
       needsSpareVehicle: false,
@@ -158,7 +158,7 @@ export function ScheduleMaintenanceDialog({
         maintenanceType: initialMaintenanceType || "breakdown",
         scheduledDate: initialDate || new Date().toISOString().split('T')[0],
         maintenanceDuration: 1,
-        maintenanceStatus: "in",
+        maintenanceStatus: "scheduled",
         description: "",
         notes: "",
         needsSpareVehicle: false,
