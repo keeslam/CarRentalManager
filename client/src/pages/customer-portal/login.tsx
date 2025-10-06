@@ -10,6 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Car } from "lucide-react";
+import ForgotPasswordDialog from "@/components/customer-portal/forgot-password-dialog";
+import RequestAccessDialog from "@/components/customer-portal/request-access-dialog";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -98,7 +100,10 @@ export default function CustomerLogin() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                      <ForgotPasswordDialog />
+                    </div>
                     <FormControl>
                       <Input
                         {...field}
@@ -122,8 +127,21 @@ export default function CustomerLogin() {
               </Button>
             </form>
           </Form>
-          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            <p>Need portal access? Contact your rental company.</p>
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-gray-950 px-2 text-gray-500 dark:text-gray-400">
+                  Or
+                </span>
+              </div>
+            </div>
+            <RequestAccessDialog />
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+              Already have an account? Log in above.
+            </p>
           </div>
         </CardContent>
       </Card>
