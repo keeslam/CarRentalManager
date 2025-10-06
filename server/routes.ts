@@ -1636,13 +1636,32 @@ Autolease Lam`
 
       const { name, email, phone, message } = validationResult.data;
 
-      // Create a custom notification for staff
+      // Check if customer already exists in database
+      const existingCustomers = await storage.getAllCustomers();
+      const existingCustomer = existingCustomers.find(c => 
+        c.email?.toLowerCase() === email.toLowerCase()
+      );
+
+      // Create a custom notification for staff with actionable link
+      let notificationDescription = `${name} has requested customer portal access.\n\nEmail: ${email}\nPhone: ${phone || 'Not provided'}`;
+      if (message) {
+        notificationDescription += `\nMessage: ${message}`;
+      }
+      
+      // Add action hint based on whether customer exists
+      if (existingCustomer) {
+        notificationDescription += `\n\n✅ Customer exists in system (ID: ${existingCustomer.id})`;
+      } else {
+        notificationDescription += `\n\n⚠️ New customer - not in system yet`;
+      }
+
       await storage.createCustomNotification({
         title: "Portal Access Request",
-        description: `${name} has requested customer portal access.\n\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nMessage: ${message || 'None'}`,
+        description: notificationDescription,
         date: new Date().toISOString().split('T')[0],
         type: 'info',
         isRead: false,
+        link: existingCustomer ? `/customers/${existingCustomer.id}` : `/customers/new?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone || '')}`,
       });
 
       // Also send an email to staff (using the default email config)
