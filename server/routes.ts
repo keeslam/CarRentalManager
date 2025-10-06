@@ -1392,6 +1392,7 @@ Autolease Lam`
         message: "Portal login created successfully. Login credentials have been sent to the customer's email.",
         email: customerUser.email,
         customerId: customerUser.customerId,
+        password: password, // Return password for staff to communicate to customer if email fails
       });
     } catch (error) {
       console.error("Error creating portal login:", error);
@@ -1466,6 +1467,7 @@ Autolease Lam`
       res.json({
         message: "Password reset successfully. New login credentials have been sent to the customer's email.",
         email: customerUser.email,
+        password: password, // Return password for staff to communicate to customer if email fails
       });
     } catch (error) {
       console.error("Error resetting portal password:", error);

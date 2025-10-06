@@ -23,11 +23,13 @@ interface PasswordResponse {
   message: string;
   email: string;
   customerId?: number;
+  password?: string;
 }
 
 export function PortalLoginDialog({ customerId, customerEmail, children }: PortalLoginDialogProps) {
   const [open, setOpen] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const { toast } = useToast();
 
   // Query portal login status
@@ -48,6 +50,9 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
     },
     onSuccess: (data) => {
       setEmailSent(true);
+      if (data.password) {
+        setGeneratedPassword(data.password);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/portal-login`] });
       toast({
         title: "Portal login created",
@@ -75,6 +80,9 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
     },
     onSuccess: (data) => {
       setEmailSent(true);
+      if (data.password) {
+        setGeneratedPassword(data.password);
+      }
       toast({
         title: "Password reset",
         description: data.message || "New login credentials have been sent to the customer's email.",
@@ -92,9 +100,18 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Clear email sent status when closing dialog
+      // Clear email sent status and password when closing dialog
       setEmailSent(false);
+      setGeneratedPassword("");
     }
+  };
+
+  const copyPassword = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    toast({
+      title: "Copied!",
+      description: "Password copied to clipboard",
+    });
   };
 
   return (
@@ -144,19 +161,40 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
               )}
             </div>
 
-            {/* Email Sent Confirmation */}
-            {emailSent && (
-              <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-                <AlertDescription className="space-y-2">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    ✅ Email sent successfully!
+            {/* Password Display */}
+            {generatedPassword && (
+              <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <AlertDescription className="space-y-3">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    🔑 Generated Password
                   </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Login credentials have been sent to <strong>{customerEmail}</strong>
-                  </p>
-                  <p className="text-xs text-green-600 dark:text-green-400">
-                    The customer will receive an email with their login details and can change their password after logging in.
-                  </p>
+                  <div className="bg-white dark:bg-gray-800 rounded-md p-3 border border-blue-200 dark:border-blue-700">
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="text-lg font-mono font-semibold text-blue-900 dark:text-blue-100">
+                        {generatedPassword}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={copyPassword}
+                        className="shrink-0"
+                        data-testid="button-copy-password"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>Login Email:</strong> {customerEmail}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      💡 If the customer didn't receive the email, you can share this password with them via phone or in person.
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      The customer should change this password after their first login for security.
+                    </p>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
