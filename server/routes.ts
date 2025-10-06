@@ -1569,15 +1569,17 @@ Autolease Lam`
               toName: customer.name,
               subject: "Password Reset - Customer Portal",
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                   <h2 style="color: #2563eb;">Password Reset Request</h2>
                   <p>Dear ${customer.name},</p>
                   <p>Your customer portal password has been reset as requested.</p>
-                  <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+                  <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 20px 0;">
                     <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
                     <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
                   </div>
-                  <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${portalUrl}" style="display: inline-block; background-color: #2563eb; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Access Customer Portal</a>
+                  </div>
                   <p style="color: #666666; font-size: 14px;">For security, we recommend changing your password after logging in.</p>
                   <p>If you did not request this reset, please contact us immediately.</p>
                   <p>Best regards,<br>Autolease Lam</p>
