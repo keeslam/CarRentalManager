@@ -1415,10 +1415,17 @@ Autolease Lam`
 
       // Generate new random password
       const password = generateRandomPassword(8);
+      console.log("🔐 Generated password:", password);
       const hashedPassword = await hashPassword(password);
+      console.log("🔒 Hashed password:", hashedPassword);
 
       // Update password
-      await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
+      const updated = await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
+      console.log("✅ Password update result:", updated);
+      
+      // Verify the password was stored correctly
+      const verifyUser = await storage.getCustomerUserByCustomerId(customerId);
+      console.log("🔍 Stored password hash:", verifyUser?.password);
 
       // Get customer details for email
       const customer = await storage.getCustomer(customerId);

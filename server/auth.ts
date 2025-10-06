@@ -237,21 +237,31 @@ export function setupAuth(app: Express) {
   app.post("/api/customer/login", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
+      console.log("🔑 Customer login attempt:", { email, passwordLength: password?.length });
       
       // Find customer user by email
       const customerUser = await storage.getCustomerUserByEmail(email);
       if (!customerUser) {
+        console.log("❌ Customer user not found for email:", email);
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
+      console.log("👤 Found customer user:", { id: customerUser.id, email: customerUser.email });
+      console.log("🔒 Stored password hash:", customerUser.password);
+      console.log("🔓 Supplied password:", password);
+      
       // Check if portal is enabled
       if (!customerUser.portalEnabled) {
+        console.log("🚫 Portal access disabled for user:", customerUser.email);
         return res.status(403).json({ message: "Portal access is disabled for this account" });
       }
       
       // Verify password
       const passwordMatches = await comparePasswords(password, customerUser.password);
+      console.log("🔐 Password comparison result:", passwordMatches);
+      
       if (!passwordMatches) {
+        console.log("❌ Password mismatch for user:", customerUser.email);
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
