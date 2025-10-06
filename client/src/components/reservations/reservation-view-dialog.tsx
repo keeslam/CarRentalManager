@@ -116,7 +116,7 @@ export function ReservationViewDialog({
     
     const activeRental = vehicleReservations.find(
       r => r.type === 'standard' && 
-      r.status === 'confirmed' && 
+      (r.status === 'confirmed' || r.status === 'pending') && 
       !r.endDate // Open-ended rental
     );
     
