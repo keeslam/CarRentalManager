@@ -561,6 +561,31 @@ export default function MaintenanceCalendar() {
       const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
       if (!vehicle) return; // Skip if vehicle not found
       
+      // Extract maintenance type from notes (format: "{maintenanceType}: {description}\n{notes}")
+      const noteParts = reservation.notes?.split(':') || [];
+      const maintenanceTypeRaw = noteParts[0]?.trim() || 'regular_maintenance';
+      
+      // Map maintenance type to display label
+      const maintenanceTypeMap: Record<string, string> = {
+        'breakdown': 'Vehicle Breakdown',
+        'tire_replacement': 'Tire Replacement',
+        'brake_service': 'Brake Service',
+        'engine_repair': 'Engine Repair',
+        'transmission_repair': 'Transmission Repair',
+        'electrical_issue': 'Electrical Issue',
+        'air_conditioning': 'Air Conditioning',
+        'battery_replacement': 'Battery Replacement',
+        'oil_change': 'Oil Change',
+        'regular_maintenance': 'Regular Maintenance',
+        'apk_inspection': 'APK Inspection',
+        'warranty_service': 'Warranty Service',
+        'accident_damage': 'Accident Damage',
+        'other': 'Other Maintenance'
+      };
+      
+      const displayTitle = maintenanceTypeMap[maintenanceTypeRaw] || 'Scheduled Maintenance';
+      const descriptionPart = noteParts[1]?.split('\n')[0]?.trim() || '';
+      
       events.push({
         id: `scheduled_maintenance_${reservation.id}`, // Avoid ID conflicts
         vehicleId: reservation.vehicleId!, // Using ! since we already checked vehicle exists
@@ -569,8 +594,8 @@ export default function MaintenanceCalendar() {
         date: reservation.startDate,
         startDate: reservation.startDate,
         endDate: reservation.endDate || undefined,
-        title: 'Scheduled Maintenance',
-        description: reservation.notes || `Scheduled maintenance for ${vehicle.brand} ${vehicle.model}`,
+        title: displayTitle,
+        description: descriptionPart || `${displayTitle} for ${vehicle.brand} ${vehicle.model}`,
         needsSpareVehicle: false,
         priority: 'high'
       });
