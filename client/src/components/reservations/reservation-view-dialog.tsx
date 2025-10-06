@@ -379,24 +379,38 @@ export function ReservationViewDialog({
 
               {/* Contract and Document Actions */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Documents</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  {reservation.type === 'maintenance_block' ? 'Expenses & Documentation' : 'Documents'}
+                </h3>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/documents/contract/${reservationId}`}>
-                    <Button variant="outline" size="sm">
-                      <FileText className="mr-2 h-4 w-4" />
-                      View Contract
-                    </Button>
-                  </Link>
-                  {reservation.vehicleId && (
-                    <UploadContractButton 
-                      vehicleId={reservation.vehicleId} 
-                      reservationId={reservation.id}
-                    />
+                  {reservation.type !== 'maintenance_block' && (
+                    <>
+                      <Link href={`/documents/contract/${reservationId}`}>
+                        <Button variant="outline" size="sm">
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Contract
+                        </Button>
+                      </Link>
+                      {reservation.vehicleId && (
+                        <UploadContractButton 
+                          vehicleId={reservation.vehicleId} 
+                          reservationId={reservation.id}
+                        />
+                      )}
+                    </>
+                  )}
+                  {reservation.type === 'maintenance_block' && reservation.vehicleId && (
+                    <Link href={`/vehicles/${reservation.vehicleId}`}>
+                      <Button variant="outline" size="sm">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Add Expense
+                      </Button>
+                    </Link>
                   )}
                   <Link href={`/vehicles/${reservation.vehicleId}/documents`}>
                     <Button variant="outline" size="sm">
                       <Upload className="mr-2 h-4 w-4" />
-                      All Vehicle Documents
+                      {reservation.type === 'maintenance_block' ? 'Upload Damage Photos' : 'All Vehicle Documents'}
                     </Button>
                   </Link>
                 </div>
