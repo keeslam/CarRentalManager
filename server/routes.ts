@@ -494,15 +494,18 @@ export async function registerRoutes(app: Express): Promise<void> {
     const { startDate, endDate, excludeVehicleId } = req.query;
     
     let vehicles;
-    if (startDate && endDate) {
-      // Use date range method when dates are provided
+    if (startDate) {
+      // For open-ended rentals (no endDate) or specific date ranges
+      // Use a far future date for open-ended rentals to check conflicts with existing rentals
+      const effectiveEndDate = endDate ? (endDate as string) : '2099-12-31';
+      
       vehicles = await storage.getAvailableVehiclesInRange(
         startDate as string, 
-        endDate as string, 
+        effectiveEndDate, 
         excludeVehicleId ? parseInt(excludeVehicleId as string) : undefined
       );
     } else {
-      // Fall back to basic method for compatibility
+      // Fall back to basic method for compatibility when no dates provided
       vehicles = await storage.getAvailableVehicles();
     }
     
