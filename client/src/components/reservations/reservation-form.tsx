@@ -96,6 +96,7 @@ interface ReservationFormProps {
   initialCustomerId?: string;
   initialStartDate?: string;
   onSuccess?: (reservation: Reservation) => void;
+  onCancel?: () => void;
 }
 
 export function ReservationForm({ 
@@ -104,7 +105,8 @@ export function ReservationForm({
   initialVehicleId,
   initialCustomerId,
   initialStartDate,
-  onSuccess
+  onSuccess,
+  onCancel
 }: ReservationFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -1599,7 +1601,13 @@ export function ReservationForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/reservations")}
+                onClick={() => {
+                  if (onCancel) {
+                    onCancel();
+                  } else {
+                    navigate("/reservations");
+                  }
+                }}
               >
                 Cancel
               </Button>

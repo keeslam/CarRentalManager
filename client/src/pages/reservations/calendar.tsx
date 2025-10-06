@@ -1331,6 +1331,11 @@ export default function ReservationCalendarPage() {
                 // Refresh calendar data
                 queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
               }}
+              onCancel={() => {
+                // Close the edit dialog without saving
+                setEditDialogOpen(false);
+                setSelectedReservation(null);
+              }}
             />
           )}
         </DialogContent>
