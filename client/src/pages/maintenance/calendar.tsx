@@ -858,7 +858,7 @@ export default function MaintenanceCalendar() {
             {/* Calendar Grid */}
             <div className="border rounded-lg overflow-hidden">
               {calendarGrid.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-5 divide-x border-b last:border-b-0">
+                <div key={weekIndex} className="grid grid-cols-4 divide-x border-b last:border-b-0">
                   {week.map((day, dayIndex) => {
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
