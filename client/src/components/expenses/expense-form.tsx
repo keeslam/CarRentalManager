@@ -549,7 +549,13 @@ export function ExpenseForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => vehicleId ? navigate(`/expenses/vehicle/${vehicleId}`) : navigate("/expenses")}
+                onClick={() => {
+                  if (onSuccess) {
+                    onSuccess();
+                  } else {
+                    vehicleId ? navigate(`/expenses/vehicle/${vehicleId}`) : navigate("/expenses");
+                  }
+                }}
               >
                 Cancel
               </Button>
