@@ -128,6 +128,7 @@ export default function MaintenanceCalendar() {
   const [warrantyDateInput, setWarrantyDateInput] = useState<string>('');
   const [apkDateInput, setApkDateInput] = useState<string>('');
   const [completingReservation, setCompletingReservation] = useState<any>(null);
+  const [apkFormFile, setApkFormFile] = useState<File | null>(null);
   
   // Calculate next APK date based on vehicle type and age
   const calculateNextApkDate = (vehicle: Vehicle, completionDate: Date = new Date()): string => {
@@ -1543,6 +1544,29 @@ export default function MaintenanceCalendar() {
                 Leave empty if not applicable
               </p>
             </div>
+            <div>
+              <label className="text-sm font-medium">APK Inspection Form (Optional)</label>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setApkFormFile(file);
+                  }
+                }}
+                className="mt-2"
+                data-testid="input-apk-form"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload the APK inspection certificate if available
+              </p>
+              {apkFormFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  Selected: {apkFormFile.name}
+                </p>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -1551,6 +1575,7 @@ export default function MaintenanceCalendar() {
                   setCompletingReservation(null);
                   setWarrantyDateInput('');
                   setApkDateInput('');
+                  setApkFormFile(null);
                 }}
               >
                 Cancel
@@ -1561,6 +1586,24 @@ export default function MaintenanceCalendar() {
                   try {
                     if (!completingReservation) {
                       throw new Error('Missing required data');
+                    }
+
+                    // Upload APK form if provided
+                    if (apkFormFile) {
+                      const formData = new FormData();
+                      formData.append('file', apkFormFile);
+                      formData.append('vehicleId', completingReservation.vehicleId.toString());
+                      formData.append('documentType', 'APK Inspection');
+                      formData.append('description', `APK inspection completed on ${apkDateInput || new Date().toISOString().split('T')[0]}`);
+
+                      const response = await fetch('/api/documents', {
+                        method: 'POST',
+                        body: formData,
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to upload APK form');
+                      }
                     }
 
                     // Build update payload
@@ -1594,11 +1637,14 @@ export default function MaintenanceCalendar() {
                     setCompletingReservation(null);
                     setWarrantyDateInput('');
                     setApkDateInput('');
+                    setApkFormFile(null);
                     closeDayDialog();
 
                     toast({
                       title: "Maintenance Completed",
-                      description: "Vehicle maintenance tracking has been updated.",
+                      description: apkFormFile 
+                        ? "Vehicle maintenance tracking has been updated and APK form uploaded."
+                        : "Vehicle maintenance tracking has been updated.",
                     });
                   } catch (error) {
                     console.error('Failed to complete maintenance:', error);
