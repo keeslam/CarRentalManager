@@ -1535,6 +1535,170 @@ Autolease Lam`
     }
   });
 
+  // Customer self-service: Forgot password (no auth required)
+  app.post("/api/customer/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const forgotPasswordSchema = z.object({
+        email: z.string().email("Please enter a valid email"),
+      });
+
+      const validationResult = forgotPasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.issues.map(i => i.message) 
+        });
+      }
+
+      const { email } = validationResult.data;
+
+      // Find customer user by email
+      const customerUser = await storage.getCustomerUserByEmail(email);
+      if (!customerUser) {
+        // Don't reveal if email exists or not for security
+        return res.json({ 
+          message: "If an account exists with this email, a password reset link has been sent." 
+        });
+      }
+
+      // Check if portal is enabled
+      if (!customerUser.portalEnabled) {
+        return res.json({ 
+          message: "If an account exists with this email, a password reset link has been sent." 
+        });
+      }
+
+      // Generate new random password
+      const password = generateRandomPassword(8);
+      const hashedPassword = await hashPassword(password);
+
+      // Update password
+      await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
+
+      // Get customer details for email
+      const customer = await storage.getCustomer(customerUser.customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Send new password to customer via email
+      const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+      await sendEmail({
+        to: customer.email,
+        toName: customer.name,
+        subject: "Password Reset - Customer Portal",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Password Reset Request</h2>
+            <p>Dear ${customer.name},</p>
+            <p>Your customer portal password has been reset as requested.</p>
+            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
+              <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
+            </div>
+            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+            <p style="color: #666666; font-size: 14px;">For security, we recommend changing your password after logging in.</p>
+            <p>If you did not request this reset, please contact us immediately.</p>
+            <p>Best regards,<br>Autolease Lam</p>
+          </div>
+        `,
+        text: `Dear ${customer.name},
+
+Your customer portal password has been reset as requested.
+
+Login Email: ${customer.email}
+New Access Code: ${password}
+
+Portal Login: ${portalUrl}
+
+For security, we recommend changing your password after logging in.
+
+If you did not request this reset, please contact us immediately.
+
+Best regards,
+Autolease Lam`
+      }, 'custom');
+
+      res.json({ 
+        message: "If an account exists with this email, a password reset link has been sent." 
+      });
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      res.status(500).json({ message: "Failed to process password reset request", error });
+    }
+  });
+
+  // Customer self-service: Request portal access (no auth required)
+  app.post("/api/customer/request-access", async (req: Request, res: Response) => {
+    try {
+      const requestAccessSchema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Please enter a valid email"),
+        phone: z.string().optional(),
+        message: z.string().optional(),
+      });
+
+      const validationResult = requestAccessSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: validationResult.error.issues.map(i => i.message) 
+        });
+      }
+
+      const { name, email, phone, message } = validationResult.data;
+
+      // Create a custom notification for staff
+      await storage.createCustomNotification({
+        title: "Portal Access Request",
+        message: `${name} has requested customer portal access.\n\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nMessage: ${message || 'None'}`,
+        type: 'info',
+        read: false,
+      });
+
+      // Also send an email to staff (using the default email config)
+      await sendEmail({
+        to: 'receptie@lamgroep.nl', // Staff email
+        toName: 'Autolease Lam Team',
+        subject: 'New Portal Access Request',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">New Portal Access Request</h2>
+            <p>A customer has requested access to the customer portal.</p>
+            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Name:</strong> ${name}</p>
+              <p style="margin: 8px 0 0 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 8px 0 0 0;"><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+              ${message ? `<p style="margin: 8px 0 0 0;"><strong>Message:</strong> ${message}</p>` : ''}
+            </div>
+            <p>Please review this request and create portal access if appropriate.</p>
+            <p>Best regards,<br>Car Rental Management System</p>
+          </div>
+        `,
+        text: `New Portal Access Request
+
+A customer has requested access to the customer portal.
+
+Name: ${name}
+Email: ${email}
+Phone: ${phone || 'Not provided'}
+${message ? `Message: ${message}` : ''}
+
+Please review this request and create portal access if appropriate.
+
+Best regards,
+Car Rental Management System`
+      }, 'custom');
+
+      res.json({ 
+        message: "Your access request has been submitted. We will review it and get back to you soon." 
+      });
+    } catch (error) {
+      console.error("Error in request access:", error);
+      res.status(500).json({ message: "Failed to process access request", error });
+    }
+  });
+
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
   app.get("/api/reservations/range", async (req, res) => {
