@@ -1200,50 +1200,24 @@ export default function MaintenanceCalendar() {
                                     );
                                     
                                     if (actualReservation) {
-                                      // Determine maintenance type from notes or event description
+                                      // Always show dialog to allow reviewing APK date and optionally adding warranty date
+                                      setCompletingReservation(actualReservation);
+                                      
+                                      // Check if this is a warranty maintenance to pre-fill warranty date
                                       const notes = actualReservation.notes?.toLowerCase() || '';
-                                      const isApk = notes.includes('apk');
                                       const isWarranty = notes.includes('warranty') || notes.includes('garantie');
                                       
                                       if (isWarranty) {
-                                        // For warranty, prompt user for the new warranty date and APK date
-                                        setCompletingReservation(actualReservation);
                                         setWarrantyDateInput(format(new Date(), 'yyyy-MM-dd'));
-                                        // Pre-fill APK date with current value or calculated value
-                                        const currentApkDate = event.vehicle.apkDate || calculateNextApkDate(event.vehicle, new Date());
-                                        setApkDateInput(currentApkDate);
-                                        setWarrantyDateDialogOpen(true);
                                       } else {
-                                        // For APK or regular maintenance, complete automatically
-                                        const today = new Date();
-                                        const updates: any = {
-                                          maintenanceStatus: 'ok',
-                                        };
-                                        
-                                        if (isApk) {
-                                          // Calculate next APK date based on vehicle type and age
-                                          updates.apkDate = calculateNextApkDate(event.vehicle, today);
-                                        }
-                                        
-                                        // Update vehicle maintenance tracking
-                                        await apiRequest('PATCH', `/api/vehicles/${event.vehicleId}`, updates);
-                                        
-                                        // Delete the maintenance reservation
-                                        await apiRequest('DELETE', `/api/reservations/${actualReservation.id}`);
-                                        
-                                        // Refresh calendar
-                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-                                        
-                                        closeDayDialog();
-                                        
-                                        toast({
-                                          title: "Maintenance Completed",
-                                          description: `Vehicle maintenance tracking has been updated${isApk ? ' (Next APK date calculated)' : ''}.`,
-                                        });
+                                        setWarrantyDateInput(''); // Leave empty for non-warranty maintenance
                                       }
+                                      
+                                      // Pre-fill APK date with current value or calculated value
+                                      const currentApkDate = event.vehicle.apkDate || calculateNextApkDate(event.vehicle, new Date());
+                                      setApkDateInput(currentApkDate);
+                                      
+                                      setWarrantyDateDialogOpen(true);
                                     }
                                   } catch (error) {
                                     console.error('Failed to complete maintenance:', error);
@@ -1533,29 +1507,16 @@ export default function MaintenanceCalendar() {
         reservationId={selectedMaintenanceReservationId}
       />
 
-      {/* Warranty Date Input Dialog */}
+      {/* Maintenance Completion Dialog */}
       <Dialog open={warrantyDateDialogOpen} onOpenChange={setWarrantyDateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Complete Warranty Maintenance</DialogTitle>
+            <DialogTitle>Complete Maintenance</DialogTitle>
             <DialogDescription>
-              Review and update warranty and APK dates for this vehicle
+              Review and update APK and warranty dates for this vehicle
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">New Warranty End Date</label>
-              <Input
-                type="date"
-                value={warrantyDateInput}
-                onChange={(e) => setWarrantyDateInput(e.target.value)}
-                className="mt-2"
-                data-testid="input-warranty-date"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter the new warranty expiration date
-              </p>
-            </div>
             <div>
               <label className="text-sm font-medium">APK Date</label>
               <Input
@@ -1566,7 +1527,20 @@ export default function MaintenanceCalendar() {
                 data-testid="input-apk-date"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Review and adjust if needed (e.g., if vehicle was inspected at a different time)
+                Review and adjust if needed (automatically calculated based on vehicle type)
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Warranty End Date (Optional)</label>
+              <Input
+                type="date"
+                value={warrantyDateInput}
+                onChange={(e) => setWarrantyDateInput(e.target.value)}
+                className="mt-2"
+                data-testid="input-warranty-date"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty if not applicable
               </p>
             </div>
             <div className="flex justify-end gap-2">
@@ -1585,16 +1559,27 @@ export default function MaintenanceCalendar() {
                 className="bg-green-600 hover:bg-green-700"
                 onClick={async () => {
                   try {
-                    if (!completingReservation || !warrantyDateInput) {
+                    if (!completingReservation) {
                       throw new Error('Missing required data');
                     }
 
-                    // Update vehicle with new warranty and APK dates
-                    await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, {
-                      warrantyEndDate: warrantyDateInput,
-                      apkDate: apkDateInput || undefined,
+                    // Build update payload
+                    const updates: any = {
                       maintenanceStatus: 'ok',
-                    });
+                    };
+
+                    // Add APK date if provided
+                    if (apkDateInput) {
+                      updates.apkDate = apkDateInput;
+                    }
+
+                    // Add warranty date if provided
+                    if (warrantyDateInput) {
+                      updates.warrantyEndDate = warrantyDateInput;
+                    }
+
+                    // Update vehicle with new dates
+                    await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, updates);
 
                     // Delete the maintenance reservation
                     await apiRequest('DELETE', `/api/reservations/${completingReservation.id}`);
@@ -1612,19 +1597,19 @@ export default function MaintenanceCalendar() {
                     closeDayDialog();
 
                     toast({
-                      title: "Warranty Maintenance Completed",
-                      description: "Vehicle warranty and APK dates have been updated.",
+                      title: "Maintenance Completed",
+                      description: "Vehicle maintenance tracking has been updated.",
                     });
                   } catch (error) {
-                    console.error('Failed to complete warranty maintenance:', error);
+                    console.error('Failed to complete maintenance:', error);
                     toast({
                       title: "Error",
-                      description: "Failed to complete warranty maintenance. Please try again.",
+                      description: "Failed to complete maintenance. Please try again.",
                       variant: "destructive",
                     });
                   }
                 }}
-                data-testid="button-complete-warranty"
+                data-testid="button-complete-maintenance"
               >
                 Complete
               </Button>
