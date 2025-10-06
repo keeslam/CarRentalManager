@@ -160,7 +160,7 @@ export function MaintenanceEditDialog({
     enabled: !!(currentVehicleId && currentStartDate && currentEndDate && open),
   });
 
-  // Reset form when reservation changes
+  // Reset form when reservation changes or when overlapping rentals are loaded
   useEffect(() => {
     if (reservation && open) {
       const parsed = parseMaintenanceNotes(reservation.notes || '');
@@ -168,16 +168,33 @@ export function MaintenanceEditDialog({
         (reservation.startDate && reservation.endDate ? 
           Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1);
       
+      // If no customer is assigned but there's an active rental, auto-select that customer
+      let customerIdToSet = reservation.customerId?.toString() || "none";
+      
+      // Check if there are overlapping rentals and no customer is currently assigned
+      if ((!reservation.customerId || reservation.customerId === null) && overlappingRentals.length > 0 && !isLoadingRentals) {
+        // Find the customer ID from the first overlapping rental
+        const firstRentalCustomerEmail = overlappingRentals[0]?.customer?.email;
+        if (firstRentalCustomerEmail && customers.length > 0) {
+          const matchingCustomer = customers.find((c: any) => 
+            c.email?.toLowerCase() === firstRentalCustomerEmail.toLowerCase()
+          );
+          if (matchingCustomer) {
+            customerIdToSet = matchingCustomer.id.toString();
+          }
+        }
+      }
+      
       form.reset({
         vehicleId: reservation.vehicleId || undefined,
-        customerId: reservation.customerId?.toString() || "none",
+        customerId: customerIdToSet,
         startDate: reservation.startDate,
         maintenanceDuration: duration,
         maintenanceStatus: (reservation.maintenanceStatus === "in" || reservation.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
         notes: reservation.notes || "",
       });
     }
-  }, [reservation, open, form]);
+  }, [reservation, open, form, overlappingRentals, isLoadingRentals, customers]);
 
   // Update mutation - single source of truth approach
   const updateMutation = useMutation({
