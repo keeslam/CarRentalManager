@@ -1532,19 +1532,6 @@ export default function MaintenanceCalendar() {
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium">Warranty End Date (Optional)</label>
-              <Input
-                type="date"
-                value={warrantyDateInput}
-                onChange={(e) => setWarrantyDateInput(e.target.value)}
-                className="mt-2"
-                data-testid="input-warranty-date"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Leave empty if not applicable
-              </p>
-            </div>
-            <div>
               <label className="text-sm font-medium">APK Inspection Form (Optional)</label>
               <Input
                 type="file"
@@ -1566,6 +1553,19 @@ export default function MaintenanceCalendar() {
                   Selected: {apkFormFile.name}
                 </p>
               )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">Warranty End Date (Optional)</label>
+              <Input
+                type="date"
+                value={warrantyDateInput}
+                onChange={(e) => setWarrantyDateInput(e.target.value)}
+                className="mt-2"
+                data-testid="input-warranty-date"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty if not applicable
+              </p>
             </div>
             <div className="flex justify-end gap-2">
               <Button
