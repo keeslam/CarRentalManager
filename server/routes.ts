@@ -1415,17 +1415,10 @@ Autolease Lam`
 
       // Generate new random password
       const password = generateRandomPassword(8);
-      console.log("🔐 Generated password:", password);
       const hashedPassword = await hashPassword(password);
-      console.log("🔒 Hashed password:", hashedPassword);
 
       // Update password
-      const updated = await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
-      console.log("✅ Password update result:", updated);
-      
-      // Verify the password was stored correctly
-      const verifyUser = await storage.getCustomerUserByCustomerId(customerId);
-      console.log("🔍 Stored password hash:", verifyUser?.password);
+      await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
 
       // Get customer details for email
       const customer = await storage.getCustomer(customerId);
@@ -1545,64 +1538,52 @@ Autolease Lam`
       const validationResult = forgotPasswordSchema.safeParse(req.body);
       if (!validationResult.success) {
         return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: validationResult.error.issues.map(i => i.message) 
+          message: "Please enter a valid email address"
         });
       }
 
       const { email } = validationResult.data;
 
-      // Find customer user by email
-      const customerUser = await storage.getCustomerUserByEmail(email);
-      if (!customerUser) {
-        // Don't reveal if email exists or not for security
-        return res.json({ 
-          message: "If an account exists with this email, a password reset link has been sent." 
-        });
-      }
+      // Process password reset silently - always return same response
+      // This prevents account enumeration attacks
+      try {
+        const customerUser = await storage.getCustomerUserByEmail(email);
+        
+        // Only send email if account exists and portal is enabled
+        if (customerUser && customerUser.portalEnabled) {
+          // Generate new random password
+          const password = generateRandomPassword(8);
+          const hashedPassword = await hashPassword(password);
 
-      // Check if portal is enabled
-      if (!customerUser.portalEnabled) {
-        return res.json({ 
-          message: "If an account exists with this email, a password reset link has been sent." 
-        });
-      }
+          // Update password
+          await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
 
-      // Generate new random password
-      const password = generateRandomPassword(8);
-      const hashedPassword = await hashPassword(password);
-
-      // Update password
-      await storage.updateCustomerUserPassword(customerUser.id, hashedPassword);
-
-      // Get customer details for email
-      const customer = await storage.getCustomer(customerUser.customerId);
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-      }
-
-      // Send new password to customer via email
-      const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
-      await sendEmail({
-        to: customer.email,
-        toName: customer.name,
-        subject: "Password Reset - Customer Portal",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Password Reset Request</h2>
-            <p>Dear ${customer.name},</p>
-            <p>Your customer portal password has been reset as requested.</p>
-            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
-              <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
-            </div>
-            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
-            <p style="color: #666666; font-size: 14px;">For security, we recommend changing your password after logging in.</p>
-            <p>If you did not request this reset, please contact us immediately.</p>
-            <p>Best regards,<br>Autolease Lam</p>
-          </div>
-        `,
-        text: `Dear ${customer.name},
+          // Get customer details for email
+          const customer = await storage.getCustomer(customerUser.customerId);
+          
+          if (customer) {
+            // Send new password to customer via email
+            const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+            await sendEmail({
+              to: customer.email,
+              toName: customer.name,
+              subject: "Password Reset - Customer Portal",
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #2563eb;">Password Reset Request</h2>
+                  <p>Dear ${customer.name},</p>
+                  <p>Your customer portal password has been reset as requested.</p>
+                  <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
+                    <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
+                  </div>
+                  <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
+                  <p style="color: #666666; font-size: 14px;">For security, we recommend changing your password after logging in.</p>
+                  <p>If you did not request this reset, please contact us immediately.</p>
+                  <p>Best regards,<br>Autolease Lam</p>
+                </div>
+              `,
+              text: `Dear ${customer.name},
 
 Your customer portal password has been reset as requested.
 
@@ -1617,14 +1598,22 @@ If you did not request this reset, please contact us immediately.
 
 Best regards,
 Autolease Lam`
-      }, 'custom');
+            }, 'custom');
+          }
+        }
+      } catch (error) {
+        // Log error but don't reveal it to user
+        console.error("Error processing password reset:", error);
+      }
 
-      res.json({ 
-        message: "If an account exists with this email, a password reset link has been sent." 
+      // Always return the same response regardless of whether account exists
+      res.status(202).json({ 
+        message: "If an account exists with this email, a password reset email has been sent." 
       });
     } catch (error) {
       console.error("Error in forgot password:", error);
-      res.status(500).json({ message: "Failed to process password reset request", error });
+      // Return generic error message
+      res.status(500).json({ message: "Unable to process your request at this time. Please try again later." });
     }
   });
 
@@ -1632,17 +1621,16 @@ Autolease Lam`
   app.post("/api/customer/request-access", async (req: Request, res: Response) => {
     try {
       const requestAccessSchema = z.object({
-        name: z.string().min(1, "Name is required"),
-        email: z.string().email("Please enter a valid email"),
-        phone: z.string().optional(),
-        message: z.string().optional(),
+        name: z.string().min(1, "Name is required").max(200),
+        email: z.string().email("Please enter a valid email").max(200),
+        phone: z.string().max(50).optional(),
+        message: z.string().max(1000).optional(),
       });
 
       const validationResult = requestAccessSchema.safeParse(req.body);
       if (!validationResult.success) {
         return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: validationResult.error.issues.map(i => i.message) 
+          message: "Please check your input and try again"
         });
       }
 
@@ -1651,9 +1639,10 @@ Autolease Lam`
       // Create a custom notification for staff
       await storage.createCustomNotification({
         title: "Portal Access Request",
-        message: `${name} has requested customer portal access.\n\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nMessage: ${message || 'None'}`,
+        description: `${name} has requested customer portal access.\n\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nMessage: ${message || 'None'}`,
+        date: new Date().toISOString().split('T')[0],
         type: 'info',
-        read: false,
+        isRead: false,
       });
 
       // Also send an email to staff (using the default email config)
