@@ -253,7 +253,10 @@ export function ReservationForm({
   
   // Fetch available vehicles based on selected date range (after form watch variables are declared)
   const { data: availableVehicles, isLoading: isLoadingAvailableVehicles } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles/available", startDateWatch, endDateWatch],
+    queryKey: ["/api/vehicles/available", { 
+      startDate: startDateWatch, 
+      endDate: endDateWatch 
+    }],
     enabled: !!startDateWatch && (!isOpenEndedWatch ? !!endDateWatch : true),
   });
 

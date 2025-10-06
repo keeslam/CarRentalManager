@@ -1127,6 +1127,7 @@ export class MemStorage implements IStorage {
 
   // Spare vehicle management methods
   async getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]> {
+    console.log(`🔍 Checking available vehicles from ${startDate} to ${endDate}, excluding vehicle ${excludeVehicleId || 'none'}`);
     const allVehicles = Array.from(this.vehicles.values());
     const availableVehicles: Vehicle[] = [];
 
@@ -1154,19 +1155,29 @@ export class MemStorage implements IStorage {
         
         // Check for overlap: ongoing reservations (null end) or date range overlap
         if (!rEnd) {
-          // Ongoing reservation - conflicts if our start is before or equal to reservation start
-          return checkEnd >= rStart;
+          // Ongoing reservation - conflicts if check period overlaps with ongoing rental
+          const conflicts = checkStart >= rStart;
+          if (conflicts) {
+            console.log(`  ❌ Vehicle ${vehicle.licensePlate} (ID ${vehicle.id}) has open-ended reservation starting ${r.startDate}`);
+          }
+          return conflicts;
         }
         
         // Standard date range overlap check
-        return checkStart <= rEnd && checkEnd >= rStart;
+        const conflicts = checkStart <= rEnd && checkEnd >= rStart;
+        if (conflicts) {
+          console.log(`  ❌ Vehicle ${vehicle.licensePlate} (ID ${vehicle.id}) conflicts: reservation ${r.startDate} to ${r.endDate}`);
+        }
+        return conflicts;
       });
       
       if (!hasConflicts) {
+        console.log(`  ✅ Vehicle ${vehicle.licensePlate} (ID ${vehicle.id}) is available`);
         availableVehicles.push(vehicle);
       }
     }
 
+    console.log(`✅ Found ${availableVehicles.length} available vehicles`);
     return availableVehicles;
   }
 
