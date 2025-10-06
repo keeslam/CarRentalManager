@@ -105,11 +105,7 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
-    if (!newOpen) {
-      // Clear email sent status and password when closing dialog
-      setEmailSent(false);
-      setGeneratedPassword("");
-    }
+    // Don't clear password state when closing - let it persist so staff can reopen and see it
   };
 
   const copyPassword = () => {
