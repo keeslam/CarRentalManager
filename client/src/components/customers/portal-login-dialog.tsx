@@ -80,9 +80,14 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
     },
     onSuccess: (data) => {
       console.log("Reset password response:", data);
+      console.log("Has password?", !!data.password);
+      console.log("Password value:", data.password);
       setEmailSent(true);
       if (data.password) {
+        console.log("Setting generatedPassword to:", data.password);
         setGeneratedPassword(data.password);
+      } else {
+        console.log("No password in response!");
       }
       toast({
         title: "Password reset",
@@ -137,6 +142,7 @@ export function PortalLoginDialog({ customerId, customerEmail, children }: Porta
           </div>
         ) : (
           <div className="space-y-4">
+            {console.log("Rendering dialog, generatedPassword:", generatedPassword)}
             {/* Current Status */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
