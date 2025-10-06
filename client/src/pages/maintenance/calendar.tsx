@@ -123,6 +123,69 @@ export default function MaintenanceCalendar() {
   const [maintenanceReservationDialogOpen, setMaintenanceReservationDialogOpen] = useState(false);
   const [selectedMaintenanceReservationId, setSelectedMaintenanceReservationId] = useState<number | null>(null);
   
+  // Warranty date dialog
+  const [warrantyDateDialogOpen, setWarrantyDateDialogOpen] = useState(false);
+  const [warrantyDateInput, setWarrantyDateInput] = useState<string>('');
+  const [completingReservation, setCompletingReservation] = useState<any>(null);
+  
+  // Calculate next APK date based on vehicle type and age
+  const calculateNextApkDate = (vehicle: Vehicle, completionDate: Date = new Date()): string => {
+    if (!vehicle.productionDate && !vehicle.apkDate) {
+      // Default to 1 year if we don't have production date
+      const nextDate = new Date(completionDate);
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      return format(nextDate, 'yyyy-MM-dd');
+    }
+    
+    // Use apkDate if available for determining current cycle, otherwise use productionDate
+    const referenceDate = vehicle.apkDate 
+      ? parseISO(vehicle.apkDate) 
+      : vehicle.productionDate 
+        ? parseISO(vehicle.productionDate) 
+        : null;
+    
+    if (!referenceDate) {
+      // Default to 1 year if we can't determine reference date
+      const nextDate = new Date(completionDate);
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      return format(nextDate, 'yyyy-MM-dd');
+    }
+    
+    // Calculate vehicle age from production date
+    const productionDate = vehicle.productionDate ? parseISO(vehicle.productionDate) : null;
+    const vehicleAgeYears = productionDate 
+      ? differenceInDays(completionDate, productionDate) / 365.25 
+      : 0;
+    
+    const fuel = vehicle.fuel?.toLowerCase() || '';
+    const isDieselOrLpg = fuel.includes('diesel') || fuel.includes('lpg');
+    const isPetrolOrElectric = fuel.includes('petrol') || fuel.includes('benzine') || fuel.includes('electric');
+    
+    let yearsToAdd = 1; // Default to annual
+    
+    if (isDieselOrLpg) {
+      // Diesel/LPG: First inspection after 3 years, then annually
+      if (vehicleAgeYears < 3) {
+        yearsToAdd = 3 - Math.floor(vehicleAgeYears);
+      } else {
+        yearsToAdd = 1;
+      }
+    } else if (isPetrolOrElectric) {
+      // Petrol/Electric: First inspection after 4 years, then every 2 years until 8 years, then annually
+      if (vehicleAgeYears < 4) {
+        yearsToAdd = 4 - Math.floor(vehicleAgeYears);
+      } else if (vehicleAgeYears < 8) {
+        yearsToAdd = 2;
+      } else {
+        yearsToAdd = 1;
+      }
+    }
+    
+    const nextDate = new Date(completionDate);
+    nextDate.setFullYear(nextDate.getFullYear() + yearsToAdd);
+    return format(nextDate, 'yyyy-MM-dd');
+  };
+  
   // Dialog handlers
   const handleViewMaintenanceEvent = (reservation: Reservation) => {
     console.log('handleViewMaintenanceEvent called with:', reservation);
@@ -1114,42 +1177,44 @@ export default function MaintenanceCalendar() {
                                       // Determine maintenance type from notes or event description
                                       const notes = actualReservation.notes?.toLowerCase() || '';
                                       const isApk = notes.includes('apk');
-                                      const isWarranty = notes.includes('warranty');
+                                      const isWarranty = notes.includes('warranty') || notes.includes('garantie');
                                       
-                                      // Calculate new date (1 year from today for APK, 2 years for warranty)
-                                      const today = new Date();
-                                      const updates: any = {
-                                        maintenanceStatus: 'ok',
-                                      };
-                                      
-                                      if (isApk) {
-                                        const newApkDate = new Date(today);
-                                        newApkDate.setFullYear(newApkDate.getFullYear() + 1);
-                                        updates.apkDate = format(newApkDate, 'yyyy-MM-dd');
-                                      } else if (isWarranty) {
-                                        const newWarrantyDate = new Date(today);
-                                        newWarrantyDate.setFullYear(newWarrantyDate.getFullYear() + 2);
-                                        updates.warrantyEndDate = format(newWarrantyDate, 'yyyy-MM-dd');
+                                      if (isWarranty) {
+                                        // For warranty, prompt user for the new warranty date
+                                        setCompletingReservation(actualReservation);
+                                        setWarrantyDateInput(format(new Date(), 'yyyy-MM-dd'));
+                                        setWarrantyDateDialogOpen(true);
+                                      } else {
+                                        // For APK or regular maintenance, complete automatically
+                                        const today = new Date();
+                                        const updates: any = {
+                                          maintenanceStatus: 'ok',
+                                        };
+                                        
+                                        if (isApk) {
+                                          // Calculate next APK date based on vehicle type and age
+                                          updates.apkDate = calculateNextApkDate(event.vehicle, today);
+                                        }
+                                        
+                                        // Update vehicle maintenance tracking
+                                        await apiRequest('PATCH', `/api/vehicles/${event.vehicleId}`, updates);
+                                        
+                                        // Delete the maintenance reservation
+                                        await apiRequest('DELETE', `/api/reservations/${actualReservation.id}`);
+                                        
+                                        // Refresh calendar
+                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+                                        
+                                        closeDayDialog();
+                                        
+                                        toast({
+                                          title: "Maintenance Completed",
+                                          description: `Vehicle maintenance tracking has been updated${isApk ? ' (Next APK date calculated)' : ''}.`,
+                                        });
                                       }
-                                      
-                                      // Update vehicle maintenance tracking
-                                      await apiRequest('PATCH', `/api/vehicles/${event.vehicleId}`, updates);
-                                      
-                                      // Delete the maintenance reservation
-                                      await apiRequest('DELETE', `/api/reservations/${actualReservation.id}`);
-                                      
-                                      // Refresh calendar
-                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-                                      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-                                      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-                                      
-                                      closeDayDialog();
-                                      
-                                      toast({
-                                        title: "Maintenance Completed",
-                                        description: `Vehicle maintenance tracking has been updated${isApk ? ' (APK renewed for 1 year)' : isWarranty ? ' (Warranty extended for 2 years)' : ''}.`,
-                                      });
                                     }
                                   } catch (error) {
                                     console.error('Failed to complete maintenance:', error);
@@ -1457,6 +1522,84 @@ export default function MaintenanceCalendar() {
         }}
         reservationId={selectedMaintenanceReservationId}
       />
+
+      {/* Warranty Date Input Dialog */}
+      <Dialog open={warrantyDateDialogOpen} onOpenChange={setWarrantyDateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Warranty Maintenance</DialogTitle>
+            <DialogDescription>
+              Enter the new warranty end date for this vehicle
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">New Warranty End Date</label>
+              <Input
+                type="date"
+                value={warrantyDateInput}
+                onChange={(e) => setWarrantyDateInput(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setWarrantyDateDialogOpen(false);
+                  setCompletingReservation(null);
+                  setWarrantyDateInput('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={async () => {
+                  try {
+                    if (!completingReservation || !warrantyDateInput) {
+                      throw new Error('Missing required data');
+                    }
+
+                    // Update vehicle with new warranty date
+                    await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, {
+                      warrantyEndDate: warrantyDateInput,
+                      maintenanceStatus: 'ok',
+                    });
+
+                    // Delete the maintenance reservation
+                    await apiRequest('DELETE', `/api/reservations/${completingReservation.id}`);
+
+                    // Refresh calendar
+                    queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+
+                    setWarrantyDateDialogOpen(false);
+                    setCompletingReservation(null);
+                    setWarrantyDateInput('');
+                    closeDayDialog();
+
+                    toast({
+                      title: "Warranty Maintenance Completed",
+                      description: "Vehicle warranty date has been updated.",
+                    });
+                  } catch (error) {
+                    console.error('Failed to complete warranty maintenance:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to complete warranty maintenance. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Complete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
