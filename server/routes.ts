@@ -2471,7 +2471,7 @@ Car Rental Management System`
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
-      // Convert string fields to the correct types
+      // Convert string fields to the correct types (FormData sends everything as strings)
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
       
@@ -2482,6 +2482,38 @@ Car Rental Management System`
         const parsedPrice = parseFloat(req.body.totalPrice);
         req.body.totalPrice = isNaN(parsedPrice) ? undefined : parsedPrice;
       }
+      
+      // Convert "null" string to actual null for nullable fields
+      if (req.body.replacementForReservationId === "null" || req.body.replacementForReservationId === "") {
+        req.body.replacementForReservationId = null;
+      } else if (req.body.replacementForReservationId) {
+        req.body.replacementForReservationId = parseInt(req.body.replacementForReservationId);
+      }
+      
+      if (req.body.affectedRentalId === "null" || req.body.affectedRentalId === "") {
+        req.body.affectedRentalId = null;
+      } else if (req.body.affectedRentalId) {
+        req.body.affectedRentalId = parseInt(req.body.affectedRentalId);
+      }
+      
+      if (req.body.maintenanceDuration === "null" || req.body.maintenanceDuration === "") {
+        req.body.maintenanceDuration = null;
+      } else if (req.body.maintenanceDuration) {
+        req.body.maintenanceDuration = parseInt(req.body.maintenanceDuration);
+      }
+      
+      // Convert string booleans to actual booleans
+      if (req.body.placeholderSpare === "true") req.body.placeholderSpare = true;
+      else if (req.body.placeholderSpare === "false") req.body.placeholderSpare = false;
+      
+      // Handle nullable string fields
+      if (req.body.maintenanceStatus === "null" || req.body.maintenanceStatus === "") {
+        req.body.maintenanceStatus = null;
+      }
+      if (req.body.spareAssignmentDecision === "null" || req.body.spareAssignmentDecision === "") {
+        req.body.spareAssignmentDecision = null;
+      }
+      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts
