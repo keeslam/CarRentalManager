@@ -761,8 +761,6 @@ export function ReservationForm({
 
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log("Form submitted!", { data, editMode, hasOverlap });
-    
     // Check for overlapping reservations (skip for open-ended rentals)
     if (hasOverlap && !data.isOpenEnded) {
       toast({
@@ -827,11 +825,7 @@ export function ReservationForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={(e) => {
-            console.log("Form onSubmit triggered", e);
-            console.log("Form errors:", form.formState.errors);
-            form.handleSubmit(onSubmit)(e);
-          }} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Date Selection Section - Now First */}
             <div className="space-y-6">
               <div className="text-lg font-medium">1. Select Rental Dates</div>

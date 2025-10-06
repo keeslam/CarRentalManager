@@ -235,10 +235,14 @@ export const insertReservationSchemaBase = createInsertSchema(reservations).omit
   ),
   endDate: z.string().optional().or(z.null()), // Make end date optional for open-ended rentals
   type: z.enum(["standard", "replacement", "maintenance_block"]).optional(),
-  replacementForReservationId: z.number().optional(),
+  replacementForReservationId: z.number().optional().or(z.null()), // Allow null
   customerId: z.number().optional().or(z.null()), // Make customerId optional for maintenance blocks
   vehicleId: z.number().optional().or(z.null()), // Allow null for placeholder spare vehicles
-  placeholderSpare: z.boolean().optional().default(false) // Default to false for normal reservations
+  placeholderSpare: z.boolean().optional().default(false), // Default to false for normal reservations
+  affectedRentalId: z.number().optional().or(z.null()), // Allow null
+  maintenanceDuration: z.number().optional().or(z.null()), // Allow null
+  maintenanceStatus: z.string().optional().or(z.null()), // Allow null
+  spareAssignmentDecision: z.string().optional().or(z.null()), // Allow null
 });
 
 // Fully validated schema with business rules for server-side use
