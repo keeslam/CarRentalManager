@@ -46,6 +46,7 @@ const maintenanceEditSchema = z.object({
     z.string().min(1, "Please select a vehicle").transform(val => parseInt(val)),
   ]),
   customerId: z.string().optional(), // Optional customer
+  contactPhone: z.string().optional(), // Phone number for person dropping off vehicle
   startDate: z.string().min(1, "Date when vehicle comes in is required"),
   maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
   maintenanceStatus: z.enum(["scheduled", "in", "out"]).default("scheduled"),
@@ -168,26 +169,43 @@ export function MaintenanceEditDialog({
         (reservation.startDate && reservation.endDate ? 
           Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1);
       
+      // Extract contact phone from notes if it exists
+      const contactPhoneMatch = (reservation.notes || '').match(/Contact Phone:\s*(.+?)(?:\n|$)/);
+      let existingContactPhone = contactPhoneMatch ? contactPhoneMatch[1].trim() : "";
+      
       // If no customer is assigned but there's an active rental, auto-select that customer
       let customerIdToSet = reservation.customerId?.toString() || "none";
+      let contactPhoneToSet = existingContactPhone;
       
       // Check if there are overlapping rentals and no customer is currently assigned
       if ((!reservation.customerId || reservation.customerId === null) && overlappingRentals.length > 0 && !isLoadingRentals) {
         // Find the customer ID from the first overlapping rental
         const firstRentalCustomerEmail = overlappingRentals[0]?.customer?.email;
+        const firstRentalCustomerPhone = overlappingRentals[0]?.customer?.phone;
         if (firstRentalCustomerEmail && customers.length > 0) {
           const matchingCustomer = customers.find((c: any) => 
             c.email?.toLowerCase() === firstRentalCustomerEmail.toLowerCase()
           );
           if (matchingCustomer) {
             customerIdToSet = matchingCustomer.id.toString();
+            // Use existing contact phone if available, otherwise use customer's phone
+            if (!contactPhoneToSet) {
+              contactPhoneToSet = matchingCustomer.phone || firstRentalCustomerPhone || "";
+            }
           }
+        }
+      } else if (customerIdToSet && customerIdToSet !== "none" && !contactPhoneToSet) {
+        // If customer is already assigned and no contact phone exists, get their phone
+        const customer = customers.find((c: any) => c.id.toString() === customerIdToSet);
+        if (customer) {
+          contactPhoneToSet = customer.phone || "";
         }
       }
       
       form.reset({
         vehicleId: reservation.vehicleId || undefined,
         customerId: customerIdToSet,
+        contactPhone: contactPhoneToSet,
         startDate: reservation.startDate,
         maintenanceDuration: duration,
         maintenanceStatus: (reservation.maintenanceStatus === "in" || reservation.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
@@ -204,6 +222,22 @@ export function MaintenanceEditDialog({
       // Calculate end date from start date + duration
       const endDate = calculateEndDate(data.startDate, data.maintenanceDuration);
       
+      // Build notes with contact phone if provided
+      let notesText = data.notes || "";
+      if (data.contactPhone) {
+        // If notes don't already contain contact phone, append it
+        if (!notesText.includes("Contact Phone:")) {
+          notesText = notesText.trim();
+          if (notesText && !notesText.endsWith("\n")) {
+            notesText += "\n";
+          }
+          notesText += `Contact Phone: ${data.contactPhone}`;
+        } else {
+          // Update existing contact phone line
+          notesText = notesText.replace(/Contact Phone:.*$/m, `Contact Phone: ${data.contactPhone}`);
+        }
+      }
+      
       // If there are spare vehicle assignments, use the maintenance-with-spare endpoint
       if (spareVehicleAssignments.length > 0) {
         // Use maintenance-with-spare endpoint to update existing maintenance with spare assignments
@@ -216,7 +250,7 @@ export function MaintenanceEditDialog({
             endDate: endDate,
             status: data.maintenanceStatus,
             type: "maintenance_block",
-            notes: data.notes || "",
+            notes: notesText,
             totalPrice: 0,
             maintenanceDuration: data.maintenanceDuration,
             maintenanceStatus: data.maintenanceStatus,
@@ -234,7 +268,7 @@ export function MaintenanceEditDialog({
           endDate: endDate,
           status: data.maintenanceStatus,
           type: "maintenance_block",
-          notes: data.notes || "",
+          notes: notesText,
           totalPrice: 0,
           maintenanceDuration: data.maintenanceDuration,
           maintenanceStatus: data.maintenanceStatus,
@@ -331,25 +365,17 @@ export function MaintenanceEditDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Vehicle Selection */}
-              <FormField
-                control={form.control}
-                name="vehicleId"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Vehicle</FormLabel>
-                    <FormControl>
-                      <VehicleSelector
-                        vehicles={vehicles}
-                        value={field.value?.toString() || ""}
-                        onChange={(value: string) => field.onChange(parseInt(value))}
-                        placeholder="Select a vehicle"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Vehicle (Display Only) */}
+              <div>
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Vehicle
+                </label>
+                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-vehicle">
+                  {vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)
+                    ? `${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.brand} ${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.model} (${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.licensePlate})`
+                    : 'Not specified'}
+                </div>
+              </div>
 
               {/* Maintenance Type - parsed from notes (display only) */}
               <div>
@@ -360,6 +386,41 @@ export function MaintenanceEditDialog({
                   {parsed.maintenanceType || 'Not specified'}
                 </div>
               </div>
+
+              {/* Customer (Display Only) */}
+              <div>
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Customer
+                </label>
+                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-customer">
+                  {form.watch("customerId") && form.watch("customerId") !== "none"
+                    ? customers.find((c: any) => c.id.toString() === form.watch("customerId"))?.name || 'Not found'
+                    : 'None (no customer)'}
+                </div>
+              </div>
+
+              {/* Contact Phone Number */}
+              <FormField
+                control={form.control}
+                name="contactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Phone Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="Phone number for drop-off contact"
+                        {...field}
+                        data-testid="input-contact-phone"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Direct number to reach the person dropping off the vehicle
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Scheduled Date */}
               <FormField
@@ -375,36 +436,6 @@ export function MaintenanceEditDialog({
                         data-testid="input-scheduled-date"
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Customer (Optional) */}
-              <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-customer">
-                          <SelectValue placeholder="Select customer (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60">
-                        <SelectItem value="none">None (no customer)</SelectItem>
-                        {customers.map((customer: any) => (
-                          <SelectItem key={customer.id} value={customer.id.toString()}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Who is bringing the vehicle in for maintenance?
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
