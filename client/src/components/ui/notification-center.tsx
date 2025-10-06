@@ -21,6 +21,8 @@ import { AlertTriangle } from "lucide-react";
 import { Info } from "lucide-react";
 import { ClipboardCheck } from "lucide-react";
 import { MessageSquare } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Link, useLocation } from "wouter";
 
@@ -412,6 +414,11 @@ function NotificationItem({
     timeText = `In ${daysUntil} days`;
   }
 
+  // Check if this is a portal access request
+  const isPortalRequest = title === "Portal Access Request";
+  const isExistingCustomer = description.includes("✅ Customer exists");
+  const isNewCustomer = description.includes("⚠️ New customer");
+
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
@@ -427,21 +434,55 @@ function NotificationItem({
     navigate(link);
   };
 
+  const handleActionClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onClick) {
+      onClick();
+    }
+    navigate(link);
+  };
+
   return (
-    <div onClick={handleClick} className="cursor-pointer">
-      <div className="p-4 border-b hover:bg-gray-50 transition-colors">
+    <div className="cursor-pointer">
+      <div className={`p-4 border-b hover:bg-gray-50 transition-colors ${isPortalRequest ? 'bg-blue-50/50' : ''}`}>
         <div className="flex">
           <div className="mr-3 mt-0.5">
-            <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center">
+            <div className={`h-6 w-6 rounded-full flex items-center justify-center ${isPortalRequest ? 'bg-blue-100' : 'bg-gray-100'}`}>
               {icon}
             </div>
           </div>
-          <div className="flex-1 space-y-1">
+          <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between">
               <p className="text-sm font-medium">{title}</p>
               <p className="text-xs text-muted-foreground font-medium">{timeText}</p>
             </div>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground whitespace-pre-line">{description}</p>
+            {isPortalRequest && (
+              <Button 
+                size="sm" 
+                onClick={handleActionClick}
+                className="w-full mt-2"
+                variant={isExistingCustomer ? "default" : "secondary"}
+                data-testid="button-portal-action"
+              >
+                {isExistingCustomer ? (
+                  <>
+                    <UserPlus className="mr-2 h-3 w-3" />
+                    Enable Portal Access
+                  </>
+                ) : isNewCustomer ? (
+                  <>
+                    <UserPlus className="mr-2 h-3 w-3" />
+                    Add New Customer
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="mr-2 h-3 w-3" />
+                    Take Action
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
