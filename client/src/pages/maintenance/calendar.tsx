@@ -1591,10 +1591,11 @@ export default function MaintenanceCalendar() {
                     // Upload APK form if provided
                     if (apkFormFile) {
                       const formData = new FormData();
-                      formData.append('file', apkFormFile);
+                      // Important: append fields before the file for multer to parse correctly
                       formData.append('vehicleId', completingReservation.vehicleId.toString());
                       formData.append('documentType', 'APK Inspection');
                       formData.append('description', `APK inspection completed on ${apkDateInput || new Date().toISOString().split('T')[0]}`);
+                      formData.append('file', apkFormFile);
 
                       const response = await fetch('/api/documents', {
                         method: 'POST',
@@ -1602,7 +1603,8 @@ export default function MaintenanceCalendar() {
                       });
 
                       if (!response.ok) {
-                        throw new Error('Failed to upload APK form');
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Failed to upload APK form');
                       }
                     }
 
