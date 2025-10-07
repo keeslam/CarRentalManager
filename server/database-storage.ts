@@ -1072,6 +1072,10 @@ export class DatabaseStorage implements IStorage {
         updateData.is_default = templateData.isDefault;
       }
       
+      if (templateData.backgroundPath !== undefined) {
+        updateData.background_path = templateData.backgroundPath;
+      }
+      
       // Always update timestamp
       updateData.updated_at = new Date();
       
@@ -1096,6 +1100,10 @@ export class DatabaseStorage implements IStorage {
       
       if (updateData.is_default !== undefined) {
         setClauses.push(sql`is_default = ${updateData.is_default}`);
+      }
+      
+      if (updateData.background_path !== undefined) {
+        setClauses.push(sql`background_path = ${updateData.background_path}`);
       }
       
       // Always update timestamp
