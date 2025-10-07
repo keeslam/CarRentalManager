@@ -447,6 +447,7 @@ export const pdfTemplates = pgTable("pdf_templates", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   isDefault: boolean("is_default").default(false),
+  backgroundPath: text("background_path"), // Custom background image path (null = use default)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   fields: jsonb("fields").default([])
