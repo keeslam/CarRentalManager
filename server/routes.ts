@@ -4679,6 +4679,131 @@ Car Rental Management System`
     }
   });
 
+  // Configure multer for template background uploads
+  const templateBackgroundStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const templatesDir = path.join(uploadsDir, 'templates');
+      cb(null, templatesDir);
+    },
+    filename: (req, file, cb) => {
+      const id = req.params.id;
+      const ext = path.extname(file.originalname);
+      cb(null, `template_${id}_background${ext}`);
+    }
+  });
+
+  const templateBackgroundUpload = multer({
+    storage: templateBackgroundStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit for backgrounds
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only JPG, PNG, and PDF are allowed.'));
+      }
+    }
+  });
+
+  // Upload template background
+  app.post("/api/pdf-templates/:id/background", requireAuth, templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No background file provided" });
+      }
+
+      // Get template to verify it exists
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        // Clean up uploaded file if template doesn't exist
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (error) {
+          console.error("Error cleaning up file:", error);
+        }
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Delete old background if it exists and is not the default
+      if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
+        const oldBackgroundPath = path.join(process.cwd(), template.backgroundPath);
+        try {
+          await fs.promises.unlink(oldBackgroundPath);
+        } catch (error) {
+          console.error("Error deleting old background:", error);
+        }
+      }
+
+      // Update template with new background path
+      const backgroundPath = path.relative(process.cwd(), req.file.path);
+      
+      const updatedTemplate = await storage.updatePdfTemplate(id, {
+        backgroundPath
+      });
+
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Failed to update template" });
+      }
+
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error uploading template background:", error);
+      res.status(400).json({ 
+        message: "Failed to upload template background", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Remove template background (reset to default)
+  app.delete("/api/pdf-templates/:id/background", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      const template = await storage.getPdfTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Delete the custom background file if it exists and is not the default
+      if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
+        const backgroundPath = path.join(process.cwd(), template.backgroundPath);
+        try {
+          await fs.promises.unlink(backgroundPath);
+        } catch (error) {
+          console.error("Error deleting background file:", error);
+        }
+      }
+
+      // Update template to remove background path (will use default)
+      const updatedTemplate = await storage.updatePdfTemplate(id, {
+        backgroundPath: null
+      });
+
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Failed to update template" });
+      }
+
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error removing template background:", error);
+      res.status(500).json({ 
+        message: "Failed to remove template background", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // ==================== CUSTOM NOTIFICATIONS ROUTES ====================
   // Get all custom notifications
   app.get("/api/custom-notifications", requireAuth, async (req: Request, res: Response) => {

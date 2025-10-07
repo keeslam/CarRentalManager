@@ -53,6 +53,7 @@ interface Template {
   id: number;
   name: string;
   isDefault: boolean;
+  backgroundPath?: string | null;
   fields: TemplateField[];
 }
 
@@ -107,6 +108,7 @@ const PDFTemplateEditor = () => {
   const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { data: templateData, isLoading: isTemplateLoading } = useQuery({
@@ -174,6 +176,55 @@ const PDFTemplateEditor = () => {
       toast({
         title: "Error",
         description: `Failed to delete template: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const uploadBackgroundMutation = useMutation({
+    mutationFn: async ({ templateId, file }: { templateId: number, file: File }) => {
+      const formData = new FormData();
+      formData.append('background', file);
+      const res = await fetch(`/api/pdf-templates/${templateId}/background`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      toast({
+        title: "Success",
+        description: "Background uploaded successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to upload background: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const removeBackgroundMutation = useMutation({
+    mutationFn: async (templateId: number) => {
+      const res = await apiRequest('DELETE', `/api/pdf-templates/${templateId}/background`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      toast({
+        title: "Success",
+        description: "Background removed, using default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to remove background: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -788,6 +839,49 @@ const PDFTemplateEditor = () => {
     setZoomLevel(1);
   };
 
+  const handleUploadBackground = () => {
+    if (!currentTemplate) return;
+    backgroundInputRef.current?.click();
+  };
+
+  const handleBackgroundFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentTemplate) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Only JPG, PNG, and PDF files are allowed",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    uploadBackgroundMutation.mutate({ templateId: currentTemplate.id, file });
+    
+    // Reset input
+    if (backgroundInputRef.current) {
+      backgroundInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveBackground = () => {
+    if (!currentTemplate) return;
+    removeBackgroundMutation.mutate(currentTemplate.id);
+  };
+
   const handleSaveTemplate = () => {
     if (!currentTemplate) return;
     
@@ -949,6 +1043,25 @@ const PDFTemplateEditor = () => {
                 <Button onClick={() => handleRedo()} disabled={historyIndex >= history.length - 1} variant="outline" size="sm" title="Redo (Ctrl+Y)">
                   <Redo2 className="h-4 w-4" />
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Background
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleUploadBackground} disabled={!currentTemplate || uploadBackgroundMutation.isPending}>
+                      Upload Custom Background
+                    </DropdownMenuItem>
+                    {currentTemplate?.backgroundPath && (
+                      <DropdownMenuItem onClick={handleRemoveBackground} disabled={removeBackgroundMutation.isPending}>
+                        Remove Custom Background
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button variant="outline" onClick={handleDeleteTemplate} disabled={saveTemplateMutation.isPending || deleteTemplateMutation.isPending}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -1239,8 +1352,8 @@ const PDFTemplateEditor = () => {
                           backgroundImage: showGrid ? 
                             `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
                              repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
-                             url(${contractBackground})` :
-                            `url(${contractBackground})`,
+                             url(${currentTemplate?.backgroundPath ? `/${currentTemplate.backgroundPath}` : contractBackground})` :
+                            `url(${currentTemplate?.backgroundPath ? `/${currentTemplate.backgroundPath}` : contractBackground})`,
                           backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, cover` : 'cover',
                           backgroundPosition: 'center',
                           backgroundRepeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',
@@ -1646,6 +1759,15 @@ const PDFTemplateEditor = () => {
           </div>
         )}
       </div>
+      
+      {/* Hidden file input for background upload */}
+      <input
+        ref={backgroundInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,application/pdf"
+        onChange={handleBackgroundFileChange}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 };

@@ -31,39 +31,130 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     
     // Always try to use the template background
     try {
-      // Default template path for the contract background
-      const templatePath = path.join(
-        process.cwd(), 
-        'uploads/templates/rental_contract_template.pdf'
-      );
+      // Use custom background if specified in template, otherwise use default
+      const backgroundPath = template?.backgroundPath || 'uploads/templates/rental_contract_template.pdf';
+      const templatePath = path.join(process.cwd(), backgroundPath);
+      const defaultTemplatePath = path.join(process.cwd(), 'uploads/templates/rental_contract_template.pdf');
       
       console.log('Loading template from path:', templatePath);
       
       // Check if the file exists
       if (fs.existsSync(templatePath)) {
         const templateBytes = fs.readFileSync(templatePath);
+        const ext = path.extname(templatePath).toLowerCase();
         
-        // Load the PDF document
-        pdfDoc = await PDFDocument.load(templateBytes);
-        
-        // Get the first page or add one if the PDF is empty
-        if (pdfDoc.getPageCount() > 0) {
-          page = pdfDoc.getPage(0);
-          console.log('Successfully loaded template background');
+        // Handle PDF files
+        if (ext === '.pdf') {
+          try {
+            // Load the PDF document
+            pdfDoc = await PDFDocument.load(templateBytes);
+            
+            // Get the first page or add one if the PDF is empty
+            if (pdfDoc.getPageCount() > 0) {
+              page = pdfDoc.getPage(0);
+              console.log('Successfully loaded PDF template background');
+            } else {
+              console.log('Template PDF exists but has no pages, falling back to default');
+              throw new Error('PDF has no pages');
+            }
+          } catch (pdfError) {
+            console.error('Error loading PDF template, falling back to default:', pdfError);
+            // Fall back to default template
+            if (fs.existsSync(defaultTemplatePath)) {
+              const defaultBytes = fs.readFileSync(defaultTemplatePath);
+              pdfDoc = await PDFDocument.load(defaultBytes);
+              page = pdfDoc.getPage(0);
+            } else {
+              pdfDoc = await PDFDocument.create();
+              page = pdfDoc.addPage([595, 842]);
+            }
+          }
+        } 
+        // Handle image files (JPG, PNG)
+        else if (ext === '.jpg' || ext === '.jpeg' || ext === '.png') {
+          console.log('Custom background is an image, creating new PDF and embedding image');
+          
+          try {
+            // Create new document for image background
+            pdfDoc = await PDFDocument.create();
+            page = pdfDoc.addPage([595, 842]); // A4 size
+            
+            // Embed the image based on type
+            let image;
+            if (ext === '.png') {
+              image = await pdfDoc.embedPng(templateBytes);
+            } else {
+              image = await pdfDoc.embedJpg(templateBytes);
+            }
+            
+            // Draw the image to fill the page
+            const { width, height } = page.getSize();
+            page.drawImage(image, {
+              x: 0,
+              y: 0,
+              width: width,
+              height: height,
+            });
+            console.log('Successfully embedded image background');
+          } catch (imgError) {
+            console.error('Error embedding image, falling back to default template:', imgError);
+            // Fall back to default template - reload completely
+            if (fs.existsSync(defaultTemplatePath)) {
+              const defaultBytes = fs.readFileSync(defaultTemplatePath);
+              pdfDoc = await PDFDocument.load(defaultBytes);
+              page = pdfDoc.getPage(0);
+              console.log('Successfully loaded default template after image failure');
+            } else {
+              console.error('CRITICAL: Default template not found after image failure');
+              pdfDoc = await PDFDocument.create();
+              page = pdfDoc.addPage([595, 842]);
+            }
+          }
         } else {
-          console.log('Template PDF exists but has no pages, creating new page');
-          page = pdfDoc.addPage([595, 842]); // A4 size
+          console.log('Unsupported file type, falling back to default template');
+          // Fall back to default template
+          if (fs.existsSync(defaultTemplatePath)) {
+            const defaultBytes = fs.readFileSync(defaultTemplatePath);
+            pdfDoc = await PDFDocument.load(defaultBytes);
+            page = pdfDoc.getPage(0);
+          } else {
+            pdfDoc = await PDFDocument.create();
+            page = pdfDoc.addPage([595, 842]);
+          }
         }
       } else {
-        console.log('Template file not found, creating new document');
-        pdfDoc = await PDFDocument.create();
-        page = pdfDoc.addPage([595, 842]); // A4 size
+        console.log('Custom template file not found, falling back to default');
+        // Fall back to default template
+        if (fs.existsSync(defaultTemplatePath)) {
+          const defaultBytes = fs.readFileSync(defaultTemplatePath);
+          pdfDoc = await PDFDocument.load(defaultBytes);
+          page = pdfDoc.getPage(0);
+          console.log('Successfully loaded default template background');
+        } else {
+          console.log('Default template also not found, creating blank document');
+          pdfDoc = await PDFDocument.create();
+          page = pdfDoc.addPage([595, 842]); // A4 size
+        }
       }
     } catch (error) {
       console.error('Error loading template background:', error);
-      // Fall back to creating a new document
-      pdfDoc = await PDFDocument.create();
-      page = pdfDoc.addPage([595, 842]); // A4 size
+      // Final fallback - try default template one more time
+      try {
+        const defaultTemplatePath = path.join(process.cwd(), 'uploads/templates/rental_contract_template.pdf');
+        if (fs.existsSync(defaultTemplatePath)) {
+          const defaultBytes = fs.readFileSync(defaultTemplatePath);
+          pdfDoc = await PDFDocument.load(defaultBytes);
+          page = pdfDoc.getPage(0);
+          console.log('Recovered using default template');
+        } else {
+          pdfDoc = await PDFDocument.create();
+          page = pdfDoc.addPage([595, 842]); // A4 size
+        }
+      } catch (fallbackError) {
+        console.error('Final fallback also failed:', fallbackError);
+        pdfDoc = await PDFDocument.create();
+        page = pdfDoc.addPage([595, 842]); // A4 size
+      }
     }
     
     // Get fonts
