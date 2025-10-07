@@ -1271,14 +1271,15 @@ const PDFTemplateEditor = () => {
                               transform: 'translate(-50%, -50%)',
                               backgroundColor: selectedFields.includes(field.id) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.85)',
                               color: '#000000',
-                              padding: '4px 8px',
-                              boxShadow: selectedFields.includes(field.id) ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
-                              borderRadius: '4px',
+                              padding: '1px 6px',
+                              boxShadow: selectedFields.includes(field.id) ? '0 2px 4px rgba(0,0,0,0.3)' : '0 1px 2px rgba(0,0,0,0.2)',
+                              borderRadius: '2px',
                               textAlign: field.textAlign,
-                              minWidth: '100px',
-                              display: 'flex',
+                              minWidth: '60px',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              justifyContent: field.textAlign === 'left' ? 'flex-start' : field.textAlign === 'right' ? 'flex-end' : 'center'
+                              justifyContent: field.textAlign === 'left' ? 'flex-start' : field.textAlign === 'right' ? 'flex-end' : 'center',
+                              lineHeight: 1.2
                             }}
                             onClick={(e) => handleFieldClick(field, e)}
                             onMouseDown={(e) => handleMouseDown(e, field)}
