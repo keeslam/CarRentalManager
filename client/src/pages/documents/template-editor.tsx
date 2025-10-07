@@ -165,8 +165,11 @@ const PDFTemplateEditor = () => {
 
   useEffect(() => {
     if (templateData) {
+      // Ensure templateData is an array
+      const templatesArray = Array.isArray(templateData) ? templateData : [];
+      
       // Process templates - parse fields if they're stored as a string
-      const processedTemplates = templateData.map((template: any) => {
+      const processedTemplates = templatesArray.map((template: any) => {
         if (template.fields && typeof template.fields === 'string') {
           try {
             return {
@@ -178,7 +181,11 @@ const PDFTemplateEditor = () => {
             return template;
           }
         }
-        return template;
+        // Ensure fields is always an array
+        return {
+          ...template,
+          fields: Array.isArray(template.fields) ? template.fields : []
+        };
       });
       
       setTemplates(processedTemplates);
