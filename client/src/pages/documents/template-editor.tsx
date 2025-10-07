@@ -104,6 +104,7 @@ const PDFTemplateEditor = () => {
   const [fieldHistory, setFieldHistory] = useState<TemplateField[]>([]);
   const [selectionBox, setSelectionBox] = useState<{start: {x: number, y: number}, end: {x: number, y: number}} | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -400,7 +401,7 @@ const PDFTemplateEditor = () => {
       return;
     }
     
-    if (!isMoving || !currentTemplate) return;
+    if (!isMoving || !currentTemplate || !pdfContainerRef.current) return;
     e.preventDefault();
     
     // Multi-select with Ctrl/Cmd
@@ -414,18 +415,30 @@ const PDFTemplateEditor = () => {
       setSelectedFields([field.id]);
     }
     
+    // Calculate where on the field the user clicked (in PDF coordinates)
+    const containerRect = pdfContainerRef.current.getBoundingClientRect();
+    const clickX = (e.clientX - containerRect.left) / zoomLevel;
+    const clickY = (e.clientY - containerRect.top) / zoomLevel;
+    
+    // Store offset from field position to click position
+    setDragOffset({
+      x: clickX - field.x,
+      y: clickY - field.y
+    });
+    
     setDraggedField(field);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isMoving || !draggedField || !currentTemplate || !pdfContainerRef.current) return;
+    if (!isMoving || !draggedField || !currentTemplate || !pdfContainerRef.current || !dragOffset) return;
     
     const containerRect = pdfContainerRef.current.getBoundingClientRect();
     const rawX = e.clientX - containerRect.left;
     const rawY = e.clientY - containerRect.top;
     
-    let x = Math.max(0, Math.min(rawX / zoomLevel, 595));
-    let y = Math.max(0, Math.min(rawY / zoomLevel, 842));
+    // Convert cursor position to PDF coordinates and subtract drag offset
+    let x = Math.max(0, Math.min(rawX / zoomLevel - dragOffset.x, 595));
+    let y = Math.max(0, Math.min(rawY / zoomLevel - dragOffset.y, 842));
     
     x = snapPosition(x);
     y = snapPosition(y);
@@ -472,6 +485,7 @@ const PDFTemplateEditor = () => {
       addToHistory(currentTemplate.fields);
     }
     setDraggedField(null);
+    setDragOffset(null);
     setAlignmentGuides({});
   };
 
@@ -756,17 +770,17 @@ const PDFTemplateEditor = () => {
     const zoomWidth = containerWidth / 595;
     const zoomHeight = containerHeight / 842;
     const idealZoom = Math.min(zoomWidth, zoomHeight);
-    setZoomLevel(Math.max(idealZoom, 0.5)); // Only enforce minimum, no maximum
+    setZoomLevel(Math.max(idealZoom, 0.3)); // Only enforce minimum, no maximum
     toast({ title: "Zoom to Fit", description: "Adjusted zoom to fit page" });
   };
 
   const handleZoomIn = () => {
-    const newZoom = Math.min(zoomLevel + 0.1, 2);
+    const newZoom = Math.min(zoomLevel + 0.1, 3);
     setZoomLevel(newZoom);
   };
 
   const handleZoomOut = () => {
-    const newZoom = Math.max(zoomLevel - 0.1, 0.5);
+    const newZoom = Math.max(zoomLevel - 0.1, 0.3);
     setZoomLevel(newZoom);
   };
 
