@@ -1202,7 +1202,7 @@ const PDFTemplateEditor = () => {
                       <>
                         <div className="absolute top-0 left-8 right-0 h-8 bg-gray-100 border-b flex items-end text-xs text-gray-600" style={{ zIndex: 10 }}>
                           {Array.from({ length: Math.ceil(595 / 50) + 1 }).map((_, i) => (
-                            <div key={i} className="absolute" style={{ left: `${i * 50 * zoomLevel + 32}px` }}>
+                            <div key={i} className="absolute" style={{ left: `${i * 50 + 32}px` }}>
                               <div className="h-2 w-px bg-gray-400" />
                               <span className="ml-1">{i * 50}</span>
                             </div>
@@ -1210,7 +1210,7 @@ const PDFTemplateEditor = () => {
                         </div>
                         <div className="absolute top-8 left-0 bottom-0 w-8 bg-gray-100 border-r flex flex-col text-xs text-gray-600" style={{ zIndex: 10 }}>
                           {Array.from({ length: Math.ceil(842 / 50) + 1 }).map((_, i) => (
-                            <div key={i} className="absolute" style={{ top: `${i * 50 * zoomLevel + 32}px` }}>
+                            <div key={i} className="absolute" style={{ top: `${i * 50 + 32}px` }}>
                               <div className="w-2 h-px bg-gray-400" />
                               <span className="ml-0.5">{i * 50}</span>
                             </div>
@@ -1233,15 +1233,17 @@ const PDFTemplateEditor = () => {
                         ref={pdfContainerRef}
                         className={`relative bg-white border border-gray-300 shadow-lg ${showGrid ? 'bg-grid' : ''}`}
                         style={{ 
-                          width: `${595 * zoomLevel}px`, 
-                          height: `${842 * zoomLevel}px`,
+                          width: `595px`, 
+                          height: `842px`,
                           margin: '0 auto',
+                          transform: `scale(${zoomLevel})`,
+                          transformOrigin: 'top left',
                           backgroundImage: showGrid ? 
-                            `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
-                             repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                            `repeating-linear-gradient(0deg, transparent, transparent ${gridSize - 1}px, #e5e7eb ${gridSize - 1}px, #e5e7eb ${gridSize}px),
+                             repeating-linear-gradient(90deg, transparent, transparent ${gridSize - 1}px, #e5e7eb ${gridSize - 1}px, #e5e7eb ${gridSize}px),
                              url(${contractBackground})` :
                             `url(${contractBackground})`,
-                          backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, cover` : 'cover',
+                          backgroundSize: showGrid ? `${gridSize}px ${gridSize}px, ${gridSize}px ${gridSize}px, cover` : 'cover',
                           backgroundPosition: 'center',
                           backgroundRepeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',
                         }}
@@ -1251,10 +1253,10 @@ const PDFTemplateEditor = () => {
                         onMouseDown={handleCanvasMouseDown}
                       >
                         {alignmentGuides.x !== undefined && (
-                          <div className="absolute top-0 bottom-0 w-px bg-blue-500" style={{ left: `${alignmentGuides.x * zoomLevel}px` }} />
+                          <div className="absolute top-0 bottom-0 w-px bg-blue-500" style={{ left: `${alignmentGuides.x}px` }} />
                         )}
                         {alignmentGuides.y !== undefined && (
-                          <div className="absolute left-0 right-0 h-px bg-blue-500" style={{ top: `${alignmentGuides.y * zoomLevel}px` }} />
+                          <div className="absolute left-0 right-0 h-px bg-blue-500" style={{ top: `${alignmentGuides.y}px` }} />
                         )}
                         
                         {currentTemplate.fields.map(field => (
@@ -1264,9 +1266,9 @@ const PDFTemplateEditor = () => {
                               selectedFields.includes(field.id) ? 'ring-2 ring-blue-500 bg-white bg-opacity-90' : ''
                             } ${isMoving && !field.locked ? 'cursor-move' : ''} ${field.locked ? 'opacity-60' : ''}`}
                             style={{
-                              left: `${field.x * zoomLevel}px`,
-                              top: `${field.y * zoomLevel}px`,
-                              fontSize: `${field.fontSize * zoomLevel}px`,
+                              left: `${field.x}px`,
+                              top: `${field.y}px`,
+                              fontSize: `${field.fontSize}px`,
                               fontWeight: field.isBold ? 'bold' : 'normal',
                               transform: 'translate(-50%, -50%)',
                               backgroundColor: selectedFields.includes(field.id) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.85)',
