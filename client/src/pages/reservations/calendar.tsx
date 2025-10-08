@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
-import { Vehicle, Reservation } from "@shared/schema";
+import { Vehicle, Reservation, Document } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { 
@@ -336,6 +336,12 @@ export default function ReservationCalendarPage() {
         endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
       }
     ],
+  });
+
+  // Fetch documents for selected reservation's vehicle
+  const { data: vehicleDocuments } = useQuery<Document[]>({
+    queryKey: [`/api/documents/vehicle/${selectedReservation?.vehicleId}`],
+    enabled: !!selectedReservation?.vehicleId
   });
   
   // Memoized maintenance map for O(1) lookups with pre-normalized dates (performance optimization)
@@ -1302,24 +1308,29 @@ export default function ReservationCalendarPage() {
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-gray-500">Contract & Documents</label>
                   
-                  {/* Contract Status */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Contract Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={async () => {
                         window.open(`/api/contracts/generate/${selectedReservation.id}`, '_blank');
                       }}
+                      className="flex items-center gap-2"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
                         <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
                       </svg>
-                      View/Generate Contract
+                      <div className="text-left">
+                        <div className="text-xs font-semibold">Contract</div>
+                        <div className="text-[10px] text-gray-500">PDF</div>
+                      </div>
                     </Button>
+
+                    {/* Damage Check Button */}
                     {selectedReservation.damageCheckPath && (
                       <Button
                         variant="outline"
@@ -1327,15 +1338,78 @@ export default function ReservationCalendarPage() {
                         onClick={() => {
                           window.open(`/uploads/${selectedReservation.damageCheckPath}`, '_blank');
                         }}
+                        className="flex items-center gap-2"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
                           <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                           <circle cx="9" cy="9" r="2"/>
                           <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                         </svg>
-                        View Damage Check
+                        <div className="text-left">
+                          <div className="text-xs font-semibold">Damage Check</div>
+                          <div className="text-[10px] text-gray-500">
+                            {selectedReservation.damageCheckPath?.split('.').pop()?.toUpperCase() || 'IMG'}
+                          </div>
+                        </div>
                       </Button>
                     )}
+
+                    {/* Vehicle Documents */}
+                    {vehicleDocuments?.map((doc) => {
+                      const getFileIcon = (contentType: string | null, fileName: string) => {
+                        const ext = fileName.split('.').pop()?.toLowerCase();
+                        if (contentType?.includes('pdf') || ext === 'pdf') {
+                          return (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          );
+                        } else if (contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {
+                          return (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                              <circle cx="9" cy="9" r="2"/>
+                              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
+                          );
+                        } else if (contentType?.includes('word') || ['doc', 'docx'].includes(ext || '')) {
+                          return (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-700">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          );
+                        } else {
+                          return (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          );
+                        }
+                      };
+
+                      return (
+                        <Button
+                          key={doc.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            window.open(`/uploads/${doc.filePath}`, '_blank');
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {getFileIcon(doc.contentType, doc.fileName)}
+                          <div className="text-left">
+                            <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
+                            <div className="text-[10px] text-gray-500">
+                              {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                            </div>
+                          </div>
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
