@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format-utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useLocation } from "wouter";
 import { Vehicle } from "@shared/schema";
+import { useTranslation } from 'react-i18next';
 
 // Function to get days until a date
 function getDaysUntil(dateStr: string): number {
@@ -27,6 +28,7 @@ function getUrgencyClass(days: number): string {
 }
 
 export function WarrantyExpirationWidget() {
+  const { t } = useTranslation();
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
@@ -50,7 +52,7 @@ export function WarrantyExpirationWidget() {
   return (
     <Card className="overflow-hidden h-full">
       <CardHeader className="bg-primary-700 py-3 px-4 flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-900">Warranty Expiring Soon</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-900">{t('vehicles.warrantyExpiry')}</CardTitle>
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert text-gray-900">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
           <path d="M12 8v4" />

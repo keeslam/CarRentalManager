@@ -10,6 +10,7 @@ import { Vehicle } from "@shared/schema";
 import { useTranslation } from 'react-i18next';
 
 export function VehicleAvailabilityWidget() {
+  const { t } = useTranslation();
   const [vehicleType, setVehicleType] = useState<string>("all");
   const [brand, setBrand] = useState<string>("all");
   
@@ -30,7 +31,7 @@ export function VehicleAvailabilityWidget() {
   return (
     <Card className="overflow-hidden h-full">
       <CardHeader className="bg-primary-600 py-3 px-4 flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-900">Available Vehicles</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-900">{t('dashboard.vehicleAvailability')}</CardTitle>
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-car text-gray-900">
           <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
           <circle cx="6.5" cy="16.5" r="2.5" />
@@ -45,10 +46,10 @@ export function VehicleAvailabilityWidget() {
           <div className="flex space-x-2">
             <Select value={vehicleType} onValueChange={setVehicleType}>
               <SelectTrigger className="h-8 text-xs w-[100px]">
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t('vehicles.vehicleType')} />
               </SelectTrigger>
               <SelectContent side="top">
-                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
                 {vehicleTypes.map(type => (
                   <SelectItem key={type} value={type || ''}>{type}</SelectItem>
                 ))}
@@ -57,10 +58,10 @@ export function VehicleAvailabilityWidget() {
             
             <Select value={brand} onValueChange={setBrand}>
               <SelectTrigger className="h-8 text-xs w-[100px]">
-                <SelectValue placeholder="All Brands" />
+                <SelectValue placeholder={t('vehicles.brand')} />
               </SelectTrigger>
               <SelectContent side="top">
-                <SelectItem value="all">All Brands</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
                 {brands.map(b => (
                   <SelectItem key={b} value={b}>{b}</SelectItem>
                 ))}
@@ -77,7 +78,7 @@ export function VehicleAvailabilityWidget() {
               </svg>
             </div>
           ) : filteredVehicles?.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No available vehicles</div>
+            <div className="text-center py-4 text-gray-500">{t('vehicles.noVehicles')}</div>
           ) : (
             filteredVehicles?.map(vehicle => (
               <div key={vehicle.id} className="flex items-center p-2 border rounded-md hover:bg-gray-50">

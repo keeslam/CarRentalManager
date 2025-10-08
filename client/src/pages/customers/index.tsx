@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useTranslation } from 'react-i18next';
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { CustomerAddDialog } from "@/components/customers/customer-add-dialog";
 import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
@@ -14,6 +15,7 @@ import { Customer } from "@shared/schema";
 import { formatPhoneNumber } from "@/lib/format-utils";
 
 export default function CustomersIndex() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
   
@@ -105,7 +107,7 @@ export default function CustomersIndex() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Customer Management</h1>
+        <h1 className="text-2xl font-bold">{t('customers.title')}</h1>
         <CustomerAddDialog onSuccess={handleCustomerAdded} />
       </div>
       
@@ -119,7 +121,7 @@ export default function CustomersIndex() {
         <CardContent>
           <div className="mb-4">
             <Input
-              placeholder="Search by name, email, or phone..."
+              placeholder={t('customers.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"

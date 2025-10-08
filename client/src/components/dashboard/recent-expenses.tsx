@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +73,7 @@ function getExpenseIcon(category: string) {
 }
 
 export function RecentExpenses() {
+  const { t } = useTranslation();
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -100,10 +102,10 @@ export function RecentExpenses() {
   return (
     <Card>
       <CardHeader className="px-4 py-3 border-b flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-800">Recent Expenses</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-800">{t('dashboard.recentExpenses')}</CardTitle>
         <Link href="/expenses">
           <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
-            View All
+            {t('common.view')}
           </Button>
         </Link>
       </CardHeader>

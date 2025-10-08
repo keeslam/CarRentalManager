@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatLicensePlate, formatReservationStatus } from "@/lib/format-utils";
 import { Reservation } from "@shared/schema";
 import { ReservationQuickStatusButton } from "@/components/reservations/reservation-quick-status-button";
+import { useTranslation } from 'react-i18next';
 
 // Function to calculate duration between two dates in days
 function getDuration(startDate: string, endDate: string): string {
@@ -35,6 +36,7 @@ function getStatusBadge(status: string) {
 }
 
 export function UpcomingReservations() {
+  const { t } = useTranslation();
   const { data: reservations, isLoading } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/upcoming?limit=10"],
   });
@@ -42,10 +44,10 @@ export function UpcomingReservations() {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader className="px-4 py-3 border-b flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-800">Upcoming Reservations</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-800">{t('dashboard.upcomingReservations')}</CardTitle>
         <Link href="/reservations">
           <Button variant="link" className="text-primary-600 hover:text-primary-700 text-sm font-medium h-8 px-0">
-            View All
+            {t('common.view')}
           </Button>
         </Link>
       </CardHeader>
@@ -109,10 +111,10 @@ export function UpcomingReservations() {
                         <span>{reservation.startDate ? formatDate(reservation.startDate) : ''}</span> - 
                         <span> {reservation.endDate ? formatDate(reservation.endDate) : ''}</span>
                       </div>
-                      <div className="text-xs text-gray-500">{getDuration(reservation.startDate, reservation.endDate)}</div>
+                      <div className="text-xs text-gray-500">{getDuration(reservation.startDate || '', reservation.endDate || '')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(reservation.status)}
+                      {getStatusBadge(reservation.status || 'pending')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {/* Status change button */}
