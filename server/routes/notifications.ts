@@ -3,6 +3,11 @@ import { db } from '../db.js';
 import { vehicles, customers, reservations, emailLogs } from '../../shared/schema.js';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { sendEmail, EmailTemplates } from '../utils/email-service.js';
+import { 
+  getApkReminderTemplate, 
+  getMaintenanceReminderTemplate,
+  getCustomMessageTemplate 
+} from '../utils/email-templates-i18n.js';
 
 // Helper function to replace placeholders in template strings
 function replacePlaceholders(text: string, data: {
@@ -246,19 +251,24 @@ router.post('/send', async (req, res) => {
           apkDate: vehicle?.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : ''
         };
 
+        // Get customer's preferred language
+        const customerLanguage = (customer?.preferredLanguage || 'nl') as 'nl' | 'en';
+
         switch (template) {
           case 'apk':
-            emailContent = EmailTemplates.apkReminder(
+            emailContent = getApkReminderTemplate(
               placeholderData.customerName,
               formattedPlate,
-              placeholderData.apkDate || 'Unknown'
+              placeholderData.apkDate || 'Unknown',
+              customerLanguage
             );
             break;
           case 'maintenance':
-            emailContent = EmailTemplates.maintenanceReminder(
+            emailContent = getMaintenanceReminderTemplate(
               placeholderData.customerName,
               formattedPlate,
-              'Regular Service' // You could make this dynamic based on vehicle data
+              'Regular Service', // You could make this dynamic based on vehicle data
+              customerLanguage
             );
             break;
           case 'custom':
@@ -266,20 +276,13 @@ router.post('/send', async (req, res) => {
             const processedSubject = replacePlaceholders(customSubject, placeholderData);
             const processedMessage = replacePlaceholders(customMessage, placeholderData);
             
-            // For custom templates, send ONLY the template content without any wrapper
-            // Convert line breaks to HTML for proper formatting
-            const htmlMessage = processedMessage
-              .split('\n')
-              .map(line => line.trim())
-              .filter(line => line.length > 0)
-              .map(line => `<p>${line}</p>`)
-              .join('');
-            
-            emailContent = {
-              subject: processedSubject,
-              html: htmlMessage,
-              text: processedMessage
-            };
+            emailContent = getCustomMessageTemplate(
+              placeholderData.customerName,
+              formattedPlate,
+              processedMessage,
+              customerLanguage,
+              processedSubject  // Pass the custom subject
+            );
             break;
           default:
             throw new Error('Invalid template');

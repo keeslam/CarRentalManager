@@ -30,6 +30,13 @@ import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
 import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
+import { 
+  getWelcomeTemplate, 
+  getPasswordResetTemplate, 
+  getApkReminderTemplate, 
+  getMaintenanceReminderTemplate,
+  getCustomMessageTemplate 
+} from "./utils/email-templates-i18n";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -1355,40 +1362,21 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // Send password to customer via email
       const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+      const customerLanguage = (customer.preferredLanguage || 'nl') as 'nl' | 'en';
+      const emailTemplate = getWelcomeTemplate(
+        customer.name,
+        customer.email,
+        password,
+        portalUrl,
+        customerLanguage
+      );
+      
       await sendEmail({
         to: customer.email,
         toName: customer.name,
-        subject: "Welcome to Your Customer Portal - Autolease Lam",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Welcome to the Customer Portal</h2>
-            <p>Dear ${customer.name},</p>
-            <p>Your customer portal account has been created. You can now view your rentals and request extensions online.</p>
-            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
-              <p style="margin: 8px 0 0 0;"><strong>Access Code:</strong> ${password}</p>
-            </div>
-            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
-            <p style="color: #666666; font-size: 14px;">Please update your access code after your first login for security.</p>
-            <p>If you have any questions, please don't hesitate to contact us.</p>
-            <p>Best regards,<br>Autolease Lam</p>
-          </div>
-        `,
-        text: `Dear ${customer.name},
-
-Your customer portal account has been created. You can now view your rentals and request extensions online.
-
-Login Email: ${customer.email}
-Access Code: ${password}
-
-Portal Login: ${portalUrl}
-
-Please update your access code after your first login for security.
-
-If you have any questions, please don't hesitate to contact us.
-
-Best regards,
-Autolease Lam`
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text
       }, 'custom');
 
       res.status(201).json({
@@ -1431,40 +1419,21 @@ Autolease Lam`
 
       // Send new password to customer via email
       const portalUrl = `${req.protocol}://${req.get('host')}/customer-portal/login`;
+      const customerLanguage = (customer.preferredLanguage || 'nl') as 'nl' | 'en';
+      const emailTemplate = getPasswordResetTemplate(
+        customer.name,
+        customer.email,
+        password,
+        portalUrl,
+        customerLanguage
+      );
+      
       await sendEmail({
         to: customer.email,
         toName: customer.name,
-        subject: "Your Portal Access Code - Autolease Lam",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Portal Access Update</h2>
-            <p>Dear ${customer.name},</p>
-            <p>Your customer portal access code has been updated as requested.</p>
-            <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0;"><strong>Login Email:</strong> ${customer.email}</p>
-              <p style="margin: 8px 0 0 0;"><strong>New Access Code:</strong> ${password}</p>
-            </div>
-            <p><strong>Portal Login:</strong> <a href="${portalUrl}" style="color: #2563eb;">${portalUrl}</a></p>
-            <p style="color: #666666; font-size: 14px;">Please update your access code after logging in for security.</p>
-            <p>If you did not request this update, please contact us immediately.</p>
-            <p>Best regards,<br>Autolease Lam</p>
-          </div>
-        `,
-        text: `Dear ${customer.name},
-
-Your customer portal access code has been updated as requested.
-
-Login Email: ${customer.email}
-New Access Code: ${password}
-
-Portal Login: ${portalUrl}
-
-Please update your access code after logging in for security.
-
-If you did not request this update, please contact us immediately.
-
-Best regards,
-Autolease Lam`
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text
       }, 'custom');
 
       res.json({
