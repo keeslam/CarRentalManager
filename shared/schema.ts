@@ -154,6 +154,30 @@ export const customers = pgTable("customers", {
   // Notes
   notes: text("notes"),
   
+  // Multi-language support
+  preferredLanguage: text("preferred_language").default("nl").notNull(), // 'nl' | 'en'
+  
+  // Corporate/Business features
+  customerType: text("customer_type").default("business").notNull(), // 'business' | 'individual'
+  accountManager: text("account_manager"), // Assigned account manager
+  billingAddress: text("billing_address"), // Separate billing address if different
+  billingCity: text("billing_city"),
+  billingPostalCode: text("billing_postal_code"),
+  corporateDiscount: numeric("corporate_discount"), // Discount percentage for corporate clients
+  paymentTermDays: integer("payment_term_days").default(30), // Payment terms in days
+  creditLimit: numeric("credit_limit"), // Credit limit for corporate accounts
+  
+  // Multiple contacts for businesses
+  primaryContactName: text("primary_contact_name"),
+  primaryContactEmail: text("primary_contact_email"),
+  primaryContactPhone: text("primary_contact_phone"),
+  secondaryContactName: text("secondary_contact_name"),
+  secondaryContactEmail: text("secondary_contact_email"),
+  secondaryContactPhone: text("secondary_contact_phone"),
+  billingContactName: text("billing_contact_name"),
+  billingContactEmail: text("billing_contact_email"),
+  billingContactPhone: text("billing_contact_phone"),
+  
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -194,6 +218,21 @@ export const reservations = pgTable("reservations", {
   maintenanceStatus: text("maintenance_status"), // 'scheduled' | 'in' | 'out' for maintenance_block type
   spareAssignmentDecision: text("spare_assignment_decision"), // 'spare_assigned' | 'customer_arranging' | 'not_handled' for maintenance tracking
   affectedRentalId: integer("affected_rental_id"), // FK to the rental that's affected by this maintenance
+  
+  // Fuel Management
+  fuelLevelPickup: text("fuel_level_pickup"), // Fuel level at pickup ('empty', '1/4', '1/2', '3/4', 'full')
+  fuelLevelReturn: text("fuel_level_return"), // Fuel level at return
+  fuelCost: numeric("fuel_cost"), // Calculated fuel cost
+  fuelCardNumber: text("fuel_card_number"), // Associated fuel card
+  fuelNotes: text("fuel_notes"), // Additional fuel-related notes
+  
+  // Recurring Rental Support
+  isRecurring: boolean("is_recurring").default(false).notNull(), // Is this a recurring rental
+  recurringParentId: integer("recurring_parent_id"), // FK to parent recurring reservation
+  recurringFrequency: text("recurring_frequency"), // 'daily', 'weekly', 'monthly'
+  recurringEndDate: text("recurring_end_date"), // When recurring pattern ends
+  recurringDayOfWeek: integer("recurring_day_of_week"), // For weekly: 0-6 (Sunday-Saturday)
+  recurringDayOfMonth: integer("recurring_day_of_month"), // For monthly: 1-31
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -592,6 +631,40 @@ export const insertCustomerUserSchema = createInsertSchema(customerUsers).omit({
 
 export type CustomerUser = typeof customerUsers.$inferSelect;
 export type InsertCustomerUser = z.infer<typeof insertCustomerUserSchema>;
+
+// Vehicle Waitlist table - for tracking customers waiting for unavailable vehicles
+export const vehicleWaitlist = pgTable("vehicle_waitlist", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").notNull().references(() => customers.id),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id), // Specific vehicle or null for any of type
+  vehicleType: text("vehicle_type"), // If waiting for any vehicle of a type
+  preferredStartDate: text("preferred_start_date").notNull(),
+  preferredEndDate: text("preferred_end_date"),
+  duration: integer("duration"), // Duration in days
+  priority: text("priority").default("normal").notNull(), // 'low', 'normal', 'high'
+  status: text("status").default("active").notNull(), // 'active', 'contacted', 'fulfilled', 'cancelled'
+  notes: text("notes"),
+  contactedAt: timestamp("contacted_at"),
+  fulfilledAt: timestamp("fulfilled_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertVehicleWaitlistSchema = createInsertSchema(vehicleWaitlist).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  contactedAt: true,
+  fulfilledAt: true,
+});
+
+export type VehicleWaitlist = typeof vehicleWaitlist.$inferSelect & {
+  customer?: Customer;
+  vehicle?: Vehicle;
+};
+export type InsertVehicleWaitlist = z.infer<typeof insertVehicleWaitlistSchema>;
 
 // Extension Requests table - for tracking rental extension requests from customers
 export const extensionRequests = pgTable("extension_requests", {
