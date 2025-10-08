@@ -16,22 +16,27 @@ const resources = {
 };
 
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
+    lng: 'nl', // Default to Dutch
     fallbackLng: 'nl', // Default language is Dutch
-    lng: localStorage.getItem('language') || 'nl',
     supportedLngs: ['nl', 'en'], // Only support these languages
     load: 'languageOnly', // Only load 'en' not 'en-US'
     interpolation: {
       escapeValue: false
-    },
-    detection: {
-      order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'language',
-      caches: ['localStorage']
     }
   });
+
+// After initialization, check localStorage and update language if needed
+if (typeof window !== 'undefined') {
+  const storedLanguage = localStorage.getItem('language');
+  if (storedLanguage && (storedLanguage === 'nl' || storedLanguage === 'en')) {
+    i18n.changeLanguage(storedLanguage);
+  } else {
+    // Set Dutch as default in localStorage
+    localStorage.setItem('language', 'nl');
+  }
+}
 
 export default i18n;

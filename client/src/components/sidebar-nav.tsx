@@ -1,25 +1,27 @@
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import { useTranslation } from 'react-i18next';
 
 export function SidebarNav() {
   const [location] = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.ADMIN;
+  const { t } = useTranslation();
 
-  // Define navigation items
+  // Define navigation items with translated labels
   const navItems = [
-    { href: "/", label: "Dashboard", icon: "dashboard" },
-    { href: "/vehicles", label: "Vehicles", icon: "directions_car" },
-    { href: "/customers", label: "Customers", icon: "people" },
-    { href: "/reservations", label: "Reservations", icon: "event" },
+    { href: "/", label: t('nav.dashboard'), icon: "dashboard" },
+    { href: "/vehicles", label: t('nav.vehicles'), icon: "directions_car" },
+    { href: "/customers", label: t('nav.customers'), icon: "people" },
+    { href: "/reservations", label: t('nav.reservations'), icon: "event" },
     { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
     { href: "/extension-requests", label: "Extensions", icon: "extension" },
-    { href: "/expenses", label: "Expenses", icon: "euro" },
-    { href: "/documents", label: "Documents", icon: "description" },
+    { href: "/expenses", label: t('nav.expenses'), icon: "euro" },
+    { href: "/documents", label: t('nav.documents'), icon: "description" },
     { href: "/communications", label: "Communications", icon: "email" },
     // Users menu item moved to user dropdown menu
-    { href: "/reports", label: "Reports", icon: "assessment" }
+    { href: "/reports", label: t('nav.reports'), icon: "assessment" }
     // My Profile moved to user dropdown menu
   ];
 

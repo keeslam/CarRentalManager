@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
+import { useTranslation } from 'react-i18next';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -53,8 +54,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
   
-  const title = getPageTitle(location);
+  const title = getPageTitle(location, t);
   
   // Query for vehicles based on search
   const { data: vehicleResults = [], isLoading: vehiclesLoading } = useQuery({
@@ -377,16 +379,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
   );
 }
 
-function getPageTitle(location: string): string {
-  if (location === "/") return "Dashboard";
-  if (location.startsWith("/vehicles")) return "Vehicles";
-  if (location.startsWith("/customers")) return "Customers";
-  if (location.startsWith("/reservations")) return "Reservations";
+function getPageTitle(location: string, t: any): string {
+  if (location === "/") return t('nav.dashboard');
+  if (location.startsWith("/vehicles")) return t('nav.vehicles');
+  if (location.startsWith("/customers")) return t('nav.customers');
+  if (location.startsWith("/reservations")) return t('nav.reservations');
   if (location.startsWith("/maintenance")) return "Maintenance";
-  if (location.startsWith("/expenses")) return "Expenses";
-  if (location.startsWith("/documents")) return "Documents";
-  if (location.startsWith("/reports")) return "Reports";
+  if (location.startsWith("/expenses")) return t('nav.expenses');
+  if (location.startsWith("/documents")) return t('nav.documents');
+  if (location.startsWith("/reports")) return t('nav.reports');
   if (location.startsWith("/search-results")) return "Search Results";
-  if (location.startsWith("/notifications")) return "Notifications";
+  if (location.startsWith("/notifications")) return t('nav.notifications');
   return "Auto Lease LAM";
 }
