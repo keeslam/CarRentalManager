@@ -55,6 +55,10 @@ export function ReservationAddDialog({
               // Close dialog on successful creation
               setOpen(false);
             }}
+            onCancel={() => {
+              // Close dialog on cancel
+              setOpen(false);
+            }}
           />
         </div>
       </DialogContent>
