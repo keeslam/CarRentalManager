@@ -175,7 +175,7 @@ export default function ReservationCalendarPage() {
     setSelectedReservation(null);
   };
   
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteReservationMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest('DELETE', `/api/reservations/${id}`);
@@ -185,25 +185,58 @@ export default function ReservationCalendarPage() {
       }
       return response.json();
     },
-    onSuccess: async () => {
-      // Force reset ALL reservation caches to clear stale data
-      await queryClient.resetQueries({ 
+    onMutate: async (reservationId: number) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0];
           return typeof key === 'string' && key.includes('reservations');
         }
       });
-      
-      toast({
-        title: "Reservation deleted",
-        description: "The reservation has been deleted successfully.",
+
+      // Snapshot previous values
+      const previousData: Record<string, any> = {};
+      queryClient.getQueryCache().getAll().forEach(query => {
+        const key = query.queryKey[0];
+        if (typeof key === 'string' && key.includes('reservations')) {
+          previousData[JSON.stringify(query.queryKey)] = query.state.data;
+        }
       });
+
+      // Optimistically update all reservation caches
+      queryClient.getQueryCache().getAll().forEach(query => {
+        const key = query.queryKey[0];
+        if (typeof key === 'string' && key.includes('reservations')) {
+          queryClient.setQueryData<Reservation[]>(query.queryKey, (old) => 
+            old?.filter(r => r.id !== reservationId) || []
+          );
+        }
+      });
+
+      return { previousData };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, reservationId, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        Object.entries(context.previousData).forEach(([keyStr, data]) => {
+          const key = JSON.parse(keyStr);
+          queryClient.setQueryData(key, data);
+        });
+      }
+      
       toast({
         title: "Delete failed",
         description: error.message,
         variant: "destructive",
+      });
+    },
+    onSuccess: async () => {
+      // Invalidate to refetch and ensure consistency
+      await invalidateRelatedQueries('reservations');
+      
+      toast({
+        title: "Reservation deleted",
+        description: "The reservation has been deleted successfully.",
       });
     },
   });

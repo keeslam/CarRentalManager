@@ -48,7 +48,7 @@ export default function ReservationsIndex() {
   // Get current date
   const today = new Date();
   
-  // Delete reservation mutation
+  // Delete reservation mutation with optimistic updates
   const deleteReservationMutation = useMutation({
     mutationFn: async (reservationId: number) => {
       const response = await apiRequest('DELETE', `/api/reservations/${reservationId}`);
@@ -58,26 +58,41 @@ export default function ReservationsIndex() {
       }
       return await response.json();
     },
-    onSuccess: async () => {
-      // Force reset ALL reservation caches to clear stale data
-      await queryClient.resetQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.includes('reservations');
-        }
+    onMutate: async (reservationId: number) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: reservationsQueryKey });
+
+      // Snapshot the previous value
+      const previousReservations = queryClient.getQueryData<Reservation[]>(reservationsQueryKey);
+
+      // Optimistically update to remove the reservation
+      queryClient.setQueryData<Reservation[]>(reservationsQueryKey, (old) => 
+        old?.filter(r => r.id !== reservationId) || []
+      );
+
+      // Return context with the snapshot
+      return { previousReservations };
+    },
+    onError: (error: Error, reservationId, context) => {
+      // Rollback on error
+      if (context?.previousReservations) {
+        queryClient.setQueryData(reservationsQueryKey, context.previousReservations);
+      }
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete reservation",
+        variant: "destructive"
       });
+    },
+    onSuccess: async () => {
+      // Invalidate to refetch and ensure consistency
+      await invalidateRelatedQueries('reservations');
       
       toast({
         title: "Reservation deleted",
         description: "The reservation has been successfully deleted.",
         variant: "default"
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete reservation",
-        variant: "destructive"
       });
     }
   });
