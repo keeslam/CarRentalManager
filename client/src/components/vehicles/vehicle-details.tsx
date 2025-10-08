@@ -556,14 +556,36 @@ Autolease Lam`;
     amount: expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
   })).sort((a, b) => b.amount - a.amount);
   
-  // Find current active reservation
+  // Find current active reservation or upcoming reservation
   const activeReservation = reservations?.find(reservation => {
-    if (!reservation.startDate || !reservation.endDate) return false;
+    if (!reservation.startDate) return false;
     const today = new Date();
     const startDate = parseISO(reservation.startDate);
-    const endDate = parseISO(reservation.endDate);
-    return reservation.status === 'rented' && today >= startDate && today <= endDate;
+    const endDate = reservation.endDate ? parseISO(reservation.endDate) : null;
+    
+    // Check if currently active (rented and within date range)
+    if (reservation.status === 'rented' && endDate && today >= startDate && today <= endDate) {
+      return true;
+    }
+    
+    return false;
   });
+  
+  // If no active reservation, find the next upcoming reservation
+  const upcomingReservation = !activeReservation ? reservations
+    ?.filter(reservation => {
+      if (!reservation.startDate || reservation.status === 'cancelled') return false;
+      const today = new Date();
+      const startDate = parseISO(reservation.startDate);
+      return startDate > today;
+    })
+    .sort((a, b) => {
+      const dateA = parseISO(a.startDate);
+      const dateB = parseISO(b.startDate);
+      return dateA.getTime() - dateB.getTime();
+    })[0] : null;
+  
+  const displayReservation = activeReservation || upcomingReservation;
   
   if (isLoadingVehicle) {
     return (
@@ -992,7 +1014,7 @@ Autolease Lam`;
       </div>
       
       {/* Vehicle Info Cards */}
-      <div className={`grid grid-cols-1 gap-4 ${activeReservation ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Vehicle Type</CardTitle>
@@ -1046,7 +1068,25 @@ Autolease Lam`;
                 </p>
               </Link>
               <p className="text-xs text-blue-600 mt-1">
-                Until {formatDate(activeReservation.endDate)}
+                Until {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {upcomingReservation && (
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">Upcoming Reservation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link href={`/customers/${upcomingReservation.customerId}`}>
+                <p className="text-2xl font-semibold text-green-900 hover:text-green-600 cursor-pointer transition-colors">
+                  {upcomingReservation.customer?.name || "N/A"}
+                </p>
+              </Link>
+              <p className="text-xs text-green-600 mt-1">
+                Starts {formatDate(upcomingReservation.startDate)}
               </p>
             </CardContent>
           </Card>
