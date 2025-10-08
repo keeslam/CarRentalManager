@@ -562,8 +562,9 @@ Autolease Lam`;
     const today = new Date();
     const startDate = parseISO(reservation.startDate);
     
-    // Check if currently active
-    if (reservation.status === 'rented' && today >= startDate) {
+    // Check if currently active (rented, confirmed, or pending status)
+    const activeStatuses = ['rented', 'confirmed', 'pending'];
+    if (activeStatuses.includes(reservation.status) && today >= startDate) {
       // For reservations with an end date, check if we're still within the range
       if (reservation.endDate) {
         const endDate = parseISO(reservation.endDate);
