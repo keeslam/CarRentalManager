@@ -1414,54 +1414,123 @@ export function ReservationForm({
                 
                 {/* Start Mileage field when status is confirmed */}
                 {currentStatus === "confirmed" && (
-                  <div className="col-span-1">
-                    <div className="flex flex-col space-y-1.5">
-                      <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Mileage When Picked Up
-                      </label>
-                      <input
-                        id="startMileage"
-                        type="number"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Enter the starting mileage"
-                        value={startMileage || ""}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || undefined;
-                          setStartMileage(value);
-                          form.setValue("startMileage", value as any);
-                        }}
-                      />
-                      <p className="text-[0.8rem] text-muted-foreground">
-                        Enter the vehicle's odometer reading when it was picked up
-                      </p>
+                  <>
+                    <div className="col-span-1">
+                      <div className="flex flex-col space-y-1.5">
+                        <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Mileage When Picked Up
+                        </label>
+                        <input
+                          id="startMileage"
+                          type="number"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="Enter the starting mileage"
+                          value={startMileage || ""}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || undefined;
+                            setStartMileage(value);
+                            form.setValue("startMileage", value as any);
+                          }}
+                        />
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Enter the vehicle's odometer reading when it was picked up
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                    
+                    <div className="col-span-1">
+                      <div className="flex flex-col space-y-1.5">
+                        <label htmlFor="fuelLevelPickup" className="text-sm font-medium leading-none">
+                          Fuel Level at Pickup
+                        </label>
+                        <select
+                          id="fuelLevelPickup"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          defaultValue=""
+                        >
+                          <option value="">Select fuel level</option>
+                          <option value="empty">Empty</option>
+                          <option value="1/4">1/4</option>
+                          <option value="1/2">1/2</option>
+                          <option value="3/4">3/4</option>
+                          <option value="full">Full</option>
+                        </select>
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Record the fuel level when vehicle was picked up
+                        </p>
+                      </div>
+                    </div>
+                  </>
                 )}
                 
                 {/* Mileage When Returned field when status is completed */}
                 {currentStatus === "completed" && (
-                  <div className="col-span-1">
-                    <div className="flex flex-col space-y-1.5">
-                      <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Mileage When Returned
-                      </label>
-                      <input
-                        id="departureMileage"
-                        type="number"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Enter the final mileage"
-                        value={departureMileage || ""}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || undefined;
-                          setDepartureMileage(value);
-                          form.setValue("departureMileage", value as any);
-                        }}
-                      />
-                      <p className="text-[0.8rem] text-muted-foreground">
-                        Enter the vehicle's odometer reading when it was returned
-                      </p>
+                  <>
+                    <div className="col-span-1">
+                      <div className="flex flex-col space-y-1.5">
+                        <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Mileage When Returned
+                        </label>
+                        <input
+                          id="departureMileage"
+                          type="number"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="Enter the final mileage"
+                          value={departureMileage || ""}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || undefined;
+                            setDepartureMileage(value);
+                            form.setValue("departureMileage", value as any);
+                          }}
+                        />
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Enter the vehicle's odometer reading when it was returned
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                    
+                    <div className="col-span-1">
+                      <div className="flex flex-col space-y-1.5">
+                        <label htmlFor="fuelLevelReturn" className="text-sm font-medium leading-none">
+                          Fuel Level at Return
+                        </label>
+                        <select
+                          id="fuelLevelReturn"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          defaultValue=""
+                        >
+                          <option value="">Select fuel level</option>
+                          <option value="empty">Empty</option>
+                          <option value="1/4">1/4</option>
+                          <option value="1/2">1/2</option>
+                          <option value="3/4">3/4</option>
+                          <option value="full">Full</option>
+                        </select>
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Record the fuel level when vehicle was returned
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="col-span-1">
+                      <div className="flex flex-col space-y-1.5">
+                        <label htmlFor="fuelCost" className="text-sm font-medium leading-none">
+                          Fuel Cost (€)
+                        </label>
+                        <input
+                          id="fuelCost"
+                          type="number"
+                          step="0.01"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="0.00"
+                          defaultValue=""
+                        />
+                        <p className="text-[0.8rem] text-muted-foreground">
+                          Fuel cost charged to customer (if applicable)
+                        </p>
+                      </div>
+                    </div>
+                  </>
                 )}
                 
                 {/* Price */}
