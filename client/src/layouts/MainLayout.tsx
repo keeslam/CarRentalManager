@@ -5,6 +5,7 @@ import { UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { NotificationCenter } from "@/components/ui/notification-center";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
@@ -362,6 +363,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               )}
             </div>
             <NotificationCenter />
+            <LanguageSwitcher />
             <UserMenu />
           </div>
         </div>
