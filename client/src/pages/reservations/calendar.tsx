@@ -1309,44 +1309,57 @@ export default function ReservationCalendarPage() {
               {/* Contract and Documents */}
               {selectedReservation.vehicleId && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-500">Contract & Documents</label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx';
-                        input.onchange = async (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (!file) return;
+                  <label className="text-sm font-medium text-gray-500">Contract & Documents</label>
+                  
+                  {/* Quick Upload Buttons */}
+                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
+                    <span className="text-xs text-gray-600 w-full mb-1">Quick Upload:</span>
+                    {[
+                      { type: 'Invoice', accept: '.pdf,.jpg,.jpeg,.png' },
+                      { type: 'Receipt', accept: '.pdf,.jpg,.jpeg,.png' },
+                      { type: 'Damage Report', accept: '.pdf,.jpg,.jpeg,.png' },
+                      { type: 'Insurance', accept: '.pdf' },
+                      { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
+                    ].map(({ type, accept }) => (
+                      <Button
+                        key={type}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = accept;
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
 
-                          setUploadingDoc(true);
-                          const formData = new FormData();
-                          formData.append('file', file);
-                          formData.append('vehicleId', selectedReservation.vehicleId!.toString());
-                          formData.append('reservationId', selectedReservation.id.toString());
-                          formData.append('documentType', file.name.split('.')[0]);
+                            setUploadingDoc(true);
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            formData.append('vehicleId', selectedReservation.vehicleId!.toString());
+                            formData.append('reservationId', selectedReservation.id.toString());
+                            formData.append('documentType', type);
 
-                          try {
-                            await apiRequest('/api/documents', {
-                              method: 'POST',
-                              body: formData,
-                            });
-                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation.id}`] });
-                          } catch (error) {
-                            console.error('Upload failed:', error);
-                          } finally {
-                            setUploadingDoc(false);
-                          }
-                        };
-                        input.click();
-                      }}
-                      disabled={uploadingDoc}
-                    >
-                      {uploadingDoc ? 'Uploading...' : '+ Upload Document'}
-                    </Button>
+                            try {
+                              await apiRequest('/api/documents', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation.id}`] });
+                            } catch (error) {
+                              console.error('Upload failed:', error);
+                            } finally {
+                              setUploadingDoc(false);
+                            }
+                          };
+                          input.click();
+                        }}
+                        disabled={uploadingDoc}
+                        className="text-xs"
+                      >
+                        + {type}
+                      </Button>
+                    ))}
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
