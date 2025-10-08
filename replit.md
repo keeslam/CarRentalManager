@@ -4,6 +4,14 @@
 
 This is a comprehensive car rental management system built with React (frontend) and Express.js (backend). The system provides a complete solution for managing car rental operations including vehicles, customers, reservations, expenses, and documents. It features a dashboard for monitoring key metrics, calendar views for reservations, and comprehensive reporting capabilities.
 
+## Recent Changes (October 2025)
+
+- **Multi-Language Email System**: Complete email template system supporting Dutch and English based on customer's preferred language, with Dutch fallback
+- **Fuel Management**: Pickup/return fuel levels, fuel cost tracking, and fuel card number fields in reservations
+- **Corporate Customer Features**: Business/individual customer types, billing contacts, account managers, corporate discounts, and separate billing addresses
+- **Language Switcher**: i18next integration with Dutch/English support throughout the UI
+- **Email Templates**: Welcome emails, password reset, APK reminders, maintenance reminders, and custom notifications all support multi-language
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
