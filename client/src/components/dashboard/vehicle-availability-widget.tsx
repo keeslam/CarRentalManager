@@ -7,6 +7,7 @@ import { formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { Vehicle } from "@shared/schema";
+import { useTranslation } from 'react-i18next';
 
 export function VehicleAvailabilityWidget() {
   const [vehicleType, setVehicleType] = useState<string>("all");

@@ -30,7 +30,21 @@
     "optional": "Optioneel",
     "select": "Selecteren",
     "selectAll": "Alles selecteren",
-    "none": "Geen"
+    "none": "Geen",
+    "all": "Alle",
+    "status": "Status",
+    "date": "Datum",
+    "price": "Prijs",
+    "total": "Totaal",
+    "details": "Details",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "notes": "Notities",
+    "success": "Succes",
+    "error": "Fout",
+    "warning": "Waarschuwing",
+    "info": "Informatie",
+    "loadingData": "Gegevens laden..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -43,7 +57,27 @@
     "reports": "Rapporten",
     "settings": "Instellingen",
     "notifications": "Meldingen",
-    "logout": "Uitloggen"
+    "logout": "Uitloggen",
+    "maintenance": "Onderhoud",
+    "extensions": "Verlengingen",
+    "communications": "Communicatie",
+    "users": "Gebruikers",
+    "profile": "Profiel"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "vehicleAvailability": "Voertuig Beschikbaarheid",
+    "upcomingReservations": "Aankomende Reserveringen",
+    "quickActions": "Snelle Acties",
+    "recentExpenses": "Recente Kosten",
+    "addVehicle": "Voertuig Toevoegen",
+    "addCustomer": "Klant Toevoegen",
+    "addReservation": "Reservering Toevoegen",
+    "viewReports": "Rapporten Bekijken",
+    "available": "Beschikbaar",
+    "rented": "Verhuurd",
+    "maintenance": "Onderhoud",
+    "totalVehicles": "Totaal Voertuigen"
   },
   "vehicles": {
     "title": "Voertuigen",
@@ -62,7 +96,19 @@
     "rented": "Verhuurd",
     "maintenance": "Onderhoud",
     "monthlyPrice": "Maandprijs",
-    "dailyPrice": "Dagprijs"
+    "dailyPrice": "Dagprijs",
+    "searchPlaceholder": "Zoek op kenteken, merk of model...",
+    "noVehicles": "Geen voertuigen gevonden",
+    "deleteConfirm": "Weet u zeker dat u dit voertuig wilt verwijderen?",
+    "deleteSuccess": "Voertuig succesvol verwijderd",
+    "deleteError": "Fout bij verwijderen voertuig",
+    "addSuccess": "Voertuig succesvol toegevoegd",
+    "updateSuccess": "Voertuig succesvol bijgewerkt",
+    "bulkImport": "Bulk Import",
+    "importVehicles": "Voertuigen Importeren",
+    "warrantyExpiry": "Garantie Verloopt",
+    "apkExpiry": "APK Verloopt",
+    "viewDetails": "Details Bekijken"
   },
   "customers": {
     "title": "Klanten",
@@ -89,7 +135,13 @@
     "billingContact": "Factuurcontact",
     "preferredLanguage": "Voorkeurstaal",
     "dutch": "Nederlands",
-    "english": "Engels"
+    "english": "Engels",
+    "searchPlaceholder": "Zoek op naam, e-mail of telefoon...",
+    "noCustomers": "Geen klanten gevonden",
+    "deleteConfirm": "Weet u zeker dat u deze klant wilt verwijderen?",
+    "deleteSuccess": "Klant succesvol verwijderd",
+    "addSuccess": "Klant succesvol toegevoegd",
+    "updateSuccess": "Klant succesvol bijgewerkt"
   },
   "reservations": {
     "title": "Reserveringen",
@@ -103,6 +155,11 @@
     "status": "Status",
     "totalPrice": "Totaalprijs",
     "notes": "Notities",
+    "pending": "In Behandeling",
+    "confirmed": "Bevestigd",
+    "active": "Actief",
+    "completed": "Voltooid",
+    "cancelled": "Geannuleerd",
     "fuelManagement": "Brandstofbeheer",
     "fuelLevelPickup": "Brandstofpeil bij Ophalen",
     "fuelLevelReturn": "Brandstofpeil bij Terugbrengen",
@@ -124,31 +181,133 @@
       "daily": "Dagelijks",
       "weekly": "Wekelijks",
       "monthly": "Maandelijks"
-    }
+    },
+    "searchPlaceholder": "Zoek reserveringen...",
+    "noReservations": "Geen reserveringen gevonden",
+    "deleteConfirm": "Weet u zeker dat u deze reservering wilt verwijderen?",
+    "deleteSuccess": "Reservering succesvol verwijderd",
+    "addSuccess": "Reservering succesvol toegevoegd",
+    "updateSuccess": "Reservering succesvol bijgewerkt",
+    "statusUpdated": "Status bijgewerkt"
   },
-  "waitlist": {
-    "title": "Wachtlijst",
-    "addToWaitlist": "Toevoegen aan Wachtlijst",
-    "preferredStartDate": "Gewenste Startdatum",
-    "preferredEndDate": "Gewenste Einddatum",
-    "priority": "Prioriteit",
-    "status": "Status",
-    "active": "Actief",
-    "contacted": "Gecontacteerd",
-    "fulfilled": "Vervuld",
-    "cancelled": "Geannuleerd",
-    "priorities": {
-      "low": "Laag",
-      "normal": "Normaal",
-      "high": "Hoog"
-    }
+  "expenses": {
+    "title": "Kosten",
+    "addExpense": "Kosten Toevoegen",
+    "editExpense": "Kosten Bewerken",
+    "recordNewExpense": "Nieuwe Kosten Registreren",
+    "expenseDetails": "Kostendetails",
+    "vehicle": "Voertuig",
+    "category": "Categorie",
+    "amount": "Bedrag",
+    "date": "Datum",
+    "description": "Beschrijving",
+    "receipt": "Bon",
+    "categories": {
+      "maintenance": "Onderhoud",
+      "fuel": "Brandstof",
+      "insurance": "Verzekering",
+      "tires": "Banden",
+      "damage": "Schade",
+      "repair": "Reparatie",
+      "other": "Overig"
+    },
+    "searchPlaceholder": "Zoek kosten...",
+    "noExpenses": "Geen kosten gevonden",
+    "totalExpenses": "Totale Kosten",
+    "deleteSuccess": "Kosten succesvol verwijderd",
+    "addSuccess": "Kosten succesvol toegevoegd",
+    "updateSuccess": "Kosten succesvol bijgewerkt",
+    "summaryByCategory": "Overzicht per Categorie"
   },
-  "fuel": {
-    "management": "Brandstofbeheer",
-    "calculateCost": "Bereken Kosten",
-    "costPerLiter": "Kosten per Liter",
-    "totalCost": "Totale Kosten",
-    "fuelUsed": "Brandstof Gebruikt"
+  "documents": {
+    "title": "Documenten",
+    "addDocument": "Document Toevoegen",
+    "uploadDocument": "Document Uploaden",
+    "documentDetails": "Documentdetails",
+    "fileName": "Bestandsnaam",
+    "fileType": "Bestandstype",
+    "uploadDate": "Uploaddatum",
+    "vehicle": "Voertuig",
+    "category": "Categorie",
+    "noDocuments": "Geen documenten gevonden",
+    "deleteConfirm": "Weet u zeker dat u dit document wilt verwijderen?",
+    "deleteSuccess": "Document succesvol verwijderd",
+    "uploadSuccess": "Document succesvol geüpload"
+  },
+  "reports": {
+    "title": "Rapporten",
+    "generateReport": "Rapport Genereren",
+    "exportReport": "Rapport Exporteren",
+    "dateRange": "Datumbereik",
+    "reportType": "Rapporttype",
+    "vehicleUtilization": "Voertuiggebruik",
+    "financialSummary": "Financieel Overzicht",
+    "customerActivity": "Klantactiviteit"
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "noNotifications": "Geen meldingen",
+    "markAsRead": "Markeren als gelezen",
+    "markAllAsRead": "Alles als gelezen markeren",
+    "settings": "Meldingsinstellingen",
+    "apkExpiring": "APK Verloopt Binnenkort",
+    "warrantyExpiring": "Garantie Verloopt Binnenkort",
+    "maintenanceDue": "Onderhoud Nodig",
+    "upcomingReservation": "Aankomende Reservering"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "general": "Algemeen",
+    "email": "E-mail",
+    "notifications": "Meldingen",
+    "account": "Account",
+    "saveSettings": "Instellingen Opslaan",
+    "settingsSaved": "Instellingen opgeslagen"
+  },
+  "users": {
+    "title": "Gebruikers",
+    "addUser": "Gebruiker Toevoegen",
+    "editUser": "Gebruiker Bewerken",
+    "username": "Gebruikersnaam",
+    "email": "E-mail",
+    "role": "Rol",
+    "roles": {
+      "admin": "Beheerder",
+      "manager": "Manager",
+      "user": "Gebruiker"
+    },
+    "isActive": "Actief",
+    "deleteConfirm": "Weet u zeker dat u deze gebruiker wilt verwijderen?",
+    "deleteSuccess": "Gebruiker succesvol verwijderd",
+    "addSuccess": "Gebruiker succesvol toegevoegd",
+    "updateSuccess": "Gebruiker succesvol bijgewerkt"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "username": "Gebruikersnaam",
+    "password": "Wachtwoord",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "resetPassword": "Wachtwoord resetten",
+    "changePassword": "Wachtwoord wijzigen",
+    "currentPassword": "Huidig wachtwoord",
+    "newPassword": "Nieuw wachtwoord",
+    "confirmPassword": "Bevestig wachtwoord",
+    "signIn": "Aanmelden",
+    "signOut": "Afmelden",
+    "welcome": "Welkom",
+    "loginError": "Ongeldige inloggegevens",
+    "passwordChanged": "Wachtwoord succesvol gewijzigd"
+  },
+  "customerPortal": {
+    "title": "Klantenportaal",
+    "dashboard": "Dashboard",
+    "myRentals": "Mijn Verhuur",
+    "activeRentals": "Actieve Verhuur",
+    "rentalHistory": "Verhuurgeschiedenis",
+    "accountInfo": "Accountinformatie",
+    "requestExtension": "Verlenging Aanvragen",
+    "loadingRentals": "Uw verhuur laden..."
   },
   "email": {
     "subject": "Onderwerp",
@@ -157,11 +316,48 @@
     "send": "Verzenden",
     "template": "Sjabloon",
     "emailSent": "E-mail verzonden",
-    "emailFailed": "E-mail mislukt"
+    "emailFailed": "E-mail mislukt",
+    "sendEmail": "E-mail Verzenden"
   },
   "language": {
     "switchLanguage": "Taal Wisselen",
     "nl": "Nederlands",
     "en": "English"
+  },
+  "errors": {
+    "notFound": "Pagina niet gevonden",
+    "serverError": "Serverfout",
+    "loadingError": "Fout bij laden gegevens",
+    "invalidData": "Ongeldige gegevens",
+    "accessDenied": "Toegang geweigerd",
+    "permissionDenied": "U heeft geen toestemming voor deze actie"
+  },
+  "calendar": {
+    "title": "Kalender",
+    "month": "Maand",
+    "week": "Week",
+    "day": "Dag",
+    "today": "Vandaag",
+    "viewReservation": "Reservering Bekijken"
+  },
+  "maintenance": {
+    "title": "Onderhoud",
+    "scheduleMaintenance": "Onderhoud Plannen",
+    "maintenanceHistory": "Onderhoudsgeschiedenis",
+    "dueDate": "Vervaldatum",
+    "type": "Type",
+    "completed": "Voltooid",
+    "pending": "In Behandeling"
+  },
+  "extensions": {
+    "title": "Verlengingen",
+    "extensionRequests": "Verlengingsverzoeken",
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen",
+    "requestedBy": "Aangevraagd door",
+    "requestDate": "Aanvraagdatum",
+    "status": "Status",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgewezen"
   }
 }
