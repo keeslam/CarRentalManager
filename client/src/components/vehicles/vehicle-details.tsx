@@ -561,10 +561,15 @@ Autolease Lam`;
     if (!reservation.startDate || reservation.type !== 'standard') return false;
     const today = new Date();
     const startDate = parseISO(reservation.startDate);
-    const endDate = reservation.endDate ? parseISO(reservation.endDate) : null;
     
-    // Check if currently active (rented and within date range)
-    if (reservation.status === 'rented' && endDate && today >= startDate && today <= endDate) {
+    // Check if currently active
+    if (reservation.status === 'rented' && today >= startDate) {
+      // For reservations with an end date, check if we're still within the range
+      if (reservation.endDate) {
+        const endDate = parseISO(reservation.endDate);
+        return today <= endDate;
+      }
+      // For open-ended reservations (endDate is null), they're active if started
       return true;
     }
     
