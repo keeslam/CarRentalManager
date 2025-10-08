@@ -150,6 +150,7 @@
     "reservationDetails": "Reservation Details",
     "customer": "Customer",
     "vehicle": "Vehicle",
+    "period": "Period",
     "startDate": "Start Date",
     "endDate": "End Date",
     "status": "Status",

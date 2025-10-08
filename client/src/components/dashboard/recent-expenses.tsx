@@ -118,7 +118,7 @@ export function RecentExpenses() {
             </svg>
           </div>
         ) : expenses?.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">No recent expenses</div>
+          <div className="text-center py-4 text-gray-500">{t('expenses.noExpenses')}</div>
         ) : (
           <div className="max-h-[265px] overflow-y-auto pr-1 space-y-3">
             {expenses?.slice(0, 10).map((expense, index) => (

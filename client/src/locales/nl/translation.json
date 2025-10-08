@@ -150,6 +150,7 @@
     "reservationDetails": "Reserveringsdetails",
     "customer": "Klant",
     "vehicle": "Voertuig",
+    "period": "Periode",
     "startDate": "Startdatum",
     "endDate": "Einddatum",
     "status": "Status",
