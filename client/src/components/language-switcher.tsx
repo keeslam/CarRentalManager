@@ -14,9 +14,12 @@ export function LanguageSwitcher() {
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
+    // Force reload to ensure all components re-render with new language
+    window.location.reload();
   };
 
-  const currentLanguage = i18n.language || 'nl';
+  // Normalize language code (en-US -> en)
+  const currentLanguage = i18n.language?.split('-')[0] || 'nl';
 
   return (
     <DropdownMenu>

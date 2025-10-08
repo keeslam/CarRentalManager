@@ -22,11 +22,14 @@ i18n
     resources,
     fallbackLng: 'nl', // Default language is Dutch
     lng: localStorage.getItem('language') || 'nl',
+    supportedLngs: ['nl', 'en'], // Only support these languages
+    load: 'languageOnly', // Only load 'en' not 'en-US'
     interpolation: {
       escapeValue: false
     },
     detection: {
       order: ['localStorage', 'navigator'],
+      lookupLocalStorage: 'language',
       caches: ['localStorage']
     }
   });
