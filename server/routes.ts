@@ -3667,6 +3667,17 @@ Car Rental Management System`
     res.json(documents);
   });
 
+  // Get documents by reservation
+  app.get("/api/documents/reservation/:reservationId", async (req, res) => {
+    const reservationId = parseInt(req.params.reservationId);
+    if (isNaN(reservationId)) {
+      return res.status(400).json({ message: "Invalid reservation ID" });
+    }
+
+    const documents = await storage.getDocumentsByReservation(reservationId);
+    res.json(documents);
+  });
+
   // Get single document
   app.get("/api/documents/:id", async (req, res) => {
     const id = parseInt(req.params.id);
@@ -3689,8 +3700,9 @@ Car Rental Management System`
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Convert vehicleId to number
+      // Convert vehicleId and reservationId to numbers
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
+      if (req.body.reservationId) req.body.reservationId = parseInt(req.body.reservationId);
       
       // Get the filename from the path (which is the formatted name)
       const formattedFileName = path.basename(req.file.path);

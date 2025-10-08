@@ -437,6 +437,7 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").notNull(),
+  reservationId: integer("reservation_id"), // Optional link to specific reservation
   documentType: text("document_type").notNull(),
   fileName: text("file_name").notNull(),
   filePath: text("file_path").notNull(),

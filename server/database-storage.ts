@@ -907,6 +907,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(documents.vehicleId, vehicleId));
   }
 
+  async getDocumentsByReservation(reservationId: number): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.reservationId, reservationId));
+  }
+
   async deleteDocument(id: number): Promise<boolean> {
     const [deleted] = await db
       .delete(documents)

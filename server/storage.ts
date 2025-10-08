@@ -83,6 +83,7 @@ export interface IStorage {
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: number, documentData: Partial<InsertDocument>): Promise<Document | undefined>;
   getDocumentsByVehicle(vehicleId: number): Promise<Document[]>;
+  getDocumentsByReservation(reservationId: number): Promise<Document[]>;
   deleteDocument(id: number): Promise<boolean>;
   
   // PDF Template methods
@@ -947,6 +948,17 @@ export class MemStorage implements IStorage {
   async getDocumentsByVehicle(vehicleId: number): Promise<Document[]> {
     return Array.from(this.documents.values())
       .filter(d => d.vehicleId === vehicleId)
+      .sort((a, b) => {
+        // Sort by upload date, newest first
+        const dateA = a.uploadDate ? new Date(a.uploadDate).getTime() : 0;
+        const dateB = b.uploadDate ? new Date(b.uploadDate).getTime() : 0;
+        return dateB - dateA;
+      });
+  }
+
+  async getDocumentsByReservation(reservationId: number): Promise<Document[]> {
+    return Array.from(this.documents.values())
+      .filter(d => d.reservationId === reservationId)
       .sort((a, b) => {
         // Sort by upload date, newest first
         const dateA = a.uploadDate ? new Date(a.uploadDate).getTime() : 0;
