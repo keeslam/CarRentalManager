@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Extended schema with validation
 const formSchema = insertCustomerSchema.extend({
@@ -49,7 +50,17 @@ const formSchema = insertCustomerSchema.extend({
   vatNumber: z.string().optional().or(z.literal("")),
   status: z.string().optional().or(z.literal("")),
   statusDate: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal(""))
+  notes: z.string().optional().or(z.literal("")),
+  // Corporate/Business fields
+  customerType: z.string().optional().or(z.literal("business")),
+  accountManager: z.string().optional().or(z.literal("")),
+  billingAddress: z.string().optional().or(z.literal("")),
+  billingCity: z.string().optional().or(z.literal("")),
+  billingPostalCode: z.string().optional().or(z.literal("")),
+  corporateDiscount: z.string().optional().or(z.literal("")),
+  billingContactName: z.string().optional().or(z.literal("")),
+  billingContactEmail: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
+  billingContactPhone: z.string().optional().or(z.literal(""))
 });
 
 interface CustomerFormProps {
@@ -124,7 +135,18 @@ export function CustomerForm({
       status: "",
       statusDate: "",
       
-      notes: ""
+      notes: "",
+      
+      // Corporate/Business fields
+      customerType: "business",
+      accountManager: "",
+      billingAddress: "",
+      billingCity: "",
+      billingPostalCode: "",
+      corporateDiscount: "",
+      billingContactName: "",
+      billingContactEmail: "",
+      billingContactPhone: ""
     },
   });
   
@@ -212,6 +234,28 @@ export function CustomerForm({
                     <h3 className="text-lg font-medium">Personal Information</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="customerType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Customer Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || "business"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select customer type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="business">Business</SelectItem>
+                                <SelectItem value="individual">Individual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
                       <FormField
                         control={form.control}
                         name="debtorNumber"
@@ -557,6 +601,133 @@ export function CustomerForm({
                       </FormItem>
                     )}
                   />
+                </div>
+                
+                <div className="space-y-4 mt-6">
+                  <h3 className="text-lg font-medium">Billing Contact</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="billingContactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Contact Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Smith" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="billingContactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Contact Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="billing@company.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="billingContactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Contact Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+31 20 1234567" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="accountManager"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Manager</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Assigned account manager" {...field} />
+                          </FormControl>
+                          <FormDescription>Staff member managing this corporate account</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="corporateDiscount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Corporate Discount (%)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          </FormControl>
+                          <FormDescription>Discount percentage for corporate clients</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Billing Address (if different)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="billingAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Billing Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="123 Business Street" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="billingCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Billing City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Amsterdam" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="billingPostalCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Billing Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="1234 AB" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
               
