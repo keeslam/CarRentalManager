@@ -17,6 +17,7 @@ import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
 import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
+import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import {
@@ -1068,11 +1069,11 @@ Autolease Lam`;
               <CardTitle className="text-sm font-medium text-blue-700">Current Renter</CardTitle>
             </CardHeader>
             <CardContent>
-              <Link href={`/customers/${activeReservation.customerId}`}>
+              <CustomerViewDialog customerId={activeReservation.customerId}>
                 <p className="text-2xl font-semibold text-blue-900 hover:text-blue-600 cursor-pointer transition-colors">
                   {activeReservation.customer?.name || "N/A"}
                 </p>
-              </Link>
+              </CustomerViewDialog>
               <p className="text-xs text-blue-600 mt-1">
                 Until {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
               </p>
@@ -1086,11 +1087,11 @@ Autolease Lam`;
               <CardTitle className="text-sm font-medium text-green-700">Upcoming Reservation</CardTitle>
             </CardHeader>
             <CardContent>
-              <Link href={`/customers/${upcomingReservation.customerId}`}>
+              <CustomerViewDialog customerId={upcomingReservation.customerId}>
                 <p className="text-2xl font-semibold text-green-900 hover:text-green-600 cursor-pointer transition-colors">
                   {upcomingReservation.customer?.name || "N/A"}
                 </p>
-              </Link>
+              </CustomerViewDialog>
               <p className="text-xs text-green-600 mt-1">
                 Starts {formatDate(upcomingReservation.startDate)}
               </p>
