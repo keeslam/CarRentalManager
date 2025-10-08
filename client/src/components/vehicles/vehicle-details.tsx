@@ -556,9 +556,9 @@ Autolease Lam`;
     amount: expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
   })).sort((a, b) => b.amount - a.amount);
   
-  // Find current active reservation or upcoming reservation
+  // Find current active RENTAL reservation (not maintenance)
   const activeReservation = reservations?.find(reservation => {
-    if (!reservation.startDate) return false;
+    if (!reservation.startDate || reservation.type !== 'standard') return false;
     const today = new Date();
     const startDate = parseISO(reservation.startDate);
     const endDate = reservation.endDate ? parseISO(reservation.endDate) : null;
@@ -571,10 +571,10 @@ Autolease Lam`;
     return false;
   });
   
-  // If no active reservation, find the next upcoming reservation
+  // If no active reservation, find the next upcoming RENTAL reservation (not maintenance)
   const upcomingReservation = !activeReservation ? reservations
     ?.filter(reservation => {
-      if (!reservation.startDate || reservation.status === 'cancelled') return false;
+      if (!reservation.startDate || reservation.status === 'cancelled' || reservation.type !== 'standard') return false;
       const today = new Date();
       const startDate = parseISO(reservation.startDate);
       return startDate > today;
