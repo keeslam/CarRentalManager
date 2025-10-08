@@ -360,7 +360,9 @@
     "status": "Status",
     "approved": "Goedgekeurd",
     "rejected": "Afgewezen"
-  },
+  }
+}
+{
   "backups": {
     "title": "Backup Management",
     "backupSettings": "Backup Settings",
@@ -473,20 +475,20 @@
     "backupDirectoryPath": "Backup Directory Path",
     "backupDirectoryPathDescription": "Specify the full path where backups should be stored. Make sure the directory has sufficient space and write permissions.",
 
-    "automaticBackups": "Automatic Backups",
-    "automaticBackupsDescription": "Enable scheduled automatic backups",
-    "backupSchedule": "Backup Schedule",
-    "selectBackupFrequency": "Select backup frequency",
-    "weeklySundays": "Weekly (Sundays at 2:00 AM)",
-    "monthlyFirst": "Monthly (1st at 2:00 AM)",
-    "everySixHours": "Every 6 hours",
-    "currentSetting": "Current setting",
-    "customSchedule": "Custom schedule",
+    "automatic Backups": "Automatic Backups",
+    "automatic Backups Description": "Enable scheduled automatic backups",
+    "backup Schedule": "Backup Schedule",
+    "select Backup Frequency": "Select backup frequency",
+    "weekly Sundays": "Weekly (Sundays at 2:00 AM)",
+    "monthly First": "Monthly (1st at 2:00 AM)",
+    "every Six Hours": "Every 6 hours",
+    "current Setting": "Current setting",
+    "custom Schedule": "Custom schedule",
 
-    "retentionPeriodDays": "Retention Period (Days)",
-    "retentionPeriodDescription": "Backups older than this will be automatically deleted to save space.",
+    "retention PeriodDays": "Retention Period (Days)",
+    "retention PeriodDescription": "Backups older than this will be automatically deleted to save space.",
 
-    "settingsSaved": "Settings Saved",
+    "settings Saved": "Settings Saved",
     "settingsSavedDescription": "Backup settings have been updated successfully.",
     "saveFailed": "Save Failed",
     "failedToSaveSettings": "Failed to save backup settings",
