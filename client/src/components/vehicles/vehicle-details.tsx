@@ -66,7 +66,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import { useMemo } from "react";
 
 interface VehicleDetailsProps {
@@ -556,6 +556,15 @@ Autolease Lam`;
     amount: expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
   })).sort((a, b) => b.amount - a.amount);
   
+  // Find current active reservation
+  const activeReservation = reservations?.find(reservation => {
+    if (!reservation.startDate || !reservation.endDate) return false;
+    const today = new Date();
+    const startDate = parseISO(reservation.startDate);
+    const endDate = parseISO(reservation.endDate);
+    return reservation.status === 'rented' && today >= startDate && today <= endDate;
+  });
+  
   if (isLoadingVehicle) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -983,7 +992,7 @@ Autolease Lam`;
       </div>
       
       {/* Vehicle Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${activeReservation ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Vehicle Type</CardTitle>
@@ -1024,6 +1033,24 @@ Autolease Lam`;
             </div>
           </CardContent>
         </Card>
+        
+        {activeReservation && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Current Renter</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link href={`/customers/${activeReservation.customerId}`}>
+                <p className="text-2xl font-semibold text-blue-900 hover:text-blue-600 cursor-pointer transition-colors">
+                  {activeReservation.customer?.name || "N/A"}
+                </p>
+              </Link>
+              <p className="text-xs text-blue-600 mt-1">
+                Until {formatDate(activeReservation.endDate)}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
       
       {/* Tabs */}
