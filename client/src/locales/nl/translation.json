@@ -360,9 +360,7 @@
     "status": "Status",
     "approved": "Goedgekeurd",
     "rejected": "Afgewezen"
-  }
-}
-{
+  },
   "backups": {
     "title": "Backup Management",
     "backupSettings": "Backup Settings",
