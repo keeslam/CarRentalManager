@@ -1758,7 +1758,7 @@ export default function ReservationCalendarPage() {
               if (isPdf) {
                 return (
                   <iframe
-                    src={`/uploads/${previewDocument.filePath}`}
+                    src={`/${previewDocument.filePath}`}
                     className="w-full h-[70vh] border-0 rounded"
                     title="PDF Preview"
                   />
@@ -1767,7 +1767,7 @@ export default function ReservationCalendarPage() {
                 return (
                   <div className="flex items-center justify-center h-full">
                     <img
-                      src={`/uploads/${previewDocument.filePath}`}
+                      src={`/${previewDocument.filePath}`}
                       alt={previewDocument.fileName}
                       className="max-w-full max-h-[70vh] object-contain rounded"
                     />
@@ -1777,7 +1777,7 @@ export default function ReservationCalendarPage() {
                 return (
                   <div className="flex flex-col items-center justify-center h-full space-y-4">
                     <p className="text-gray-600">Preview not available for this file type.</p>
-                    <Button onClick={() => window.open(`/uploads/${previewDocument.filePath}`, '_blank')}>
+                    <Button onClick={() => window.open(`/${previewDocument.filePath}`, '_blank')}>
                       Download File
                     </Button>
                   </div>
@@ -1786,7 +1786,7 @@ export default function ReservationCalendarPage() {
             })()}
           </div>
           <div className="flex justify-between items-center pt-4 border-t">
-            <Button variant="outline" onClick={() => window.open(`/uploads/${previewDocument?.filePath}`, '_blank')}>
+            <Button variant="outline" onClick={() => window.open(`/${previewDocument?.filePath}`, '_blank')}>
               Open in New Tab
             </Button>
             <Button onClick={() => setPreviewDialogOpen(false)}>
