@@ -52,6 +52,7 @@ export function ColorCodingDialog({ open, onOpenChange }: ColorCodingDialogProps
       });
       onOpenChange(false);
     } catch (error) {
+      console.error('Error saving color rules:', error);
       toast({
         title: "Error saving colors",
         description: "Failed to save your color preferences. Please try again.",
