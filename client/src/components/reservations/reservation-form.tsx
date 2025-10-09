@@ -1665,7 +1665,7 @@ export function ReservationForm({
                   <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
                     <span className="text-xs text-gray-600 w-full mb-1">Quick Upload:</span>
                     {[
-                      { type: 'Contract', accept: '.pdf' },
+                      { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
                       { type: 'Damage Report PDF', accept: '.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
@@ -1733,11 +1733,15 @@ export function ReservationForm({
                       <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
                       <div className="flex flex-wrap gap-2">
                         {(() => {
-                          const contractDocs = reservationDocuments.filter(d => d.documentType === 'Contract');
+                          const contractDocs = reservationDocuments.filter(d => 
+                            d.documentType === 'Contract (Unsigned)' || d.documentType === 'Contract (Signed)' || d.documentType === 'Contract'
+                          );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
                           const otherDocs = reservationDocuments.filter(d => 
+                            d.documentType !== 'Contract (Unsigned)' && 
+                            d.documentType !== 'Contract (Signed)' && 
                             d.documentType !== 'Contract' && 
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'

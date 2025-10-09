@@ -4353,9 +4353,59 @@ Car Rental Management System`
         pdfBuffer = await generateRentalContract(reservation);
       }
       
+      // Save the unsigned contract to documents (linked to both reservation and vehicle)
+      if (reservation.vehicleId && reservation.vehicle) {
+        try {
+          const timestamp = Date.now();
+          const dateString = format(new Date(), 'yyyy-MM-dd');
+          // Guard against missing license plate
+          const licensePlate = reservation.vehicle.licensePlate || 'UNKNOWN';
+          const sanitizedPlate = licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+          const documentType = 'Contract (Unsigned)';
+          
+          // Create directory structure for contracts
+          const vehicleDir = path.join(uploadsDir, sanitizedPlate, 'contracts');
+          if (!fs.existsSync(vehicleDir)) {
+            fs.mkdirSync(vehicleDir, { recursive: true });
+          }
+          
+          // Generate filename
+          const fileName = `${sanitizedPlate}_Contract_Unsigned_${dateString}_${timestamp}.pdf`;
+          const filePath = path.join(vehicleDir, fileName);
+          const relativeFilePath = `uploads/${sanitizedPlate}/contracts/${fileName}`;
+          
+          // Write PDF to file system
+          fs.writeFileSync(filePath, pdfBuffer);
+          console.log(`✅ Saved unsigned contract to: ${relativeFilePath}`);
+          
+          // Create document record linked to both reservation and vehicle
+          const documentData = {
+            vehicleId: reservation.vehicleId,
+            reservationId: reservationId,
+            documentType: documentType,
+            fileName: fileName,
+            filePath: relativeFilePath,
+            fileSize: pdfBuffer.length,
+            contentType: 'application/pdf',
+            uploadDate: new Date().toISOString(),
+            notes: 'Auto-generated unsigned contract',
+            createdBy: req.user?.username || 'system'
+          };
+          
+          const savedDocument = await storage.createDocument(documentData);
+          console.log(`✅ Created document record for unsigned contract`);
+          
+          // Broadcast real-time update to all connected clients
+          realtimeEvents.documents.created(savedDocument);
+        } catch (saveError) {
+          // Log the error but don't fail the PDF download
+          console.error('⚠️ Error saving contract to documents (PDF will still download):', saveError);
+        }
+      }
+      
       // Set headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=contract_${reservationId}.pdf`);
+      res.setHeader('Content-Disposition', `attachment; filename=contract_${reservationId}_unsigned.pdf`);
       res.setHeader('Content-Length', pdfBuffer.length);
       
       // Send the PDF buffer
