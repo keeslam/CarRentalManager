@@ -47,7 +47,7 @@ import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
-import { Customer, Vehicle, Reservation } from "@shared/schema";
+import { Customer, Vehicle, Reservation, Document } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
@@ -145,6 +145,11 @@ export function ReservationForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAllVehicles, setShowAllVehicles] = useState<boolean>(false);
   
+  // Document management states
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
+  
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
     try {
@@ -194,6 +199,12 @@ export function ReservationForm({
   // Fetch PDF templates for contract generation
   const { data: pdfTemplates = [] } = useQuery<any[]>({
     queryKey: ["/api/pdf-templates"],
+  });
+  
+  // Fetch documents for the reservation (only in edit mode)
+  const { data: reservationDocuments } = useQuery<Document[]>({
+    queryKey: [`/api/documents/reservation/${createdReservationId}`],
+    enabled: !!createdReservationId
   });
 
   // Set default template when templates are loaded
@@ -814,6 +825,7 @@ export function ReservationForm({
   };
   
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>{editMode ? "Edit Reservation" : "Create New Reservation"}</CardTitle>
@@ -1644,6 +1656,137 @@ export function ReservationForm({
                 </div>
               </div>
               
+              {/* Document Management - Only show in edit mode with a created reservation */}
+              {createdReservationId && form.watch("vehicleId") && (
+                <div className="space-y-3 border-t pt-4">
+                  <label className="text-sm font-medium text-gray-700">Additional Documents</label>
+                  
+                  {/* Quick Upload Buttons */}
+                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
+                    <span className="text-xs text-gray-600 w-full mb-1">Quick Upload:</span>
+                    {[
+                      { type: 'Contract', accept: '.pdf' },
+                      { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
+                      { type: 'Damage Report PDF', accept: '.pdf' },
+                      { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
+                    ].map(({ type, accept }) => (
+                      <Button
+                        key={type}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = accept;
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+
+                            setUploadingDoc(true);
+                            const formData = new FormData();
+                            formData.append('vehicleId', form.watch("vehicleId").toString());
+                            formData.append('reservationId', createdReservationId.toString());
+                            formData.append('documentType', type);
+                            formData.append('file', file);
+
+                            try {
+                              const response = await fetch('/api/documents', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include',
+                              });
+                              
+                              if (!response.ok) {
+                                throw new Error('Upload failed');
+                              }
+                              
+                              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
+                              toast({
+                                title: "Success",
+                                description: `${type} uploaded successfully`,
+                              });
+                            } catch (error) {
+                              console.error('Upload failed:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to upload document",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setUploadingDoc(false);
+                            }
+                          };
+                          input.click();
+                        }}
+                        disabled={uploadingDoc}
+                        className="text-xs"
+                      >
+                        + {type}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  {/* Uploaded Documents */}
+                  {reservationDocuments && reservationDocuments.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          const contractDocs = reservationDocuments.filter(d => d.documentType === 'Contract');
+                          const damageReportDocs = reservationDocuments.filter(d => 
+                            d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
+                          );
+                          const otherDocs = reservationDocuments.filter(d => 
+                            d.documentType !== 'Contract' && 
+                            d.documentType !== 'Damage Report Photo' && 
+                            d.documentType !== 'Damage Report PDF'
+                          );
+                          
+                          return [...contractDocs, ...damageReportDocs, ...otherDocs];
+                        })().map((doc) => {
+                          const ext = doc.fileName.split('.').pop()?.toLowerCase();
+                          const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
+                          const isImage = doc.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '');
+                          
+                          return (
+                            <Button
+                              key={doc.id}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (isPdf) {
+                                  window.open(`/${doc.filePath}`, '_blank');
+                                } else {
+                                  setPreviewDocument(doc);
+                                  setPreviewDialogOpen(true);
+                                }
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              {isPdf ? (
+                                <FileText className="h-4 w-4 text-red-600" />
+                              ) : isImage ? (
+                                <FileCheck className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <FileText className="h-4 w-4 text-gray-600" />
+                              )}
+                              <div className="text-left">
+                                <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
+                                <div className="text-[10px] text-gray-500">
+                                  {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                                </div>
+                              </div>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               {/* Notes */}
               <FormField
                 control={form.control}
@@ -1781,5 +1924,53 @@ export function ReservationForm({
         </Form>
       </CardContent>
     </Card>
+    
+    {/* Document Preview Dialog */}
+    <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{previewDocument?.documentType || 'Document Preview'}</DialogTitle>
+          <DialogDescription>
+            {previewDocument?.fileName}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto bg-gray-100 rounded-md p-4">
+          {previewDocument && (() => {
+            const ext = previewDocument.fileName.split('.').pop()?.toLowerCase();
+            const isImage = previewDocument.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+
+            if (isImage) {
+              return (
+                <div className="flex items-center justify-center h-full">
+                  <img
+                    src={`/${previewDocument.filePath}`}
+                    alt={previewDocument.fileName}
+                    className="max-w-full max-h-[70vh] object-contain rounded shadow-lg"
+                  />
+                </div>
+              );
+            } else {
+              return (
+                <div className="flex flex-col items-center justify-center h-full space-y-4">
+                  <p className="text-gray-600">Preview not available for this file type.</p>
+                  <Button onClick={() => window.open(`/${previewDocument.filePath}`, '_blank')}>
+                    Open File
+                  </Button>
+                </div>
+              );
+            }
+          })()}
+        </div>
+        <div className="flex justify-between items-center pt-4 border-t">
+          <Button variant="outline" onClick={() => window.open(`/${previewDocument?.filePath}`, '_blank')}>
+            Open in New Tab
+          </Button>
+          <Button onClick={() => setPreviewDialogOpen(false)}>
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
