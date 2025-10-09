@@ -1319,7 +1319,7 @@ export default function ReservationCalendarPage() {
                   <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
                     <span className="text-xs text-gray-600 w-full mb-1">Quick Upload:</span>
                     {[
-                      { type: 'Contract', accept: '.pdf' },
+                      { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
                       { type: 'Damage Report PDF', accept: '.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
