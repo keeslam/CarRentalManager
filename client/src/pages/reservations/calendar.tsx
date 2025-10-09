@@ -1339,13 +1339,28 @@ export default function ReservationCalendarPage() {
                             formData.append('documentType', type);
 
                             try {
-                              await apiRequest('/api/documents', {
+                              const response = await fetch('/api/documents', {
                                 method: 'POST',
                                 body: formData,
+                                credentials: 'include',
                               });
+                              
+                              if (!response.ok) {
+                                throw new Error('Upload failed');
+                              }
+                              
                               queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation.id}`] });
+                              toast({
+                                title: "Success",
+                                description: `${type} uploaded successfully`,
+                              });
                             } catch (error) {
                               console.error('Upload failed:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to upload document",
+                                variant: "destructive",
+                              });
                             } finally {
                               setUploadingDoc(false);
                             }
@@ -1360,54 +1375,19 @@ export default function ReservationCalendarPage() {
                     ))}
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    {/* Contract Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        window.open(`/api/contracts/generate/${selectedReservation.id}`, '_blank');
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                      </svg>
-                      <div className="text-left">
-                        <div className="text-xs font-semibold">Contract</div>
-                        <div className="text-[10px] text-gray-500">PDF</div>
-                      </div>
-                    </Button>
-
-                    {/* Damage Check Button */}
-                    {selectedReservation.damageCheckPath && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          window.open(`/uploads/${selectedReservation.damageCheckPath}`, '_blank');
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                          <circle cx="9" cy="9" r="2"/>
-                          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                        </svg>
-                        <div className="text-left">
-                          <div className="text-xs font-semibold">Damage Check</div>
-                          <div className="text-[10px] text-gray-500">
-                            {selectedReservation.damageCheckPath?.split('.').pop()?.toUpperCase() || 'IMG'}
-                          </div>
-                        </div>
-                      </Button>
-                    )}
-
-                    {/* Reservation Documents */}
-                    {reservationDocuments?.map((doc) => {
+                  {/* Uploaded Documents */}
+                  {reservationDocuments && reservationDocuments.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Group documents by type */}
+                        {(() => {
+                          const contractDocs = reservationDocuments.filter(d => d.documentType === 'Contract');
+                          const damageReportDocs = reservationDocuments.filter(d => d.documentType === 'Damage Report Photo');
+                          const otherDocs = reservationDocuments.filter(d => d.documentType !== 'Contract' && d.documentType !== 'Damage Report Photo');
+                          
+                          return [...contractDocs, ...damageReportDocs, ...otherDocs];
+                        })().map((doc) => {
                       const getFileIcon = (contentType: string | null, fileName: string) => {
                         const ext = fileName.split('.').pop()?.toLowerCase();
                         if (contentType?.includes('pdf') || ext === 'pdf') {
@@ -1462,7 +1442,9 @@ export default function ReservationCalendarPage() {
                         </Button>
                       );
                     })}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
