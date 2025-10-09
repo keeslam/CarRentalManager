@@ -6,7 +6,6 @@ import { formatDate } from "@/lib/format-utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useLocation } from "wouter";
 import { Vehicle } from "@shared/schema";
-import { useTranslation } from 'react-i18next';
 
 // Function to get days until a date
 function getDaysUntil(dateStr: string): number {
@@ -29,7 +28,6 @@ function getUrgencyClass(days: number): string {
 }
 
 export function ApkExpirationWidget() {
-  const { t } = useTranslation();
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
@@ -53,7 +51,7 @@ export function ApkExpirationWidget() {
   return (
     <Card className="overflow-hidden h-full">
       <CardHeader className="bg-warning-500 py-3 px-4 flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-900">{t('vehicles.apkExpiry')}</CardTitle>
+        <CardTitle className="text-base font-medium text-gray-900">APK Expiring Soon</CardTitle>
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-triangle text-gray-900">
           <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
           <path d="M12 9v4" />

@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { useState } from "react";
 import { SpareVehicleAssignmentDialog } from "@/components/reservations/spare-vehicle-assignment-dialog";
 
 export function PendingSpareAssignmentWidget() {
-  const { t } = useTranslation();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState<Reservation | null>(null);
 
@@ -38,7 +36,7 @@ export function PendingSpareAssignmentWidget() {
       <Card className="overflow-hidden h-full">
         <CardHeader className="bg-orange-500 py-3 px-4 flex-row justify-between items-center space-y-0">
           <CardTitle className="text-base font-medium text-gray-900">
-            {t('dashboard.spareVehicleAssignments')}
+            Spare Vehicle Assignments
           </CardTitle>
           <Car className="w-5 h-5 text-gray-900" />
         </CardHeader>
@@ -51,7 +49,7 @@ export function PendingSpareAssignmentWidget() {
               {isLoading ? "-" : sortedAssignments?.length || 0}
             </div>
             <p className="text-xs text-gray-500">
-              {t('dashboard.tbdSpareVehiclesNeedingAssignment')}
+              TBD spare vehicles needing assignment
             </p>
           </div>
           <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -83,7 +81,7 @@ export function PendingSpareAssignmentWidget() {
                 className="text-center py-4 text-gray-500"
                 data-testid="status-no-pending-spares"
               >
-                {t('dashboard.noPendingSpareAssignments')}
+                No pending spare assignments
               </div>
             ) : (
               sortedAssignments?.map(placeholder => (
@@ -119,7 +117,7 @@ export function PendingSpareAssignmentWidget() {
                     data-testid={`button-assign-spare-${placeholder.id}`}
                     className="text-xs ml-2"
                   >
-                    {t('dashboard.assign')}
+                    Assign
                   </Button>
                 </div>
               ))
