@@ -2513,6 +2513,37 @@ Car Rental Management System`
         req.body.recurringFrequency = null;
       }
       
+      // Handle fuel-related numeric fields
+      if (req.body.fuelLevelPickup === "null" || req.body.fuelLevelPickup === "" || req.body.fuelLevelPickup === null) {
+        req.body.fuelLevelPickup = null;
+      } else if (req.body.fuelLevelPickup) {
+        const parsed = parseFloat(req.body.fuelLevelPickup);
+        req.body.fuelLevelPickup = isNaN(parsed) ? null : parsed;
+      }
+      
+      if (req.body.fuelLevelReturn === "null" || req.body.fuelLevelReturn === "" || req.body.fuelLevelReturn === null) {
+        req.body.fuelLevelReturn = null;
+      } else if (req.body.fuelLevelReturn) {
+        const parsed = parseFloat(req.body.fuelLevelReturn);
+        req.body.fuelLevelReturn = isNaN(parsed) ? null : parsed;
+      }
+      
+      if (req.body.fuelCost === "null" || req.body.fuelCost === "" || req.body.fuelCost === null) {
+        req.body.fuelCost = null;
+      } else if (req.body.fuelCost) {
+        const parsed = parseFloat(req.body.fuelCost);
+        req.body.fuelCost = isNaN(parsed) ? null : parsed;
+      }
+      
+      // Handle nullable fuel text fields
+      if (req.body.fuelCardNumber === "null" || req.body.fuelCardNumber === "") {
+        req.body.fuelCardNumber = null;
+      }
+      
+      if (req.body.fuelNotes === "null" || req.body.fuelNotes === "") {
+        req.body.fuelNotes = null;
+      }
+      
       const reservationData = insertReservationSchema.parse(req.body);
       
       // Check for conflicts
