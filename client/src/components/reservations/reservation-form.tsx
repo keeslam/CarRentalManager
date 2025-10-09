@@ -1754,35 +1754,71 @@ export function ReservationForm({
                           const isImage = doc.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '');
                           
                           return (
-                            <Button
-                              key={doc.id}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                if (isPdf) {
-                                  window.open(`/${doc.filePath}`, '_blank');
-                                } else {
-                                  setPreviewDocument(doc);
-                                  setPreviewDialogOpen(true);
-                                }
-                              }}
-                              className="flex items-center gap-2"
-                            >
-                              {isPdf ? (
-                                <FileText className="h-4 w-4 text-red-600" />
-                              ) : isImage ? (
-                                <FileCheck className="h-4 w-4 text-blue-600" />
-                              ) : (
-                                <FileText className="h-4 w-4 text-gray-600" />
-                              )}
-                              <div className="text-left">
-                                <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
-                                <div className="text-[10px] text-gray-500">
-                                  {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                            <div key={doc.id} className="relative group">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (isPdf) {
+                                    window.open(`/${doc.filePath}`, '_blank');
+                                  } else {
+                                    setPreviewDocument(doc);
+                                    setPreviewDialogOpen(true);
+                                  }
+                                }}
+                                className="flex items-center gap-2 pr-8"
+                              >
+                                {isPdf ? (
+                                  <FileText className="h-4 w-4 text-red-600" />
+                                ) : isImage ? (
+                                  <FileCheck className="h-4 w-4 text-blue-600" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-gray-600" />
+                                )}
+                                <div className="text-left">
+                                  <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
+                                  <div className="text-[10px] text-gray-500">
+                                    {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                                  </div>
                                 </div>
-                              </div>
-                            </Button>
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm(`Delete ${doc.documentType}?`)) {
+                                    try {
+                                      const response = await fetch(`/api/documents/${doc.id}`, {
+                                        method: 'DELETE',
+                                        credentials: 'include',
+                                      });
+                                      
+                                      if (!response.ok) {
+                                        throw new Error('Delete failed');
+                                      }
+                                      
+                                      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
+                                      toast({
+                                        title: "Success",
+                                        description: "Document deleted successfully",
+                                      });
+                                    } catch (error) {
+                                      console.error('Delete failed:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to delete document",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
+                                title="Delete document"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
                           );
                         })}
                       </div>

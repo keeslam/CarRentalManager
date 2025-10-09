@@ -1439,33 +1439,71 @@ export default function ReservationCalendarPage() {
                       };
 
                       return (
-                        <Button
-                          key={doc.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const ext = doc.fileName.split('.').pop()?.toLowerCase();
-                            const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
-                            
-                            // Open PDFs directly in new tab (browsers often block PDF iframes)
-                            if (isPdf) {
-                              window.open(`/${doc.filePath}`, '_blank');
-                            } else {
-                              // Show preview for images and other files
-                              setPreviewDocument(doc);
-                              setPreviewDialogOpen(true);
-                            }
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          {getFileIcon(doc.contentType, doc.fileName)}
-                          <div className="text-left">
-                            <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
-                            <div className="text-[10px] text-gray-500">
-                              {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                        <div key={doc.id} className="relative group">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const ext = doc.fileName.split('.').pop()?.toLowerCase();
+                              const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
+                              
+                              // Open PDFs directly in new tab (browsers often block PDF iframes)
+                              if (isPdf) {
+                                window.open(`/${doc.filePath}`, '_blank');
+                              } else {
+                                // Show preview for images and other files
+                                setPreviewDocument(doc);
+                                setPreviewDialogOpen(true);
+                              }
+                            }}
+                            className="flex items-center gap-2 pr-8"
+                          >
+                            {getFileIcon(doc.contentType, doc.fileName)}
+                            <div className="text-left">
+                              <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
+                              <div className="text-[10px] text-gray-500">
+                                {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                              </div>
                             </div>
-                          </div>
-                        </Button>
+                          </Button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete ${doc.documentType}?`)) {
+                                try {
+                                  const response = await fetch(`/api/documents/${doc.id}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include',
+                                  });
+                                  
+                                  if (!response.ok) {
+                                    throw new Error('Delete failed');
+                                  }
+                                  
+                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation?.id}`] });
+                                  toast({
+                                    title: "Success",
+                                    description: "Document deleted successfully",
+                                  });
+                                } catch (error) {
+                                  console.error('Delete failed:', error);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to delete document",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                            className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
+                            title="Delete document"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
+                        </div>
                       );
                     })}
                       </div>
