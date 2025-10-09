@@ -146,6 +146,13 @@ export default function ReservationCalendarPage() {
   // Color coding dialog
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   
+  // Document preview dialog
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
+  
+  // Upload state
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
     console.log('handleViewReservation called with:', reservation);
@@ -343,9 +350,6 @@ export default function ReservationCalendarPage() {
     queryKey: [`/api/documents/reservation/${selectedReservation?.id}`],
     enabled: !!selectedReservation?.id
   });
-
-  // File upload state for reservation documents
-  const [uploadingDoc, setUploadingDoc] = useState(false);
   
   // Memoized maintenance map for O(1) lookups with pre-normalized dates (performance optimization)
   const maintenanceByVehicle = useMemo(() => {
@@ -1429,7 +1433,8 @@ export default function ReservationCalendarPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            window.open(`/uploads/${doc.filePath}`, '_blank');
+                            setPreviewDocument(doc);
+                            setPreviewDialogOpen(true);
                           }}
                           className="flex items-center gap-2"
                         >
@@ -1734,6 +1739,62 @@ export default function ReservationCalendarPage() {
         open={colorDialogOpen}
         onOpenChange={setColorDialogOpen}
       />
+
+      {/* Document Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.documentType || 'Document Preview'}</DialogTitle>
+            <DialogDescription>
+              {previewDocument?.fileName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-gray-100 rounded-md p-4">
+            {previewDocument && (() => {
+              const ext = previewDocument.fileName.split('.').pop()?.toLowerCase();
+              const isPdf = previewDocument.contentType?.includes('pdf') || ext === 'pdf';
+              const isImage = previewDocument.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+
+              if (isPdf) {
+                return (
+                  <iframe
+                    src={`/uploads/${previewDocument.filePath}`}
+                    className="w-full h-[70vh] border-0 rounded"
+                    title="PDF Preview"
+                  />
+                );
+              } else if (isImage) {
+                return (
+                  <div className="flex items-center justify-center h-full">
+                    <img
+                      src={`/uploads/${previewDocument.filePath}`}
+                      alt={previewDocument.fileName}
+                      className="max-w-full max-h-[70vh] object-contain rounded"
+                    />
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="flex flex-col items-center justify-center h-full space-y-4">
+                    <p className="text-gray-600">Preview not available for this file type.</p>
+                    <Button onClick={() => window.open(`/uploads/${previewDocument.filePath}`, '_blank')}>
+                      Download File
+                    </Button>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t">
+            <Button variant="outline" onClick={() => window.open(`/uploads/${previewDocument?.filePath}`, '_blank')}>
+              Open in New Tab
+            </Button>
+            <Button onClick={() => setPreviewDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
