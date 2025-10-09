@@ -1,41 +1,27 @@
+// Stub i18n configuration - keeps everything in English
+// No actual translation happens, just returns the English text
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// Import translation files
-import translationEN from './locales/en/translation.json';
-import translationNL from './locales/nl/translation.json';
-
-const resources = {
-  en: {
-    translation: translationEN
-  },
-  nl: {
-    translation: translationNL
-  }
-};
-
+// Simple pass-through translation
 i18n
   .use(initReactI18next)
   .init({
-    resources,
-    lng: 'nl', // Default to Dutch
-    fallbackLng: 'nl', // Default language is Dutch
-    supportedLngs: ['nl', 'en'], // Only support these languages
-    load: 'languageOnly', // Only load 'en' not 'en-US'
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: {
+      en: {
+        translation: {}
+      }
+    },
     interpolation: {
       escapeValue: false
-    }
+    },
+    // Return the key itself if no translation found (keeps English text)
+    returnEmptyString: false,
+    returnNull: false,
+    saveMissing: false,
   });
-
-// After initialization, check localStorage and update language if needed
-if (typeof window !== 'undefined') {
-  const storedLanguage = localStorage.getItem('language');
-  if (storedLanguage && (storedLanguage === 'nl' || storedLanguage === 'en')) {
-    i18n.changeLanguage(storedLanguage);
-  } else {
-    // Set Dutch as default in localStorage
-    localStorage.setItem('language', 'nl');
-  }
-}
 
 export default i18n;

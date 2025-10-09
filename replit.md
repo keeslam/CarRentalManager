@@ -6,15 +6,22 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
-- **Multi-Language Email System**: Complete email template system supporting Dutch and English based on customer's preferred language, with Dutch fallback
+- **Document Management**: Reservation-specific document uploads with auto-generated filenames (vehicle plate + document type + date)
+  - Quick upload buttons for Contract, Damage Report Photo, and Other documents
+  - Documents linked to both vehicle AND reservation for organized tracking
+- **English-Only Interface**: Simplified UI by removing multi-language switcher - all internal staff features in English only
+  - Email system still supports Dutch/English for customer communications
 - **Fuel Management**: Pickup/return fuel levels, fuel cost tracking, and fuel card number fields in reservations
 - **Corporate Customer Features**: Business/individual customer types, billing contacts, account managers, corporate discounts, and separate billing addresses
-- **Language Switcher**: i18next integration with Dutch/English support throughout the UI
-- **Email Templates**: Welcome emails, password reset, APK reminders, maintenance reminders, and custom notifications all support multi-language
+- **Email Templates**: Welcome emails, password reset, APK reminders, maintenance reminders, and custom notifications support multi-language
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## System Language
+
+The internal staff interface is **English-only** for simplicity. The multi-language system (i18next) is still installed but configured as a pass-through that keeps all text in English. Customer-facing email communications still support Dutch and English based on customer language preference.
 
 ## System Architecture
 
