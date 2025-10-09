@@ -2475,12 +2475,42 @@ Car Rental Management System`
       if (req.body.placeholderSpare === "true") req.body.placeholderSpare = true;
       else if (req.body.placeholderSpare === "false") req.body.placeholderSpare = false;
       
+      if (req.body.isRecurring === "true") req.body.isRecurring = true;
+      else if (req.body.isRecurring === "false") req.body.isRecurring = false;
+      
       // Handle nullable string fields
       if (req.body.maintenanceStatus === "null" || req.body.maintenanceStatus === "") {
         req.body.maintenanceStatus = null;
       }
       if (req.body.spareAssignmentDecision === "null" || req.body.spareAssignmentDecision === "") {
         req.body.spareAssignmentDecision = null;
+      }
+      
+      // Handle recurring reservation fields
+      if (req.body.recurringParentId === "null" || req.body.recurringParentId === "") {
+        req.body.recurringParentId = null;
+      } else if (req.body.recurringParentId) {
+        req.body.recurringParentId = parseInt(req.body.recurringParentId);
+      }
+      
+      if (req.body.recurringDayOfWeek === "null" || req.body.recurringDayOfWeek === "") {
+        req.body.recurringDayOfWeek = null;
+      } else if (req.body.recurringDayOfWeek) {
+        req.body.recurringDayOfWeek = parseInt(req.body.recurringDayOfWeek);
+      }
+      
+      if (req.body.recurringDayOfMonth === "null" || req.body.recurringDayOfMonth === "") {
+        req.body.recurringDayOfMonth = null;
+      } else if (req.body.recurringDayOfMonth) {
+        req.body.recurringDayOfMonth = parseInt(req.body.recurringDayOfMonth);
+      }
+      
+      if (req.body.recurringEndDate === "null" || req.body.recurringEndDate === "") {
+        req.body.recurringEndDate = null;
+      }
+      
+      if (req.body.recurringFrequency === "null" || req.body.recurringFrequency === "") {
+        req.body.recurringFrequency = null;
       }
       
       const reservationData = insertReservationSchema.parse(req.body);
