@@ -1433,8 +1433,17 @@ export default function ReservationCalendarPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            setPreviewDocument(doc);
-                            setPreviewDialogOpen(true);
+                            const ext = doc.fileName.split('.').pop()?.toLowerCase();
+                            const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
+                            
+                            // Open PDFs directly in new tab (browsers often block PDF iframes)
+                            if (isPdf) {
+                              window.open(`/${doc.filePath}`, '_blank');
+                            } else {
+                              // Show preview for images and other files
+                              setPreviewDocument(doc);
+                              setPreviewDialogOpen(true);
+                            }
                           }}
                           className="flex items-center gap-2"
                         >
@@ -1752,24 +1761,15 @@ export default function ReservationCalendarPage() {
           <div className="flex-1 overflow-auto bg-gray-100 rounded-md p-4">
             {previewDocument && (() => {
               const ext = previewDocument.fileName.split('.').pop()?.toLowerCase();
-              const isPdf = previewDocument.contentType?.includes('pdf') || ext === 'pdf';
               const isImage = previewDocument.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
 
-              if (isPdf) {
-                return (
-                  <iframe
-                    src={`/${previewDocument.filePath}`}
-                    className="w-full h-[70vh] border-0 rounded"
-                    title="PDF Preview"
-                  />
-                );
-              } else if (isImage) {
+              if (isImage) {
                 return (
                   <div className="flex items-center justify-center h-full">
                     <img
                       src={`/${previewDocument.filePath}`}
                       alt={previewDocument.fileName}
-                      className="max-w-full max-h-[70vh] object-contain rounded"
+                      className="max-w-full max-h-[70vh] object-contain rounded shadow-lg"
                     />
                   </div>
                 );
@@ -1778,7 +1778,7 @@ export default function ReservationCalendarPage() {
                   <div className="flex flex-col items-center justify-center h-full space-y-4">
                     <p className="text-gray-600">Preview not available for this file type.</p>
                     <Button onClick={() => window.open(`/${previewDocument.filePath}`, '_blank')}>
-                      Download File
+                      Open File
                     </Button>
                   </div>
                 );
