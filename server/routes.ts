@@ -4171,28 +4171,32 @@ Car Rental Management System`
             // Create document entry for the contract
             const documentData = {
               vehicleId: reservation.vehicleId,
-              documentType: 'Contract',
+              reservationId: reservationId, // Link to reservation
+              documentType: 'Contract (Unsigned)', // Mark as unsigned
               fileName: filename,
               filePath: getRelativePath(filePath),
               fileSize: pdfBuffer.length,
               contentType: 'application/pdf',
               createdBy: req.user ? req.user.username : 'System',
-              notes: `Rental contract for reservation #${reservationId} (${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)})`
+              notes: `Auto-generated unsigned contract for reservation #${reservationId}`
             };
             
             // Check if a contract document already exists for this reservation
             const existingDocs = await storage.getDocumentsByVehicle(reservation.vehicleId);
             const existingContract = existingDocs.find(doc => 
-              doc.documentType === 'Contract' && 
-              doc.fileName.includes(`${sanitizedPlate}_contract_${currentDate}`)
+              doc.documentType === 'Contract (Unsigned)' && 
+              doc.reservationId === reservationId
             );
             
-            // Only create a new document if one doesn't already exist for today's date
+            // Only create a new document if one doesn't already exist for this reservation
             if (!existingContract) {
               const document = await storage.createDocument(documentData);
-              console.log(`Created document entry for contract: ID ${document.id}`);
+              console.log(`✅ Created document entry for unsigned contract: ID ${document.id}`);
+              
+              // Broadcast real-time update to all connected clients
+              realtimeEvents.documents.created(document);
             } else {
-              console.log(`Contract document already exists: ID ${existingContract.id}`);
+              console.log(`Contract document already exists for this reservation: ID ${existingContract.id}`);
             }
           } catch (docError) {
             console.error('Error registering contract as document:', docError);
