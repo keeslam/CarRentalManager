@@ -1388,11 +1388,15 @@ export default function ReservationCalendarPage() {
                       <div className="flex flex-wrap gap-2">
                         {/* Group documents by type */}
                         {(() => {
-                          const contractDocs = reservationDocuments.filter(d => d.documentType === 'Contract');
+                          const contractDocs = reservationDocuments.filter(d => 
+                            d.documentType === 'Contract (Unsigned)' || d.documentType === 'Contract (Signed)' || d.documentType === 'Contract'
+                          );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
                           const otherDocs = reservationDocuments.filter(d => 
+                            d.documentType !== 'Contract (Unsigned)' && 
+                            d.documentType !== 'Contract (Signed)' && 
                             d.documentType !== 'Contract' && 
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'
