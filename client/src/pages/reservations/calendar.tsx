@@ -1321,6 +1321,7 @@ export default function ReservationCalendarPage() {
                     {[
                       { type: 'Contract', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
+                      { type: 'Damage Report PDF', accept: '.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
                     ].map(({ type, accept }) => (
                       <Button
@@ -1388,8 +1389,14 @@ export default function ReservationCalendarPage() {
                         {/* Group documents by type */}
                         {(() => {
                           const contractDocs = reservationDocuments.filter(d => d.documentType === 'Contract');
-                          const damageReportDocs = reservationDocuments.filter(d => d.documentType === 'Damage Report Photo');
-                          const otherDocs = reservationDocuments.filter(d => d.documentType !== 'Contract' && d.documentType !== 'Damage Report Photo');
+                          const damageReportDocs = reservationDocuments.filter(d => 
+                            d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
+                          );
+                          const otherDocs = reservationDocuments.filter(d => 
+                            d.documentType !== 'Contract' && 
+                            d.documentType !== 'Damage Report Photo' && 
+                            d.documentType !== 'Damage Report PDF'
+                          );
                           
                           return [...contractDocs, ...damageReportDocs, ...otherDocs];
                         })().map((doc) => {
