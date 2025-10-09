@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,6 @@ interface BackupStatus {
 }
 
 export function BackupManagement() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,21 +88,21 @@ export function BackupManagement() {
       const response = await apiRequest('POST', '/api/backups/run');
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || t('backups.failedToRun'));
+        throw new Error(error.error || 'Failed to run backup');
       }
       return await response.json();
     },
     onSuccess: () => {
       toast({
-        title: t('backups.backupStarted'),
-        description: t('backups.backupStartedDescription'),
+        title: 'Backup Started',
+        description: 'The backup process has been initiated.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.backupFailed'),
+        title: 'Backup Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -117,20 +115,20 @@ export function BackupManagement() {
       const response = await apiRequest('POST', '/api/backups/cleanup');
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || t('backups.failedToCleanup'));
+        throw new Error(error.error || 'Failed to cleanup backups');
       }
       return await response.json();
     },
     onSuccess: () => {
       toast({
-        title: t('backups.cleanupComplete'),
-        description: t('backups.cleanupCompleteDescription'),
+        title: 'Cleanup Complete',
+        description: 'Old backups have been removed successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.cleanupFailed'),
+        title: 'Cleanup Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -145,13 +143,13 @@ export function BackupManagement() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || t('backups.failedToRestoreDatabase'));
+        throw new Error(error.error || 'Failed to restore database');
       }
       return await response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: t('backups.databaseRestored'),
+        title: 'Database Restored',
         description: data.message + (data.warning ? ` ${data.warning}` : ''),
         variant: data.warning ? "default" : "default",
       });
@@ -160,7 +158,7 @@ export function BackupManagement() {
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.databaseRestoreFailed'),
+        title: 'Database Restore Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -175,19 +173,19 @@ export function BackupManagement() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || t('backups.failedToRestoreFiles'));
+        throw new Error(error.error || 'Failed to restore files');
       }
       return await response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: t('backups.filesRestored'),
+        title: 'Files Restored',
         description: data.message,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.filesRestoreFailed'),
+        title: 'Files Restore Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -203,13 +201,13 @@ export function BackupManagement() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || t('backups.failedToRestoreComplete'));
+        throw new Error(error.error || 'Failed to restore complete system');
       }
       return await response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: t('backups.systemRestoreComplete'),
+        title: 'System Restore Complete',
         description: data.message + (data.warning ? ` ${data.warning}` : ''),
         variant: data.warning ? "default" : "default",
       });
@@ -219,7 +217,7 @@ export function BackupManagement() {
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.completeRestoreFailed'),
+        title: 'Complete Restore Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -238,18 +236,15 @@ export function BackupManagement() {
         body: formData,
       }).then(response => {
         if (!response.ok) {
-          return response.json().then(err => Promise.reject(new Error(err.error || t('backups.uploadFailed'))));
+          return response.json().then(err => Promise.reject(new Error(err.error || 'Upload failed')));
         }
         return response.json();
       });
     },
     onSuccess: (data) => {
       toast({
-        title: t('backups.uploadSuccessful'),
-        description: t('backups.uploadSuccessfulDescription', { 
-          type: data.backup.type, 
-          name: data.backup.metadata.originalName 
-        }),
+        title: 'Upload Successful',
+        description: `Backup file uploaded successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
       setUploadDialogOpen(false);
@@ -257,7 +252,7 @@ export function BackupManagement() {
     },
     onError: (error: Error) => {
       toast({
-        title: t('backups.uploadFailed'),
+        title: 'Upload Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -267,15 +262,15 @@ export function BackupManagement() {
   // Helper functions
   const getStatusBadge = () => {
     if (status?.isRunning) {
-      return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />{t('backups.running')}</Badge>;
+      return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Running</Badge>;
     }
     if (status?.lastError) {
-      return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />{t('backups.error')}</Badge>;
+      return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Error</Badge>;
     }
     if (status?.lastSuccess) {
-      return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t('backups.ready')}</Badge>;
+      return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Ready</Badge>;
     }
-    return <Badge variant="secondary">{t('backups.unknown')}</Badge>;
+    return <Badge variant="secondary">Unknown</Badge>;
   };
 
   const downloadBackup = (backup: BackupManifest) => {
@@ -317,7 +312,7 @@ export function BackupManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">{t('backups.title')}</h1>
+        <h1 className="text-2xl font-semibold">Backups</h1>
         {getStatusBadge()}
       </div>
 
@@ -331,43 +326,43 @@ export function BackupManagement() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('backups.nextScheduledBackup')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Next Scheduled Backup</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {status?.nextScheduled ? 
                 formatDate(status.nextScheduled) : 
-                t('backups.notScheduled')
+                'Not Scheduled'
               }
             </div>
             <p className="text-xs text-muted-foreground">
-              {t('backups.dailyAt2AM')}
+              Daily at 2:00 AM
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('backups.lastSuccessfulBackup')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Last Successful Backup</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {status?.lastSuccess ? 
                 formatDate(status.lastSuccess) : 
-                t('common.never')
+                'Never'
               }
             </div>
             <p className="text-xs text-muted-foreground">
-              {t('backups.databaseAndFiles')}
+              Database and Files
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('backups.totalBackups')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Backups</CardTitle>
             <FolderArchive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -375,10 +370,7 @@ export function BackupManagement() {
               {backups?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t('backups.dbAndFilesCount', { 
-                dbCount: databaseBackups.length, 
-                filesCount: fileBackups.length 
-              })}
+              {`${databaseBackups.length} database, ${fileBackups.length} files`}
             </p>
           </CardContent>
         </Card>
@@ -387,9 +379,9 @@ export function BackupManagement() {
       {/* Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('backups.backupActions')}</CardTitle>
+          <CardTitle>Backup Actions</CardTitle>
           <CardDescription>
-            {t('backups.backupActionsDescription')}
+            Manage and control your backups
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-4">
@@ -398,47 +390,47 @@ export function BackupManagement() {
             disabled={status?.isRunning || runBackupMutation.isPending}
           >
             <Play className="w-4 h-4 mr-2" />
-            {status?.isRunning ? t('backups.backupRunning') : t('backups.runBackupNow')}
+            {status?.isRunning ? 'Backup Running...' : 'Run Backup Now'}
           </Button>
 
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" disabled={uploadBackupMutation.isPending}>
                 <Upload className="w-4 h-4 mr-2" />
-                {t('backups.uploadBackup')}
+                Upload Backup
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>{t('backups.uploadBackupFile')}</DialogTitle>
+                <DialogTitle>Upload Backup File</DialogTitle>
                 <DialogDescription>
-                  {t('backups.uploadBackupDescription')}
+                  Upload a previously exported backup file to restore your data
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="backup-type">{t('backups.backupType')}</Label>
+                  <Label htmlFor="backup-type">Backup Type</Label>
                   <Select value={uploadType} onValueChange={(value: 'database' | 'files') => setUploadType(value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder={t('backups.selectBackupType')} />
+                      <SelectValue placeholder="Select backup type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="database">{t('backups.databaseBackupFiles')}</SelectItem>
-                      <SelectItem value="files">{t('backups.filesBackupFiles')}</SelectItem>
+                      <SelectItem value="database">Database Backup</SelectItem>
+                      <SelectItem value="files">Files Backup</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="backup-file">{t('backups.backupFile')}</Label>
+                  <Label htmlFor="backup-file">Backup File</Label>
                   <div className="flex gap-2">
                     <Input
                       readOnly
-                      value={selectedFile?.name || t('backups.noFileSelected')}
-                      placeholder={t('backups.chooseBackupFile')}
+                      value={selectedFile?.name || 'No file selected'}
+                      placeholder="Choose a backup file"
                       className="flex-1"
                     />
                     <Button type="button" variant="outline" onClick={openFileDialog}>
-                      {t('common.browse')}
+                      Browse
                     </Button>
                   </div>
                   <input
@@ -451,7 +443,7 @@ export function BackupManagement() {
                 </div>
                 {selectedFile && (
                   <div className="text-sm text-muted-foreground">
-                    {t('backups.fileSize')}: {formatFileSize(selectedFile.size)}
+                    File Size: {formatFileSize(selectedFile.size)}
                   </div>
                 )}
               </div>
@@ -460,7 +452,7 @@ export function BackupManagement() {
                   setUploadDialogOpen(false);
                   setSelectedFile(null);
                 }}>
-                  {t('common.cancel')}
+                  Cancel
                 </Button>
                 <Button 
                   onClick={handleUpload}
@@ -469,12 +461,12 @@ export function BackupManagement() {
                   {uploadBackupMutation.isPending ? (
                     <>
                       <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      {t('backups.uploading')}
+                      Uploading...
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      {t('common.upload')}
+                      Upload
                     </>
                   )}
                 </Button>
@@ -486,20 +478,20 @@ export function BackupManagement() {
             <AlertDialogTrigger asChild>
               <Button variant="outline" disabled={cleanupMutation.isPending}>
                 <Trash2 className="w-4 h-4 mr-2" />
-                {t('backups.cleanupOldBackups')}
+                Cleanup Old Backups
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{t('backups.cleanupOldBackups')}</AlertDialogTitle>
+                <AlertDialogTitle>Cleanup Old Backups</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t('backups.cleanupDescription')}
+                  This will remove backups older than the retention period. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={() => cleanupMutation.mutate()}>
-                  {t('backups.cleanup')}
+                  Cleanup
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -510,17 +502,17 @@ export function BackupManagement() {
       {/* Backup History */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('backups.backupHistory')}</CardTitle>
+          <CardTitle>Backup History</CardTitle>
           <CardDescription>
-            {t('backups.backupHistoryDescription')}
+            View and restore previous backups
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
             <TabsList>
-              <TabsTrigger value="all">{t('backups.allBackups')} ({backups?.length || 0})</TabsTrigger>
-              <TabsTrigger value="database">{t('backups.database')} ({databaseBackups.length})</TabsTrigger>
-              <TabsTrigger value="files">{t('backups.files')} ({fileBackups.length})</TabsTrigger>
+              <TabsTrigger value="all">All Backups ({backups?.length || 0})</TabsTrigger>
+              <TabsTrigger value="database">Database ({databaseBackups.length})</TabsTrigger>
+              <TabsTrigger value="files">Files ({fileBackups.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">
@@ -562,16 +554,16 @@ export function BackupManagement() {
           <CardHeader>
             <CardTitle className="text-blue-800 flex items-center">
               <HardDriveIcon className="w-4 h-4 mr-2" />
-              {t('backups.completeSystemRestore')}
+              Complete System Restore
             </CardTitle>
             <CardDescription>
-              {t('backups.completeSystemRestoreDescription')}
+              Restore both database and files to a previous state
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                <p className="mb-2">{t('backups.selectMatchingBackups')}</p>
+                <p className="mb-2">Select matching database and files backups from the same time period</p>
               </div>
 
               <AlertDialog>
@@ -583,46 +575,46 @@ export function BackupManagement() {
                     data-testid="complete-restore-button"
                   >
                     <HardDriveIcon className="w-4 h-4 mr-2" />
-                    {t('backups.completeSystemRestore')}
+                    Complete System Restore
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-2xl">
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="text-destructive">⚠️ {t('backups.completeSystemRestore')}</AlertDialogTitle>
+                    <AlertDialogTitle className="text-destructive">⚠️ Complete System Restore</AlertDialogTitle>
                     <AlertDialogDescription>
                       <div className="space-y-3">
-                        <p>{t('backups.completeRestoreConfirmation')}</p>
+                        <p>This will restore your entire system to a previous state using the most recent backups.</p>
 
                         <div className="bg-gray-50 p-3 rounded space-y-2">
                           <div>
-                            <strong>{t('backups.database')}:</strong> {databaseBackups[0]?.filename || t('backups.noDatabaseBackup')}
+                            <strong>Database:</strong> {databaseBackups[0]?.filename || 'No database backup'}
                             <br />
                             <span className="text-sm text-muted-foreground">
-                              {t('backups.created')}: {databaseBackups[0] ? formatDate(databaseBackups[0].timestamp) : t('common.na')}
+                              Created: {databaseBackups[0] ? formatDate(databaseBackups[0].timestamp) : 'N/A'}
                             </span>
                           </div>
 
                           <div>
-                            <strong>{t('backups.files')}:</strong> {fileBackups[0]?.filename || t('backups.noFilesBackup')}
+                            <strong>Files:</strong> {fileBackups[0]?.filename || 'No files backup'}
                             <br />
                             <span className="text-sm text-muted-foreground">
-                              {t('backups.created')}: {fileBackups[0] ? formatDate(fileBackups[0].timestamp) : t('common.na')}
+                              Created: {fileBackups[0] ? formatDate(fileBackups[0].timestamp) : 'N/A'}
                             </span>
                           </div>
                         </div>
 
                         <div className="text-destructive font-semibold">
-                          ⚠️ {t('backups.completeRestoreWarning')}
+                          ⚠️ This will replace all current data with data from the backups. All changes made since the backup will be lost.
                         </div>
 
                         <p className="text-sm text-muted-foreground">
-                          {t('backups.restartRequiredNote')}
+                          The system may need to restart after the restore is complete.
                         </p>
                       </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => {
                         if (databaseBackups[0] && fileBackups[0]) {
@@ -634,7 +626,7 @@ export function BackupManagement() {
                       }}
                       className="bg-destructive hover:bg-destructive/90"
                     >
-                      {t('backups.restoreCompleteSystem')}
+                      Restore Complete System
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -650,7 +642,7 @@ export function BackupManagement() {
           <CardHeader>
             <CardTitle className="text-destructive flex items-center">
               <AlertTriangle className="w-4 h-4 mr-2" />
-              {t('backups.lastBackupError')}
+              Last Backup Error
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -671,25 +663,23 @@ interface BackupTableProps {
 }
 
 function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }: BackupTableProps) {
-  const { t } = useTranslation();
-
   if (isLoading) {
-    return <div className="text-center py-4">{t('backups.loadingBackups')}</div>;
+    return <div className="text-center py-4">Loading backups...</div>;
   }
 
   if (backups.length === 0) {
-    return <div className="text-center py-4 text-gray-500">{t('backups.noBackupsFound')}</div>;
+    return <div className="text-center py-4 text-gray-500">No backups found</div>;
   }
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>{t('backups.type')}</TableHead>
-          <TableHead>{t('backups.created')}</TableHead>
-          <TableHead>{t('backups.size')}</TableHead>
-          <TableHead>{t('backups.details')}</TableHead>
-          <TableHead>{t('common.actions')}</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Created</TableHead>
+          <TableHead>Size</TableHead>
+          <TableHead>Details</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -713,10 +703,10 @@ function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }:
             <TableCell>
               <div className="text-sm text-muted-foreground">
                 {backup.metadata?.fileCount && (
-                  <div>{t('backups.filesCount', { count: backup.metadata.fileCount })}</div>
+                  <div>{backup.metadata.fileCount} files</div>
                 )}
                 {backup.metadata?.compressedSize && (
-                  <div>{t('backups.compressed')}: {formatFileSize(backup.metadata.compressedSize)}</div>
+                  <div>Compressed: {formatFileSize(backup.metadata.compressedSize)}</div>
                 )}
               </div>
             </TableCell>
@@ -729,7 +719,7 @@ function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }:
                   data-testid={`download-backup-${backup.filename}`}
                 >
                   <Download className="w-3 h-3 mr-1" />
-                  {t('common.download')}
+                  Download
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -740,40 +730,38 @@ function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }:
                       data-testid={`restore-backup-${backup.filename}`}
                     >
                       <RotateCcw className="w-3 h-3 mr-1" />
-                      {t('backups.restore')}
+                      Restore
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>{t('backups.restoreBackupTitle', { type: backup.type })}</AlertDialogTitle>
+                      <AlertDialogTitle>Restore {backup.type} Backup</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {t('backups.restoreBackupConfirmation', { type: backup.type })}
+                        Are you sure you want to restore this {backup.type} backup? This will replace current {backup.type}.
                         <br /><br />
-                        <strong>{t('backups.backup')}:</strong> {backup.filename}
+                        <strong>Backup:</strong> {backup.filename}
                         <br />
-                        <strong>{t('backups.created')}:</strong> {formatDate(backup.timestamp)}
+                        <strong>Created:</strong> {formatDate(backup.timestamp)}
                         <br />
-                        <strong>{t('backups.size')}:</strong> {formatFileSize(backup.size)}
+                        <strong>Size:</strong> {formatFileSize(backup.size)}
                         <br /><br />
                         <span className="text-destructive">
-                          ⚠️ {t('backups.restoreWarning', { 
-                            dataType: backup.type === 'database' ? t('backups.databaseData') : t('backups.files') 
-                          })}
+                          ⚠️ This will replace all current {backup.type === 'database' ? 'database data' : 'files'}. Any changes made since this backup will be lost.
                         </span>
                         {backup.type === 'database' && (
                           <p className="text-sm text-muted-foreground mt-2">
-                            {t('backups.databaseRestoreNote')}
+                            The application may need to restart after database restoration.
                           </p>
                         )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => onRestore(backup)}
                         className="bg-destructive hover:bg-destructive/90"
                       >
-                        {t('backups.restoreType', { type: backup.type })}
+                        Restore {backup.type}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
