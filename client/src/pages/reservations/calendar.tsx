@@ -1333,10 +1333,11 @@ export default function ReservationCalendarPage() {
 
                             setUploadingDoc(true);
                             const formData = new FormData();
-                            formData.append('file', file);
+                            // Important: append fields BEFORE the file for multer to parse correctly
                             formData.append('vehicleId', selectedReservation.vehicleId!.toString());
                             formData.append('reservationId', selectedReservation.id.toString());
                             formData.append('documentType', type);
+                            formData.append('file', file);
 
                             try {
                               const response = await fetch('/api/documents', {
