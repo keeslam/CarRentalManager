@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     throw new Error(`Upload directory setup failed. Please ensure the application has write permissions to: ${uploadsDir}`);
   }
 
-  // Configure multer for file uploads
+  // Configure multer for file uploads (PDFs for invoices/expenses)
   const upload = multer({
     dest: path.join(uploadsDir, 'temp'),
     limits: {
@@ -99,6 +99,25 @@ export async function registerRoutes(app: Express): Promise<void> {
         cb(null, true);
       } else {
         cb(new Error('Only PDF files are allowed'));
+      }
+    },
+  });
+
+  // Configure multer for backup uploads (backup files)
+  const backupUpload = multer({
+    dest: path.join(uploadsDir, 'temp'),
+    limits: {
+      fileSize: 1000 * 1024 * 1024, // 1GB limit for backups
+    },
+    fileFilter: (req, file, cb) => {
+      const filename = file.originalname.toLowerCase();
+      const allowedExtensions = ['.sql', '.sql.gz', '.tar.gz', '.tgz', '.gz'];
+      const isAllowed = allowedExtensions.some(ext => filename.endsWith(ext));
+      
+      if (isAllowed) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only backup files (.sql, .sql.gz, .tar.gz, .tgz) are allowed'));
       }
     },
   });
@@ -5433,7 +5452,7 @@ Car Rental Management System`
   });
 
   // Upload backup file
-  app.post("/api/backups/upload", requireAuth, requireAdmin, upload.single('backup'), async (req, res) => {
+  app.post("/api/backups/upload", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No backup file provided" });
