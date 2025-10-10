@@ -6,6 +6,12 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Backup System Enhancement**: Fixed backup system for deployment environments
+  - Auto-creates backup folders in project directory (`./backups/`) instead of requiring `/home/runner/`
+  - Intelligent fallback: tries cloud storage first, falls back to local filesystem if unavailable
+  - Automatic initialization with local_filesystem storage for new deployments
+  - Organized backup structure: `backups/[database|files]/YYYY/MM/DD/`
+  - Clear error messages when storage paths are unavailable
 - **Document Management**: Reservation-specific document uploads with auto-generated filenames (vehicle plate + document type + date)
   - Quick upload buttons for Contract, Damage Report Photo, and Other documents
   - Documents linked to both vehicle AND reservation for organized tracking
