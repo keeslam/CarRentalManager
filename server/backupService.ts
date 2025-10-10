@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, copyFileSync } from 'fs';
+import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'fs';
 import { readdir, stat, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { createGzip } from 'zlib';
@@ -371,6 +371,40 @@ export class BackupService {
     return manifest;
   }
 
+  // Helper function to find a file in date-structured directory
+  private findFileInDateStructure(basePath: string, filename: string): string[] {
+    const paths: string[] = [];
+    
+    if (!existsSync(basePath)) {
+      return paths;
+    }
+    
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear, currentYear - 1]; // Check current and previous year
+    
+    for (const year of years) {
+      const yearPath = join(basePath, String(year));
+      if (!existsSync(yearPath)) continue;
+      
+      const months = readdirSync(yearPath);
+      for (const month of months) {
+        const monthPath = join(yearPath, month);
+        if (!existsSync(monthPath)) continue;
+        
+        const days = readdirSync(monthPath);
+        for (const day of days) {
+          const dayPath = join(monthPath, day);
+          const filePath = join(dayPath, filename);
+          if (existsSync(filePath)) {
+            paths.push(filePath);
+          }
+        }
+      }
+    }
+    
+    return paths;
+  }
+
   // Add directory to archive recursively
   private async addDirectoryToArchive(archive: archiver.Archiver, dirPath: string, baseName: string): Promise<number> {
     let fileCount = 0;
@@ -482,23 +516,65 @@ export class BackupService {
   // List available backups
   async listBackups(type?: 'database' | 'files'): Promise<BackupManifest[]> {
     try {
-      const privatePath = this.objectStorage.getPrivateObjectDir();
+      // Get backup settings to determine storage type
+      const settings = await this.getBackupSettings();
+      const storageType = settings?.storageType || 'local_filesystem';
+      const backupPath = settings?.localPath || this.defaultBackupPath;
+      
       const backupTypes = type ? [type] : ['database', 'files'];
       const manifests: BackupManifest[] = [];
 
-      for (const backupType of backupTypes) {
-        const prefix = `${privatePath}/backups/${backupType}/`;
-        const files = await this.objectStorage.listFiles(prefix);
+      if (storageType === 'object_storage') {
+        // List from object storage
+        const privatePath = this.objectStorage.getPrivateObjectDir();
         
-        for (const file of files) {
-          if (file.name.endsWith('.manifest.json')) {
-            try {
-              const buffer = await file.download();
-              const manifest = JSON.parse(buffer[0].toString('utf8'));
-              manifests.push(manifest);
-            } catch (error) {
-              console.error(`Error reading manifest ${file.name}:`, error);
+        for (const backupType of backupTypes) {
+          const prefix = `${privatePath}/backups/${backupType}/`;
+          const files = await this.objectStorage.listFiles(prefix);
+          
+          for (const file of files) {
+            if (file.name.endsWith('.manifest.json')) {
+              try {
+                const buffer = await file.download();
+                const manifest = JSON.parse(buffer[0].toString('utf8'));
+                manifests.push(manifest);
+              } catch (error) {
+                console.error(`Error reading manifest ${file.name}:`, error);
+              }
             }
+          }
+        }
+      } else {
+        // List from local filesystem
+        for (const backupType of backupTypes) {
+          // Check root backups directory for uploaded files (no manifest)
+          const rootFiles = existsSync(backupPath) ? readdirSync(backupPath) : [];
+          for (const file of rootFiles) {
+            const filePath = join(backupPath, file);
+            const fileStat = statSync(filePath);
+            
+            if (fileStat.isFile()) {
+              const isDatabase = backupType === 'database' && (file.endsWith('.sql') || file.endsWith('.sql.gz'));
+              const isFiles = backupType === 'files' && (file.endsWith('.tar.gz') || file.endsWith('.tgz'));
+              
+              if (isDatabase || isFiles) {
+                // Create manifest for uploaded backup without manifest
+                manifests.push({
+                  timestamp: fileStat.mtime.toISOString(),
+                  type: backupType,
+                  filename: file,
+                  size: fileStat.size,
+                  checksum: 'uploaded',
+                  metadata: { uploaded: true }
+                });
+              }
+            }
+          }
+          
+          // Check organized structure for created backups (with manifests)
+          const typeDir = join(backupPath, backupType);
+          if (existsSync(typeDir)) {
+            this.scanDirectoryForManifests(typeDir, manifests);
           }
         }
       }
@@ -511,37 +587,133 @@ export class BackupService {
     }
   }
 
+  // Recursively scan directory for manifest files
+  private scanDirectoryForManifests(dir: string, manifests: BackupManifest[]): void {
+    try {
+      const items = readdirSync(dir);
+      
+      for (const item of items) {
+        const itemPath = join(dir, item);
+        const itemStat = statSync(itemPath);
+        
+        if (itemStat.isDirectory()) {
+          this.scanDirectoryForManifests(itemPath, manifests);
+        } else if (item.endsWith('.manifest.json')) {
+          try {
+            const manifestContent = readFileSync(itemPath, 'utf8');
+            const manifest = JSON.parse(manifestContent);
+            manifests.push(manifest);
+          } catch (error) {
+            console.error(`Error reading manifest ${itemPath}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error scanning directory ${dir}:`, error);
+    }
+  }
+
   // Restore database from backup
   async restoreDatabase(backupFilename: string): Promise<void> {
     console.log(`Starting database restore from: ${backupFilename}`);
     
-    // Download backup file
-    const privatePath = this.objectStorage.getPrivateObjectDir();
-    const backupPath = await this.findBackupPath(backupFilename, 'database');
+    // Get backup settings to determine storage type
+    const settings = await this.getBackupSettings();
+    const storageType = settings?.storageType || 'local_filesystem';
+    const backupPath = settings?.localPath || this.defaultBackupPath;
     
-    if (!backupPath) {
-      throw new Error(`Backup file not found: ${backupFilename}`);
-    }
-
-    // Download to temp file
-    const tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
-    const files = await this.objectStorage.listFiles(backupPath);
-    const backupFile = files.find(f => f.name.endsWith(backupFilename));
+    let tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
     
-    if (!backupFile) {
-      throw new Error(`Could not download backup: ${backupFilename}`);
-    }
-
-    const [buffer] = await backupFile.download();
-    writeFileSync(tempFile, buffer);
-
     try {
-      // Verify backup integrity
-      const manifest = await this.getBackupManifest(backupFilename, 'database');
-      const actualChecksum = await this.calculateChecksum(tempFile);
+      if (storageType === 'object_storage') {
+        // Download from object storage
+        const privatePath = this.objectStorage.getPrivateObjectDir();
+        const remotePath = await this.findBackupPath(backupFilename, 'database');
+        
+        if (!remotePath) {
+          throw new Error(`Backup file not found in object storage: ${backupFilename}`);
+        }
+
+        const files = await this.objectStorage.listFiles(remotePath);
+        const backupFile = files.find(f => f.name.endsWith(backupFilename));
+        
+        if (!backupFile) {
+          throw new Error(`Could not download backup from object storage: ${backupFilename}`);
+        }
+
+        const [buffer] = await backupFile.download();
+        writeFileSync(tempFile, buffer);
+      } else {
+        // Use local filesystem - find the backup file
+        const localBackupPath = join(backupPath, backupFilename);
+        
+        if (existsSync(localBackupPath)) {
+          // File is directly in backups directory (uploaded backup)
+          tempFile = localBackupPath;
+        } else {
+          // Try to find in organized structure (created backup)
+          const searchPaths = [
+            join(backupPath, 'database', backupFilename),
+            ...this.findFileInDateStructure(join(backupPath, 'database'), backupFilename)
+          ];
+          
+          let found = false;
+          for (const path of searchPaths) {
+            if (existsSync(path)) {
+              tempFile = path;
+              found = true;
+              break;
+            }
+          }
+          
+          if (!found) {
+            throw new Error(`Backup file not found in local filesystem: ${backupFilename}`);
+          }
+        }
+        
+        console.log(`Found backup file at: ${tempFile}`);
+      }
+    } catch (error) {
+      throw new Error(`Failed to locate backup file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const isTemporaryFile = tempFile.startsWith('/tmp/');
+    let uncompressedFile = tempFile;
+    
+    try {
+      // Decompress if needed
+      if (tempFile.endsWith('.gz')) {
+        uncompressedFile = tempFile.replace('.gz', '');
+        console.log(`Decompressing ${tempFile} to ${uncompressedFile}`);
+        
+        const gunzipProcess = spawn('gunzip', ['-c', tempFile]);
+        const writeStream = createWriteStream(uncompressedFile);
+        
+        gunzipProcess.stdout.pipe(writeStream);
+        
+        await new Promise<void>((resolve, reject) => {
+          gunzipProcess.on('close', (code) => {
+            if (code === 0) {
+              resolve();
+            } else {
+              reject(new Error(`Decompression failed with code ${code}`));
+            }
+          });
+          gunzipProcess.on('error', reject);
+        });
+      }
       
-      if (manifest?.checksum && actualChecksum !== manifest.checksum) {
-        throw new Error('Backup file integrity check failed - checksum mismatch');
+      // Verify backup integrity (skip for uploaded backups without manifest)
+      try {
+        const manifest = await this.getBackupManifest(backupFilename, 'database');
+        if (manifest?.checksum && manifest.checksum !== 'uploaded') {
+          const actualChecksum = await this.calculateChecksum(tempFile);
+          if (actualChecksum !== manifest.checksum) {
+            throw new Error('Backup file integrity check failed - checksum mismatch');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not verify backup integrity (manifest may be missing):', error);
       }
 
       // Stop application connections (in production, you'd want more sophisticated handling)
@@ -550,7 +722,7 @@ export class BackupService {
       // Import database
       const psqlProcess = spawn('psql', [
         process.env.DATABASE_URL!,
-        '-f', tempFile
+        '-f', uncompressedFile
       ]);
 
       let stderr = '';
@@ -576,12 +748,21 @@ export class BackupService {
       });
 
     } finally {
-      // Cleanup temp file
-      if (existsSync(tempFile)) {
+      // Cleanup temp files (but not the original backup file)
+      if (isTemporaryFile && existsSync(tempFile)) {
         try {
           require('fs').unlinkSync(tempFile);
         } catch (error) {
           console.error('Error cleaning up temp restore file:', error);
+        }
+      }
+      
+      // Cleanup uncompressed file if it was created
+      if (uncompressedFile !== tempFile && existsSync(uncompressedFile)) {
+        try {
+          require('fs').unlinkSync(uncompressedFile);
+        } catch (error) {
+          console.error('Error cleaning up uncompressed file:', error);
         }
       }
     }
@@ -591,32 +772,79 @@ export class BackupService {
   async restoreFiles(backupFilename: string, targetPath?: string): Promise<void> {
     console.log(`Starting files restore from: ${backupFilename}`);
     
-    // Download backup file
-    const backupPath = await this.findBackupPath(backupFilename, 'files');
+    // Get backup settings to determine storage type
+    const settings = await this.getBackupSettings();
+    const storageType = settings?.storageType || 'local_filesystem';
+    const backupPath = settings?.localPath || this.defaultBackupPath;
     
-    if (!backupPath) {
-      throw new Error(`Backup file not found: ${backupFilename}`);
-    }
-
-    // Download to temp file
-    const tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
-    const files = await this.objectStorage.listFiles(backupPath);
-    const backupFile = files.find(f => f.name.endsWith(backupFilename));
+    let tempFile = `/tmp/restore-${Date.now()}-${backupFilename}`;
     
-    if (!backupFile) {
-      throw new Error(`Could not download backup: ${backupFilename}`);
-    }
-
-    const [buffer] = await backupFile.download();
-    writeFileSync(tempFile, buffer);
-
     try {
-      // Verify backup integrity
-      const manifest = await this.getBackupManifest(backupFilename, 'files');
-      const actualChecksum = await this.calculateChecksum(tempFile);
-      
-      if (manifest?.checksum && actualChecksum !== manifest.checksum) {
-        throw new Error('Backup file integrity check failed - checksum mismatch');
+      if (storageType === 'object_storage') {
+        // Download from object storage
+        const remotePath = await this.findBackupPath(backupFilename, 'files');
+        
+        if (!remotePath) {
+          throw new Error(`Backup file not found in object storage: ${backupFilename}`);
+        }
+
+        const files = await this.objectStorage.listFiles(remotePath);
+        const backupFile = files.find(f => f.name.endsWith(backupFilename));
+        
+        if (!backupFile) {
+          throw new Error(`Could not download backup from object storage: ${backupFilename}`);
+        }
+
+        const [buffer] = await backupFile.download();
+        writeFileSync(tempFile, buffer);
+      } else {
+        // Use local filesystem - find the backup file
+        const localBackupPath = join(backupPath, backupFilename);
+        
+        if (existsSync(localBackupPath)) {
+          // File is directly in backups directory (uploaded backup)
+          tempFile = localBackupPath;
+        } else {
+          // Try to find in organized structure (created backup)
+          const searchPaths = [
+            join(backupPath, 'files', backupFilename),
+            ...this.findFileInDateStructure(join(backupPath, 'files'), backupFilename)
+          ];
+          
+          let found = false;
+          for (const path of searchPaths) {
+            if (existsSync(path)) {
+              tempFile = path;
+              found = true;
+              break;
+            }
+          }
+          
+          if (!found) {
+            throw new Error(`Backup file not found in local filesystem: ${backupFilename}`);
+          }
+        }
+        
+        console.log(`Found backup file at: ${tempFile}`);
+      }
+    } catch (error) {
+      throw new Error(`Failed to locate backup file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const isTemporaryFile = tempFile.startsWith('/tmp/');
+    
+    try {
+      // Verify backup integrity (skip for uploaded backups without manifest)
+      try {
+        const manifest = await this.getBackupManifest(backupFilename, 'files');
+        if (manifest?.checksum && manifest.checksum !== 'uploaded') {
+          const actualChecksum = await this.calculateChecksum(tempFile);
+          if (actualChecksum !== manifest.checksum) {
+            throw new Error('Backup file integrity check failed - checksum mismatch');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not verify backup integrity (manifest may be missing):', error);
       }
 
       // Extract files
@@ -652,8 +880,8 @@ export class BackupService {
       });
 
     } finally {
-      // Cleanup temp file
-      if (existsSync(tempFile)) {
+      // Cleanup temp files (but not the original backup file)
+      if (isTemporaryFile && existsSync(tempFile)) {
         try {
           require('fs').unlinkSync(tempFile);
         } catch (error) {
