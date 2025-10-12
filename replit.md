@@ -18,6 +18,11 @@ This is a comprehensive car rental management system built with React (frontend)
     - Files stored in uploads/drivers/ directory with customer ID in filename
     - Secure serving via authenticated endpoint
     - Current file display when editing existing drivers
+  - **Searchable Driver Selection**: Searchable dropdown for finding drivers in reservations
+    - Real-time search filtering by name, phone, or email
+    - Handles 100+ drivers efficiently with instant search
+    - Shows primary driver badge and contact info
+    - "No driver selected" option with clear visual indicator
 - **Backup System Enhancement**: Complete backup/restore system for all user data
   - **What's Backed Up**:
     - **Database**: All tables including pdf_templates, email_templates, custom_notifications, users, vehicles, customers, reservations, expenses, documents, etc.

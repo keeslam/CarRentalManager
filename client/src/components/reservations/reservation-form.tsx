@@ -94,6 +94,41 @@ const formSchema = insertReservationSchemaBase.extend({
   path: ["endDate"],
 });
 
+// Driver Search Combobox component
+interface DriverSearchComboboxProps {
+  value: number | null | undefined;
+  drivers: Driver[];
+  isLoading: boolean;
+  onSelect: (value: number | null) => void;
+}
+
+function DriverSearchCombobox({ value, drivers, isLoading, onSelect }: DriverSearchComboboxProps) {
+  const options = useMemo(() => {
+    const activeDrivers = drivers.filter(d => d.status === "active");
+    return [
+      { value: "none", label: "No driver selected", tags: ["Clear"] },
+      ...activeDrivers.map(driver => ({
+        value: driver.id.toString(),
+        label: driver.displayName || `${driver.firstName} ${driver.lastName}`.trim(),
+        description: [driver.phone, driver.email].filter(Boolean).join(" • ") || undefined,
+        tags: driver.isPrimaryDriver ? ["Primary"] : [],
+      }))
+    ];
+  }, [drivers]);
+
+  return (
+    <SearchableCombobox
+      options={options}
+      value={value ? value.toString() : "none"}
+      onChange={(val) => onSelect(val === "none" ? null : parseInt(val))}
+      placeholder={isLoading ? "Loading drivers..." : "Search drivers..."}
+      emptyMessage={isLoading ? "Loading..." : "No active drivers found"}
+      searchPlaceholder="Search by name, phone, or email..."
+      disabled={isLoading}
+    />
+  );
+}
+
 interface ReservationFormProps {
   editMode?: boolean;
   initialData?: any;
@@ -1468,37 +1503,18 @@ export function ReservationForm({
                           </DriverDialog>
                         </div>
                         <FormControl>
-                          <Select
-                            value={field.value ? field.value.toString() : "none"}
-                            onValueChange={(value) => {
-                              form.setValue("driverId", value === "none" ? null : parseInt(value), {
+                          <DriverSearchCombobox
+                            value={field.value}
+                            drivers={drivers || []}
+                            isLoading={isLoadingDrivers}
+                            onSelect={(value) => {
+                              form.setValue("driverId", value, {
                                 shouldDirty: true,
                                 shouldTouch: true,
                                 shouldValidate: true
                               });
                             }}
-                          >
-                            <SelectTrigger data-testid="select-driver">
-                              <SelectValue placeholder="Select a driver (optional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No driver selected</SelectItem>
-                              {isLoadingDrivers ? (
-                                <SelectItem value="loading" disabled>Loading drivers...</SelectItem>
-                              ) : drivers && drivers.length > 0 ? (
-                                drivers
-                                  .filter(d => d.status === "active")
-                                  .map(driver => (
-                                    <SelectItem key={driver.id} value={driver.id.toString()}>
-                                      {driver.displayName || `${driver.firstName} ${driver.lastName}`.trim()}
-                                      {driver.isPrimaryDriver && " (Primary)"}
-                                    </SelectItem>
-                                  ))
-                              ) : (
-                                <SelectItem value="no-drivers" disabled>No active drivers available</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                          />
                         </FormControl>
                         <FormMessage />
                         {selectedDriver && (
