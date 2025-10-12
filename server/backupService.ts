@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'fs';
-import { readdir, stat, mkdir } from 'fs/promises';
+import { readdir, stat, mkdir, unlink } from 'fs/promises';
 import { join, dirname } from 'path';
 import { createGzip } from 'zlib';
 import { createHash } from 'crypto';
@@ -990,7 +990,10 @@ export class BackupService {
           filePath = rootFilePath;
         } else {
           // Search in date-organized structure
-          filePath = this.findFileInDateStructure(join(backupPath, type), filename);
+          const foundPaths = this.findFileInDateStructure(join(backupPath, type), filename);
+          if (foundPaths.length > 0) {
+            filePath = foundPaths[0];
+          }
         }
         
         if (!filePath || !existsSync(filePath)) {
@@ -1031,7 +1034,6 @@ export class BackupService {
         }
       } else {
         // Delete from local filesystem
-        const { unlink } = require('fs/promises');
         let filePath: string | null = null;
         let manifestPath: string | null = null;
         
@@ -1041,8 +1043,9 @@ export class BackupService {
           filePath = rootFilePath;
         } else {
           // Search in date-organized structure
-          filePath = this.findFileInDateStructure(join(backupPath, type), filename);
-          if (filePath) {
+          const foundPaths = this.findFileInDateStructure(join(backupPath, type), filename);
+          if (foundPaths.length > 0) {
+            filePath = foundPaths[0];
             // Look for manifest in the same directory
             const dir = dirname(filePath);
             const potentialManifest = join(dir, `${filename}.manifest.json`);
