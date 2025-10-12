@@ -1951,51 +1951,63 @@ export function ReservationForm({
                   </div>
                   
                   {/* Contract Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleViewContract}
-                      disabled={previewContractMutation.isPending || !selectedTemplateId}
-                      data-testid="button-view-contract"
-                    >
-                      {previewContractMutation.isPending ? (
-                        <>
-                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Contract
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={handleGenerateContract}
-                      disabled={generateContractMutation.isPending || !selectedTemplateId}
-                      data-testid="button-generate-contract"
-                    >
-                      {generateContractMutation.isPending ? (
-                        <>
-                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="mr-2 h-4 w-4" />
-                          {createdReservationId ? "Generate & Save Contract" : "Generate Contract"}
-                        </>
-                      )}
-                    </Button>
+                  <div className="space-y-2">
+                    {!createdReservationId && !editMode && (
+                      <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2 flex items-start gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                        </svg>
+                        <span>Create the reservation first, then you can generate and save the contract</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleViewContract}
+                        disabled={previewContractMutation.isPending || !selectedTemplateId || (!createdReservationId && !editMode)}
+                        data-testid="button-view-contract"
+                        title={!createdReservationId && !editMode ? "Create reservation first" : ""}
+                      >
+                        {previewContractMutation.isPending ? (
+                          <>
+                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Contract
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={createdReservationId || editMode ? "default" : "secondary"}
+                        onClick={handleGenerateContract}
+                        disabled={generateContractMutation.isPending || !selectedTemplateId || (!createdReservationId && !editMode)}
+                        data-testid="button-generate-contract"
+                        title={!createdReservationId && !editMode ? "Create reservation first" : ""}
+                      >
+                        {generateContractMutation.isPending ? (
+                          <>
+                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            {createdReservationId || editMode ? "Generate & Save Contract" : "Create Reservation First"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
