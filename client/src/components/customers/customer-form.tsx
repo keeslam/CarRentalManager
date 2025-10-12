@@ -229,6 +229,7 @@ export function CustomerForm({
           <form 
             onSubmit={(e) => {
               e.stopPropagation();
+              console.log("Form errors:", form.formState.errors);
               form.handleSubmit(onSubmit)(e);
             }} 
             className="space-y-6"
