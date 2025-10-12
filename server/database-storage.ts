@@ -10,7 +10,8 @@ import {
   backupSettings, type BackupSettings, type InsertBackupSettings,
   appSettings, type AppSettings, type InsertAppSettings,
   customerUsers, type CustomerUser, type InsertCustomerUser,
-  extensionRequests, type ExtensionRequest, type InsertExtensionRequest
+  extensionRequests, type ExtensionRequest, type InsertExtensionRequest,
+  drivers, type Driver, type InsertDriver
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -1832,6 +1833,60 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExtensionRequest(id: number): Promise<boolean> {
     const result = await db.delete(extensionRequests).where(eq(extensionRequests.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Driver methods
+  async getAllDrivers(): Promise<Driver[]> {
+    return await db.select().from(drivers).orderBy(desc(drivers.createdAt));
+  }
+
+  async getDriver(id: number): Promise<Driver | undefined> {
+    const [driver] = await db.select().from(drivers).where(eq(drivers.id, id));
+    return driver || undefined;
+  }
+
+  async getDriversByCustomer(customerId: number): Promise<Driver[]> {
+    return await db.select().from(drivers)
+      .where(eq(drivers.customerId, customerId))
+      .orderBy(desc(drivers.isPrimaryDriver), drivers.displayName);
+  }
+
+  async getActiveDriversByCustomer(customerId: number): Promise<Driver[]> {
+    return await db.select().from(drivers)
+      .where(and(eq(drivers.customerId, customerId), eq(drivers.status, 'active')))
+      .orderBy(desc(drivers.isPrimaryDriver), drivers.displayName);
+  }
+
+  async getPrimaryDriverByCustomer(customerId: number): Promise<Driver | undefined> {
+    const [driver] = await db.select().from(drivers)
+      .where(and(eq(drivers.customerId, customerId), eq(drivers.isPrimaryDriver, true)))
+      .limit(1);
+    return driver || undefined;
+  }
+
+  async createDriver(insertDriver: InsertDriver): Promise<Driver> {
+    const [driver] = await db.insert(drivers).values(insertDriver).returning();
+    return driver;
+  }
+
+  async updateDriver(id: number, driverData: Partial<InsertDriver>): Promise<Driver | undefined> {
+    const updateData = {
+      ...driverData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedDriver] = await db
+      .update(drivers)
+      .set(updateData)
+      .where(eq(drivers.id, id))
+      .returning();
+      
+    return updatedDriver || undefined;
+  }
+
+  async deleteDriver(id: number): Promise<boolean> {
+    const result = await db.delete(drivers).where(eq(drivers.id, id));
     return result.rowCount > 0;
   }
 }

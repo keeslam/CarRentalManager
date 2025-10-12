@@ -6086,6 +6086,140 @@ Car Rental Management System`
     }
   });
 
+  // ==================== DRIVER MANAGEMENT ====================
+  
+  // Get all drivers for a specific customer
+  app.get("/api/customers/:customerId/drivers", requireAuth, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ error: "Invalid customer ID" });
+      }
+      const drivers = await storage.getDriversByCustomer(customerId);
+      res.json(drivers);
+    } catch (error) {
+      console.error("Error fetching drivers:", error);
+      res.status(500).json({ error: "Failed to fetch drivers" });
+    }
+  });
+
+  // Get active drivers for a specific customer
+  app.get("/api/customers/:customerId/drivers/active", requireAuth, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ error: "Invalid customer ID" });
+      }
+      const drivers = await storage.getActiveDriversByCustomer(customerId);
+      res.json(drivers);
+    } catch (error) {
+      console.error("Error fetching active drivers:", error);
+      res.status(500).json({ error: "Failed to fetch active drivers" });
+    }
+  });
+
+  // Get a specific driver
+  app.get("/api/drivers/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid driver ID" });
+      }
+      const driver = await storage.getDriver(id);
+      if (!driver) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+      res.json(driver);
+    } catch (error) {
+      console.error("Error fetching driver:", error);
+      res.status(500).json({ error: "Failed to fetch driver" });
+    }
+  });
+
+  // Create a new driver
+  app.post("/api/customers/:customerId/drivers", requireAuth, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ error: "Invalid customer ID" });
+      }
+
+      const validation = insertDriverSchema.safeParse({ ...req.body, customerId });
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid driver data", details: validation.error.issues });
+      }
+
+      const username = req.user?.username || 'Unknown';
+      const userId = req.user?.id || null;
+      
+      const driverData = {
+        ...validation.data,
+        customerId,
+        createdBy: username,
+        updatedBy: username,
+        createdByUser: userId,
+        updatedByUser: userId
+      };
+
+      const driver = await storage.createDriver(driverData);
+      res.status(201).json(driver);
+    } catch (error) {
+      console.error("Error creating driver:", error);
+      res.status(500).json({ error: "Failed to create driver" });
+    }
+  });
+
+  // Update a driver
+  app.patch("/api/drivers/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid driver ID" });
+      }
+
+      const validation = insertDriverSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid driver data", details: validation.error.issues });
+      }
+
+      const username = req.user?.username || 'Unknown';
+      const userId = req.user?.id || null;
+      
+      const updateData = {
+        ...validation.data,
+        updatedBy: username,
+        updatedByUser: userId
+      };
+
+      const driver = await storage.updateDriver(id, updateData);
+      if (!driver) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+      res.json(driver);
+    } catch (error) {
+      console.error("Error updating driver:", error);
+      res.status(500).json({ error: "Failed to update driver" });
+    }
+  });
+
+  // Delete a driver
+  app.delete("/api/drivers/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid driver ID" });
+      }
+      const success = await storage.deleteDriver(id);
+      if (!success) {
+        return res.status(404).json({ error: "Driver not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      res.status(500).json({ error: "Failed to delete driver" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);

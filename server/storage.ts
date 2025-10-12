@@ -9,7 +9,8 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
   customerUsers, type CustomerUser, type InsertCustomerUser,
-  extensionRequests, type ExtensionRequest, type InsertExtensionRequest, type UpdateExtensionRequest
+  extensionRequests, type ExtensionRequest, type InsertExtensionRequest, type UpdateExtensionRequest,
+  drivers, type Driver, type InsertDriver
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -134,6 +135,16 @@ export interface IStorage {
   approveExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
   rejectExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
   deleteExtensionRequest(id: number): Promise<boolean>;
+  
+  // Driver methods
+  getAllDrivers(): Promise<Driver[]>;
+  getDriver(id: number): Promise<Driver | undefined>;
+  getDriversByCustomer(customerId: number): Promise<Driver[]>;
+  getActiveDriversByCustomer(customerId: number): Promise<Driver[]>;
+  getPrimaryDriverByCustomer(customerId: number): Promise<Driver | undefined>;
+  createDriver(driver: InsertDriver): Promise<Driver>;
+  updateDriver(id: number, driverData: Partial<InsertDriver>): Promise<Driver | undefined>;
+  deleteDriver(id: number): Promise<boolean>;
   
 }
 
