@@ -1969,9 +1969,11 @@ Car Rental Management System`
         if (bodyData.driverId === '' || bodyData.driverId === null) {
           bodyData.driverId = null;
         } else {
-          bodyData.driverId = parseInt(bodyData.driverId);
+          bodyData.driverId = parseInt(bodyData.driverId as string);
         }
       }
+      
+      console.log('After conversions - driverId type:', typeof bodyData.driverId, 'value:', bodyData.driverId);
       
       // Convert boolean fields from strings
       if (bodyData.placeholderSpare !== undefined) {
