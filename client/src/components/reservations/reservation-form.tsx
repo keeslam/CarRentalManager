@@ -228,6 +228,20 @@ export function ReservationForm({
       }
     }
   }, [pdfTemplates, selectedTemplateId]);
+
+  // Reset preview token when critical form fields change
+  // This prevents using stale preview data when user edits the form after previewing
+  useEffect(() => {
+    if (contractPreviewToken && !editMode && !createdReservationId) {
+      console.log('🔄 Form field changed, clearing preview token to prevent stale data');
+      setContractPreviewToken(null);
+      toast({
+        title: "Preview Invalidated",
+        description: "Form data changed. Please generate a new preview.",
+        variant: "default",
+      });
+    }
+  }, [vehicleIdWatch, customerIdWatch, selectedTemplateId, startDateWatch, endDateWatch]);
   
   // Fetch selected vehicle details if vehicleId is provided
   const actualVehicleId = initialVehicleId || preSelectedVehicleId;

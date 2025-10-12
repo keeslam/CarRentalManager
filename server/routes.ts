@@ -2047,9 +2047,10 @@ Car Rental Management System`
           if (preview) {
             console.log(`🔄 Finalizing contract from preview token for reservation ${reservation.id}`);
             
-            // Regenerate contract with real reservation data
-            const vehicle = await storage.getVehicle(preview.vehicleId);
-            const customer = await storage.getCustomer(preview.customerId);
+            // IMPORTANT: Regenerate contract using FRESH reservation data, not stale preview data
+            // This ensures the contract matches the actual reservation that was created
+            const vehicle = await storage.getVehicle(reservation.vehicleId);
+            const customer = await storage.getCustomer(reservation.customerId);
             
             if (vehicle && customer) {
               let template;
