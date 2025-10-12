@@ -1461,7 +1461,7 @@ export function ReservationForm({
                               }
                             }}
                           >
-                            <Button variant="outline" size="sm" data-testid="button-quick-add-driver">
+                            <Button type="button" variant="outline" size="sm" data-testid="button-quick-add-driver">
                               <PlusCircle className="h-3.5 w-3.5 mr-1" />
                               Quick Add Driver
                             </Button>
