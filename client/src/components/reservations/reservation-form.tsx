@@ -605,8 +605,10 @@ export function ReservationForm({
           // Navigate to reservation details page
           navigate(`/reservations/${initialData.id}`);
         } else {
-          // Navigate back to reservations list
-          navigate("/reservations");
+          // For new reservations, DON'T navigate away immediately
+          // Keep the form open so user can generate and save the contract
+          // Only navigate if user clicks Cancel button
+          // navigate("/reservations"); // Removed - keep form open
         }
       }
     },
@@ -1848,6 +1850,21 @@ export function ReservationForm({
               />
             </div>
             
+            {/* Success message after creating reservation */}
+            {!editMode && createdReservationId && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-start gap-3">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-green-800">Reservation Created Successfully!</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      Now you can generate and save the contract using the buttons below. The contract will be automatically saved to the documents.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Submit Button */}
             <div className="flex justify-end gap-4">
               <Button
@@ -1861,17 +1878,19 @@ export function ReservationForm({
                   }
                 }}
               >
-                Cancel
+                {createdReservationId ? "Close" : "Cancel"}
               </Button>
-              <Button 
-                type="submit" 
-                disabled={createReservationMutation.isPending || hasOverlap}
-              >
-                {createReservationMutation.isPending 
-                  ? "Saving..." 
-                  : editMode ? "Update Reservation" : "Create Reservation"
-                }
-              </Button>
+              {!createdReservationId && (
+                <Button 
+                  type="submit" 
+                  disabled={createReservationMutation.isPending || hasOverlap}
+                >
+                  {createReservationMutation.isPending 
+                    ? "Saving..." 
+                    : editMode ? "Update Reservation" : "Create Reservation"
+                  }
+                </Button>
+              )}
               {/* Contract buttons - show when vehicle and customer are selected */}
               {selectedVehicle && selectedCustomer && (
                 <div className="flex flex-col gap-2">
@@ -1940,7 +1959,7 @@ export function ReservationForm({
                       ) : (
                         <>
                           <FileText className="mr-2 h-4 w-4" />
-                          Generate Contract
+                          {createdReservationId ? "Generate & Save Contract" : "Generate Contract"}
                         </>
                       )}
                     </Button>
