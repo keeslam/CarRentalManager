@@ -14,6 +14,7 @@ This is a comprehensive car rental management system built with React (frontend)
   - Clear error messages when storage paths are unavailable
   - **Upload fix**: Backup upload now respects storage type settings (object_storage vs local_filesystem) and uses correct storage interface (`storage.getBackupSettings()` instead of direct db access)
   - Download/delete/upload all honor configured storage type for consistency
+  - **Cross-filesystem support**: Upload now uses copy+delete instead of rename to support backup folders on different filesystems/volumes
 - **Document Management**: Reservation-specific document uploads with auto-generated filenames (vehicle plate + document type + date)
   - Quick upload buttons for Contract, Damage Report Photo, and Other documents
   - Documents linked to both vehicle AND reservation for organized tracking

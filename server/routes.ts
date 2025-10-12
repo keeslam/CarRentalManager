@@ -5551,7 +5551,10 @@ Car Rental Management System`
         }
         
         const destinationPath = path.join(backupDir, newFilename);
-        fs.renameSync(file.path, destinationPath);
+        
+        // Use copy + delete instead of rename to support cross-filesystem moves
+        fs.copyFileSync(file.path, destinationPath);
+        fs.unlinkSync(file.path);
         
         manifest = {
           timestamp: new Date().toISOString(),
