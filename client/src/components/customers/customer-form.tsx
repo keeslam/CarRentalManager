@@ -211,7 +211,7 @@ export function CustomerForm({
       corporateDiscount: data.corporateDiscount === "" ? null : data.corporateDiscount,
       paymentTermDays: data.paymentTermDays === "" ? null : data.paymentTermDays,
       creditLimit: data.creditLimit === "" ? null : data.creditLimit,
-    };
+    } as any;
     
     createCustomerMutation.mutate(transformedData);
   };
