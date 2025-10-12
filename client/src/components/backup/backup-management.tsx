@@ -259,6 +259,32 @@ export function BackupManagement() {
     },
   });
 
+  // Delete backup mutation
+  const deleteBackupMutation = useMutation({
+    mutationFn: async ({ filename, type }: { filename: string; type: 'database' | 'files' }) => {
+      const response = await apiRequest('DELETE', `/api/backups/${type}/${filename}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete backup');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Backup Deleted',
+        description: 'Backup file has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Helper functions
   const getStatusBadge = () => {
     if (status?.isRunning) {
@@ -284,6 +310,10 @@ export function BackupManagement() {
     } else {
       restoreFilesMutation.mutate(backup.filename);
     }
+  };
+
+  const deleteBackup = (backup: BackupManifest) => {
+    deleteBackupMutation.mutate({ filename: backup.filename, type: backup.type });
   };
 
   // Removed duplicate function - use formatFileSize directly
@@ -520,8 +550,10 @@ export function BackupManagement() {
                 backups={backups || []} 
                 onDownload={downloadBackup}
                 onRestore={restoreBackup}
+                onDelete={deleteBackup}
                 isLoading={backupsLoading}
                 isRestoring={restoreDatabaseMutation.isPending || restoreFilesMutation.isPending}
+                isDeleting={deleteBackupMutation.isPending}
               />
             </TabsContent>
 
@@ -530,8 +562,10 @@ export function BackupManagement() {
                 backups={databaseBackups} 
                 onDownload={downloadBackup}
                 onRestore={restoreBackup}
+                onDelete={deleteBackup}
                 isLoading={backupsLoading}
                 isRestoring={restoreDatabaseMutation.isPending}
+                isDeleting={deleteBackupMutation.isPending}
               />
             </TabsContent>
 
@@ -540,8 +574,10 @@ export function BackupManagement() {
                 backups={fileBackups} 
                 onDownload={downloadBackup}
                 onRestore={restoreBackup}
+                onDelete={deleteBackup}
                 isLoading={backupsLoading}
                 isRestoring={restoreFilesMutation.isPending}
+                isDeleting={deleteBackupMutation.isPending}
               />
             </TabsContent>
           </Tabs>
@@ -658,11 +694,13 @@ interface BackupTableProps {
   backups: BackupManifest[];
   onDownload: (backup: BackupManifest) => void;
   onRestore: (backup: BackupManifest) => void;
+  onDelete: (backup: BackupManifest) => void;
   isLoading: boolean;
   isRestoring?: boolean;
+  isDeleting?: boolean;
 }
 
-function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }: BackupTableProps) {
+function BackupTable({ backups, onDownload, onRestore, onDelete, isLoading, isRestoring, isDeleting }: BackupTableProps) {
   if (isLoading) {
     return <div className="text-center py-4">Loading backups...</div>;
   }
@@ -762,6 +800,48 @@ function BackupTable({ backups, onDownload, onRestore, isLoading, isRestoring }:
                         className="bg-destructive hover:bg-destructive/90"
                       >
                         Restore {backup.type}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isDeleting}
+                      data-testid={`delete-backup-${backup.filename}`}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-destructive">Delete Backup</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this backup? This action cannot be undone.
+                        <br /><br />
+                        <strong>Backup:</strong> {backup.filename}
+                        <br />
+                        <strong>Type:</strong> {backup.type}
+                        <br />
+                        <strong>Created:</strong> {formatDate(backup.timestamp)}
+                        <br />
+                        <strong>Size:</strong> {formatFileSize(backup.size)}
+                        <br /><br />
+                        <span className="text-destructive font-semibold">
+                          ⚠️ Once deleted, this backup cannot be recovered.
+                        </span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onDelete(backup)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Delete Backup
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
