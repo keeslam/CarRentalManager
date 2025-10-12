@@ -274,22 +274,19 @@ export class BackupService {
     const writeStream = createWriteStream(tempFile);
     archive.pipe(writeStream);
 
-    // Add uploads directory if it exists
+    // Add uploads directory if it exists (contains all user-uploaded files and templates)
     const uploadsDir = join(process.cwd(), 'uploads');
     let fileCount = 0;
     
     if (existsSync(uploadsDir)) {
       fileCount = await this.addDirectoryToArchive(archive, uploadsDir, 'uploads');
+      console.log(`📦 Added uploads directory to backup (${fileCount} files)`);
+    } else {
+      console.warn('⚠️ uploads directory not found, creating empty backup');
     }
 
-    // Add any other important directories
-    const otherDirs = ['shared', 'server', 'client'];
-    for (const dir of otherDirs) {
-      const dirPath = join(process.cwd(), dir);
-      if (existsSync(dirPath)) {
-        fileCount += await this.addDirectoryToArchive(archive, dirPath, dir);
-      }
-    }
+    // Note: We do NOT backup source code (shared/, server/, client/) as it's in version control
+    // Only user data (uploads/) is backed up
 
     // Finalize archive
     await archive.finalize();

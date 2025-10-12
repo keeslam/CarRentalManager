@@ -6,15 +6,18 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
-- **Backup System Enhancement**: Fixed backup system for deployment environments
-  - Auto-creates backup folders in project directory (`./backups/`) instead of requiring `/home/runner/`
-  - Intelligent fallback: tries cloud storage first, falls back to local filesystem if unavailable
-  - Automatic initialization with local_filesystem storage for new deployments
-  - Organized backup structure: `backups/[database|files]/YYYY/MM/DD/`
-  - Clear error messages when storage paths are unavailable
-  - **Upload fix**: Backup upload now respects storage type settings (object_storage vs local_filesystem) and uses correct storage interface (`storage.getBackupSettings()` instead of direct db access)
-  - Download/delete/upload all honor configured storage type for consistency
-  - **Cross-filesystem support**: Upload now uses copy+delete instead of rename to support backup folders on different filesystems/volumes
+- **Backup System Enhancement**: Complete backup/restore system for all user data
+  - **What's Backed Up**:
+    - **Database**: All tables including pdf_templates, email_templates, custom_notifications, users, vehicles, customers, reservations, expenses, documents, etc.
+    - **Files**: uploads/ directory containing all user files (documents, contracts, PDF template backgrounds in uploads/templates/, invoices, etc.)
+    - **NOT backed up**: Source code (it's in version control) - only user-created data is backed up
+  - **Storage Options**: 
+    - Object storage (cloud) with automatic fallback to local filesystem
+    - Local filesystem: `./backups/[database|files]/YYYY/MM/DD/`
+  - **Complete Restore**: One-click restoration of both database and files
+    - ⚠️ Important: Database restore resets your session - you must refresh browser and log in again after restore
+  - **Cross-filesystem support**: Upload uses copy+delete instead of rename to support different volume mounts
+  - **Easy Upload**: Upload external backups through UI - system auto-detects type and stores correctly
 - **Document Management**: Reservation-specific document uploads with auto-generated filenames (vehicle plate + document type + date)
   - Quick upload buttons for Contract, Damage Report Photo, and Other documents
   - Documents linked to both vehicle AND reservation for organized tracking
