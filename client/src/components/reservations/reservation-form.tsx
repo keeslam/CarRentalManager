@@ -202,19 +202,20 @@ export function ReservationForm({
     queryKey: ["/api/pdf-templates"],
   });
   
-  // Fetch documents for the reservation (only in edit mode)
+  // Fetch documents for the reservation (in edit mode or after creation)
+  const activeReservationId = createdReservationId || (editMode && initialData?.id);
   const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
-    queryKey: [`/api/documents/reservation/${createdReservationId}`],
-    enabled: !!createdReservationId
+    queryKey: [`/api/documents/reservation/${activeReservationId}`],
+    enabled: !!activeReservationId
   });
   
-  // Refetch documents when createdReservationId changes
+  // Refetch documents when activeReservationId changes
   useEffect(() => {
-    if (createdReservationId) {
-      console.log('🔄 Refetching documents for reservation:', createdReservationId);
+    if (activeReservationId) {
+      console.log('🔄 Refetching documents for reservation:', activeReservationId);
       refetchDocuments();
     }
-  }, [createdReservationId, refetchDocuments]);
+  }, [activeReservationId, refetchDocuments]);
 
   // Set default template when templates are loaded
   useEffect(() => {
@@ -1709,90 +1710,16 @@ export function ReservationForm({
                 />
               </div>
               
-              {/* Damage Check Upload */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <FormLabel>Upload Damage Check</FormLabel>
-                  <div className="text-xs text-muted-foreground">Optional</div>
-                </div>
-                
-                <div 
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    isDragActive 
-                      ? "border-primary bg-primary/5" 
-                      : damageFile 
-                        ? "border-success bg-success/5" 
-                        : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  {!damageFile ? (
-                    <>
-                      <div className="flex flex-col items-center gap-2">
-                        <Upload className="h-8 w-8 text-muted-foreground/70" />
-                        <div className="text-sm font-medium">
-                          Drag & drop a damage check document here, or click to browse
-                        </div>
-                        <input
-                          type="file"
-                          id="damageCheckFile"
-                          className="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={handleFileChange}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => document.getElementById("damageCheckFile")?.click()}
-                        >
-                          Select File
-                        </Button>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          Accepted formats: PDF, JPG, PNG (max 25MB)
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-center gap-2 text-success">
-                        <Check className="h-5 w-5" />
-                        <span className="font-medium">File uploaded</span>
-                      </div>
-                      <div className="flex items-center justify-center mt-2">
-                        <FileCheck className="h-12 w-12 text-muted-foreground/70 mr-3" />
-                        <div className="text-left">
-                          <div className="font-medium truncate max-w-[200px]">
-                            {damageFile.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {(damageFile.size / 1024 / 1024).toFixed(2)} MB
-                          </div>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={removeDamageFile}
-                        className="mt-4"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              {/* Document Management in Edit Mode - Show prominently */}
-              {editMode && createdReservationId && form.watch("vehicleId") && (
+              {/* Document Management - Always visible */}
+              {form.watch("vehicleId") && (
                 <div className="space-y-3 border rounded-lg p-4 bg-blue-50">
                   <label className="text-sm font-semibold text-gray-800">📄 Contract & Documents</label>
                   
                   {/* Quick Upload Buttons */}
                   <div className="flex flex-wrap gap-2 p-3 bg-white rounded-md border border-gray-200">
-                    <span className="text-xs text-gray-600 w-full mb-1 font-medium">Quick Upload:</span>
+                    <span className="text-xs text-gray-600 w-full mb-1 font-medium">
+                      {!createdReservationId && !editMode ? 'Quick Upload (available after creating reservation):' : 'Quick Upload:'}
+                    </span>
                     {[
                       { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
@@ -1805,26 +1732,28 @@ export function ReservationForm({
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          // Check if reservation exists (either edit mode with initialData or created)
+                          const reservationId = createdReservationId || (editMode && initialData?.id);
+                          
+                          if (!reservationId) {
+                            toast({
+                              title: "Create reservation first",
+                              description: "Please complete the reservation details and click 'Preview & Generate Contract', then finalize to upload documents.",
+                            });
+                            return;
+                          }
+
                           const input = document.createElement('input');
                           input.type = 'file';
                           input.accept = accept;
                           input.onchange = async (e) => {
                             const file = (e.target as HTMLInputElement).files?.[0];
                             if (!file) return;
-
-                            if (!createdReservationId) {
-                              toast({
-                                title: "Error",
-                                description: "Please save the reservation first",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
                             
                             setUploadingDoc(true);
                             const formData = new FormData();
                             formData.append('vehicleId', form.watch("vehicleId").toString());
-                            formData.append('reservationId', createdReservationId.toString());
+                            formData.append('reservationId', reservationId.toString());
                             formData.append('documentType', type);
                             formData.append('file', file);
 
@@ -1839,7 +1768,7 @@ export function ReservationForm({
                                 throw new Error('Upload failed');
                               }
                               
-                              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
+                              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
                               toast({
                                 title: "Success",
                                 description: `${type} uploaded successfully`,
@@ -1986,200 +1915,18 @@ export function ReservationForm({
               />
             </div>
             
-            {/* Success message and document management after creating reservation */}
+            {/* Success message after creating reservation */}
             {!editMode && createdReservationId && (
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                  <div className="flex items-start gap-3">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-green-800">Reservation Created Successfully!</h4>
-                      <p className="text-sm text-green-700 mt-1">
-                        The unsigned contract has been generated. You can upload additional documents below or generate a new contract if needed.
-                      </p>
-                    </div>
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-start gap-3">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-green-800">Reservation Created Successfully!</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      The unsigned contract has been generated. You can now upload additional documents using the section above.
+                    </p>
                   </div>
                 </div>
-
-                {/* Document Management Section - Moved here for better visibility */}
-                {form.watch("vehicleId") && (
-                  <div className="space-y-3 border rounded-lg p-4 bg-blue-50">
-                    <label className="text-sm font-semibold text-gray-800">📄 Contract & Documents</label>
-                    
-                    {/* Quick Upload Buttons */}
-                    <div className="flex flex-wrap gap-2 p-3 bg-white rounded-md border border-gray-200">
-                      <span className="text-xs text-gray-600 w-full mb-1 font-medium">Quick Upload:</span>
-                      {[
-                        { type: 'Contract (Signed)', accept: '.pdf' },
-                        { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
-                        { type: 'Damage Report PDF', accept: '.pdf' },
-                        { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
-                      ].map(({ type, accept }) => (
-                        <Button
-                          key={type}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = accept;
-                            input.onchange = async (e) => {
-                              const file = (e.target as HTMLInputElement).files?.[0];
-                              if (!file) return;
-
-                              if (!createdReservationId) {
-                                toast({
-                                  title: "Error",
-                                  description: "Please save the reservation first",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              
-                              setUploadingDoc(true);
-                              const formData = new FormData();
-                              formData.append('vehicleId', form.watch("vehicleId").toString());
-                              formData.append('reservationId', createdReservationId.toString());
-                              formData.append('documentType', type);
-                              formData.append('file', file);
-
-                              try {
-                                const response = await fetch('/api/documents', {
-                                  method: 'POST',
-                                  body: formData,
-                                  credentials: 'include',
-                                });
-                                
-                                if (!response.ok) {
-                                  throw new Error('Upload failed');
-                                }
-                                
-                                queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
-                                toast({
-                                  title: "Success",
-                                  description: `${type} uploaded successfully`,
-                                });
-                              } catch (error) {
-                                console.error('Upload failed:', error);
-                                toast({
-                                  title: "Error",
-                                  description: "Failed to upload document",
-                                  variant: "destructive",
-                                });
-                              } finally {
-                                setUploadingDoc(false);
-                              }
-                            };
-                            input.click();
-                          }}
-                          disabled={uploadingDoc}
-                          className="text-xs"
-                        >
-                          + {type}
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    {/* Uploaded Documents */}
-                    {reservationDocuments && reservationDocuments.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {(() => {
-                            const contractDocs = reservationDocuments.filter(d => 
-                              d.documentType === 'Contract (Unsigned)' || d.documentType === 'Contract (Signed)' || d.documentType === 'Contract'
-                            );
-                            const damageReportDocs = reservationDocuments.filter(d => 
-                              d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
-                            );
-                            const otherDocs = reservationDocuments.filter(d => 
-                              d.documentType !== 'Contract (Unsigned)' && 
-                              d.documentType !== 'Contract (Signed)' && 
-                              d.documentType !== 'Contract' && 
-                              d.documentType !== 'Damage Report Photo' && 
-                              d.documentType !== 'Damage Report PDF'
-                            );
-                            
-                            return [...contractDocs, ...damageReportDocs, ...otherDocs];
-                          })().map((doc) => {
-                            const ext = doc.fileName.split('.').pop()?.toLowerCase();
-                            const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
-                            const isImage = doc.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '');
-                            
-                            return (
-                              <div key={doc.id} className="relative group">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (isPdf) {
-                                      window.open(`/${doc.filePath}`, '_blank');
-                                    } else {
-                                      setPreviewDocument(doc);
-                                      setPreviewDialogOpen(true);
-                                    }
-                                  }}
-                                  className="flex items-center gap-2 pr-8"
-                                >
-                                  {isPdf ? (
-                                    <FileText className="h-4 w-4 text-red-600" />
-                                  ) : isImage ? (
-                                    <FileCheck className="h-4 w-4 text-blue-600" />
-                                  ) : (
-                                    <FileText className="h-4 w-4 text-gray-600" />
-                                  )}
-                                  <div className="text-left">
-                                    <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
-                                    <div className="text-[10px] text-gray-500">
-                                      {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
-                                    </div>
-                                  </div>
-                                </Button>
-                                <button
-                                  type="button"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (window.confirm(`Delete ${doc.documentType}?`)) {
-                                      try {
-                                        const response = await fetch(`/api/documents/${doc.id}`, {
-                                          method: 'DELETE',
-                                          credentials: 'include',
-                                        });
-                                        
-                                        if (!response.ok) {
-                                          throw new Error('Delete failed');
-                                        }
-                                        
-                                        queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
-                                        toast({
-                                          title: "Success",
-                                          description: "Document deleted successfully",
-                                        });
-                                      } catch (error) {
-                                        console.error('Delete failed:', error);
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to delete document",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }
-                                  }}
-                                  className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
-                                  title="Delete document"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
             
