@@ -1272,6 +1272,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       res.json(customer);
     } catch (error) {
+      console.error("Customer update error:", error);
       res.status(400).json({ message: "Invalid customer data", error });
     }
   });
