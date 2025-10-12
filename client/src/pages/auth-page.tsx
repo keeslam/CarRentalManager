@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
 import { ScrollToTop } from "@/components/scroll-to-top";
-import { useTranslation } from 'react-i18next';
 import { 
   Card, 
   CardContent, 
@@ -35,7 +34,6 @@ type LoginFormValues = {
 };
 
 export default function AuthPage() {
-  const { t } = useTranslation();
   const [_, navigate] = useLocation();
   const { user, loginMutation } = useAuth();
   
@@ -67,13 +65,13 @@ export default function AuthPage() {
         <div className="p-5 flex flex-col justify-center h-full">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Vehicle Fleet Manager</h1>
-            <p className="text-gray-600">{t('auth.signIn')}</p>
+            <p className="text-gray-600">Sign in to your account</p>
           </div>
           
           <Card>
             <CardHeader>
-              <CardTitle>{t('auth.login')}</CardTitle>
-              <CardDescription>{t('auth.welcome')}</CardDescription>
+              <CardTitle>Login</CardTitle>
+              <CardDescription>Welcome back! Please enter your credentials.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...loginForm}>
@@ -83,9 +81,9 @@ export default function AuthPage() {
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('auth.username')}</FormLabel>
+                        <FormLabel>Username</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('auth.username')} {...field} />
+                          <Input placeholder="Username" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -96,9 +94,9 @@ export default function AuthPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('auth.password')}</FormLabel>
+                        <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder={t('auth.password')} {...field} />
+                          <Input type="password" placeholder="Password" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -109,7 +107,7 @@ export default function AuthPage() {
                     className="w-full" 
                     disabled={loginMutation.isPending}
                   >
-                    {loginMutation.isPending ? t('common.loading') : t('auth.login')}
+                    {loginMutation.isPending ? 'Logging in...' : 'Login'}
                   </Button>
                 </form>
               </Form>

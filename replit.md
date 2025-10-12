@@ -33,7 +33,7 @@ Preferred communication style: Simple, everyday language.
 
 ## System Language
 
-The internal staff interface is **English-only** for simplicity. The multi-language system (i18next) is still installed but configured as a pass-through that keeps all text in English. Customer-facing email communications still support Dutch and English based on customer language preference.
+The internal staff interface is **English-only** for simplicity. All UI text, including the login page, is in plain English without translation keys. Customer-facing email communications still support Dutch and English based on customer language preference via the email template system.
 
 ## System Architecture
 
