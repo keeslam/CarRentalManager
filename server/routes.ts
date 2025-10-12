@@ -2038,6 +2038,90 @@ Car Rental Management System`
       // Broadcast real-time update to all connected clients
       realtimeEvents.reservations.created(reservation);
       
+      // If there's a contract preview token, finalize and save the contract
+      if (bodyData.contractPreviewToken) {
+        try {
+          const { previewTokenService } = await import('./preview-token-service');
+          const preview = previewTokenService.get(bodyData.contractPreviewToken, req.user!.id.toString());
+          
+          if (preview) {
+            console.log(`🔄 Finalizing contract from preview token for reservation ${reservation.id}`);
+            
+            // Regenerate contract with real reservation data
+            const vehicle = await storage.getVehicle(preview.vehicleId);
+            const customer = await storage.getCustomer(preview.customerId);
+            
+            if (vehicle && customer) {
+              let template;
+              if (preview.templateId) {
+                template = await storage.getPdfTemplate(preview.templateId);
+              } else {
+                template = await storage.getDefaultPdfTemplate();
+              }
+              
+              if (template) {
+                const contractData = {
+                  ...reservation,
+                  vehicle,
+                  customer
+                };
+                
+                // Make sure template fields are properly formatted
+                if (template.fields && typeof template.fields === 'string') {
+                  try {
+                    template.fields = JSON.parse(template.fields);
+                  } catch (e) {
+                    console.error('Error parsing template fields:', e);
+                  }
+                }
+                
+                // Generate final contract with real reservation ID
+                const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+                const pdfBuffer = await generateRentalContractFromTemplate(contractData, template);
+                
+                // Save contract to filesystem
+                const licensePlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+                const contractsDir = path.join(process.cwd(), 'uploads', 'contracts', licensePlate);
+                await fs.promises.mkdir(contractsDir, { recursive: true });
+                
+                const fileName = `${licensePlate}_contract_${format(new Date(), 'yyyyMMdd')}.pdf`;
+                const filePath = path.join(contractsDir, fileName);
+                const relativeFilePath = `uploads/contracts/${licensePlate}/${fileName}`;
+                
+                await fs.promises.writeFile(filePath, pdfBuffer);
+                console.log(`✅ Contract saved to: ${filePath}`);
+                
+                // Save to database
+                const documentData = {
+                  vehicleId: vehicle.id,
+                  reservationId: reservation.id,
+                  documentType: "Contract (Unsigned)",
+                  fileName,
+                  filePath: relativeFilePath,
+                  fileSize: pdfBuffer.length,
+                  contentType: "application/pdf",
+                  createdBy: user ? user.username : 'System',
+                  notes: `Auto-generated unsigned contract for reservation #${reservation.id}`
+                };
+                
+                const savedDocument = await storage.createDocument(documentData);
+                console.log(`✅ Created document entry for unsigned contract: ID ${savedDocument.id}`);
+                
+                // Broadcast document creation
+                realtimeEvents.documents.created(savedDocument);
+              }
+            }
+            
+            // Delete the preview token
+            previewTokenService.delete(bodyData.contractPreviewToken);
+            console.log(`🗑️ Deleted preview token: ${bodyData.contractPreviewToken}`);
+          }
+        } catch (error) {
+          console.error('Error finalizing contract from preview:', error);
+          // Don't fail reservation creation if contract finalization fails
+        }
+      }
+      
       // If there's a file, create a document record linked to the vehicle
       // and update the reservation with the damage check path
       if (req.file) {
@@ -4307,7 +4391,7 @@ Car Rental Management System`
     }
   });
   
-  // Generate contract preview with form data
+  // Generate contract preview with form data (returns preview token)
   app.post("/api/contracts/preview", requireAuth, async (req: Request, res: Response) => {
     try {
       const { vehicleId, customerId, startDate, endDate, notes } = req.body;
@@ -4340,7 +4424,7 @@ Car Rental Management System`
         return res.status(404).json({ message: "PDF template not found" });
       }
 
-      // Create preview contract data
+      // Create preview contract data with PENDING placeholder
       const previewData = {
         id: 0, // Preview - no actual reservation ID
         vehicleId,
@@ -4354,7 +4438,7 @@ Car Rental Management System`
         customer
       };
 
-      console.log("Generating contract preview with data:", previewData);
+      console.log("Generating contract preview with PENDING placeholder");
 
       // Make sure the template fields are properly formatted
       if (template.fields && typeof template.fields === 'string') {
@@ -4370,17 +4454,60 @@ Car Rental Management System`
       const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
       const pdfBuffer = await generateRentalContractFromTemplate(previewData, template);
       
-      // Set response headers for PDF preview (inline instead of attachment)
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="contract_preview.pdf"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
+      // Store preview with token
+      const { previewTokenService } = await import('./preview-token-service');
+      const token = previewTokenService.store({
+        vehicleId: parseInt(vehicleId),
+        customerId: parseInt(customerId),
+        startDate,
+        endDate,
+        notes,
+        templateId: template.id,
+        pdfBuffer,
+        userId: req.user!.id.toString(),
+      });
+
+      console.log(`✅ Preview generated and stored with token: ${token}`);
       
-      // Send the PDF buffer
-      res.send(pdfBuffer);
+      // Return token and download URL
+      res.json({
+        token,
+        downloadUrl: `/api/contracts/preview/${token}`
+      });
     } catch (error) {
       console.error("Error generating contract preview:", error);
       res.status(500).json({ 
         message: "Failed to generate contract preview", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Get contract preview by token
+  app.get("/api/contracts/preview/:token", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { previewTokenService } = await import('./preview-token-service');
+      
+      const preview = previewTokenService.get(token, req.user!.id.toString());
+      
+      if (!preview) {
+        return res.status(404).json({ message: "Preview not found or expired" });
+      }
+
+      console.log(`📄 Serving preview PDF for token: ${token}`);
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="contract_preview.pdf"');
+      res.setHeader('Content-Length', preview.pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(preview.pdfBuffer);
+    } catch (error) {
+      console.error("Error retrieving contract preview:", error);
+      res.status(500).json({ 
+        message: "Failed to retrieve contract preview", 
         error: error instanceof Error ? error.message : String(error) 
       });
     }
