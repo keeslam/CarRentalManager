@@ -954,6 +954,120 @@ export class BackupService {
     }
   }
 
+  // Download backup file
+  async downloadBackup(filename: string, type: 'database' | 'files'): Promise<{ stream: NodeJS.ReadableStream, contentType: string } | null> {
+    try {
+      const settings = await this.getBackupSettings();
+      const storageType = settings?.storageType || 'local_filesystem';
+      const backupPath = settings?.localPath || this.defaultBackupPath;
+
+      if (storageType === 'object_storage') {
+        // Download from object storage
+        const privatePath = this.objectStorage.getPrivateObjectDir();
+        const files = await this.objectStorage.listFiles(`${privatePath}/backups/${type}/`);
+        
+        const backupFile = files.find(file => file.name.includes(filename));
+        if (!backupFile) {
+          console.error(`Backup file not found in object storage: ${filename}`);
+          return null;
+        }
+
+        const [buffer] = await backupFile.download();
+        const { Readable } = require('stream');
+        const stream = Readable.from(buffer);
+        
+        return {
+          stream,
+          contentType: 'application/gzip'
+        };
+      } else {
+        // Download from local filesystem
+        let filePath: string | null = null;
+        
+        // Check root backup directory first (uploaded files)
+        const rootFilePath = join(backupPath, filename);
+        if (existsSync(rootFilePath)) {
+          filePath = rootFilePath;
+        } else {
+          // Search in date-organized structure
+          filePath = this.findFileInDateStructure(join(backupPath, type), filename);
+        }
+        
+        if (!filePath || !existsSync(filePath)) {
+          console.error(`Backup file not found in local filesystem: ${filename}`);
+          return null;
+        }
+
+        const stream = createReadStream(filePath);
+        return {
+          stream,
+          contentType: 'application/gzip'
+        };
+      }
+    } catch (error) {
+      console.error(`Error downloading backup ${filename}:`, error);
+      return null;
+    }
+  }
+
+  // Delete backup file
+  async deleteBackup(filename: string, type: 'database' | 'files'): Promise<void> {
+    try {
+      const settings = await this.getBackupSettings();
+      const storageType = settings?.storageType || 'local_filesystem';
+      const backupPath = settings?.localPath || this.defaultBackupPath;
+
+      if (storageType === 'object_storage') {
+        // Delete from object storage
+        const privatePath = this.objectStorage.getPrivateObjectDir();
+        const files = await this.objectStorage.listFiles(`${privatePath}/backups/${type}/`);
+        
+        // Find and delete the backup file and its manifest
+        const filesToDelete = files.filter(file => file.name.includes(filename));
+        
+        for (const file of filesToDelete) {
+          await this.objectStorage.deleteFile(file.name);
+          console.log(`Deleted backup file from object storage: ${file.name}`);
+        }
+      } else {
+        // Delete from local filesystem
+        const { unlink } = require('fs/promises');
+        let filePath: string | null = null;
+        let manifestPath: string | null = null;
+        
+        // Check root backup directory first (uploaded files)
+        const rootFilePath = join(backupPath, filename);
+        if (existsSync(rootFilePath)) {
+          filePath = rootFilePath;
+        } else {
+          // Search in date-organized structure
+          filePath = this.findFileInDateStructure(join(backupPath, type), filename);
+          if (filePath) {
+            // Look for manifest in the same directory
+            const dir = dirname(filePath);
+            const potentialManifest = join(dir, `${filename}.manifest.json`);
+            if (existsSync(potentialManifest)) {
+              manifestPath = potentialManifest;
+            }
+          }
+        }
+        
+        if (filePath && existsSync(filePath)) {
+          await unlink(filePath);
+          console.log(`Deleted backup file from local filesystem: ${filePath}`);
+        }
+        
+        if (manifestPath && existsSync(manifestPath)) {
+          await unlink(manifestPath);
+          console.log(`Deleted manifest file from local filesystem: ${manifestPath}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error deleting backup ${filename}:`, error);
+      throw error;
+    }
+  }
+
   // Cleanup old backups based on retention policy
   async cleanupOldBackups(): Promise<void> {
     console.log('Cleaning up old backups...');
