@@ -1714,10 +1714,7 @@ export default function ReservationCalendarPage() {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => {
-                            handleDeleteReservation(reservation);
-                            closeDayDialog();
-                          }}
+                          onClick={() => handleDeleteReservation(reservation)}
                           data-testid={`button-delete-${reservation.id}`}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
