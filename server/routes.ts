@@ -5504,34 +5504,68 @@ Car Rental Management System`
         });
       }
 
-      // Create backup directory if it doesn't exist
-      const backupDir = path.join(process.cwd(), 'backups');
-      if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir, { recursive: true });
-      }
-
+      // Get backup settings to determine storage type
+      const settings = await db.query.backupSettings.findFirst();
+      const storageType = settings?.storageType || 'local_filesystem';
+      const backupDir = settings?.localPath || path.join(process.cwd(), 'backups');
+      
       // Generate a unique filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const originalName = file.originalname.replace(/\.[^/.]+$/, ""); // Remove extension
       const extension = file.originalname.substring(file.originalname.lastIndexOf('.'));
       const newFilename = `uploaded-${backupType}-${timestamp}-${originalName}${extension}`;
-      const destinationPath = path.join(backupDir, newFilename);
 
-      // Move the uploaded file to backups directory
-      fs.renameSync(file.path, destinationPath);
+      let manifest;
 
-      // Create manifest entry
-      const manifest = {
-        timestamp: new Date().toISOString(),
-        type: backupType,
-        filename: newFilename,
-        size: fs.statSync(destinationPath).size,
-        checksum: 'uploaded', // We could calculate actual checksum if needed
-        metadata: {
-          uploaded: true,
-          originalName: file.originalname
+      if (storageType === 'object_storage') {
+        // Upload to object storage
+        const privatePath = objectStorage.getPrivateObjectDir();
+        const objectPath = `${privatePath}/backups/${backupType}/${newFilename}`;
+        
+        await objectStorage.uploadObject(objectPath, fs.createReadStream(file.path));
+        
+        // Clean up temporary upload file
+        fs.unlinkSync(file.path);
+        
+        manifest = {
+          timestamp: new Date().toISOString(),
+          type: backupType,
+          filename: newFilename,
+          size: file.size,
+          checksum: 'uploaded',
+          metadata: {
+            uploaded: true,
+            originalName: file.originalname,
+            storedIn: 'object_storage'
+          }
+        };
+        
+        // Save manifest to object storage
+        const manifestPath = `${privatePath}/backups/${backupType}/${newFilename}.manifest.json`;
+        await objectStorage.uploadObject(manifestPath, Buffer.from(JSON.stringify(manifest, null, 2)));
+        
+      } else {
+        // Upload to local filesystem
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir, { recursive: true });
         }
-      };
+        
+        const destinationPath = path.join(backupDir, newFilename);
+        fs.renameSync(file.path, destinationPath);
+        
+        manifest = {
+          timestamp: new Date().toISOString(),
+          type: backupType,
+          filename: newFilename,
+          size: fs.statSync(destinationPath).size,
+          checksum: 'uploaded',
+          metadata: {
+            uploaded: true,
+            originalName: file.originalname,
+            storedIn: 'local_filesystem'
+          }
+        };
+      }
 
       res.json({
         success: true,
