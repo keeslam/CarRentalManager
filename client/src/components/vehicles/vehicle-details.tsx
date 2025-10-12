@@ -1074,6 +1074,11 @@ Autolease Lam`;
                   {activeReservation.customer?.name || "N/A"}
                 </p>
               </CustomerViewDialog>
+              {activeReservation.customer?.phone && (
+                <p className="text-sm text-blue-700 mt-1">
+                  {activeReservation.customer.phone}
+                </p>
+              )}
               <p className="text-xs text-blue-600 mt-1">
                 Until {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
               </p>
@@ -1092,6 +1097,11 @@ Autolease Lam`;
                   {upcomingReservation.customer?.name || "N/A"}
                 </p>
               </CustomerViewDialog>
+              {upcomingReservation.customer?.phone && (
+                <p className="text-sm text-green-700 mt-1">
+                  {upcomingReservation.customer.phone}
+                </p>
+              )}
               <p className="text-xs text-green-600 mt-1">
                 Starts {formatDate(upcomingReservation.startDate)}
               </p>
