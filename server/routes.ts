@@ -5415,25 +5415,44 @@ Car Rental Management System`
         return res.status(400).json({ error: "Invalid backup type" });
       }
 
-      // Find the backup file in object storage
-      const privatePath = objectStorage.getPrivateObjectDir();
-      const files = await objectStorage.listFiles(`${privatePath}/backups/${type}/`);
+      // Use BackupService to download from either storage type
+      const result = await backupService.downloadBackup(filename, type as 'database' | 'files');
       
-      const backupFile = files.find(file => file.name.includes(filename));
-      if (!backupFile) {
+      if (!result) {
         return res.status(404).json({ error: "Backup file not found" });
       }
 
       // Set download headers
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Type', result.contentType);
       
       // Stream the file
-      await objectStorage.downloadObject(backupFile, res);
+      result.stream.pipe(res);
       
     } catch (error) {
       console.error("Error downloading backup:", error);
       res.status(500).json({ error: "Failed to download backup" });
+    }
+  });
+
+  // Delete backup file
+  app.delete("/api/backups/:type/:filename", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { type, filename } = req.params;
+      
+      if (!['database', 'files'].includes(type)) {
+        return res.status(400).json({ error: "Invalid backup type" });
+      }
+
+      await backupService.deleteBackup(filename, type as 'database' | 'files');
+      
+      res.json({
+        success: true,
+        message: "Backup deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting backup:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
     }
   });
 
