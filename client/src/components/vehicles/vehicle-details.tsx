@@ -1074,10 +1074,19 @@ Autolease Lam`;
                   {activeReservation.customer?.name || "N/A"}
                 </p>
               </CustomerViewDialog>
-              {activeReservation.customer?.phone && (
-                <p className="text-sm text-blue-700 mt-1">
-                  {activeReservation.customer.phone}
-                </p>
+              {(activeReservation.customer?.phone || activeReservation.customer?.driverPhone) && (
+                <div className="text-sm text-blue-700 mt-1 space-y-0.5">
+                  {activeReservation.customer?.phone && (
+                    <p>
+                      <span className="font-medium">Phone:</span> {activeReservation.customer.phone}
+                    </p>
+                  )}
+                  {activeReservation.customer?.driverPhone && (
+                    <p>
+                      <span className="font-medium">Driver:</span> {activeReservation.customer.driverPhone}
+                    </p>
+                  )}
+                </div>
               )}
               <p className="text-xs text-blue-600 mt-1">
                 Until {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
@@ -1097,10 +1106,19 @@ Autolease Lam`;
                   {upcomingReservation.customer?.name || "N/A"}
                 </p>
               </CustomerViewDialog>
-              {upcomingReservation.customer?.phone && (
-                <p className="text-sm text-green-700 mt-1">
-                  {upcomingReservation.customer.phone}
-                </p>
+              {(upcomingReservation.customer?.phone || upcomingReservation.customer?.driverPhone) && (
+                <div className="text-sm text-green-700 mt-1 space-y-0.5">
+                  {upcomingReservation.customer?.phone && (
+                    <p>
+                      <span className="font-medium">Phone:</span> {upcomingReservation.customer.phone}
+                    </p>
+                  )}
+                  {upcomingReservation.customer?.driverPhone && (
+                    <p>
+                      <span className="font-medium">Driver:</span> {upcomingReservation.customer.driverPhone}
+                    </p>
+                  )}
+                </div>
               )}
               <p className="text-xs text-green-600 mt-1">
                 Starts {formatDate(upcomingReservation.startDate)}
