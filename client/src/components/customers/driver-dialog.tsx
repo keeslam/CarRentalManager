@@ -49,7 +49,7 @@ interface DriverDialogProps {
   customerId: number;
   driver?: Driver;
   children: React.ReactNode;
-  onSuccess?: () => void;
+  onSuccess?: (createdDriverId?: number) => void;
 }
 
 export function DriverDialog({ customerId, driver, children, onSuccess }: DriverDialogProps) {
@@ -104,7 +104,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       }
       return await response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (data: Driver) => {
       await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/drivers`] });
       await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
       
@@ -116,7 +116,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       
       setOpen(false);
       form.reset();
-      onSuccess?.();
+      onSuccess?.(data.id);
     },
     onError: (error: Error) => {
       toast({

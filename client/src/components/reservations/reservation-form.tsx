@@ -279,7 +279,7 @@ export function ReservationForm({
   const statusWatch = form.watch("status");
   
   // Fetch drivers for the selected customer (after watches are declared)
-  const { data: drivers, isLoading: isLoadingDrivers } = useQuery<Driver[]>({
+  const { data: drivers, isLoading: isLoadingDrivers, refetch: refetchDrivers } = useQuery<Driver[]>({
     queryKey: [`/api/customers/${customerIdWatch}/drivers`],
     enabled: !!customerIdWatch,
   });
@@ -1445,7 +1445,22 @@ export function ReservationForm({
                       <FormItem className="flex flex-col">
                         <div className="flex justify-between items-center">
                           <FormLabel>Authorized Driver (Optional)</FormLabel>
-                          <DriverDialog customerId={Number(customerIdWatch)}>
+                          <DriverDialog 
+                            customerId={Number(customerIdWatch)}
+                            onSuccess={async (createdDriverId) => {
+                              // Refetch drivers to get the updated list
+                              await refetchDrivers();
+                              
+                              // Auto-select the newly created driver
+                              if (createdDriverId) {
+                                form.setValue("driverId", createdDriverId, {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                  shouldValidate: true
+                                });
+                              }
+                            }}
+                          >
                             <Button variant="outline" size="sm" data-testid="button-quick-add-driver">
                               <PlusCircle className="h-3.5 w-3.5 mr-1" />
                               Quick Add Driver
