@@ -6100,6 +6100,41 @@ Car Rental Management System`
 
   // ==================== DRIVER MANAGEMENT ====================
   
+  // Configure multer for driver license uploads
+  const driverLicenseStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const driversDir = path.join(uploadsDir, 'drivers');
+      if (!fs.existsSync(driversDir)) {
+        fs.mkdirSync(driversDir, { recursive: true });
+      }
+      cb(null, driversDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const timestamp = Date.now();
+      const customerId = req.params.customerId || 'unknown';
+      cb(null, `license_customer${customerId}_${timestamp}${ext}`);
+    }
+  });
+  
+  const driverLicenseUpload = multer({
+    storage: driverLicenseStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      const fileTypes = /jpeg|jpg|png|pdf/;
+      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = fileTypes.test(file.mimetype);
+      
+      if (extname && mimetype) {
+        return cb(null, true);
+      } else {
+        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
+      }
+    },
+  });
+  
   // Get all drivers for a specific customer
   app.get("/api/customers/:customerId/drivers", requireAuth, async (req, res) => {
     try {
@@ -6149,14 +6184,28 @@ Car Rental Management System`
   });
 
   // Create a new driver
-  app.post("/api/customers/:customerId/drivers", requireAuth, async (req, res) => {
+  app.post("/api/customers/:customerId/drivers", requireAuth, driverLicenseUpload.single('licenseFile'), async (req, res) => {
     try {
       const customerId = parseInt(req.params.customerId);
       if (isNaN(customerId)) {
         return res.status(400).json({ error: "Invalid customer ID" });
       }
 
-      const validation = insertDriverSchema.safeParse({ ...req.body, customerId });
+      // Handle JSON data that comes through multer middleware
+      let bodyData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        try {
+          bodyData = JSON.parse(req.body.body);
+        } catch (e) {
+          console.error('Failed to parse JSON body:', e);
+          return res.status(400).json({ message: "Invalid JSON in request body" });
+        }
+      }
+
+      // Remove licenseFilePath from body data to prevent path traversal
+      const { licenseFilePath, ...safeBodyData } = bodyData;
+      
+      const validation = insertDriverSchema.omit({ licenseFilePath: true }).safeParse({ ...safeBodyData, customerId });
       if (!validation.success) {
         return res.status(400).json({ error: "Invalid driver data", details: validation.error.issues });
       }
@@ -6167,6 +6216,8 @@ Car Rental Management System`
       const driverData = {
         ...validation.data,
         customerId,
+        // Only set licenseFilePath from multer upload, never from user input
+        ...(req.file ? { licenseFilePath: path.relative(process.cwd(), req.file.path) } : {}),
         createdBy: username,
         updatedBy: username,
         createdByUser: userId,
@@ -6182,14 +6233,28 @@ Car Rental Management System`
   });
 
   // Update a driver
-  app.patch("/api/drivers/:id", requireAuth, async (req, res) => {
+  app.patch("/api/drivers/:id", requireAuth, driverLicenseUpload.single('licenseFile'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid driver ID" });
       }
 
-      const validation = insertDriverSchema.partial().safeParse(req.body);
+      // Handle JSON data that comes through multer middleware
+      let bodyData = req.body;
+      if (req.body.body && typeof req.body.body === 'string') {
+        try {
+          bodyData = JSON.parse(req.body.body);
+        } catch (e) {
+          console.error('Failed to parse JSON body:', e);
+          return res.status(400).json({ message: "Invalid JSON in request body" });
+        }
+      }
+
+      // Remove licenseFilePath from body data to prevent path traversal
+      const { licenseFilePath, ...safeBodyData } = bodyData;
+      
+      const validation = insertDriverSchema.omit({ licenseFilePath: true }).partial().safeParse(safeBodyData);
       if (!validation.success) {
         return res.status(400).json({ error: "Invalid driver data", details: validation.error.issues });
       }
@@ -6199,6 +6264,8 @@ Car Rental Management System`
       
       const updateData = {
         ...validation.data,
+        // Only set licenseFilePath from multer upload, never from user input
+        ...(req.file ? { licenseFilePath: path.relative(process.cwd(), req.file.path) } : {}),
         updatedBy: username,
         updatedByUser: userId
       };
@@ -6211,6 +6278,40 @@ Car Rental Management System`
     } catch (error) {
       console.error("Error updating driver:", error);
       res.status(500).json({ error: "Failed to update driver" });
+    }
+  });
+
+  // Serve driver license file
+  app.get("/api/drivers/:id/license", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid driver ID" });
+      }
+
+      const driver = await storage.getDriver(id);
+      if (!driver || !driver.licenseFilePath) {
+        return res.status(404).json({ error: "License file not found" });
+      }
+
+      // Resolve the file path and validate it's within uploads directory
+      const uploadsDir = path.resolve(process.cwd(), 'uploads');
+      const requestedPath = path.resolve(process.cwd(), driver.licenseFilePath);
+      
+      // Security: Prevent path traversal by ensuring file is within uploads directory
+      if (!requestedPath.startsWith(uploadsDir)) {
+        console.error('Path traversal attempt detected:', driver.licenseFilePath);
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (!fs.existsSync(requestedPath)) {
+        return res.status(404).json({ error: "License file not found on disk" });
+      }
+
+      res.sendFile(requestedPath);
+    } catch (error) {
+      console.error("Error serving license file:", error);
+      res.status(500).json({ error: "Failed to serve license file" });
     }
   });
 

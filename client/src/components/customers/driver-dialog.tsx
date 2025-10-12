@@ -39,8 +39,10 @@ const driverFormSchema = insertDriverSchema.omit({
   customerId: true,
   createdBy: true,
   updatedBy: true,
+  licenseFilePath: true,
 }).extend({
   displayName: z.string().min(1, "Display name is required"),
+  licenseFile: z.any().optional(),
 });
 
 type DriverFormValues = z.infer<typeof driverFormSchema>;
@@ -54,6 +56,7 @@ interface DriverDialogProps {
 
 export function DriverDialog({ customerId, driver, children, onSuccess }: DriverDialogProps) {
   const [open, setOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const isEdit = !!driver;
 
@@ -90,6 +93,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
         notes: driver?.notes ?? "",
         preferredLanguage: driver?.preferredLanguage ?? "nl",
       });
+      setSelectedFile(null);
     }
   }, [open, driver, form]);
 
@@ -97,7 +101,24 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
     mutationFn: async (data: DriverFormValues) => {
       const url = isEdit ? `/api/drivers/${driver.id}` : `/api/customers/${customerId}/drivers`;
       const method = isEdit ? 'PATCH' : 'POST';
-      const response = await apiRequest(method, url, data);
+      
+      let response;
+      if (selectedFile) {
+        // Use FormData when file is present
+        const formData = new FormData();
+        formData.append('body', JSON.stringify(data));
+        formData.append('licenseFile', selectedFile);
+        
+        response = await fetch(url, {
+          method,
+          body: formData,
+          credentials: 'include',
+        });
+      } else {
+        // Use JSON when no file
+        response = await apiRequest(method, url, data);
+      }
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to ${isEdit ? 'update' : 'create'} driver`);
@@ -250,6 +271,36 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                   </FormItem>
                 )}
               />
+
+              <FormItem className="md:col-span-2">
+                <FormLabel>Driver's License Copy (Optional)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                      }
+                    }}
+                    data-testid="input-license-file"
+                  />
+                </FormControl>
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+                {driver?.licenseFilePath && !selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Current file: {driver.licenseFilePath.split('/').pop()}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Upload a copy of the driver's license (JPG, PNG, or PDF, max 10MB)
+                </p>
+              </FormItem>
 
               <FormField
                 control={form.control}

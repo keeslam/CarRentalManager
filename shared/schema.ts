@@ -215,6 +215,7 @@ export const drivers = pgTable("drivers", {
   driverLicenseNumber: text("driver_license_number"),
   licenseExpiry: text("license_expiry"),
   licenseDocumentId: integer("license_document_id").references(() => documents.id, { onDelete: "set null" }), // FK to documents table for license copy
+  licenseFilePath: text("license_file_path"), // Direct file path for license copy (simpler alternative)
   
   // Driver flags
   isPrimaryDriver: boolean("is_primary_driver").default(false).notNull(), // Mark as primary contact for this customer
