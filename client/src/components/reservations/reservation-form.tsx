@@ -573,11 +573,16 @@ export function ReservationForm({
       
       // Add all other form data
       Object.entries(data).forEach(([key, value]) => {
-        if (key !== "damageCheckFile" && value !== null && value !== undefined) {
+        if (key !== "damageCheckFile" && value !== undefined) {
           if (key === "contractPreviewToken" && value) {
             console.log('📎 Including contract preview token:', value);
           }
-          formData.append(key, String(value));
+          // Allow null values for driverId (nullable field)
+          if (value === null) {
+            formData.append(key, '');
+          } else {
+            formData.append(key, String(value));
+          }
         }
       });
       

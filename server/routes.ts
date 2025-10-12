@@ -1964,6 +1964,15 @@ Car Rental Management System`
         bodyData.customerId = parseInt(bodyData.customerId);
       }
       
+      // Handle driverId - convert to integer or null
+      if (bodyData.driverId !== undefined) {
+        if (bodyData.driverId === '' || bodyData.driverId === null) {
+          bodyData.driverId = null;
+        } else {
+          bodyData.driverId = parseInt(bodyData.driverId);
+        }
+      }
+      
       // Convert boolean fields from strings
       if (bodyData.placeholderSpare !== undefined) {
         bodyData.placeholderSpare = bodyData.placeholderSpare === 'true' || bodyData.placeholderSpare === true;
