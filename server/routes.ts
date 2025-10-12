@@ -1236,7 +1236,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid customer ID" });
       }
 
-      const customerData = insertCustomerSchema.parse(req.body);
+      const customerData = insertCustomerSchema.partial().parse(req.body);
       
       // Add user tracking information for updates
       const user = req.user;
