@@ -1767,18 +1767,10 @@ export default function ReservationCalendarPage() {
           <div className="mt-4">
             <ReservationForm 
               initialStartDate={selectedDate || undefined}
-              onSuccess={() => {
-                // Close dialog on successful creation
+              onCancel={() => {
+                // Close dialog on cancel
                 setAddDialogOpen(false);
                 setSelectedDate(null);
-                // Refresh the calendar data
-                queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/reservations/range', {
-                    startDate: format(dateRanges.start, "yyyy-MM-dd"),
-                    endDate: format(dateRanges.end, "yyyy-MM-dd")
-                  }]
-                });
               }}
             />
           </div>
