@@ -1980,6 +1980,22 @@ export function ReservationForm({
               >
                 {createdReservationId ? "Close" : "Cancel"}
               </Button>
+              {createdReservationId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCreatedReservationId(null);
+                    toast({
+                      title: "Edit Mode",
+                      description: "You can now modify the reservation information.",
+                    });
+                  }}
+                  data-testid="button-back-to-edit"
+                >
+                  Back to Edit
+                </Button>
+              )}
               {!createdReservationId && (
                 <Button 
                   type="submit" 
