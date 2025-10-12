@@ -816,8 +816,12 @@ export function ReservationForm({
     }
   };
 
-  // Handle reservation form submission
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  // State for preview mode
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewData, setPreviewData] = useState<z.infer<typeof formSchema> | null>(null);
+
+  // Handle preview generation (first step)
+  const handlePreviewAndContract = async (data: z.infer<typeof formSchema>) => {
     // Check for overlapping reservations (skip for open-ended rentals)
     if (hasOverlap && !data.isOpenEnded) {
       toast({
@@ -828,8 +832,7 @@ export function ReservationForm({
       return;
     }
     
-    // Automatically generate contract preview token before creating reservation
-    let previewToken: string | null = null;
+    // Generate contract preview token
     if (!editMode && selectedTemplateId && data.vehicleId && data.customerId) {
       try {
         const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
@@ -850,31 +853,53 @@ export function ReservationForm({
         
         if (response.ok) {
           const { token } = await response.json();
-          console.log('✅ Auto-generated preview token for contract:', token);
-          previewToken = token;
-          setContractPreviewToken(token); // Also update state for UI
+          console.log('✅ Generated preview token for contract:', token);
+          setContractPreviewToken(token);
+          setPreviewData(data);
+          setIsPreviewMode(true);
+          
+          // Auto-open the contract in a new tab
+          window.open(`/api/contracts/preview/${token}`, '_blank');
+          
+          toast({
+            title: "Preview Generated",
+            description: "Contract preview has been generated. Review it and click 'Finalize Reservation' to complete.",
+          });
         } else {
           toast({
-            title: "Contract Generation Skipped",
-            description: "Failed to generate contract preview. Reservation will be created without a contract.",
-            variant: "default",
+            title: "Preview Failed",
+            description: "Failed to generate contract preview. Please try again.",
+            variant: "destructive",
           });
         }
       } catch (error) {
-        console.error('Failed to auto-generate contract preview:', error);
+        console.error('Failed to generate contract preview:', error);
         toast({
-          title: "Contract Generation Skipped",
-          description: "Failed to generate contract preview. Reservation will be created without a contract.",
-          variant: "default",
+          title: "Preview Failed",
+          description: "Failed to generate contract preview. Please try again.",
+          variant: "destructive",
         });
       }
+    } else {
+      toast({
+        title: "Missing Information",
+        description: "Please select a vehicle, customer, and contract template.",
+        variant: "destructive",
+      });
     }
+  };
+
+  // Handle final reservation creation (second step)
+  const handleFinalizeReservation = async () => {
+    if (!previewData) return;
+    
+    const data = previewData;
     
     // Process data for open-ended rentals
     const submissionData = {
       ...data,
       endDate: data.isOpenEnded ? undefined : data.endDate,
-      contractPreviewToken: previewToken, // Include the token directly
+      contractPreviewToken: contractPreviewToken, // Include the preview token
     };
     
     // Remove the isOpenEnded field as it's not part of the backend schema
@@ -896,8 +921,7 @@ export function ReservationForm({
         vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
       }
       
-      // First create/update the reservation - use mutate instead of mutateAsync 
-      // to let the mutation's onError handler deal with errors properly
+      // Create the reservation with preview token
       createReservationMutation.mutate(submissionData, {
         onSuccess: (reservationResult) => {
           // Then update the vehicle mileage if we have any mileage data
@@ -907,9 +931,25 @@ export function ReservationForm({
         }
       });
     } else {
-      // No vehicle ID, just create/update the reservation
-      // Use mutate instead of mutateAsync to prevent unhandled promise rejections
+      // No vehicle ID, just create the reservation
       createReservationMutation.mutate(submissionData);
+    }
+  };
+
+  // Handle reservation form submission (in edit mode only)
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    if (editMode) {
+      // In edit mode, directly update the reservation
+      const submissionData = {
+        ...data,
+        endDate: data.isOpenEnded ? undefined : data.endDate,
+      };
+      delete submissionData.isOpenEnded;
+      
+      createReservationMutation.mutate(submissionData);
+    } else {
+      // In create mode, go to preview
+      handlePreviewAndContract(data);
     }
   };
   
@@ -1966,102 +2006,154 @@ export function ReservationForm({
             )}
             
             {/* Submit Button */}
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (onCancel) {
-                    onCancel();
-                  } else {
-                    navigate("/reservations");
-                  }
-                }}
-              >
-                {createdReservationId ? "Close" : "Cancel"}
-              </Button>
-              {createdReservationId && (
+            <div className="flex flex-col gap-4">
+              {/* Template Selector - Show at top when not in preview or created state */}
+              {!isPreviewMode && !createdReservationId && !editMode && selectedVehicle && selectedCustomer && (
+                <div className="flex items-center gap-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <label className="text-sm font-medium text-gray-700 min-w-fit">Contract Template:</label>
+                  <Select value={selectedTemplateId?.toString() || ""} onValueChange={(value) => setSelectedTemplateId(value ? parseInt(value) : null)}>
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Select a template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pdfTemplates.length === 0 ? (
+                        <SelectItem value="no-templates" disabled>
+                          No templates available - Create one in Documents
+                        </SelectItem>
+                      ) : (
+                        pdfTemplates.map((template: any) => (
+                          <SelectItem key={template.id} value={template.id.toString()}>
+                            {template.name} {template.isDefault && "(Default)"}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Preview Mode Banner */}
+              {isPreviewMode && !createdReservationId && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">Preview Generated</span>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">
+                    Review the contract that opened in a new tab. When ready, click "Finalize Reservation" to save.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setCreatedReservationId(null);
-                    toast({
-                      title: "Edit Mode",
-                      description: "You can now modify the reservation information.",
-                    });
+                    if (onCancel) {
+                      onCancel();
+                    } else {
+                      navigate("/reservations");
+                    }
                   }}
-                  data-testid="button-back-to-edit"
                 >
-                  Back to Edit
+                  {createdReservationId ? "Close" : "Cancel"}
                 </Button>
-              )}
-              {!createdReservationId && (
-                <Button 
-                  type="submit" 
-                  disabled={createReservationMutation.isPending || hasOverlap}
-                >
-                  {createReservationMutation.isPending 
-                    ? "Saving..." 
-                    : editMode ? "Update Reservation" : "Create Reservation"
-                  }
-                </Button>
-              )}
-              {/* Contract buttons - show when vehicle and customer are selected */}
-              {selectedVehicle && selectedCustomer && (
-                <div className="flex flex-col gap-2">
-                  {/* Template Selector */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 min-w-fit">Contract Template:</label>
-                    <Select value={selectedTemplateId?.toString() || ""} onValueChange={(value) => setSelectedTemplateId(value ? parseInt(value) : null)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a template..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pdfTemplates.length === 0 ? (
-                          <SelectItem value="no-templates" disabled>
-                            No templates available - Create one in Documents
-                          </SelectItem>
-                        ) : (
-                          pdfTemplates.map((template: any) => (
-                            <SelectItem key={template.id} value={template.id.toString()}>
-                              {template.name} {template.isDefault && "(Default)"}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Contract Action Button */}
-                  <div className="space-y-2">
-                    <Button
-                      type="button"
-                      variant={createdReservationId || editMode ? "default" : "secondary"}
-                      onClick={handleGenerateContract}
-                      disabled={generateContractMutation.isPending || !selectedTemplateId || (!createdReservationId && !editMode)}
-                      data-testid="button-generate-contract"
-                      title={!createdReservationId && !editMode ? "Create reservation first" : ""}
-                      className="w-full"
-                    >
-                      {generateContractMutation.isPending ? (
-                        <>
-                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Generating...
-                        </>
-                      ) : (
+                
+                {/* Back to Edit button in preview mode */}
+                {isPreviewMode && !createdReservationId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsPreviewMode(false);
+                      setPreviewData(null);
+                      setContractPreviewToken(null);
+                      toast({
+                        title: "Edit Mode",
+                        description: "You can now modify the reservation information.",
+                      });
+                    }}
+                    data-testid="button-back-to-edit"
+                  >
+                    Back to Edit
+                  </Button>
+                )}
+
+                {/* Finalize Reservation button in preview mode */}
+                {isPreviewMode && !createdReservationId && (
+                  <Button
+                    type="button"
+                    onClick={handleFinalizeReservation}
+                    disabled={createReservationMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="button-finalize-reservation"
+                  >
+                    {createReservationMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Finalizing...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Finalize Reservation
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                {/* Submit button - Preview in create mode, Update in edit mode, hidden when created/preview */}
+                {!createdReservationId && !isPreviewMode && (
+                  <Button 
+                    type="submit" 
+                    disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
+                  >
+                    {createReservationMutation.isPending 
+                      ? "Saving..." 
+                      : editMode ? "Update Reservation" : (
                         <>
                           <FileText className="mr-2 h-4 w-4" />
-                          {createdReservationId || editMode ? "Generate & Save Contract" : "Create Reservation First"}
+                          Preview & Generate Contract
                         </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
+                      )
+                    }
+                  </Button>
+                )}
+
+                {/* Generate contract button - only in created/edit state */}
+                {(createdReservationId || editMode) && selectedVehicle && selectedCustomer && (
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleGenerateContract}
+                    disabled={generateContractMutation.isPending || !selectedTemplateId}
+                    data-testid="button-generate-contract"
+                  >
+                    {generateContractMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate & Save Contract
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
             
             {/* Booking Conflict Warning */}
