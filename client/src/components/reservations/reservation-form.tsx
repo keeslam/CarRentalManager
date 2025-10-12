@@ -1454,9 +1454,9 @@ export function ReservationForm({
                         </div>
                         <FormControl>
                           <Select
-                            value={field.value?.toString() ?? ""}
+                            value={field.value?.toString() ?? "none"}
                             onValueChange={(value) => {
-                              form.setValue("driverId", value === "" ? null : parseInt(value), {
+                              form.setValue("driverId", value === "none" ? null : parseInt(value), {
                                 shouldDirty: true,
                                 shouldTouch: true,
                                 shouldValidate: true
@@ -1467,9 +1467,9 @@ export function ReservationForm({
                               <SelectValue placeholder="Select a driver (optional)" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No driver selected</SelectItem>
+                              <SelectItem value="none">No driver selected</SelectItem>
                               {isLoadingDrivers ? (
-                                <SelectItem value="" disabled>Loading drivers...</SelectItem>
+                                <SelectItem value="loading" disabled>Loading drivers...</SelectItem>
                               ) : drivers && drivers.length > 0 ? (
                                 drivers
                                   .filter(d => d.status === "active")
@@ -1480,7 +1480,7 @@ export function ReservationForm({
                                     </SelectItem>
                                   ))
                               ) : (
-                                <SelectItem value="" disabled>No active drivers available</SelectItem>
+                                <SelectItem value="no-drivers" disabled>No active drivers available</SelectItem>
                               )}
                             </SelectContent>
                           </Select>
