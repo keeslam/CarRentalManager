@@ -5505,7 +5505,7 @@ Car Rental Management System`
       }
 
       // Get backup settings to determine storage type
-      const settings = await db.query.backupSettings.findFirst();
+      const settings = await storage.getBackupSettings();
       const storageType = settings?.storageType || 'local_filesystem';
       const backupDir = settings?.localPath || path.join(process.cwd(), 'backups');
       
