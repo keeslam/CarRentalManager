@@ -197,11 +197,56 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   updatedByUser: true,
 });
 
+// Drivers table - for managing multiple drivers per customer/company
+export const drivers = pgTable("drivers", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  
+  // Driver personal info
+  displayName: text("display_name").notNull(), // Full name for display
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  
+  // Contact info
+  email: text("email"),
+  phone: text("phone"),
+  
+  // Driver's license info
+  driverLicenseNumber: text("driver_license_number"),
+  licenseExpiry: text("license_expiry"),
+  licenseDocumentId: integer("license_document_id").references(() => documents.id, { onDelete: "set null" }), // FK to documents table for license copy
+  
+  // Driver flags
+  isPrimaryDriver: boolean("is_primary_driver").default(false).notNull(), // Mark as primary contact for this customer
+  status: text("status").default("active").notNull(), // 'active' | 'inactive'
+  
+  // Additional info
+  notes: text("notes"),
+  preferredLanguage: text("preferred_language").default("nl"), // 'nl' | 'en'
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+  createdByUser: integer("created_by_user_id").references(() => users.id),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
+});
+
+export const insertDriverSchema = createInsertSchema(drivers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdByUser: true,
+  updatedByUser: true,
+});
+
 // Reservations table
 export const reservations = pgTable("reservations", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id"), // Made nullable to support placeholder spare vehicles
   customerId: integer("customer_id"), // Allow null for maintenance blocks
+  driverId: integer("driver_id").references(() => drivers.id, { onDelete: "set null" }), // Link to specific driver (nullable for backward compatibility)
   startDate: text("start_date").notNull(),
   endDate: text("end_date"), // Allow null for open-ended rentals
   status: text("status").default("pending").notNull(),
