@@ -58,6 +58,8 @@ const formSchema = insertCustomerSchema.extend({
   billingCity: z.string().optional().or(z.literal("")),
   billingPostalCode: z.string().optional().or(z.literal("")),
   corporateDiscount: z.string().optional().or(z.literal("")),
+  paymentTermDays: z.string().optional().or(z.literal("")),
+  creditLimit: z.string().optional().or(z.literal("")),
   billingContactName: z.string().optional().or(z.literal("")),
   billingContactEmail: z.string().email("Invalid email address when provided").optional().or(z.literal("")),
   billingContactPhone: z.string().optional().or(z.literal(""))
@@ -144,6 +146,8 @@ export function CustomerForm({
       billingCity: "",
       billingPostalCode: "",
       corporateDiscount: "",
+      paymentTermDays: "",
+      creditLimit: "",
       billingContactName: "",
       billingContactEmail: "",
       billingContactPhone: ""
@@ -201,7 +205,15 @@ export function CustomerForm({
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    createCustomerMutation.mutate(data);
+    // Transform empty strings to null for numeric fields
+    const transformedData = {
+      ...data,
+      corporateDiscount: data.corporateDiscount === "" ? null : data.corporateDiscount,
+      paymentTermDays: data.paymentTermDays === "" ? null : data.paymentTermDays,
+      creditLimit: data.creditLimit === "" ? null : data.creditLimit,
+    };
+    
+    createCustomerMutation.mutate(transformedData);
   };
   
   return (
