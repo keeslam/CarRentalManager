@@ -82,17 +82,19 @@ export function CustomerForm({
   const queryClient = useQueryClient();
   const [_, navigate] = useLocation();
   
-  // Helper function to transform null values to empty strings
+  // Helper function to transform null values to empty strings and numbers to strings
   const transformInitialData = (data: any) => {
     if (!data) return null;
     
     // Create a new object with the same properties as data
     const transformed = { ...data };
     
-    // Replace null values with empty strings
+    // Replace null values with empty strings and convert numbers to strings
     Object.keys(transformed).forEach(key => {
       if (transformed[key] === null) {
         transformed[key] = "";
+      } else if (typeof transformed[key] === 'number') {
+        transformed[key] = transformed[key].toString();
       }
     });
     
