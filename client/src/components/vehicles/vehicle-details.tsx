@@ -1438,9 +1438,26 @@ Autolease Lam`;
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">GPS</h4>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={!!vehicle.gps} disabled />
-                      <span className="text-sm text-gray-500">{vehicle.gps ? "Enabled" : "Disabled"}</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={!!vehicle.gps} disabled />
+                        <span className="text-sm text-gray-500">{vehicle.gps ? "Enabled" : "Disabled"}</span>
+                      </div>
+                      {vehicle.gps && (
+                        <>
+                          <p className="text-sm">
+                            <span className="font-medium">IMEI:</span> {vehicle.imei || "N/A"}
+                          </p>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className={`inline-flex items-center ${vehicle.gpsSwapped ? 'text-orange-600' : 'text-gray-500'}`}>
+                              {vehicle.gpsSwapped ? '✓' : '✗'} Swapped
+                            </span>
+                            <span className={`inline-flex items-center ${vehicle.gpsActivated ? 'text-green-600' : 'text-gray-500'}`}>
+                              {vehicle.gpsActivated ? '✓' : '✗'} Activated
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   

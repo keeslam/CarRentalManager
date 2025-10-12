@@ -930,77 +930,123 @@ export function VehicleForm({
                   />
                   
                   {form.watch('gps') && (
-                    <FormField
-                      control={form.control}
-                      name="imei"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IMEI Number</FormLabel>
-                          <div className="flex gap-2">
-                            <FormControl>
-                              <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
-                            </FormControl>
-                            <Dialog open={isGpsDialogOpen} onOpenChange={setIsGpsDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button type="button" variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-gps-activation">
-                                  <Mail className="h-4 w-4 mr-1" />
-                                  Activate GPS
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[500px]">
-                                <DialogHeader>
-                                  <DialogTitle>Request GPS Activation</DialogTitle>
-                                  <DialogDescription>
-                                    Send an email to the GPS company to activate this GPS device
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <GPSActivationDialog 
-                                  vehicleData={{
-                                    brand: form.getValues('brand') || '',
-                                    model: form.getValues('model') || '',
-                                    licensePlate: form.getValues('licensePlate') || '',
-                                    imei: field.value || ''
-                                  }}
-                                  onSuccess={() => setIsGpsDialogOpen(false)}
-                                  onAutoSave={async () => {
-                                    // Enable GPS toggle if not already enabled
-                                    if (!form.getValues('gps')) {
-                                      form.setValue('gps', true);
-                                    }
-                                    
-                                    // Save directly using mutation without triggering onSuccess callback
-                                    if (editMode && initialData?.id) {
-                                      const formData = form.getValues();
-                                      
-                                      try {
-                                        const response = await apiRequest("PATCH", `/api/vehicles/${initialData.id}`, formData);
-                                        
-                                        if (response.ok) {
-                                          // Invalidate queries to refresh data
-                                          await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
-                                          await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-                                          
-                                          toast({
-                                            title: "GPS Settings Saved",
-                                            description: "GPS has been enabled and IMEI has been saved.",
-                                          });
-                                        }
-                                      } catch (error) {
-                                        console.error("Failed to save GPS settings:", error);
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="imei"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IMEI Number</FormLabel>
+                            <div className="flex gap-2">
+                              <FormControl>
+                                <Input placeholder="Enter GPS device IMEI number" {...field} value={handleFieldValue(field.value)} />
+                              </FormControl>
+                              <Dialog open={isGpsDialogOpen} onOpenChange={setIsGpsDialogOpen}>
+                                <DialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-gps-activation">
+                                    <Mail className="h-4 w-4 mr-1" />
+                                    Activate GPS
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[500px]">
+                                  <DialogHeader>
+                                    <DialogTitle>Request GPS Activation</DialogTitle>
+                                    <DialogDescription>
+                                      Send an email to the GPS company to activate this GPS device
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <GPSActivationDialog 
+                                    vehicleData={{
+                                      brand: form.getValues('brand') || '',
+                                      model: form.getValues('model') || '',
+                                      licensePlate: form.getValues('licensePlate') || '',
+                                      imei: field.value || ''
+                                    }}
+                                    onSuccess={() => setIsGpsDialogOpen(false)}
+                                    onAutoSave={async () => {
+                                      // Enable GPS toggle if not already enabled
+                                      if (!form.getValues('gps')) {
+                                        form.setValue('gps', true);
                                       }
-                                    }
-                                  }}
+                                      
+                                      // Save directly using mutation without triggering onSuccess callback
+                                      if (editMode && initialData?.id) {
+                                        const formData = form.getValues();
+                                        
+                                        try {
+                                          const response = await apiRequest("PATCH", `/api/vehicles/${initialData.id}`, formData);
+                                          
+                                          if (response.ok) {
+                                            // Invalidate queries to refresh data
+                                            await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+                                            await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+                                            
+                                            toast({
+                                              title: "GPS Settings Saved",
+                                              description: "GPS has been enabled and IMEI has been saved.",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error("Failed to save GPS settings:", error);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            <FormDescription>
+                              IMEI number for GPS device tracking
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="gpsSwapped"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel>GPS Swapped</FormLabel>
+                                <FormDescription className="text-xs">
+                                  GPS module was swapped
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value as boolean}
+                                  onCheckedChange={field.onChange}
                                 />
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                          <FormDescription>
-                            IMEI number for GPS device tracking
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="gpsActivated"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel>GPS Activated</FormLabel>
+                                <FormDescription className="text-xs">
+                                  GPS is activated
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value as boolean}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </>
                   )}
                   
                   <FormField
