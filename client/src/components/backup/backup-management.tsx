@@ -150,11 +150,11 @@ export function BackupManagement() {
     onSuccess: (data) => {
       toast({
         title: 'Database Restored',
-        description: data.message + (data.warning ? ` ${data.warning}` : ''),
-        variant: data.warning ? "default" : "default",
+        description: '⚠️ Your session was reset. Please refresh your browser and log in again.',
+        duration: 10000, // Show for 10 seconds
       });
-      // Refresh backup status since restore might affect the system
-      queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
+      // Don't invalidate queries since the session is now invalid
+      // User will need to refresh and log in again
     },
     onError: (error: Error) => {
       toast({
