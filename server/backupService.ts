@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'fs';
+import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { readdir, stat, mkdir, unlink } from 'fs/promises';
 import { join, dirname } from 'path';
 import { createGzip } from 'zlib';
@@ -751,7 +751,7 @@ export class BackupService {
       // Cleanup temp files (but not the original backup file)
       if (isTemporaryFile && existsSync(tempFile)) {
         try {
-          require('fs').unlinkSync(tempFile);
+          unlinkSync(tempFile);
         } catch (error) {
           console.error('Error cleaning up temp restore file:', error);
         }
@@ -760,7 +760,7 @@ export class BackupService {
       // Cleanup uncompressed file if it was created
       if (uncompressedFile !== tempFile && existsSync(uncompressedFile)) {
         try {
-          require('fs').unlinkSync(uncompressedFile);
+          unlinkSync(uncompressedFile);
         } catch (error) {
           console.error('Error cleaning up uncompressed file:', error);
         }
@@ -800,32 +800,43 @@ export class BackupService {
       } else {
         // Use local filesystem - find the backup file
         const localBackupPath = join(backupPath, backupFilename);
+        console.log(`Looking for files backup at: ${localBackupPath}`);
         
         if (existsSync(localBackupPath)) {
           // File is directly in backups directory (uploaded backup)
           tempFile = localBackupPath;
+          console.log(`Found backup file at: ${tempFile}`);
         } else {
+          console.log(`Not found in root, searching organized structure...`);
           // Try to find in organized structure (created backup)
           const searchPaths = [
             join(backupPath, 'files', backupFilename),
             ...this.findFileInDateStructure(join(backupPath, 'files'), backupFilename)
           ];
           
+          console.log(`Searching in paths:`, searchPaths);
+          
           let found = false;
           for (const path of searchPaths) {
             if (existsSync(path)) {
               tempFile = path;
               found = true;
+              console.log(`Found backup file at: ${tempFile}`);
               break;
             }
           }
           
           if (!found) {
+            // List what IS in the backup directory to help debug
+            try {
+              const filesInDir = readdirSync(backupPath);
+              console.log(`Files in ${backupPath}:`, filesInDir);
+            } catch (e) {
+              console.log(`Could not list files in ${backupPath}`);
+            }
             throw new Error(`Backup file not found in local filesystem: ${backupFilename}`);
           }
         }
-        
-        console.log(`Found backup file at: ${tempFile}`);
       }
     } catch (error) {
       throw new Error(`Failed to locate backup file: ${error instanceof Error ? error.message : String(error)}`);
