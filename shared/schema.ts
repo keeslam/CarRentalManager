@@ -241,6 +241,9 @@ export const insertDriverSchema = createInsertSchema(drivers).omit({
   updatedByUser: true,
 });
 
+export type Driver = typeof drivers.$inferSelect;
+export type InsertDriver = z.infer<typeof insertDriverSchema>;
+
 // Reservations table
 export const reservations = pgTable("reservations", {
   id: serial("id").primaryKey(),

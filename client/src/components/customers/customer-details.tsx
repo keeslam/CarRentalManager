@@ -7,9 +7,10 @@ import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 import { PortalLoginDialog } from "./portal-login-dialog";
+import { DriverDialog } from "./driver-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
-import { Customer, Reservation } from "@shared/schema";
+import { Customer, Reservation, Driver } from "@shared/schema";
 import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import {
   AlertDialog,
@@ -36,6 +37,7 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
   // Define query keys for easier reference
   const customerQueryKey = [`/api/customers/${customerId}`];
   const customerReservationsQueryKey = [`/api/reservations/customer/${customerId}`];
+  const customerDriversQueryKey = [`/api/customers/${customerId}/drivers`];
   
   // Fetch customer details with proper caching
   const { 
@@ -51,6 +53,14 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
     isLoading: isLoadingReservations
   } = useQuery<Reservation[]>({
     queryKey: customerReservationsQueryKey
+  });
+
+  // Fetch customer drivers with proper caching
+  const { 
+    data: drivers, 
+    isLoading: isLoadingDrivers
+  } = useQuery<Driver[]>({
+    queryKey: customerDriversQueryKey
   });
   
   // Delete reservation mutation
@@ -184,8 +194,9 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
       
       {/* Tabs */}
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-3xl">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
+          <TabsTrigger value="drivers">Drivers</TabsTrigger>
           <TabsTrigger value="reservations">Reservations</TabsTrigger>
         </TabsList>
         
@@ -411,6 +422,185 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Drivers Tab */}
+        <TabsContent value="drivers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Authorized Drivers</CardTitle>
+                  <CardDescription>Manage drivers authorized to rent vehicles for this customer</CardDescription>
+                </div>
+                <DriverDialog customerId={customerId}>
+                  <Button size="sm" data-testid="button-add-driver">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <line x1="19" x2="19" y1="8" y2="14" />
+                      <line x1="22" x2="16" y1="11" y2="11" />
+                    </svg>
+                    Add Driver
+                  </Button>
+                </DriverDialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDrivers ? (
+                <div className="flex justify-center p-6">
+                  <svg className="animate-spin h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : drivers?.length === 0 ? (
+                <div className="text-center py-8" data-testid="text-no-drivers">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-gray-400">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <line x1="19" x2="19" y1="8" y2="14" />
+                    <line x1="22" x2="16" y1="11" y2="11" />
+                  </svg>
+                  <p className="text-gray-500 mb-4">No drivers added yet</p>
+                  <p className="text-sm text-gray-400">Add a driver to get started</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Driver
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Contact
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          License
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {drivers?.map((driver) => (
+                        <tr key={driver.id} data-testid={`row-driver-${driver.id}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 flex items-center gap-2" data-testid={`text-driver-name-${driver.id}`}>
+                                  {driver.displayName}
+                                  {driver.isPrimaryDriver && (
+                                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">Primary</Badge>
+                                  )}
+                                </div>
+                                {driver.firstName || driver.lastName ? (
+                                  <div className="text-xs text-gray-500">
+                                    {driver.firstName} {driver.lastName}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {driver.email && <div data-testid={`text-driver-email-${driver.id}`}>{driver.email}</div>}
+                              {driver.phone && <div className="text-xs text-gray-500" data-testid={`text-driver-phone-${driver.id}`}>{formatPhoneNumber(driver.phone)}</div>}
+                              {!driver.email && !driver.phone && <span className="text-gray-400">—</span>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {driver.driverLicenseNumber ? (
+                                <div>
+                                  <div data-testid={`text-driver-license-${driver.id}`}>{driver.driverLicenseNumber}</div>
+                                  {driver.licenseExpiry && (
+                                    <div className="text-xs text-gray-500">Exp: {formatDate(driver.licenseExpiry)}</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge 
+                              className={driver.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'}
+                              data-testid={`badge-driver-status-${driver.id}`}
+                            >
+                              {driver.status}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end gap-2">
+                              <DriverDialog customerId={customerId} driver={driver}>
+                                <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800" data-testid={`button-edit-driver-${driver.id}`}>
+                                  Edit
+                                </Button>
+                              </DriverDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-red-600 hover:text-red-800"
+                                    data-testid={`button-delete-driver-${driver.id}`}
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Driver</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete {driver.displayName}? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={async () => {
+                                        try {
+                                          const response = await apiRequest('DELETE', `/api/drivers/${driver.id}`);
+                                          if (!response.ok) {
+                                            throw new Error('Failed to delete driver');
+                                          }
+                                          await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/drivers`] });
+                                          toast({
+                                            title: "Driver deleted",
+                                            description: "The driver has been successfully deleted.",
+                                            variant: "default"
+                                          });
+                                        } catch (error) {
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to delete driver",
+                                            variant: "destructive"
+                                          });
+                                        }
+                                      }}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
