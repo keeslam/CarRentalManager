@@ -209,12 +209,12 @@ export function CustomerForm({
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log("Form submitted!", data);
     
-    // Transform empty strings to null for numeric fields
+    // Transform empty strings to null and strings to numbers for numeric fields
     const transformedData = {
       ...data,
-      corporateDiscount: data.corporateDiscount === "" ? null : data.corporateDiscount,
-      paymentTermDays: data.paymentTermDays === "" ? null : data.paymentTermDays,
-      creditLimit: data.creditLimit === "" ? null : data.creditLimit,
+      corporateDiscount: data.corporateDiscount === "" ? null : data.corporateDiscount ? parseFloat(data.corporateDiscount) : null,
+      paymentTermDays: data.paymentTermDays === "" ? null : data.paymentTermDays ? parseInt(data.paymentTermDays) : null,
+      creditLimit: data.creditLimit === "" ? null : data.creditLimit ? parseFloat(data.creditLimit) : null,
     } as any;
     
     console.log("Transformed data:", transformedData);
