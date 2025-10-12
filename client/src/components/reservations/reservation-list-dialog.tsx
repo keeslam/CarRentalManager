@@ -285,7 +285,10 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => deleteReservationMutation.mutate(reservation.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteReservationMutation.mutate(reservation.id);
+                    }}
                     disabled={deleteReservationMutation.isPending}
                   >
                     Delete
@@ -462,8 +465,8 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
           // Refresh the data after successful edit using unified invalidation
           invalidateRelatedQueries('reservations', {
             id: updatedReservation.id,
-            vehicleId: updatedReservation.vehicleId,
-            customerId: updatedReservation.customerId
+            vehicleId: updatedReservation.vehicleId ?? undefined,
+            customerId: updatedReservation.customerId ?? undefined
           });
           toast({
             title: "Reservation updated",
