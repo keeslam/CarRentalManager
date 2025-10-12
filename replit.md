@@ -6,6 +6,14 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Multi-Driver Management System**: Complete driver management for corporate customers
+  - **Drivers Table**: Separate drivers table with full contact and license information
+  - **Customer Association**: Multiple drivers per customer with primary driver designation
+  - **Reservation Assignment**: Optional driver selection when creating reservations
+  - **Auto-Reset**: Driver selection automatically resets when customer changes to prevent invalid assignments
+  - **Migration Complete**: Existing customer driver license data migrated to drivers table (2 records transferred)
+  - **CRUD Operations**: Full create, read, update, delete functionality with audit tracking
+  - **UI Integration**: Drivers tab on customer details page with add/edit/delete, plus quick-add driver in reservation form
 - **Backup System Enhancement**: Complete backup/restore system for all user data
   - **What's Backed Up**:
     - **Database**: All tables including pdf_templates, email_templates, custom_notifications, users, vehicles, customers, reservations, expenses, documents, etc.

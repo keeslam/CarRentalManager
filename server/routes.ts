@@ -6220,6 +6220,72 @@ Car Rental Management System`
     }
   });
 
+  // Migration endpoint: Transfer driver license data from customers to drivers table
+  app.post("/api/migrate/customer-drivers", requireAuth, async (req, res) => {
+    try {
+      const username = req.user?.username || 'system';
+      const userId = req.user?.id || null;
+
+      const customers = await storage.getCustomers();
+      const migratedDrivers = [];
+      const skippedCustomers = [];
+
+      for (const customer of customers) {
+        if (!customer.driverLicenseNumber || customer.driverLicenseNumber.trim() === '') {
+          continue;
+        }
+
+        const existingDrivers = await storage.getDriversByCustomer(customer.id);
+        if (existingDrivers.length > 0) {
+          skippedCustomers.push({
+            customerId: customer.id,
+            name: customer.name,
+            reason: 'Already has drivers'
+          });
+          continue;
+        }
+
+        const driverData = {
+          customerId: customer.id,
+          displayName: customer.name,
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          driverLicenseNumber: customer.driverLicenseNumber,
+          licenseExpiry: null,
+          isPrimaryDriver: true,
+          status: 'active' as const,
+          notes: 'Migrated from customer record',
+          preferredLanguage: customer.preferredLanguage || 'nl',
+          createdBy: username,
+          createdByUser: userId
+        };
+
+        const driver = await storage.createDriver(driverData);
+        migratedDrivers.push({
+          customerId: customer.id,
+          customerName: customer.name,
+          driverId: driver.id,
+          driverName: driver.displayName
+        });
+      }
+
+      res.json({
+        success: true,
+        migrated: migratedDrivers.length,
+        skipped: skippedCustomers.length,
+        details: {
+          migratedDrivers,
+          skippedCustomers
+        }
+      });
+    } catch (error) {
+      console.error("Error migrating driver data:", error);
+      res.status(500).json({ error: "Failed to migrate driver data" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
