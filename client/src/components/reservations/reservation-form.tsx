@@ -560,6 +560,17 @@ export function ReservationForm({
       return await response.json();
     },
     onSuccess: async (data) => {
+      console.log('🎉 onSuccess called with data:', data);
+      
+      // Set the created reservation ID FIRST to enable contract generation immediately
+      if (data && data.id) {
+        console.log('✅ Setting createdReservationId to:', data.id);
+        setCreatedReservationId(data.id);
+        console.log('✅ createdReservationId set successfully');
+      } else {
+        console.log('⚠️ No data.id in response:', data);
+      }
+      
       // Save selections to recent items
       if (vehicleIdWatch) {
         saveToRecent('recentVehicles', vehicleIdWatch.toString());
@@ -587,15 +598,6 @@ export function ReservationForm({
         title: `Reservation ${editMode ? "updated" : "created"} successfully`,
         description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
       });
-
-      // Set the created reservation ID to enable contract generation
-      if (data && data.id) {
-        console.log('✅ Setting createdReservationId to:', data.id);
-        setCreatedReservationId(data.id);
-        console.log('✅ createdReservationId set successfully');
-      } else {
-        console.log('⚠️ No data.id in response:', data);
-      }
       
       // Force refetch if needed
       queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
