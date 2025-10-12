@@ -205,6 +205,8 @@ export function CustomerForm({
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    console.log("Form submitted!", data);
+    
     // Transform empty strings to null for numeric fields
     const transformedData = {
       ...data,
@@ -213,6 +215,7 @@ export function CustomerForm({
       creditLimit: data.creditLimit === "" ? null : data.creditLimit,
     } as any;
     
+    console.log("Transformed data:", transformedData);
     createCustomerMutation.mutate(transformedData);
   };
   
