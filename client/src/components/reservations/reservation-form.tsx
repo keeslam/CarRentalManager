@@ -590,7 +590,11 @@ export function ReservationForm({
 
       // Set the created reservation ID to enable contract generation
       if (data && data.id) {
+        console.log('✅ Setting createdReservationId to:', data.id);
         setCreatedReservationId(data.id);
+        console.log('✅ createdReservationId set successfully');
+      } else {
+        console.log('⚠️ No data.id in response:', data);
       }
       
       // Force refetch if needed
@@ -765,9 +769,15 @@ export function ReservationForm({
 
   // Handle contract generation
   const handleGenerateContract = () => {
+    console.log('handleGenerateContract called, createdReservationId:', createdReservationId);
+    console.log('editMode:', editMode);
+    console.log('initialData?.id:', initialData?.id);
+    
     if (createdReservationId) {
+      console.log('Using saved reservation ID:', createdReservationId);
       generateContractMutation.mutate(createdReservationId);
     } else {
+      console.log('Using form data (preview mode)');
       generateContractMutation.mutate(undefined);
     }
   };
