@@ -47,10 +47,11 @@ import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
-import { Customer, Vehicle, Reservation, Document } from "@shared/schema";
+import { Customer, Vehicle, Reservation, Document, Driver } from "@shared/schema";
 import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
+import { DriverDialog } from "@/components/customers/driver-dialog";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -62,6 +63,10 @@ const formSchema = insertReservationSchemaBase.extend({
     z.number().min(1, "Please select a customer"),
     z.string().min(1, "Please select a customer").transform(val => parseInt(val)),
   ]),
+  driverId: z.union([
+    z.number(),
+    z.string().transform(val => val === "" ? null : parseInt(val)),
+  ]).optional().nullable(),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   isOpenEnded: z.boolean().optional(),
@@ -253,7 +258,8 @@ export function ReservationForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       vehicleId: initialVehicleId || preSelectedVehicleId || "",
-      customerId: initialCustomerId || preSelectedCustomerId || "", 
+      customerId: initialCustomerId || preSelectedCustomerId || "",
+      driverId: null,
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       isOpenEnded: isOpenEnded,
@@ -269,7 +275,25 @@ export function ReservationForm({
   const isOpenEndedWatch = form.watch("isOpenEnded");
   const vehicleIdWatch = form.watch("vehicleId");
   const customerIdWatch = form.watch("customerId");
+  const driverIdWatch = form.watch("driverId");
   const statusWatch = form.watch("status");
+  
+  // Fetch drivers for the selected customer (after watches are declared)
+  const { data: drivers, isLoading: isLoadingDrivers } = useQuery<Driver[]>({
+    queryKey: [`/api/customers/${customerIdWatch}/drivers`],
+    enabled: !!customerIdWatch,
+  });
+  
+  // Reset driverId when customer changes to prevent invalid driver-customer assignment
+  useEffect(() => {
+    // If there's a selected driver and it's not in the new customer's driver list, clear it
+    if (driverIdWatch && drivers) {
+      const isDriverValid = drivers.some(d => d.id === Number(driverIdWatch));
+      if (!isDriverValid) {
+        form.setValue("driverId", null, { shouldDirty: true });
+      }
+    }
+  }, [customerIdWatch, drivers, driverIdWatch, form]);
 
   // Reset preview token when critical form fields change
   // This prevents using stale preview data when user edits the form after previewing
@@ -334,6 +358,11 @@ export function ReservationForm({
     if (!customers || !customerIdWatch) return null;
     return customers.find(c => c.id === Number(customerIdWatch)) || null;
   }, [customers, customerIdWatch]);
+  
+  const selectedDriver = useMemo(() => {
+    if (!drivers || !driverIdWatch) return null;
+    return drivers.find(d => d.id === Number(driverIdWatch)) || null;
+  }, [drivers, driverIdWatch]);
   
   // Calculate rental duration
   const rentalDuration = useMemo(() => {
@@ -1401,6 +1430,89 @@ export function ReservationForm({
                     </FormItem>
                   )}
                 />
+                
+                {/* Driver Selection - only show when customer is selected */}
+                {customerIdWatch && (
+                  <FormField
+                    control={form.control}
+                    name="driverId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Authorized Driver (Optional)</FormLabel>
+                          <DriverDialog customerId={Number(customerIdWatch)}>
+                            <Button variant="outline" size="sm" data-testid="button-quick-add-driver">
+                              <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                              Quick Add Driver
+                            </Button>
+                          </DriverDialog>
+                        </div>
+                        <FormControl>
+                          <Select
+                            value={field.value?.toString() ?? ""}
+                            onValueChange={(value) => {
+                              form.setValue("driverId", value === "" ? null : parseInt(value), {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true
+                              });
+                            }}
+                          >
+                            <SelectTrigger data-testid="select-driver">
+                              <SelectValue placeholder="Select a driver (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No driver selected</SelectItem>
+                              {isLoadingDrivers ? (
+                                <SelectItem value="" disabled>Loading drivers...</SelectItem>
+                              ) : drivers && drivers.length > 0 ? (
+                                drivers
+                                  .filter(d => d.status === "active")
+                                  .map(driver => (
+                                    <SelectItem key={driver.id} value={driver.id.toString()}>
+                                      {driver.displayName || `${driver.firstName} ${driver.lastName}`.trim()}
+                                      {driver.isPrimaryDriver && " (Primary)"}
+                                    </SelectItem>
+                                  ))
+                              ) : (
+                                <SelectItem value="" disabled>No active drivers available</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                        {selectedDriver && (
+                          <div className="mt-2 text-sm bg-muted p-2 rounded-md">
+                            <div className="font-medium flex items-center gap-2 mb-1">
+                              <span>{selectedDriver.displayName || `${selectedDriver.firstName} ${selectedDriver.lastName}`.trim()}</span>
+                              {selectedDriver.isPrimaryDriver && (
+                                <Badge variant="default" className="text-xs">Primary Driver</Badge>
+                              )}
+                            </div>
+                            {selectedDriver.phone && (
+                              <div className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                </svg>
+                                <span>{selectedDriver.phone}</span>
+                              </div>
+                            )}
+                            {selectedDriver.driverLicenseNumber && (
+                              <div className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                  <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                  <line x1="2" x2="22" y1="10" y2="10"/>
+                                </svg>
+                                <span className="text-muted-foreground">License:</span>
+                                <span>{selectedDriver.driverLicenseNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
               <Separator />
             </div>
