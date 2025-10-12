@@ -202,10 +202,18 @@ export function ReservationForm({
   });
   
   // Fetch documents for the reservation (only in edit mode)
-  const { data: reservationDocuments } = useQuery<Document[]>({
+  const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
     queryKey: [`/api/documents/reservation/${createdReservationId}`],
     enabled: !!createdReservationId
   });
+  
+  // Refetch documents when createdReservationId changes
+  useEffect(() => {
+    if (createdReservationId) {
+      console.log('🔄 Refetching documents for reservation:', createdReservationId);
+      refetchDocuments();
+    }
+  }, [createdReservationId, refetchDocuments]);
 
   // Set default template when templates are loaded
   useEffect(() => {
@@ -1671,7 +1679,11 @@ export function ReservationForm({
               </div>
               
               {/* Document Management - Only show in edit mode with a created reservation */}
-              {createdReservationId && form.watch("vehicleId") && (
+              {(() => {
+                const vehicleId = form.watch("vehicleId");
+                console.log('📋 Document section render check:', { createdReservationId, vehicleId, shouldShow: !!(createdReservationId && vehicleId) });
+                return createdReservationId && vehicleId;
+              })() && (
                 <div className="space-y-3 border-t pt-4">
                   <label className="text-sm font-medium text-gray-700">Additional Documents</label>
                   
@@ -1697,6 +1709,15 @@ export function ReservationForm({
                             const file = (e.target as HTMLInputElement).files?.[0];
                             if (!file) return;
 
+                            if (!createdReservationId) {
+                              toast({
+                                title: "Error",
+                                description: "Please save the reservation first",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            
                             setUploadingDoc(true);
                             const formData = new FormData();
                             formData.append('vehicleId', form.watch("vehicleId").toString());
