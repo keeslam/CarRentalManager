@@ -1454,7 +1454,7 @@ export function ReservationForm({
                         </div>
                         <FormControl>
                           <Select
-                            value={field.value?.toString() ?? "none"}
+                            value={field.value ? field.value.toString() : "none"}
                             onValueChange={(value) => {
                               form.setValue("driverId", value === "none" ? null : parseInt(value), {
                                 shouldDirty: true,
