@@ -543,16 +543,13 @@ export function ReservationForm({
       
       // Add all other form data
       Object.entries(data).forEach(([key, value]) => {
-        if (key !== "damageCheckFile") {
+        if (key !== "damageCheckFile" && value !== null && value !== undefined) {
+          if (key === "contractPreviewToken" && value) {
+            console.log('📎 Including contract preview token:', value);
+          }
           formData.append(key, String(value));
         }
       });
-      
-      // Add contract preview token if present
-      if (contractPreviewToken) {
-        console.log('📎 Including contract preview token:', contractPreviewToken);
-        formData.append("contractPreviewToken", contractPreviewToken);
-      }
       
       // Add file if present
       if (data.damageCheckFile) {
@@ -831,10 +828,53 @@ export function ReservationForm({
       return;
     }
     
+    // Automatically generate contract preview token before creating reservation
+    let previewToken: string | null = null;
+    if (!editMode && selectedTemplateId && data.vehicleId && data.customerId) {
+      try {
+        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+        const response = await fetch(`/api/contracts/preview${templateParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            vehicleId: data.vehicleId,
+            customerId: data.customerId,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            notes: data.notes
+          }),
+        });
+        
+        if (response.ok) {
+          const { token } = await response.json();
+          console.log('✅ Auto-generated preview token for contract:', token);
+          previewToken = token;
+          setContractPreviewToken(token); // Also update state for UI
+        } else {
+          toast({
+            title: "Contract Generation Skipped",
+            description: "Failed to generate contract preview. Reservation will be created without a contract.",
+            variant: "default",
+          });
+        }
+      } catch (error) {
+        console.error('Failed to auto-generate contract preview:', error);
+        toast({
+          title: "Contract Generation Skipped",
+          description: "Failed to generate contract preview. Reservation will be created without a contract.",
+          variant: "default",
+        });
+      }
+    }
+    
     // Process data for open-ended rentals
     const submissionData = {
       ...data,
       endDate: data.isOpenEnded ? undefined : data.endDate,
+      contractPreviewToken: previewToken, // Include the token directly
     };
     
     // Remove the isOpenEnded field as it's not part of the backend schema
@@ -1977,63 +2017,32 @@ export function ReservationForm({
                     </Select>
                   </div>
                   
-                  {/* Contract Action Buttons */}
+                  {/* Contract Action Button */}
                   <div className="space-y-2">
-                    {!createdReservationId && !editMode && contractPreviewToken && (
-                      <div className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-md p-2 flex items-start gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-                        </svg>
-                        <span>Contract preview ready! Click "Create Reservation" to save it.</span>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleViewContract}
-                        disabled={previewContractMutation.isPending || !selectedTemplateId}
-                        data-testid="button-view-contract"
-                      >
-                        {previewContractMutation.isPending ? (
-                          <>
-                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Previewing...
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {contractPreviewToken ? "View Preview Again" : "Preview Contract"}
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={createdReservationId || editMode ? "default" : "secondary"}
-                        onClick={handleGenerateContract}
-                        disabled={generateContractMutation.isPending || !selectedTemplateId || (!createdReservationId && !editMode)}
-                        data-testid="button-generate-contract"
-                        title={!createdReservationId && !editMode ? "Create reservation first" : ""}
-                      >
-                        {generateContractMutation.isPending ? (
-                          <>
-                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="mr-2 h-4 w-4" />
-                            {createdReservationId || editMode ? "Generate & Save Contract" : "Generate Preview Only"}
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant={createdReservationId || editMode ? "default" : "secondary"}
+                      onClick={handleGenerateContract}
+                      disabled={generateContractMutation.isPending || !selectedTemplateId || (!createdReservationId && !editMode)}
+                      data-testid="button-generate-contract"
+                      title={!createdReservationId && !editMode ? "Create reservation first" : ""}
+                      className="w-full"
+                    >
+                      {generateContractMutation.isPending ? (
+                        <>
+                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          {createdReservationId || editMode ? "Generate & Save Contract" : "Create Reservation First"}
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}
