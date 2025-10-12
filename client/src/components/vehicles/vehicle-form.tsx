@@ -75,7 +75,7 @@ const fuelTypes = ["Gasoline", "Diesel", "Electric", "Hybrid", "LPG", "CNG"];
 const euroZones = ["Euro 3", "Euro 4", "Euro 5", "Euro 6", "Euro 6d"];
 
 // GPS Activation Dialog Component
-function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string }, onSuccess?: () => void, onAutoSave?: () => void }) {
+function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleData: { brand: string; model: string; licensePlate: string; imei: string }, onSuccess?: () => void, onAutoSave?: (isSwap: boolean) => void }) {
   const [isSwap, setIsSwap] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
@@ -111,9 +111,9 @@ function GPSActivationDialog({ vehicleData, onSuccess, onAutoSave }: { vehicleDa
         description: `Email sent to GPS company for ${isSwap ? 'GPS module swap' : 'activation'}.`
       });
       
-      // Auto-save the form with GPS enabled
+      // Auto-save the form with GPS enabled and activation status
       if (onAutoSave) {
-        onAutoSave();
+        onAutoSave(isSwap);
       }
       
       // Close dialog on success
@@ -963,27 +963,38 @@ export function VehicleForm({
                                       imei: field.value || ''
                                     }}
                                     onSuccess={() => setIsGpsDialogOpen(false)}
-                                    onAutoSave={async () => {
-                                      // Enable GPS toggle if not already enabled
-                                      if (!form.getValues('gps')) {
-                                        form.setValue('gps', true);
-                                      }
-                                      
+                                    onAutoSave={async (isSwap: boolean) => {
                                       // Save directly using mutation without triggering onSuccess callback
                                       if (editMode && initialData?.id) {
+                                        // Get current form data
                                         const formData = form.getValues();
                                         
+                                        // Update GPS activation fields
+                                        const updatedData = {
+                                          ...formData,
+                                          gps: true,
+                                          gpsActivated: true,
+                                          gpsSwapped: isSwap ? true : formData.gpsSwapped
+                                        };
+                                        
                                         try {
-                                          const response = await apiRequest("PATCH", `/api/vehicles/${initialData.id}`, formData);
+                                          const response = await apiRequest("PATCH", `/api/vehicles/${initialData.id}`, updatedData);
                                           
                                           if (response.ok) {
+                                            // Update form state to reflect saved values
+                                            form.setValue('gps', true);
+                                            form.setValue('gpsActivated', true);
+                                            if (isSwap) {
+                                              form.setValue('gpsSwapped', true);
+                                            }
+                                            
                                             // Invalidate queries to refresh data
                                             await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
                                             await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
                                             
                                             toast({
                                               title: "GPS Settings Saved",
-                                              description: "GPS has been enabled and IMEI has been saved.",
+                                              description: `GPS has been ${isSwap ? 'marked as swapped and' : ''} activated.`,
                                             });
                                           }
                                         } catch (error) {

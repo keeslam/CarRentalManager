@@ -1449,11 +1449,22 @@ Autolease Lam`;
                             <span className="font-medium">IMEI:</span> {vehicle.imei || "N/A"}
                           </p>
                           <div className="flex items-center gap-3 text-sm">
-                            <span className={`inline-flex items-center ${vehicle.gpsSwapped ? 'text-orange-600' : 'text-gray-500'}`}>
-                              {vehicle.gpsSwapped ? '✓' : '✗'} Swapped
+                            <span className={`inline-flex items-center gap-1 ${vehicle.gpsSwapped ? 'text-orange-600 font-medium' : 'text-gray-400'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                              </svg>
+                              {vehicle.gpsSwapped ? 'Module Swapped' : 'Not Swapped'}
                             </span>
-                            <span className={`inline-flex items-center ${vehicle.gpsActivated ? 'text-green-600' : 'text-gray-500'}`}>
-                              {vehicle.gpsActivated ? '✓' : '✗'} Activated
+                            <span className={`inline-flex items-center gap-1 ${vehicle.gpsActivated ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                {vehicle.gpsActivated ? (
+                                  <><polyline points="20 6 9 17 4 12"/></>
+                                ) : (
+                                  <><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></>
+                                )}
+                              </svg>
+                              {vehicle.gpsActivated ? 'Activated' : 'Not Activated'}
                             </span>
                           </div>
                         </>
