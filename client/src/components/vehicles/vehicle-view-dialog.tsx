@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -49,6 +50,9 @@ export function VehicleViewDialog({
               "Vehicle Details"
             )}
           </DialogTitle>
+          <DialogDescription>
+            View complete vehicle information, reservations, expenses, and documents
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-auto">

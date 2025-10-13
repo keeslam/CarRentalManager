@@ -33,6 +33,8 @@ import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dial
 import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
 import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
 import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
+import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 
 interface ReservationViewDialogProps {
   open: boolean;
@@ -52,6 +54,8 @@ export function ReservationViewDialog({
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [isSpareDialogOpen, setIsSpareDialogOpen] = useState(false);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+  const [viewVehicleId, setViewVehicleId] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch reservation details
@@ -366,11 +370,11 @@ export function ReservationViewDialog({
                           )}
                         </div>
                       </div>
-                      <Link href={`/customers/${displayCustomer.id}`}>
-                        <Button variant="ghost" size="sm" className="mt-2 sm:mt-0">
+                      <CustomerViewDialog customerId={displayCustomer.id}>
+                        <Button variant="ghost" size="sm" className="mt-2 sm:mt-0" data-testid="button-view-customer">
                           View Customer
                         </Button>
-                      </Link>
+                      </CustomerViewDialog>
                     </div>
                   ) : (
                     <p className="text-gray-500">No customer assigned to this reservation</p>
@@ -414,12 +418,20 @@ export function ReservationViewDialog({
                       </Button>
                     </ExpenseAddDialog>
                   )}
-                  <Link href={`/vehicles/${reservation.vehicleId}/documents`}>
-                    <Button variant="outline" size="sm">
-                      <Upload className="mr-2 h-4 w-4" />
-                      {reservation.type === 'maintenance_block' ? 'Upload Damage Photos' : 'All Vehicle Documents'}
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      if (reservation.vehicleId) {
+                        setViewVehicleId(reservation.vehicleId);
+                        setIsVehicleDialogOpen(true);
+                      }
+                    }}
+                    data-testid="button-view-vehicle-documents"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {reservation.type === 'maintenance_block' ? 'Upload Damage Photos' : 'All Vehicle Documents'}
+                  </Button>
                 </div>
               </div>
 
@@ -550,6 +562,13 @@ export function ReservationViewDialog({
           queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}/active-replacement`] });
           queryClient.invalidateQueries({ queryKey: [`/api/reservations`] });
         }}
+      />
+
+      {/* Vehicle View Dialog */}
+      <VehicleViewDialog
+        open={isVehicleDialogOpen}
+        onOpenChange={setIsVehicleDialogOpen}
+        vehicleId={viewVehicleId}
       />
     </>
   );
