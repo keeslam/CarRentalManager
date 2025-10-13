@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 import { PortalLoginDialog } from "./portal-login-dialog";
 import { DriverDialog } from "./driver-dialog";
@@ -33,6 +35,8 @@ interface CustomerDetailsProps {
 export function CustomerDetails({ customerId, inDialog = false }: CustomerDetailsProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
+  const [viewReservationId, setViewReservationId] = useState<number | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
   // Define query keys for easier reference
   const customerQueryKey = [`/api/customers/${customerId}`];
@@ -686,11 +690,18 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
-                              <Link href={`/reservations/${reservation.id}`}>
-                                <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800">
-                                  View
-                                </Button>
-                              </Link>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary-600 hover:text-primary-800"
+                                onClick={() => {
+                                  setViewReservationId(reservation.id);
+                                  setIsViewDialogOpen(true);
+                                }}
+                                data-testid={`button-view-reservation-${reservation.id}`}
+                              >
+                                View
+                              </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button 
@@ -759,6 +770,13 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Reservation View Dialog */}
+      <ReservationViewDialog
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        reservationId={viewReservationId}
+      />
     </div>
   );
 }
