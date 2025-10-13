@@ -289,11 +289,18 @@ export function ReservationViewDialog({
                           )}
                         </div>
                       </div>
-                      <Link href={`/vehicles/${vehicle.id}`}>
-                        <Button variant="ghost" size="sm" className="mt-2 sm:mt-0">
-                          View Vehicle
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-2 sm:mt-0"
+                        onClick={() => {
+                          setViewVehicleId(vehicle.id);
+                          setIsVehicleDialogOpen(true);
+                        }}
+                        data-testid="button-view-vehicle"
+                      >
+                        View Vehicle
+                      </Button>
                     </div>
                   ) : (
                     <p className="text-gray-500">Vehicle information unavailable</p>
