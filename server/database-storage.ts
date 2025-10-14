@@ -264,6 +264,7 @@ export class DatabaseStorage implements IStorage {
           sql`${reservations.status} != 'cancelled'`,
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
+          sql`${reservations.vehicleId} IS NOT NULL`, // Exclude placeholder reservations
           sql`${reservations.startDate} <= ${today}`,
           or(
             sql`${reservations.endDate} >= ${today}`,
