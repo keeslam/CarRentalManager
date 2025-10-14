@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { format, addDays, parseISO } from "date-fns";
 import { Reservation, Vehicle, Customer, Driver } from "@shared/schema";
-import { Loader2, User, Car as CarIcon } from "lucide-react";
+import { Loader2, User, Car as CarIcon, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Form schema for maintenance editing - only fields that can be edited
@@ -173,7 +173,7 @@ export function MaintenanceEditDialog({
       maintenanceDuration: reservation?.maintenanceDuration || 
         (reservation?.startDate && reservation?.endDate ? 
           Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1),
-      maintenanceStatus: (reservation?.maintenanceStatus === "in" || reservation?.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
+      maintenanceStatus: (reservation?.maintenanceStatus === "in" || reservation?.maintenanceStatus === "out") ? reservation.maintenanceStatus : "scheduled",
       notes: parsed.notes || "",
     },
   });
@@ -399,7 +399,12 @@ export function MaintenanceEditDialog({
                       <div className="mt-1 flex items-center gap-2 text-sm text-blue-900">
                         <User className="h-4 w-4" />
                         <span className="font-medium">{rentalCustomer.name}</span>
-                        {rentalCustomer.phone && <span className="text-blue-600">• {rentalCustomer.phone}</span>}
+                        {rentalCustomer.phone && (
+                          <span className="flex items-center gap-1 text-blue-600">
+                            <Phone className="h-3 w-3" />
+                            {rentalCustomer.phone}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -415,6 +420,12 @@ export function MaintenanceEditDialog({
                           <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">Primary</Badge>
                         )}
                       </div>
+                      {rentalDriver.phone && (
+                        <div className="mt-1 flex items-center gap-1 text-sm text-blue-600">
+                          <Phone className="h-3 w-3" />
+                          {rentalDriver.phone}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -499,12 +510,16 @@ export function MaintenanceEditDialog({
                   <FormItem>
                     <FormLabel>Contact Phone Number</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="Phone number for drop-off contact"
-                        {...field}
-                        data-testid="input-contact-phone"
-                      />
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          type="tel"
+                          placeholder="Phone number for drop-off contact"
+                          {...field}
+                          className="pl-10"
+                          data-testid="input-contact-phone"
+                        />
+                      </div>
                     </FormControl>
                     <FormDescription>
                       Direct number to reach the person dropping off the vehicle
