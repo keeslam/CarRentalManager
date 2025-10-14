@@ -255,12 +255,14 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     
     // Get all vehicles that don't have a non-cancelled, non-deleted reservation that includes today
+    // Exclude maintenance blocks - rentals continue during maintenance (monthly payment)
     const reservedVehicleIds = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
       .where(
         and(
           sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.startDate} <= ${today}`,
           sql`${reservations.endDate} >= ${today}`
