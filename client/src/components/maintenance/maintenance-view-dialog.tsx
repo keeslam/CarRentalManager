@@ -690,7 +690,7 @@ export function MaintenanceViewDialog({
                     <div 
                       key={doc.id} 
                       className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}
+                      onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
                     >
                       <FileText className="h-5 w-5 text-red-500" />
                       <div className="flex-1 min-w-0">
@@ -745,12 +745,12 @@ export function MaintenanceViewDialog({
                 <div 
                   key={doc.id} 
                   className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}
+                  onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
                 >
                   {isImage ? (
                     <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
                       <img 
-                        src={`/api/documents/${doc.id}/download`} 
+                        src={`/api/documents/download/${doc.id}`} 
                         alt={doc.documentType}
                         className="w-full h-full object-cover"
                       />
