@@ -809,13 +809,14 @@ export function MaintenanceViewDialog({
                       variant="outline"
                       className="flex-1 px-2"
                       onClick={() => {
-                        const iframe = document.createElement('iframe');
-                        iframe.style.display = 'none';
-                        iframe.src = `/api/documents/download/${doc.id}`;
-                        document.body.appendChild(iframe);
-                        iframe.onload = () => {
-                          iframe.contentWindow?.print();
-                        };
+                        const printWindow = window.open(`/api/documents/download/${doc.id}`, '_blank');
+                        if (printWindow) {
+                          printWindow.addEventListener('load', () => {
+                            setTimeout(() => {
+                              printWindow.print();
+                            }, 250);
+                          });
+                        }
                       }}
                       data-testid={`button-print-${doc.id}`}
                       title="Print document"
@@ -895,13 +896,14 @@ export function MaintenanceViewDialog({
           <Button
             variant="outline"
             onClick={() => {
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = `/api/documents/download/${previewDocument.id}`;
-              document.body.appendChild(iframe);
-              iframe.onload = () => {
-                iframe.contentWindow?.print();
-              };
+              const printWindow = window.open(`/api/documents/download/${previewDocument.id}`, '_blank');
+              if (printWindow) {
+                printWindow.addEventListener('load', () => {
+                  setTimeout(() => {
+                    printWindow.print();
+                  }, 250);
+                });
+              }
             }}
           >
             <Printer className="h-4 w-4 mr-2" />
