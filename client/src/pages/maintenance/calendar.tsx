@@ -1506,6 +1506,23 @@ export default function MaintenanceCalendar() {
           }
         }}
         reservationId={selectedMaintenanceReservationId}
+        onEdit={async (reservationId) => {
+          try {
+            const response = await fetch(`/api/reservations/${reservationId}`);
+            if (!response.ok) throw new Error('Failed to fetch reservation');
+            const reservation = await response.json();
+            setMaintenanceReservationDialogOpen(false);
+            setSelectedMaintenanceReservationId(null);
+            handleEditMaintenance(reservation);
+          } catch (error) {
+            console.error('Failed to fetch reservation for edit:', error);
+            toast({
+              title: "Error",
+              description: "Failed to load reservation for editing",
+              variant: "destructive",
+            });
+          }
+        }}
       />
 
       {/* Maintenance Completion Dialog */}
