@@ -107,7 +107,7 @@ export default function CustomersIndex() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t('customers.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('Customers')}</h1>
         <CustomerAddDialog onSuccess={handleCustomerAdded} />
       </div>
       
@@ -121,7 +121,7 @@ export default function CustomersIndex() {
         <CardContent>
           <div className="mb-4">
             <Input
-              placeholder={t('customers.searchPlaceholder')}
+              placeholder={t('Search Customers')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"

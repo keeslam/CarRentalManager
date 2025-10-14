@@ -35,9 +35,9 @@ export function ReservationDocumentsDialog({
 
   if (!open || vehicleId === null) return null;
 
-  // Filter documents for this specific reservation (and general vehicle docs)
+  // Filter documents for this specific reservation ONLY (not general vehicle docs)
   const reservationDocuments = documents?.filter(
-    doc => doc.reservationId === reservationId || doc.reservationId === null
+    doc => doc.reservationId === reservationId
   ) || [];
 
   // Group documents by type
@@ -57,7 +57,7 @@ export function ReservationDocumentsDialog({
             Reservation Documents
           </DialogTitle>
           <DialogDescription>
-            Documents related to this reservation and vehicle
+            Documents specifically linked to this reservation (contracts, damage reports, photos)
           </DialogDescription>
         </DialogHeader>
         
