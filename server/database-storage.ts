@@ -265,7 +265,10 @@ export class DatabaseStorage implements IStorage {
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.startDate} <= ${today}`,
-          sql`${reservations.endDate} >= ${today}`
+          or(
+            sql`${reservations.endDate} >= ${today}`,
+            isNull(reservations.endDate) // Include open-ended rentals (monthly contracts)
+          )
         )
       );
     
