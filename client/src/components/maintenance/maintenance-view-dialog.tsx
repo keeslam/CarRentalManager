@@ -739,7 +739,7 @@ export function MaintenanceViewDialog({
         </DialogHeader>
 
         {documents.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {documents.map((doc: any) => {
               const isImage = doc.contentType?.startsWith('image/');
               const isPDF = doc.contentType === 'application/pdf';
@@ -779,17 +779,17 @@ export function MaintenanceViewDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 px-2"
                       onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
                       data-testid={`button-view-${doc.id}`}
+                      title="View document"
                     >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 px-2"
                       onClick={() => {
                         const link = document.createElement('a');
                         link.href = `/api/documents/download/${doc.id}`;
@@ -799,14 +799,14 @@ export function MaintenanceViewDialog({
                         document.body.removeChild(link);
                       }}
                       data-testid={`button-download-${doc.id}`}
+                      title="Download document"
                     >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
+                      <Download className="h-4 w-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 px-2"
                       onClick={() => {
                         const printWindow = window.open(`/api/documents/download/${doc.id}`, '_blank');
                         if (printWindow) {
@@ -816,9 +816,9 @@ export function MaintenanceViewDialog({
                         }
                       }}
                       data-testid={`button-print-${doc.id}`}
+                      title="Print document"
                     >
-                      <Printer className="h-3 w-3 mr-1" />
-                      Print
+                      <Printer className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
