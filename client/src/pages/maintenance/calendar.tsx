@@ -41,7 +41,7 @@ import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-mai
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
 import { MaintenanceListDialog } from "@/components/maintenance/maintenance-list-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
-import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { MaintenanceViewDialog } from "@/components/maintenance/maintenance-view-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -1497,7 +1497,7 @@ export default function MaintenanceCalendar() {
       />
 
       {/* Maintenance Reservation View Dialog */}
-      <ReservationViewDialog
+      <MaintenanceViewDialog
         open={maintenanceReservationDialogOpen}
         onOpenChange={(open) => {
           setMaintenanceReservationDialogOpen(open);
@@ -1506,22 +1506,10 @@ export default function MaintenanceCalendar() {
           }
         }}
         reservationId={selectedMaintenanceReservationId}
-        onEdit={async (reservationId) => {
-          try {
-            const response = await fetch(`/api/reservations/${reservationId}`);
-            if (!response.ok) throw new Error('Failed to fetch reservation');
-            const reservation = await response.json();
-            setMaintenanceReservationDialogOpen(false);
-            setSelectedMaintenanceReservationId(null);
-            handleEditMaintenance(reservation);
-          } catch (error) {
-            console.error('Failed to fetch reservation for edit:', error);
-            toast({
-              title: "Error",
-              description: "Failed to load reservation for editing",
-              variant: "destructive",
-            });
-          }
+        onEdit={(reservation) => {
+          setMaintenanceReservationDialogOpen(false);
+          setSelectedMaintenanceReservationId(null);
+          handleEditMaintenance(reservation);
         }}
       />
 
