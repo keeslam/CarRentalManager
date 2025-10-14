@@ -798,6 +798,82 @@ export function ReservationForm({
     }
   });
 
+  // Generate versioned contract mutation (for edit mode with current form data)
+  const generateVersionedContractMutation = useMutation({
+    mutationFn: async ({ reservationId, useFormData }: { reservationId: number; useFormData: boolean }) => {
+      if (useFormData) {
+        // Generate from current form data and save with version
+        const formData = form.getValues();
+        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+        const response = await fetch(`/api/contracts/generate-versioned/${reservationId}${templateParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            vehicleId: formData.vehicleId,
+            customerId: formData.customerId,
+            driverId: formData.driverId,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            notes: formData.notes
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to generate versioned contract');
+        }
+        
+        return { blob: await response.blob(), filename: `contract_${reservationId}_versioned.pdf` };
+      } else {
+        // Generate from saved reservation
+        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
+        const response = await fetch(`/api/contracts/generate/${reservationId}${templateParam}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to generate contract');
+        }
+        
+        return { blob: await response.blob(), filename: `contract_${reservationId}.pdf` };
+      }
+    },
+    onSuccess: (data) => {
+      // Download the PDF
+      const url = URL.createObjectURL(data.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      // Refetch documents to show the new version
+      if (createdReservationId || initialData?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/documents/reservation', createdReservationId || initialData?.id] 
+        });
+      }
+      
+      toast({
+        title: "Contract Generated",
+        description: "New contract version has been created and downloaded.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate contract: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Generate contract mutation
   const generateContractMutation = useMutation({
     mutationFn: async (reservationId?: number) => {
@@ -877,7 +953,14 @@ export function ReservationForm({
     console.log('editMode:', editMode);
     console.log('initialData?.id:', initialData?.id);
     
-    if (createdReservationId) {
+    // In edit mode, use current form data to generate versioned contract
+    if (editMode && initialData?.id) {
+      console.log('Edit mode: Using current form data for versioned contract');
+      generateVersionedContractMutation.mutate({ 
+        reservationId: initialData.id, 
+        useFormData: true 
+      });
+    } else if (createdReservationId) {
       console.log('Using saved reservation ID:', createdReservationId);
       generateContractMutation.mutate(createdReservationId);
     } else {
@@ -2209,11 +2292,11 @@ export function ReservationForm({
                     type="button"
                     variant="outline"
                     onClick={handleGenerateContract}
-                    disabled={generateContractMutation.isPending || !selectedTemplateId}
+                    disabled={generateVersionedContractMutation.isPending || !selectedTemplateId}
                     data-testid="button-generate-contract-version"
                     className="border-blue-200 text-blue-700 hover:bg-blue-50"
                   >
-                    {generateContractMutation.isPending ? (
+                    {generateVersionedContractMutation.isPending ? (
                       <>
                         <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

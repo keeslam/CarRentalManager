@@ -4544,6 +4544,171 @@ Car Rental Management System`
       });
     }
   });
+
+  // Generate versioned contract with form data (for edit mode)
+  app.post("/api/contracts/generate-versioned/:reservationId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const { vehicleId, customerId, driverId, startDate, endDate, notes } = req.body;
+      const templateId = req.query.templateId ? parseInt(req.query.templateId as string) : undefined;
+      
+      if (!vehicleId || !customerId) {
+        return res.status(400).json({ message: "Vehicle ID and Customer ID are required" });
+      }
+
+      // Get vehicle and customer data
+      const vehicle = await storage.getVehicle(vehicleId);
+      const customer = await storage.getCustomer(customerId);
+      
+      if (!vehicle || !customer) {
+        return res.status(404).json({ message: "Vehicle or customer not found" });
+      }
+
+      // Get driver data if provided
+      let driver = null;
+      if (driverId) {
+        driver = await storage.getDriver(driverId);
+      }
+
+      // Get the specified template or default PDF template
+      let template;
+      if (templateId) {
+        template = await storage.getPdfTemplate(templateId);
+        if (!template) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+      } else {
+        template = await storage.getDefaultPdfTemplate();
+      }
+      
+      if (!template) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+
+      // Create contract data with current form values
+      const contractData = {
+        id: reservationId,
+        vehicleId,
+        customerId,
+        driverId,
+        startDate,
+        endDate,
+        notes: notes || "",
+        status: "pending",
+        totalPrice: 0,
+        vehicle,
+        customer,
+        driver
+      };
+
+      console.log("Generating versioned contract with current form data");
+
+      // Make sure the template fields are properly formatted
+      if (template.fields && typeof template.fields === 'string') {
+        try {
+          const parsedFields = JSON.parse(template.fields);
+          template.fields = parsedFields;
+        } catch (e) {
+          console.error('Error parsing template fields:', e);
+        }
+      }
+
+      // Use the imported function from pdf-generator.ts
+      const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+      const pdfBuffer = await generateRentalContractFromTemplate(contractData, template);
+      
+      // Save as versioned document
+      if (vehicle) {
+        try {
+          const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+          const contractsBaseDir = path.join(getUploadsDir(), 'contracts');
+          const vehicleContractsDir = path.join(contractsBaseDir, sanitizedPlate);
+          
+          // Create directories if they don't exist
+          if (!fs.existsSync(contractsBaseDir)) {
+            fs.mkdirSync(contractsBaseDir, { recursive: true });
+          }
+          
+          if (!fs.existsSync(vehicleContractsDir)) {
+            fs.mkdirSync(vehicleContractsDir, { recursive: true });
+          }
+          
+          // Format date for filename
+          const today = new Date();
+          const currentDate = today.getFullYear().toString() + 
+                             (today.getMonth() + 1).toString().padStart(2, '0') + 
+                             today.getDate().toString().padStart(2, '0');
+          
+          // Create a unique filename based on license plate and date
+          const filename = `${sanitizedPlate}_contract_${currentDate}.pdf`;
+          const filePath = path.join(vehicleContractsDir, filename);
+          
+          // Save the file
+          fs.writeFileSync(filePath, pdfBuffer);
+          console.log(`Contract successfully saved to: ${filePath}`);
+          
+          // Check for existing unsigned contracts for this reservation to determine version number
+          const existingDocs = await storage.getDocumentsByReservation(reservationId);
+          const existingContracts = existingDocs.filter(doc => 
+            doc.documentType?.startsWith('Contract (Unsigned)')
+          );
+          
+          // Determine version number
+          let versionNumber = 1;
+          if (existingContracts.length > 0) {
+            // Extract version numbers from existing contracts
+            const versions = existingContracts.map(doc => {
+              const match = doc.documentType?.match(/Contract \(Unsigned\)(?: (\d+))?/);
+              return match && match[1] ? parseInt(match[1]) : 1;
+            });
+            versionNumber = Math.max(...versions) + 1;
+          }
+          
+          // Create document entry for the contract
+          const documentData = {
+            vehicleId: vehicleId,
+            reservationId: reservationId,
+            documentType: versionNumber > 1 ? `Contract (Unsigned) ${versionNumber}` : 'Contract (Unsigned)',
+            fileName: filename,
+            filePath: getRelativePath(filePath),
+            fileSize: pdfBuffer.length,
+            contentType: 'application/pdf',
+            createdBy: req.user ? req.user.username : 'System',
+            notes: versionNumber > 1 
+              ? `Auto-generated unsigned contract (version ${versionNumber}) with current form data for reservation #${reservationId}`
+              : `Auto-generated unsigned contract with current form data for reservation #${reservationId}`
+          };
+          
+          const document = await storage.createDocument(documentData);
+          console.log(`✅ Created document entry for unsigned contract (version ${versionNumber}): ID ${document.id}`);
+          
+          // Broadcast real-time update to all connected clients
+          realtimeEvents.documents.created(document);
+        } catch (docError) {
+          console.error('Error registering contract as document:', docError);
+          // Continue even if document registration fails
+        }
+      }
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=rental_contract_${reservationId}_v${Date.now()}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating versioned contract:", error);
+      res.status(500).json({ 
+        message: "Failed to generate versioned contract", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
   
   // Generate contract using default template
   app.get("/api/contracts/generate-default/:reservationId", requireAuth, async (req: Request, res: Response) => {
