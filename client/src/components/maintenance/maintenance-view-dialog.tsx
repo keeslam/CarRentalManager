@@ -22,7 +22,12 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Receipt,
+  Camera,
+  AlertTriangle,
+  FolderOpen
 } from "lucide-react";
 import { displayLicensePlate } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -30,6 +35,8 @@ import { useState } from "react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
+import { Link } from "wouter";
 
 interface MaintenanceViewDialogProps {
   open: boolean;
@@ -612,6 +619,75 @@ export function MaintenanceViewDialog({
               <FileText className="h-4 w-4" />
               Service Documentation
             </h3>
+            
+            {/* Quick Upload Buttons */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <InlineDocumentUpload
+                vehicleId={vehicle?.id || 0}
+                reservationId={reservation?.id}
+                preselectedType="Receipt"
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                }}
+              >
+                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-receipt">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Upload Receipt
+                </Button>
+              </InlineDocumentUpload>
+
+              <InlineDocumentUpload
+                vehicleId={vehicle?.id || 0}
+                reservationId={reservation?.id}
+                preselectedType="Damage Report"
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                }}
+              >
+                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-damage-report">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Upload Damage Report
+                </Button>
+              </InlineDocumentUpload>
+
+              <InlineDocumentUpload
+                vehicleId={vehicle?.id || 0}
+                reservationId={reservation?.id}
+                preselectedType="Vehicle Photos"
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                }}
+              >
+                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-photos">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Upload Photos
+                </Button>
+              </InlineDocumentUpload>
+
+              <InlineDocumentUpload
+                vehicleId={vehicle?.id || 0}
+                reservationId={reservation?.id}
+                preselectedType="Maintenance Record"
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                }}
+              >
+                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-other">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Other
+                </Button>
+              </InlineDocumentUpload>
+            </div>
+
+            {/* View All Documents Button */}
+            <Link href={`/documents?vehicleId=${vehicle?.id}&reservationId=${reservation?.id}`}>
+              <Button variant="outline" size="sm" className="w-full mb-3" data-testid="button-view-all-documents">
+                <FolderOpen className="h-4 w-4 mr-2" />
+                View All Documents
+              </Button>
+            </Link>
+
+            {/* Documents List */}
             {documents.length > 0 ? (
               <div className="space-y-2">
                 {documents.map((doc: any) => (
@@ -636,9 +712,10 @@ export function MaintenanceViewDialog({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground">
+              <div className="text-center py-6 text-muted-foreground bg-gray-50 dark:bg-gray-800 rounded-lg border">
                 <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No service documentation uploaded</p>
+                <p className="text-sm">No service documentation uploaded yet</p>
+                <p className="text-xs mt-1">Use the buttons above to upload documents</p>
               </div>
             )}
           </div>
