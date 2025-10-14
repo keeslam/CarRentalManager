@@ -36,6 +36,7 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
+import { InvoiceScanner } from "@/components/invoice-scanner";
 import { Link } from "wouter";
 
 interface MaintenanceViewDialogProps {
@@ -625,19 +626,18 @@ export function MaintenanceViewDialog({
             
             {/* Quick Upload Buttons */}
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <InlineDocumentUpload
-                vehicleId={vehicle?.id || 0}
-                reservationId={reservation?.id}
-                preselectedType="Receipt"
-                onSuccess={() => {
+              <InvoiceScanner
+                selectedVehicleId={vehicle?.id}
+                onExpensesCreated={(expenses) => {
+                  console.log('Expenses created from invoice:', expenses);
+                  queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
                   queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                  toast({
+                    title: "Expenses created",
+                    description: `Created ${expenses.length} expense record(s) from invoice`,
+                  });
                 }}
-              >
-                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-receipt">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Upload Receipt
-                </Button>
-              </InlineDocumentUpload>
+              />
 
               <InlineDocumentUpload
                 vehicleId={vehicle?.id || 0}
