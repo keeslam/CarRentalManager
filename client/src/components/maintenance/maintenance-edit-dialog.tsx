@@ -18,7 +18,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select,
   SelectContent,
@@ -34,7 +33,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { format, addDays, parseISO } from "date-fns";
 import { Reservation, Vehicle, Customer, Driver } from "@shared/schema";
 import { Loader2, User, Car as CarIcon } from "lucide-react";
@@ -93,9 +91,6 @@ export function MaintenanceEditDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for spare vehicle assignments
-  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<SpareVehicleAssignment[]>([]);
-
   // Fetch vehicles for the selector
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
@@ -301,43 +296,20 @@ export function MaintenanceEditDialog({
         notesText += `\nContact Phone: ${data.contactPhone}`;
       }
       
-      // If there are spare vehicle assignments, use the maintenance-with-spare endpoint
-      if (spareVehicleAssignments.length > 0) {
-        // Use maintenance-with-spare endpoint to update existing maintenance with spare assignments
-        const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
-          maintenanceId: reservation.id, // Reference existing maintenance to update
-          maintenanceData: {
-            vehicleId: data.vehicleId,
-            customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
-            startDate: data.startDate,
-            endDate: endDate,
-            status: data.maintenanceStatus,
-            type: "maintenance_block",
-            notes: notesText,
-            totalPrice: 0,
-            maintenanceDuration: data.maintenanceDuration,
-            maintenanceStatus: data.maintenanceStatus,
-          },
-          conflictingReservations: overlappingRentals.map(rental => rental.reservation.id), // Send all overlapping rentals (including open-ended)
-          spareVehicleAssignments: spareVehicleAssignments,
-        });
-        return await response.json();
-      } else {
-        // No spare assignments, just update the maintenance reservation directly
-        const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
-          vehicleId: data.vehicleId,
-          customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
-          startDate: data.startDate,
-          endDate: endDate,
-          status: data.maintenanceStatus,
-          type: "maintenance_block",
-          notes: notesText,
-          totalPrice: 0,
-          maintenanceDuration: data.maintenanceDuration,
-          maintenanceStatus: data.maintenanceStatus,
-        });
-        return await response.json();
-      }
+      // Update the maintenance reservation directly (spare vehicle assignments are now managed in the view dialog)
+      const response = await apiRequest("PATCH", `/api/reservations/${reservation.id}`, {
+        vehicleId: data.vehicleId,
+        customerId: (data.customerId && data.customerId !== "none") ? parseInt(data.customerId) : null,
+        startDate: data.startDate,
+        endDate: endDate,
+        status: data.maintenanceStatus,
+        type: "maintenance_block",
+        notes: notesText,
+        totalPrice: 0,
+        maintenanceDuration: data.maintenanceDuration,
+        maintenanceStatus: data.maintenanceStatus,
+      });
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -378,17 +350,6 @@ export function MaintenanceEditDialog({
           }
         });
       }
-      
-      // Invalidate vehicle caches for all spare vehicles assigned
-      spareVehicleAssignments.forEach(assignment => {
-        const spareVehicleId = assignment.spareVehicleId;
-        queryClient.invalidateQueries({
-          predicate: (query) => {
-            const key = query.queryKey;
-            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === spareVehicleId;
-          }
-        });
-      });
       
       onOpenChange(false);
     },
@@ -638,80 +599,6 @@ export function MaintenanceEditDialog({
                 )}
               />
 
-              {/* Spare Vehicle Assignment for Overlapping Rentals */}
-              <div className="col-span-full" data-testid="section-spare-vehicles">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Spare Vehicle Assignment
-                </div>
-                {isLoadingRentals ? (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="loading-rentals">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Loading rental information...
-                    </div>
-                  </div>
-                ) : overlappingRentals.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
-                      <div className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-3">
-                        Active rentals during maintenance (spare vehicle assignment is optional):
-                      </div>
-                      {overlappingRentals.map((rental: { reservation: { id: number; startDate: string; endDate: string; status: string; type: string }; customer: { name: string; firstName?: string; lastName?: string; email?: string; phone?: string } }, index: number) => (
-                        <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border mb-2" data-testid={`overlapping-rental-${index}`}>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                            <div>
-                              <div className="font-medium text-gray-900 dark:text-gray-100">
-                                {rental.customer.firstName || rental.customer.name} {rental.customer.lastName || ''}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                Rental: {rental.reservation.startDate} to {rental.reservation.endDate}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                Status: {rental.reservation.status}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                Assign Spare Vehicle (Optional):
-                              </label>
-                              <VehicleSelector
-                                vehicles={[
-                                  // Add a "no vehicle" option by creating a dummy vehicle
-                                  { id: 0, licensePlate: "NO-SPARE", brand: "No spare vehicle", model: "needed", vehicleType: "None" } as Vehicle,
-                                  // Add a "TBD" option for placeholder assignment
-                                  { id: -1, licensePlate: "TBD-SPARE", brand: "TBD - Vehicle", model: "placeholder", vehicleType: "TBD" } as Vehicle,
-                                  ...availableVehicles
-                                ]}
-                                value={spareVehicleAssignments.find(a => a.reservationId === rental.reservation.id)?.spareVehicleId?.toString() || "0"}
-                                onChange={(value) => {
-                                  const spareVehicleId = parseInt(value);
-                                  if (spareVehicleId && spareVehicleId !== 0) {
-                                    setSpareVehicleAssignments(prev => [
-                                      ...prev.filter(a => a.reservationId !== rental.reservation.id),
-                                      { reservationId: rental.reservation.id, spareVehicleId }
-                                    ]);
-                                  } else {
-                                    setSpareVehicleAssignments(prev => 
-                                      prev.filter(a => a.reservationId !== rental.reservation.id)
-                                    );
-                                  }
-                                }}
-                                placeholder="Select spare vehicle..."
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border" data-testid="no-overlapping-rentals">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      No active rentals overlap this maintenance period
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Notes */}
