@@ -1949,14 +1949,16 @@ export function ReservationForm({
                       <div className="flex flex-wrap gap-2">
                         {(() => {
                           const contractDocs = reservationDocuments.filter(d => 
-                            d.documentType === 'Contract (Unsigned)' || d.documentType === 'Contract (Signed)' || d.documentType === 'Contract'
+                            d.documentType?.startsWith('Contract (Unsigned)') || 
+                            d.documentType?.startsWith('Contract (Signed)') || 
+                            d.documentType === 'Contract'
                           );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
                           const otherDocs = reservationDocuments.filter(d => 
-                            d.documentType !== 'Contract (Unsigned)' && 
-                            d.documentType !== 'Contract (Signed)' && 
+                            !d.documentType?.startsWith('Contract (Unsigned)') && 
+                            !d.documentType?.startsWith('Contract (Signed)') && 
                             d.documentType !== 'Contract' && 
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'
@@ -2198,6 +2200,33 @@ export function ReservationForm({
                         </>
                       )
                     }
+                  </Button>
+                )}
+
+                {/* Generate new contract version button - only in edit mode */}
+                {editMode && initialData && selectedVehicle && selectedCustomer && !isPreviewMode && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateContract}
+                    disabled={generateContractMutation.isPending || !selectedTemplateId}
+                    data-testid="button-generate-contract-version"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    {generateContractMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate New Contract Version
+                      </>
+                    )}
                   </Button>
                 )}
 

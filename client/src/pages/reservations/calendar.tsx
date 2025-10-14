@@ -1448,14 +1448,16 @@ export default function ReservationCalendarPage() {
                         {/* Group documents by type */}
                         {(() => {
                           const contractDocs = reservationDocuments.filter(d => 
-                            d.documentType === 'Contract (Unsigned)' || d.documentType === 'Contract (Signed)' || d.documentType === 'Contract'
+                            d.documentType?.startsWith('Contract (Unsigned)') || 
+                            d.documentType?.startsWith('Contract (Signed)') || 
+                            d.documentType === 'Contract'
                           );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
                           const otherDocs = reservationDocuments.filter(d => 
-                            d.documentType !== 'Contract (Unsigned)' && 
-                            d.documentType !== 'Contract (Signed)' && 
+                            !d.documentType?.startsWith('Contract (Unsigned)') && 
+                            !d.documentType?.startsWith('Contract (Signed)') && 
                             d.documentType !== 'Contract' && 
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'

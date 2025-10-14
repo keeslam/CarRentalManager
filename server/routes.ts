@@ -4359,23 +4359,34 @@ Car Rental Management System`
               notes: `Auto-generated unsigned contract for reservation #${reservationId}`
             };
             
-            // Check if a contract document already exists for this reservation
-            const existingDocs = await storage.getDocumentsByVehicle(reservation.vehicleId);
-            const existingContract = existingDocs.find(doc => 
-              doc.documentType === 'Contract (Unsigned)' && 
-              doc.reservationId === reservationId
+            // Check for existing unsigned contracts for this reservation to determine version number
+            const existingDocs = await storage.getDocumentsByReservation(reservationId);
+            const existingContracts = existingDocs.filter(doc => 
+              doc.documentType?.startsWith('Contract (Unsigned)')
             );
             
-            // Only create a new document if one doesn't already exist for this reservation
-            if (!existingContract) {
-              const document = await storage.createDocument(documentData);
-              console.log(`✅ Created document entry for unsigned contract: ID ${document.id}`);
-              
-              // Broadcast real-time update to all connected clients
-              realtimeEvents.documents.created(document);
-            } else {
-              console.log(`Contract document already exists for this reservation: ID ${existingContract.id}`);
+            // Determine version number
+            let versionNumber = 1;
+            if (existingContracts.length > 0) {
+              // Extract version numbers from existing contracts
+              const versions = existingContracts.map(doc => {
+                const match = doc.documentType?.match(/Contract \(Unsigned\)(?: (\d+))?/);
+                return match && match[1] ? parseInt(match[1]) : 1;
+              });
+              versionNumber = Math.max(...versions) + 1;
             }
+            
+            // Update document type with version number if > 1
+            if (versionNumber > 1) {
+              documentData.documentType = `Contract (Unsigned) ${versionNumber}`;
+              documentData.notes = `Auto-generated unsigned contract (version ${versionNumber}) for reservation #${reservationId}`;
+            }
+            
+            const document = await storage.createDocument(documentData);
+            console.log(`✅ Created document entry for unsigned contract (version ${versionNumber}): ID ${document.id}`);
+            
+            // Broadcast real-time update to all connected clients
+            realtimeEvents.documents.created(document);
           } catch (docError) {
             console.error('Error registering contract as document:', docError);
             // Continue even if document registration fails
