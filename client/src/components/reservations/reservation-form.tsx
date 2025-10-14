@@ -2183,8 +2183,8 @@ export function ReservationForm({
                   </Button>
                 )}
                 
-                {/* Submit button - Preview in create mode, Update in edit mode, hidden when created/preview */}
-                {!createdReservationId && !isPreviewMode && (
+                {/* Submit button - Preview in create mode, Update in edit mode */}
+                {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
                   <Button 
                     type="submit" 
                     disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
@@ -2201,8 +2201,8 @@ export function ReservationForm({
                   </Button>
                 )}
 
-                {/* Generate contract button - only in created/edit state */}
-                {(createdReservationId || editMode) && selectedVehicle && selectedCustomer && (
+                {/* Generate contract button - only in created state or after updating in edit mode */}
+                {createdReservationId && selectedVehicle && selectedCustomer && !editMode && (
                   <Button
                     type="button"
                     variant="default"
