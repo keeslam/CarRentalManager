@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +21,15 @@ import {
   FileText,
   Clock,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from "lucide-react";
 import { displayLicensePlate } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useState } from "react";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface MaintenanceViewDialogProps {
   open: boolean;
@@ -41,6 +45,8 @@ export function MaintenanceViewDialog({
   onEdit,
 }: MaintenanceViewDialogProps) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editingSpare, setEditingSpare] = useState<number | null>(null);
 
   // Fetch reservation data
   const { data: reservation, isLoading } = useQuery<Reservation>({
@@ -70,6 +76,89 @@ export function MaintenanceViewDialog({
   const { data: documents = [] } = useQuery<any[]>({
     queryKey: [`/api/documents/reservation/${reservationId}`],
     enabled: !!reservationId && open,
+  });
+
+  // Fetch all reservations to find overlapping rentals
+  const { data: allReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    enabled: !!reservation && open,
+  });
+
+  // Fetch available vehicles for spare assignment
+  const { data: availableVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ['/api/vehicles/available'],
+    enabled: open,
+  });
+
+  // Find overlapping rentals during this maintenance
+  const overlappingRentals = reservation ? allReservations.filter((r: Reservation) => {
+    if (r.id === reservation.id) return false;
+    if (r.type !== 'standard') return false;
+    if (r.status !== 'confirmed' && r.status !== 'pending') return false;
+    if (r.vehicleId !== reservation.vehicleId) return false;
+
+    const maintenanceStart = new Date(reservation.startDate);
+    const maintenanceEnd = reservation.endDate ? new Date(reservation.endDate) : maintenanceStart;
+    const rentalStart = new Date(r.startDate);
+    const rentalEnd = r.endDate ? new Date(r.endDate) : new Date('2099-12-31');
+
+    return (rentalStart <= maintenanceEnd && rentalEnd >= maintenanceStart);
+  }) : [];
+
+  // Update spare vehicle mutation
+  const updateSpareMutation = useMutation({
+    mutationFn: async ({ rentalId, spareVehicleId, replacementReservationId }: { 
+      rentalId: number; 
+      spareVehicleId: number | null;
+      replacementReservationId?: number;
+    }) => {
+      if (spareVehicleId) {
+        // Assign or update spare vehicle
+        if (replacementReservationId) {
+          // Update existing replacement reservation
+          const response = await apiRequest('PATCH', `/api/reservations/${replacementReservationId}`, {
+            vehicleId: spareVehicleId,
+          });
+          return response.json();
+        } else {
+          // Create new replacement reservation
+          const rental = allReservations.find(r => r.id === rentalId);
+          if (!rental) throw new Error('Rental not found');
+          
+          const response = await apiRequest('POST', '/api/reservations', {
+            type: 'replacement',
+            replacementForReservationId: rentalId,
+            vehicleId: spareVehicleId,
+            customerId: rental.customerId,
+            driverId: rental.driverId,
+            startDate: rental.startDate,
+            endDate: rental.endDate,
+            status: 'confirmed',
+            totalPrice: 0,
+          });
+          return response.json();
+        }
+      } else if (replacementReservationId) {
+        // Remove spare vehicle by deleting replacement reservation
+        const response = await apiRequest('DELETE', `/api/reservations/${replacementReservationId}`);
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Spare vehicle assignment updated",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      setEditingSpare(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update spare vehicle",
+        variant: "destructive",
+      });
+    },
   });
 
   // Parse maintenance notes
@@ -308,6 +397,112 @@ export function MaintenanceViewDialog({
               </div>
             </>
           )}
+
+          {/* Spare Vehicle Assignments */}
+          <Separator />
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Spare Vehicle Assignments
+            </h3>
+            {overlappingRentals.length > 0 ? (
+              <div className="space-y-3">
+                {overlappingRentals.map((rental: Reservation) => {
+                  const rentalCustomer = allReservations.find(r => r.id === rental.id)?.customer;
+                  const rentalDriver = allReservations.find(r => r.id === rental.id)?.driver;
+                  
+                  // Find the replacement reservation for this rental
+                  const replacementReservation = allReservations.find(
+                    (r: Reservation) => r.type === 'replacement' && r.replacementForReservationId === rental.id
+                  );
+                  const spareVehicleId = replacementReservation?.vehicleId;
+                  const assignedSpareVehicle = spareVehicleId 
+                    ? availableVehicles.find(v => v.id === spareVehicleId)
+                    : null;
+                  
+                  return (
+                    <div key={rental.id} className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="font-medium text-blue-900 dark:text-blue-100">
+                            {rentalCustomer?.name || 'Customer'}
+                            {rentalDriver && <span className="text-sm ml-2">({rentalDriver.displayName})</span>}
+                          </div>
+                          <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                            Rental: {format(new Date(rental.startDate), 'MMM dd, yyyy')} - {rental.endDate ? format(new Date(rental.endDate), 'MMM dd, yyyy') : 'Open'}
+                          </div>
+                          {rentalCustomer?.phone && (
+                            <div className="text-xs text-blue-700 dark:text-blue-300 mt-1 flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {rentalCustomer.phone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-blue-700 dark:text-blue-300">Assigned Spare Vehicle</label>
+                        {editingSpare === rental.id ? (
+                          <div className="flex gap-2">
+                            <VehicleSelector
+                              vehicles={availableVehicles}
+                              value={spareVehicleId || undefined}
+                              onChange={(vehicleId) => {
+                                updateSpareMutation.mutate({
+                                  rentalId: rental.id,
+                                  spareVehicleId: vehicleId ? parseInt(vehicleId.toString()) : null,
+                                  replacementReservationId: replacementReservation?.id,
+                                });
+                              }}
+                              placeholder="Select spare vehicle..."
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingSpare(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-md p-2 border">
+                            <div className="text-sm">
+                              {assignedSpareVehicle ? (
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">
+                                    {displayLicensePlate(assignedSpareVehicle.licensePlate)}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {assignedSpareVehicle.brand} {assignedSpareVehicle.model}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground italic">No spare vehicle assigned</span>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingSpare(rental.id)}
+                              data-testid={`button-edit-spare-${rental.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                <RefreshCw className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No overlapping rentals during this maintenance period</p>
+              </div>
+            )}
+          </div>
 
           {/* Additional Notes */}
           {parsed?.notes && (
