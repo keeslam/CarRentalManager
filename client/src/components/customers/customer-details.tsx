@@ -30,9 +30,10 @@ import { useToast } from "@/hooks/use-toast";
 interface CustomerDetailsProps {
   customerId: number;
   inDialog?: boolean;
+  onClose?: () => void;
 }
 
-export function CustomerDetails({ customerId, inDialog = false }: CustomerDetailsProps) {
+export function CustomerDetails({ customerId, inDialog = false, onClose }: CustomerDetailsProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const [viewReservationId, setViewReservationId] = useState<number | null>(null);
@@ -124,25 +125,22 @@ export function CustomerDetails({ customerId, inDialog = false }: CustomerDetail
   
   return (
     <div className="space-y-6">
-      {!inDialog && (
-        <div className="flex mb-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/customers">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                <path d="M5 12h14M5 12l4-4M5 12l4 4"/>
-              </svg>
-              Back to Customers
-            </Link>
-          </Button>
-        </div>
-      )}
-      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">{customer.name}</h1>
           <p className="text-gray-600">Customer since {formatDate(customer.createdAt?.toString() || "")}</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => inDialog && onClose ? onClose() : navigate("/customers")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="m12 19-7-7 7-7"/>
+              <path d="M19 12H5"/>
+            </svg>
+            {inDialog ? "Back" : "Back to Customers"}
+          </Button>
           <CustomerEditDialog 
             customerId={customerId}
             onSuccess={() => {

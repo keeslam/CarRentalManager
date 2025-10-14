@@ -40,7 +40,11 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4">
-          <CustomerDetails customerId={customerId} inDialog={true} />
+          <CustomerDetails 
+            customerId={customerId} 
+            inDialog={true}
+            onClose={() => setOpen(false)}
+          />
         </div>
       </DialogContent>
     </Dialog>
