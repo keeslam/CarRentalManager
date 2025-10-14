@@ -262,9 +262,22 @@ export default function DocumentsIndex() {
     setIframeError(true);
   };
   
-  // Get unique document types
+  // Helper function to normalize versioned contract types
+  const normalizeDocumentType = (type: string): string => {
+    // Normalize "Contract (Unsigned) 2, 3, etc." to "Contract (Unsigned)"
+    if (type.match(/^Contract \(Unsigned\)(?: \d+)?$/)) {
+      return "Contract (Unsigned)";
+    }
+    // Normalize "Contract (Signed) 2, 3, etc." to "Contract (Signed)"
+    if (type.match(/^Contract \(Signed\)(?: \d+)?$/)) {
+      return "Contract (Signed)";
+    }
+    return type;
+  };
+  
+  // Get unique document types (normalized to group versioned contracts)
   const documentTypes = documents 
-    ? ["all", ...new Set(documents.map(doc => doc.documentType))]
+    ? ["all", ...new Set(documents.map(doc => normalizeDocumentType(doc.documentType)))]
     : ["all"];
   
   // Filter documents based on search, vehicle and type filters
@@ -277,7 +290,10 @@ export default function DocumentsIndex() {
     );
     
     const matchesVehicle = vehicleFilter === "all" || doc.vehicleId.toString() === vehicleFilter;
-    const matchesType = typeFilter === "all" || doc.documentType === typeFilter;
+    // Match both exact type and normalized type for versioned contracts
+    const matchesType = typeFilter === "all" || 
+                        doc.documentType === typeFilter || 
+                        normalizeDocumentType(doc.documentType) === typeFilter;
     
     return matchesSearch && matchesVehicle && matchesType;
   });

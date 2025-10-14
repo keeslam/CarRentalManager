@@ -2561,6 +2561,13 @@ Car Rental Management System`
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       if (req.body.customerId) req.body.customerId = parseInt(req.body.customerId);
       
+      // Handle driverId - convert to number or null
+      if (req.body.driverId === "null" || req.body.driverId === "" || req.body.driverId === null) {
+        req.body.driverId = null;
+      } else if (req.body.driverId) {
+        req.body.driverId = parseInt(req.body.driverId);
+      }
+      
       // Handle totalPrice properly - treat empty string and NaN as undefined
       if (req.body.totalPrice === "" || req.body.totalPrice === null) {
         req.body.totalPrice = undefined;
