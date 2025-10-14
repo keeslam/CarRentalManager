@@ -59,6 +59,7 @@ export function MaintenanceViewDialog({
   const { toast } = useToast();
   const [editingSpare, setEditingSpare] = useState<number | null>(null);
   const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<any | null>(null);
 
   // Fetch reservation data
   const { data: reservation, isLoading } = useQuery<Reservation>({
@@ -780,7 +781,7 @@ export function MaintenanceViewDialog({
                       size="sm"
                       variant="outline"
                       className="flex-1 px-2"
-                      onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
+                      onClick={() => setPreviewDocument(doc)}
                       data-testid={`button-view-${doc.id}`}
                       title="View document"
                     >
@@ -808,12 +809,13 @@ export function MaintenanceViewDialog({
                       variant="outline"
                       className="flex-1 px-2"
                       onClick={() => {
-                        const printWindow = window.open(`/api/documents/download/${doc.id}`, '_blank');
-                        if (printWindow) {
-                          printWindow.onload = () => {
-                            printWindow.print();
-                          };
-                        }
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.src = `/api/documents/download/${doc.id}`;
+                        document.body.appendChild(iframe);
+                        iframe.onload = () => {
+                          iframe.contentWindow?.print();
+                        };
                       }}
                       data-testid={`button-print-${doc.id}`}
                       title="Print document"
@@ -831,6 +833,84 @@ export function MaintenanceViewDialog({
             <p>No documents uploaded yet</p>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+
+    {/* Document Preview Dialog */}
+    <Dialog open={!!previewDocument} onOpenChange={() => setPreviewDocument(null)}>
+      <DialogContent className="max-w-6xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>{previewDocument?.documentType}</DialogTitle>
+          <DialogDescription>
+            {previewDocument?.fileName}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-hidden">
+          {previewDocument?.contentType?.startsWith('image/') ? (
+            <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg p-4">
+              <img 
+                src={`/api/documents/download/${previewDocument.id}`} 
+                alt={previewDocument.documentType}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            </div>
+          ) : previewDocument?.contentType === 'application/pdf' ? (
+            <iframe
+              src={`/api/documents/download/${previewDocument.id}`}
+              className="w-full h-[70vh] rounded-lg border"
+              title={previewDocument.documentType}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <FileText className="h-16 w-16 mb-4 text-gray-300" />
+              <p className="text-lg font-medium">Preview not available</p>
+              <p className="text-sm">This file type cannot be previewed</p>
+              <Button
+                className="mt-4"
+                onClick={() => window.open(`/api/documents/download/${previewDocument.id}`, '_blank')}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download to view
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 pt-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = `/api/documents/download/${previewDocument.id}`;
+              link.download = previewDocument.fileName || 'document';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = `/api/documents/download/${previewDocument.id}`;
+              document.body.appendChild(iframe);
+              iframe.onload = () => {
+                iframe.contentWindow?.print();
+              };
+            }}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button variant="outline" onClick={() => setPreviewDocument(null)}>
+            Close
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
     </>
