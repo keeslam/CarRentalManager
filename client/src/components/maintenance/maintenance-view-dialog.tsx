@@ -107,32 +107,72 @@ export function MaintenanceViewDialog({
 
   // Update spare vehicle mutation
   const updateSpareMutation = useMutation({
-    mutationFn: async ({ rentalId, spareVehicleId, replacementReservationId }: { 
+    mutationFn: async ({ rentalId, spareVehicleId, replacementReservationId, placeholder, ownTransport }: { 
       rentalId: number; 
       spareVehicleId: number | null;
       replacementReservationId?: number;
+      placeholder?: boolean;
+      ownTransport?: boolean;
     }) => {
-      if (spareVehicleId) {
+      const rental = allReservations.find(r => r.id === rentalId);
+      if (!rental) throw new Error('Rental not found');
+
+      if (ownTransport) {
+        // Mark as customer arranging own transport - delete any existing replacement reservation
+        if (replacementReservationId) {
+          const response = await apiRequest('DELETE', `/api/reservations/${replacementReservationId}`);
+          return response.json();
+        }
+        // Update the rental to mark it as customer arranging
+        const response = await apiRequest('PATCH', `/api/reservations/${rentalId}`, {
+          spareAssignmentDecision: 'customer_arranging',
+        });
+        return response.json();
+      } else if (placeholder) {
+        // Create or update TBD placeholder spare
+        if (replacementReservationId) {
+          // Update existing to placeholder
+          const response = await apiRequest('PATCH', `/api/reservations/${replacementReservationId}`, {
+            vehicleId: null,
+            placeholderSpare: true,
+          });
+          return response.json();
+        } else {
+          // Create new placeholder replacement reservation
+          const response = await apiRequest('POST', '/api/reservations', {
+            type: 'replacement',
+            replacementForReservationId: rentalId,
+            vehicleId: null,
+            placeholderSpare: true,
+            customerId: rental.customerId,
+            driverId: rental.driverId,
+            startDate: rental.startDate,
+            endDate: rental.endDate || rental.startDate,
+            status: 'pending',
+            totalPrice: 0,
+          });
+          return response.json();
+        }
+      } else if (spareVehicleId) {
         // Assign or update spare vehicle
         if (replacementReservationId) {
           // Update existing replacement reservation
           const response = await apiRequest('PATCH', `/api/reservations/${replacementReservationId}`, {
             vehicleId: spareVehicleId,
+            placeholderSpare: false,
           });
           return response.json();
         } else {
           // Create new replacement reservation
-          const rental = allReservations.find(r => r.id === rentalId);
-          if (!rental) throw new Error('Rental not found');
-          
           const response = await apiRequest('POST', '/api/reservations', {
             type: 'replacement',
             replacementForReservationId: rentalId,
             vehicleId: spareVehicleId,
+            placeholderSpare: false,
             customerId: rental.customerId,
             driverId: rental.driverId,
             startDate: rental.startDate,
-            endDate: rental.endDate,
+            endDate: rental.endDate || rental.startDate,
             status: 'confirmed',
             totalPrice: 0,
           });
@@ -152,10 +192,11 @@ export function MaintenanceViewDialog({
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       setEditingSpare(null);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Spare vehicle update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update spare vehicle",
+        description: error.message || "Failed to update spare vehicle",
         variant: "destructive",
       });
     },
@@ -443,39 +484,83 @@ export function MaintenanceViewDialog({
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-blue-700 dark:text-blue-300">Assigned Spare Vehicle</label>
                         {editingSpare === rental.id ? (
-                          <div className="flex gap-2">
+                          <div className="space-y-2">
                             <VehicleSelector
                               vehicles={availableVehicles}
                               value={spareVehicleId || undefined}
                               onChange={(vehicleId) => {
-                                updateSpareMutation.mutate({
-                                  rentalId: rental.id,
-                                  spareVehicleId: vehicleId ? parseInt(vehicleId.toString()) : null,
-                                  replacementReservationId: replacementReservation?.id,
-                                });
+                                if (vehicleId) {
+                                  updateSpareMutation.mutate({
+                                    rentalId: rental.id,
+                                    spareVehicleId: parseInt(vehicleId.toString()),
+                                    replacementReservationId: replacementReservation?.id,
+                                  });
+                                }
                               }}
                               placeholder="Select spare vehicle..."
                             />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setEditingSpare(null)}
-                            >
-                              Cancel
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  updateSpareMutation.mutate({
+                                    rentalId: rental.id,
+                                    spareVehicleId: null,
+                                    replacementReservationId: replacementReservation?.id,
+                                    placeholder: true,
+                                  });
+                                }}
+                              >
+                                TBD (Placeholder)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  updateSpareMutation.mutate({
+                                    rentalId: rental.id,
+                                    spareVehicleId: null,
+                                    replacementReservationId: replacementReservation?.id,
+                                    ownTransport: true,
+                                  });
+                                }}
+                              >
+                                Own Transport
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingSpare(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-md p-2 border">
                             <div className="text-sm">
-                              {assignedSpareVehicle ? (
+                              {rental.spareAssignmentDecision === 'customer_arranging' ? (
                                 <div className="flex items-center gap-2">
-                                  <Car className="h-4 w-4 text-muted-foreground" />
+                                  <User className="h-4 w-4 text-blue-600" />
+                                  <span className="font-medium text-blue-700 dark:text-blue-400">Own Transport</span>
+                                  <span className="text-xs text-muted-foreground">(Customer arranging)</span>
+                                </div>
+                              ) : assignedSpareVehicle ? (
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-green-600" />
                                   <span className="font-medium">
                                     {displayLicensePlate(assignedSpareVehicle.licensePlate)}
                                   </span>
                                   <span className="text-muted-foreground">
                                     {assignedSpareVehicle.brand} {assignedSpareVehicle.model}
                                   </span>
+                                </div>
+                              ) : replacementReservation?.placeholderSpare ? (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-orange-600" />
+                                  <span className="font-medium text-orange-700 dark:text-orange-400">TBD (Placeholder)</span>
+                                  <span className="text-xs text-muted-foreground">(To be assigned)</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground italic">No spare vehicle assigned</span>
