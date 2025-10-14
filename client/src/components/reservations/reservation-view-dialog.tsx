@@ -35,6 +35,7 @@ import { ReturnFromServiceDialog } from "@/components/reservations/return-from-s
 import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
+import { ReservationDocumentsDialog } from "@/components/reservations/reservation-documents-dialog";
 
 interface ReservationViewDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function ReservationViewDialog({
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
   const [viewVehicleId, setViewVehicleId] = useState<number | null>(null);
+  const [isDocumentsDialogOpen, setIsDocumentsDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch reservation details
@@ -431,7 +433,7 @@ export function ReservationViewDialog({
                     onClick={() => {
                       if (reservation.vehicleId) {
                         setViewVehicleId(reservation.vehicleId);
-                        setIsVehicleDialogOpen(true);
+                        setIsDocumentsDialogOpen(true);
                       }
                     }}
                     data-testid="button-view-vehicle-documents"
@@ -575,6 +577,14 @@ export function ReservationViewDialog({
       <VehicleViewDialog
         open={isVehicleDialogOpen}
         onOpenChange={setIsVehicleDialogOpen}
+        vehicleId={viewVehicleId}
+      />
+
+      {/* Reservation Documents Dialog */}
+      <ReservationDocumentsDialog
+        open={isDocumentsDialogOpen}
+        onOpenChange={setIsDocumentsDialogOpen}
+        reservationId={reservationId}
         vehicleId={viewVehicleId}
       />
     </>
