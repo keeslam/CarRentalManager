@@ -13,6 +13,10 @@ export function VehicleAvailabilityWidget() {
   const [brand, setBrand] = useState<string>("all");
   
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+  
+  const { data: availableVehicles } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/available"],
   });
   
@@ -39,7 +43,12 @@ export function VehicleAvailabilityWidget() {
       <CardContent className="p-4">
         <div className="mb-3 flex justify-between items-center">
           <div className="text-xl font-semibold">
-            {isLoading ? "-" : filteredVehicles?.length || 0}
+            {isLoading ? "-" : (
+              <span>
+                <span className="text-green-600">{availableVehicles?.length || 0}</span>
+                <span className="text-gray-400 text-sm"> / {filteredVehicles?.length || 0}</span>
+              </span>
+            )}
           </div>
           <div className="flex space-x-2">
             <Select value={vehicleType} onValueChange={setVehicleType}>
@@ -76,37 +85,53 @@ export function VehicleAvailabilityWidget() {
               </svg>
             </div>
           ) : filteredVehicles?.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No vehicles available</div>
+            <div className="text-center py-4 text-gray-500">No vehicles found</div>
           ) : (
-            filteredVehicles?.map(vehicle => (
-              <div key={vehicle.id} className="flex items-center p-2 border rounded-md hover:bg-gray-50">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-md flex items-center justify-center text-primary-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-car">
-                    <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
-                    <circle cx="6.5" cy="16.5" r="2.5" />
-                    <circle cx="16.5" cy="16.5" r="2.5" />
-                  </svg>
+            filteredVehicles?.map(vehicle => {
+              const isAvailable = availableVehicles?.some(v => v.id === vehicle.id);
+              return (
+                <div key={vehicle.id} className="flex items-center p-2 border rounded-md hover:bg-gray-50">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-md flex items-center justify-center ${
+                    isAvailable ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-car">
+                      <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
+                      <circle cx="6.5" cy="16.5" r="2.5" />
+                      <circle cx="16.5" cy="16.5" r="2.5" />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-grow">
+                    <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                      {formatLicensePlate(vehicle.licensePlate)}
+                      {isAvailable ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                          Available
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                          Rented
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">{vehicle.brand} {vehicle.model}</div>
+                  </div>
+                  <div>
+                    <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
+                      <Button variant="ghost" size="icon" className="text-primary-600 hover:bg-primary-50 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus">
+                          <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
+                          <line x1="16" x2="16" y1="2" y2="6" />
+                          <line x1="8" x2="8" y1="2" y2="6" />
+                          <line x1="3" x2="21" y1="10" y2="10" />
+                          <line x1="19" x2="19" y1="16" y2="22" />
+                          <line x1="16" x2="22" y1="19" y2="19" />
+                        </svg>
+                      </Button>
+                    </ReservationAddDialog>
+                  </div>
                 </div>
-                <div className="ml-3 flex-grow">
-                  <div className="text-sm font-medium text-gray-900">{formatLicensePlate(vehicle.licensePlate)}</div>
-                  <div className="text-xs text-gray-500">{vehicle.brand} {vehicle.model}</div>
-                </div>
-                <div>
-                  <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
-                    <Button variant="ghost" size="icon" className="text-primary-600 hover:bg-primary-50 rounded">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus">
-                        <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
-                        <line x1="16" x2="16" y1="2" y2="6" />
-                        <line x1="8" x2="8" y1="2" y2="6" />
-                        <line x1="3" x2="21" y1="10" y2="10" />
-                        <line x1="19" x2="19" y1="16" y2="22" />
-                        <line x1="16" x2="22" y1="19" y2="19" />
-                      </svg>
-                    </Button>
-                  </ReservationAddDialog>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </CardContent>
