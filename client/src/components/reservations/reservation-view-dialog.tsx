@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer, Driver } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
-import { Wrench, Car, ArrowRightLeft, Trash2, Edit, FileText, Upload } from "lucide-react";
+import { Wrench, Car, ArrowRightLeft, Trash2, Edit, FileText, Upload, FileCheck, X, Camera } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +58,8 @@ export function ReservationViewDialog({
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
   const [viewVehicleId, setViewVehicleId] = useState<number | null>(null);
   const [isDocumentsDialogOpen, setIsDocumentsDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Fetch reservation details
@@ -162,6 +164,12 @@ export function ReservationViewDialog({
   // Use rental customer/driver for maintenance blocks if available, otherwise use direct customer/driver
   const displayCustomer = reservation?.type === 'maintenance_block' && rentalCustomer ? rentalCustomer : customer;
   const displayDriver = reservation?.type === 'maintenance_block' && rentalDriver ? rentalDriver : driver;
+
+  // Fetch documents for the reservation (for maintenance blocks)
+  const { data: reservationDocuments } = useQuery<any[]>({
+    queryKey: [`/api/documents/reservation/${reservationId}`],
+    enabled: !!reservationId && reservation?.type === 'maintenance_block' && open,
+  });
 
   // Fetch active replacement reservation if this is an original reservation
   const { data: activeReplacement } = useQuery<Reservation>({
@@ -480,57 +488,158 @@ export function ReservationViewDialog({
                 </div>
               )}
 
-              {/* Contract and Document Actions */}
+              {/* Documents Section */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">
-                  {reservation.type === 'maintenance_block' ? 'Expenses & Documentation' : 'Documents'}
+                <h3 className="text-sm font-medium text-gray-500 mb-3">
+                  {reservation.type === 'maintenance_block' ? 'Service Documentation' : 'Documents'}
                 </h3>
-                <div className="flex flex-wrap gap-2">
-                  {reservation.type !== 'maintenance_block' && (
-                    <>
-                      <Link href={`/documents/contract/${reservationId}`}>
-                        <Button variant="outline" size="sm">
-                          <FileText className="mr-2 h-4 w-4" />
-                          View Contract
-                        </Button>
-                      </Link>
+                
+                {reservation.type === 'maintenance_block' ? (
+                  <div className="space-y-4">
+                    {/* Quick Actions for Maintenance */}
+                    <div className="flex flex-wrap gap-2">
                       {reservation.vehicleId && (
-                        <UploadContractButton 
-                          vehicleId={reservation.vehicleId} 
-                          reservationId={reservation.id}
-                        />
+                        <ExpenseAddDialog 
+                          vehicleId={reservation.vehicleId}
+                          onSuccess={() => {
+                            queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+                            queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation.vehicleId}`] });
+                          }}
+                        >
+                          <Button variant="outline" size="sm">
+                            <FileText className="mr-2 h-4 w-4" />
+                            Add Expense
+                          </Button>
+                        </ExpenseAddDialog>
                       )}
-                    </>
-                  )}
-                  {reservation.type === 'maintenance_block' && reservation.vehicleId && (
-                    <ExpenseAddDialog 
-                      vehicleId={reservation.vehicleId}
-                      onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation.vehicleId}`] });
-                      }}
-                    >
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (reservation.vehicleId) {
+                            setViewVehicleId(reservation.vehicleId);
+                            setIsDocumentsDialogOpen(true);
+                          }
+                        }}
+                        data-testid="button-upload-documents"
+                      >
+                        <Camera className="mr-2 h-4 w-4" />
+                        Upload Documents
+                      </Button>
+                    </div>
+
+                    {/* Uploaded Documents Display */}
+                    {reservationDocuments && reservationDocuments.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {reservationDocuments.map((doc) => {
+                            const ext = doc.fileName.split('.').pop()?.toLowerCase();
+                            const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
+                            const isImage = doc.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '');
+                            
+                            return (
+                              <div key={doc.id} className="relative group">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (isPdf) {
+                                      window.open(`/${doc.filePath}`, '_blank');
+                                    } else {
+                                      setPreviewDocument(doc);
+                                      setPreviewDialogOpen(true);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 pr-8"
+                                >
+                                  {isPdf ? (
+                                    <FileText className="h-4 w-4 text-red-600" />
+                                  ) : isImage ? (
+                                    <FileCheck className="h-4 w-4 text-blue-600" />
+                                  ) : (
+                                    <FileText className="h-4 w-4 text-gray-600" />
+                                  )}
+                                  <div className="text-left">
+                                    <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
+                                    <div className="text-[10px] text-gray-500">
+                                      {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                                    </div>
+                                  </div>
+                                </Button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm(`Delete ${doc.documentType}?`)) {
+                                      try {
+                                        const response = await fetch(`/api/documents/${doc.id}`, {
+                                          method: 'DELETE',
+                                          credentials: 'include',
+                                        });
+                                        
+                                        if (!response.ok) {
+                                          throw new Error('Delete failed');
+                                        }
+                                        
+                                        queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+                                        toast({
+                                          title: "Success",
+                                          description: "Document deleted successfully",
+                                        });
+                                      } catch (error) {
+                                        console.error('Delete failed:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to delete document",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }
+                                  }}
+                                  className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
+                                  title="Delete document"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/documents/contract/${reservationId}`}>
                       <Button variant="outline" size="sm">
                         <FileText className="mr-2 h-4 w-4" />
-                        Add Expense
+                        View Contract
                       </Button>
-                    </ExpenseAddDialog>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      if (reservation.vehicleId) {
-                        setViewVehicleId(reservation.vehicleId);
-                        setIsDocumentsDialogOpen(true);
-                      }
-                    }}
-                    data-testid="button-view-vehicle-documents"
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {reservation.type === 'maintenance_block' ? 'Upload Damage Photos' : 'All Vehicle Documents'}
-                  </Button>
-                </div>
+                    </Link>
+                    {reservation.vehicleId && (
+                      <UploadContractButton 
+                        vehicleId={reservation.vehicleId} 
+                        reservationId={reservation.id}
+                      />
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (reservation.vehicleId) {
+                          setViewVehicleId(reservation.vehicleId);
+                          setIsDocumentsDialogOpen(true);
+                        }
+                      }}
+                      data-testid="button-view-vehicle-documents"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      All Vehicle Documents
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Spare Vehicle Management */}
@@ -676,6 +785,50 @@ export function ReservationViewDialog({
         reservationId={reservationId}
         vehicleId={viewVehicleId}
       />
+
+      {/* Document Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.documentType || 'Document Preview'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-gray-100 rounded-md p-4">
+            {previewDocument && (() => {
+              const ext = previewDocument.fileName.split('.').pop()?.toLowerCase();
+              const isImage = previewDocument.contentType?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+
+              if (isImage) {
+                return (
+                  <div className="flex items-center justify-center h-full">
+                    <img
+                      src={`/${previewDocument.filePath}`}
+                      alt={previewDocument.fileName}
+                      className="max-w-full max-h-[70vh] object-contain rounded shadow-lg"
+                    />
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="flex flex-col items-center justify-center h-full space-y-4">
+                    <p className="text-gray-600">Preview not available for this file type.</p>
+                    <Button onClick={() => window.open(`/${previewDocument.filePath}`, '_blank')}>
+                      Open File
+                    </Button>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t">
+            <Button variant="outline" onClick={() => window.open(`/${previewDocument?.filePath}`, '_blank')}>
+              Open in New Tab
+            </Button>
+            <Button onClick={() => setPreviewDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
