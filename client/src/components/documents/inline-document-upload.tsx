@@ -156,11 +156,11 @@ export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, pres
       // Use invalidateRelatedQueries to refresh all related data
       invalidateRelatedQueries('documents');
       if (vehicleId) {
-        invalidateRelatedQueries('vehicles', vehicleId);
+        invalidateRelatedQueries('vehicles', { id: vehicleId });
       }
       if (reservationId) {
         queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
-        invalidateRelatedQueries('reservations', reservationId);
+        invalidateRelatedQueries('reservations', { id: reservationId });
       }
       
       // Show success message

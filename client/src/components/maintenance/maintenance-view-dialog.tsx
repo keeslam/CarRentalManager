@@ -265,6 +265,9 @@ export function MaintenanceViewDialog({
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Loading...</DialogTitle>
+            <DialogDescription>
+              Please wait while we load the maintenance details.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-8 text-center text-muted-foreground">
             Loading maintenance details...
@@ -494,7 +497,7 @@ export function MaintenanceViewDialog({
                           <div className="space-y-2">
                             <VehicleSelector
                               vehicles={availableVehicles}
-                              value={spareVehicleId || undefined}
+                              value={spareVehicleId?.toString() || ""}
                               onChange={(vehicleId) => {
                                 if (vehicleId) {
                                   updateSpareMutation.mutate({
@@ -680,7 +683,7 @@ export function MaintenanceViewDialog({
             </div>
 
             {/* View All Documents Button */}
-            <Link href={`/documents?vehicleId=${vehicle?.id}&reservationId=${reservation?.id}`}>
+            <Link href={`/documents?vehicleId=${vehicle?.id || ''}&reservationId=${reservation?.id || ''}`}>
               <Button variant="outline" size="sm" className="w-full mb-3" data-testid="button-view-all-documents">
                 <FolderOpen className="h-4 w-4 mr-2" />
                 View All Documents
