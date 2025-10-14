@@ -36,8 +36,9 @@ import {
 } from "@/components/ui/dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { format, addDays, parseISO } from "date-fns";
-import { Reservation, Vehicle, Customer } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { Reservation, Vehicle, Customer, Driver } from "@shared/schema";
+import { Loader2, User, Car as CarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Form schema for maintenance editing - only fields that can be edited
 const maintenanceEditSchema = z.object({
@@ -87,6 +88,48 @@ export function MaintenanceEditDialog({
   const { data: customers = [] } = useQuery<any[]>({
     queryKey: ['/api/customers'],
     enabled: open,
+  });
+
+  // For maintenance blocks, fetch active rentals for the vehicle to find the customer
+  const { data: vehicleReservations } = useQuery<Reservation[]>({
+    queryKey: [`/api/reservations/vehicle/${reservation?.vehicleId}`],
+    enabled: !!reservation?.vehicleId && reservation?.type === 'maintenance_block' && open,
+  });
+
+  // Find active rental for this vehicle (for maintenance blocks)
+  const activeRental = (() => {
+    if (reservation?.type !== 'maintenance_block' || !vehicleReservations) return null;
+    
+    const now = new Date();
+    
+    return vehicleReservations.find(r => {
+      if (r.type !== 'standard') return false;
+      if (r.status !== 'confirmed' && r.status !== 'pending') return false;
+      
+      const startDate = parseISO(r.startDate);
+      
+      // Check if rental is currently active
+      if (!r.endDate) {
+        // Open-ended rental - check if started
+        return startDate <= now;
+      } else {
+        // Has end date - check if we're within the rental period
+        const endDate = parseISO(r.endDate);
+        return startDate <= now && now <= endDate;
+      }
+    }) || null;
+  })();
+
+  // Fetch the customer from active rental (for maintenance blocks)
+  const { data: rentalCustomer } = useQuery<Customer>({
+    queryKey: [`/api/customers/${activeRental?.customerId}`],
+    enabled: !!activeRental?.customerId && open,
+  });
+
+  // Fetch the driver from active rental (for maintenance blocks)
+  const { data: rentalDriver } = useQuery<Driver>({
+    queryKey: [`/api/drivers/${activeRental?.driverId}`],
+    enabled: !!activeRental?.driverId && open,
   });
 
   // Parse the maintenance notes to extract structured data
@@ -364,6 +407,41 @@ export function MaintenanceEditDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Active Rental Context - Show if exists */}
+            {(rentalCustomer || rentalDriver) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-blue-900">Active Rental Information</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Active Rental Customer */}
+                  {rentalCustomer && (
+                    <div>
+                      <label className="text-xs font-medium text-blue-700">Customer (from active rental)</label>
+                      <div className="mt-1 flex items-center gap-2 text-sm text-blue-900">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">{rentalCustomer.name}</span>
+                        {rentalCustomer.phone && <span className="text-blue-600">• {rentalCustomer.phone}</span>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Active Rental Driver */}
+                  {rentalDriver && (
+                    <div>
+                      <label className="text-xs font-medium text-blue-700">Driver (from active rental)</label>
+                      <div className="mt-1 flex items-center gap-2 text-sm text-blue-900">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">{rentalDriver.displayName}</span>
+                        {rentalDriver.isPrimaryDriver && (
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">Primary</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Vehicle (Display Only) */}
               <div>
@@ -377,14 +455,36 @@ export function MaintenanceEditDialog({
                 </div>
               </div>
 
-              {/* Maintenance Type - parsed from notes (display only) */}
+              {/* Maintenance Type - Editable */}
               <div>
                 <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   Maintenance Type
                 </label>
-                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-maintenance-type">
-                  {parsed.maintenanceType || 'Not specified'}
-                </div>
+                <Select 
+                  value={parsed.maintenanceType} 
+                  disabled
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={parsed.maintenanceType || "Not specified"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="breakdown">Breakdown</SelectItem>
+                    <SelectItem value="tire_replacement">Tire Replacement</SelectItem>
+                    <SelectItem value="brake_service">Brake Service</SelectItem>
+                    <SelectItem value="engine_repair">Engine Repair</SelectItem>
+                    <SelectItem value="transmission_repair">Transmission Repair</SelectItem>
+                    <SelectItem value="electrical_issue">Electrical Issue</SelectItem>
+                    <SelectItem value="air_conditioning">Air Conditioning</SelectItem>
+                    <SelectItem value="battery_replacement">Battery Replacement</SelectItem>
+                    <SelectItem value="oil_change">Oil Change</SelectItem>
+                    <SelectItem value="regular_maintenance">Regular Maintenance</SelectItem>
+                    <SelectItem value="apk_inspection">APK Inspection</SelectItem>
+                    <SelectItem value="warranty_service">Warranty Service</SelectItem>
+                    <SelectItem value="accident_damage">Accident Damage</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Type cannot be changed after creation</p>
               </div>
 
               {/* Customer (Display Only) */}
