@@ -98,6 +98,8 @@ export const vehicles = pgTable("vehicles", {
   warrantyEndDate: text("warranty_end_date"),
   seatcovers: boolean("seatcovers"),
   backupbeepers: boolean("backupbeepers"),
+  spareTire: boolean("spare_tire"),
+  toolsAndJack: boolean("tools_and_jack"),
   
   // Maintenance status for spare vehicle management
   maintenanceStatus: text("maintenance_status").default("ok").notNull(), // 'ok' | 'needs_service' | 'in_service'

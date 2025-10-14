@@ -215,6 +215,8 @@ export function VehicleForm({
     wokNotification: Boolean(initialData.wokNotification),
     seatcovers: Boolean(initialData.seatcovers),
     backupbeepers: Boolean(initialData.backupbeepers),
+    spareTire: Boolean(initialData.spareTire),
+    toolsAndJack: Boolean(initialData.toolsAndJack),
     
     // For string-boolean fields, convert to actual boolean for UI
     registeredTo: initialData.registeredTo === "true" || initialData.registeredTo === true,
@@ -260,6 +262,8 @@ export function VehicleForm({
       radioCode: "",
       seatcovers: false,
       backupbeepers: false,
+      spareTire: false,
+      toolsAndJack: false,
       internalAppointments: "",
       departureMileage: "",
       returnMileage: "",
@@ -490,7 +494,7 @@ export function VehicleForm({
     
     // Separate normal boolean fields from string-boolean fields
     const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
-      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'gps', 'adBlue'];
+      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'spareTire', 'toolsAndJack', 'gps', 'adBlue'];
     
     // These fields are stored as strings in the database despite being boolean in the UI
     const stringBooleanFields = ['registeredTo', 'company'];
@@ -1157,6 +1161,42 @@ export function VehicleForm({
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
                         <div className="space-y-0.5">
                           <FormLabel>Backup Beepers</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="spareTire"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Spare Tire</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="toolsAndJack"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Onboard Tools & Jack</FormLabel>
                         </div>
                         <FormControl>
                           <Switch

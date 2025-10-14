@@ -1555,6 +1555,22 @@ Autolease Lam`;
                   </div>
                   
                   <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Tire</h4>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.spareTire} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.spareTire ? "Available" : "Not Available"}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Onboard Tools & Jack</h4>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!vehicle.toolsAndJack} disabled />
+                      <span className="text-sm text-gray-500">{vehicle.toolsAndJack ? "Available" : "Not Available"}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Internal Appointments</h4>
                     <p className="text-base">{vehicle.internalAppointments || "N/A"}</p>
                   </div>
