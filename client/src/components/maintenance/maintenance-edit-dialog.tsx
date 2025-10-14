@@ -421,19 +421,19 @@ export function MaintenanceEditDialog({
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Vehicle (Display Only) */}
-              <div>
-                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Vehicle
-                </label>
-                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-vehicle">
-                  {vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)
-                    ? `${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.brand} ${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.model} (${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.licensePlate})`
-                    : 'Not specified'}
-                </div>
+            {/* Vehicle (Display Only) - Full Width */}
+            <div>
+              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Vehicle
+              </label>
+              <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border text-base font-medium" data-testid="display-vehicle">
+                {vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)
+                  ? `${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.brand} ${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.model} (${vehicles.find((v: Vehicle) => v.id === reservation?.vehicleId)?.licensePlate})`
+                  : 'Not specified'}
               </div>
-
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Maintenance Type - Editable */}
               <FormField
                 control={form.control}
@@ -490,18 +490,6 @@ export function MaintenanceEditDialog({
                   </FormItem>
                 )}
               />
-
-              {/* Customer (Display Only) */}
-              <div>
-                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Customer
-                </label>
-                <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-sm" data-testid="display-customer">
-                  {form.watch("customerId") && form.watch("customerId") !== "none"
-                    ? customers.find((c: any) => c.id.toString() === form.watch("customerId"))?.name || 'Not found'
-                    : 'None (no customer)'}
-                </div>
-              </div>
 
               {/* Contact Phone Number */}
               <FormField
