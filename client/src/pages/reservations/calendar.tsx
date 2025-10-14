@@ -1608,6 +1608,13 @@ export default function ReservationCalendarPage() {
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setViewDialogOpen(false)}
+                  data-testid="button-close-view-dialog"
+                >
+                  Close
+                </Button>
               </div>
             </div>
           )}
