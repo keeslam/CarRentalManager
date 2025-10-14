@@ -27,7 +27,10 @@ import {
   Receipt,
   Camera,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  Download,
+  Printer,
+  Eye
 } from "lucide-react";
 import { displayLicensePlate } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -744,8 +747,7 @@ export function MaintenanceViewDialog({
               return (
                 <div 
                   key={doc.id} 
-                  className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
+                  className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
                 >
                   {isImage ? (
                     <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
@@ -770,6 +772,54 @@ export function MaintenanceViewDialog({
                         {doc.notes}
                       </div>
                     )}
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-1 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => window.open(`/api/documents/download/${doc.id}`, '_blank')}
+                      data-testid={`button-view-${doc.id}`}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `/api/documents/download/${doc.id}`;
+                        link.download = doc.fileName || 'document';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      data-testid={`button-download-${doc.id}`}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        const printWindow = window.open(`/api/documents/download/${doc.id}`, '_blank');
+                        if (printWindow) {
+                          printWindow.onload = () => {
+                            printWindow.print();
+                          };
+                        }
+                      }}
+                      data-testid={`button-print-${doc.id}`}
+                    >
+                      <Printer className="h-3 w-3 mr-1" />
+                      Print
+                    </Button>
                   </div>
                 </div>
               );
