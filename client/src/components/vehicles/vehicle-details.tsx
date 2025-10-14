@@ -72,9 +72,11 @@ import { useMemo } from "react";
 
 interface VehicleDetailsProps {
   vehicleId: number;
+  inDialogContext?: boolean;
+  onClose?: () => void;
 }
 
-export function VehicleDetails({ vehicleId }: VehicleDetailsProps) {
+export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: VehicleDetailsProps) {
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
   const [isApkReminderOpen, setIsApkReminderOpen] = useState(false);
@@ -625,13 +627,13 @@ Autolease Lam`;
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => navigate("/vehicles")}
+            onClick={() => inDialogContext && onClose ? onClose() : navigate("/vehicles")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left mr-2">
               <path d="m12 19-7-7 7-7"/>
               <path d="M19 12H5"/>
             </svg>
-            Back to Vehicles
+            {inDialogContext ? "Back" : "Back to Vehicles"}
           </Button>
 
           <Dialog open={isEditVehicleDialogOpen} onOpenChange={setIsEditVehicleDialogOpen}>

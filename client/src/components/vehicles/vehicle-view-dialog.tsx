@@ -70,7 +70,11 @@ export function VehicleViewDialog({
               </AlertDescription>
             </Alert>
           ) : vehicleId ? (
-            <VehicleDetails vehicleId={vehicleId} />
+            <VehicleDetails 
+              vehicleId={vehicleId} 
+              inDialogContext={true}
+              onClose={() => onOpenChange(false)}
+            />
           ) : null}
         </div>
       </DialogContent>
