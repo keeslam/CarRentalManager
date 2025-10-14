@@ -79,12 +79,13 @@ const formSchema = z.object({
 
 interface InlineDocumentUploadProps {
   vehicleId: number;
+  reservationId?: number;
   onSuccess?: () => void;
   preselectedType?: string;
   children?: React.ReactNode;
 }
 
-export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, children }: InlineDocumentUploadProps) {
+export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, preselectedType, children }: InlineDocumentUploadProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -137,6 +138,10 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
       formData.append("file", data.file);
       formData.append("createdBy", localStorage.getItem("userName") || "User");
       
+      if (reservationId) {
+        formData.append("reservationId", reservationId.toString());
+      }
+      
       if (data.notes) {
         formData.append("notes", data.notes);
       }
@@ -152,6 +157,10 @@ export function InlineDocumentUpload({ vehicleId, onSuccess, preselectedType, ch
       invalidateRelatedQueries('documents');
       if (vehicleId) {
         invalidateRelatedQueries('vehicles', vehicleId);
+      }
+      if (reservationId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+        invalidateRelatedQueries('reservations', reservationId);
       }
       
       // Show success message
