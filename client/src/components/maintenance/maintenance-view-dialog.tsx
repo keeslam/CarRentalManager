@@ -616,111 +616,104 @@ export function MaintenanceViewDialog({
             </>
           )}
 
-          {/* Service Documentation */}
+          {/* Maintenance Documents */}
           <Separator />
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Service Documentation
-            </h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Maintenance Documents</h3>
             
-            {/* Quick Upload Buttons */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <InvoiceScanner
-                selectedVehicleId={vehicle?.id}
-                onExpensesCreated={(expenses) => {
-                  console.log('Expenses created from invoice:', expenses);
-                  queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
-                  toast({
-                    title: "Expenses created",
-                    description: `Created ${expenses.length} expense record(s) from invoice`,
-                  });
-                }}
-              />
+            {/* Quick Upload */}
+            <div className="mb-4">
+              <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Quick Upload:</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <InvoiceScanner
+                  selectedVehicleId={vehicle?.id}
+                  onExpensesCreated={(expenses) => {
+                    console.log('Expenses created from invoice:', expenses);
+                    queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                    toast({
+                      title: "Expenses created",
+                      description: `Created ${expenses.length} expense record(s) from invoice`,
+                    });
+                  }}
+                />
 
-              <InlineDocumentUpload
-                vehicleId={vehicle?.id || 0}
-                reservationId={reservation?.id}
-                preselectedType="Damage Report"
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
-                }}
-              >
-                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-damage-report">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Upload Damage Report
-                </Button>
-              </InlineDocumentUpload>
+                <InlineDocumentUpload
+                  vehicleId={vehicle?.id || 0}
+                  reservationId={reservation?.id}
+                  preselectedType="Vehicle Photos"
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                  }}
+                >
+                  <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-photos">
+                    + Service Photo
+                  </Button>
+                </InlineDocumentUpload>
 
-              <InlineDocumentUpload
-                vehicleId={vehicle?.id || 0}
-                reservationId={reservation?.id}
-                preselectedType="Vehicle Photos"
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
-                }}
-              >
-                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-photos">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Upload Photos
-                </Button>
-              </InlineDocumentUpload>
+                <InlineDocumentUpload
+                  vehicleId={vehicle?.id || 0}
+                  reservationId={reservation?.id}
+                  preselectedType="Maintenance Record"
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                  }}
+                >
+                  <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-maintenance-pdf">
+                    + Service Report PDF
+                  </Button>
+                </InlineDocumentUpload>
 
-              <InlineDocumentUpload
-                vehicleId={vehicle?.id || 0}
-                reservationId={reservation?.id}
-                preselectedType="Maintenance Record"
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
-                }}
-              >
-                <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-upload-other">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Other
-                </Button>
-              </InlineDocumentUpload>
+                <InlineDocumentUpload
+                  vehicleId={vehicle?.id || 0}
+                  reservationId={reservation?.id}
+                  preselectedType="Other"
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                  }}
+                >
+                  <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-other">
+                    + Other
+                  </Button>
+                </InlineDocumentUpload>
+              </div>
             </div>
 
-            {/* View All Documents Button */}
-            <Link href={`/documents?vehicleId=${vehicle?.id || ''}&reservationId=${reservation?.id || ''}`}>
-              <Button variant="outline" size="sm" className="w-full mb-3" data-testid="button-view-all-documents">
-                <FolderOpen className="h-4 w-4 mr-2" />
-                View All Documents
-              </Button>
-            </Link>
-
-            {/* Documents List */}
-            {documents.length > 0 ? (
-              <div className="space-y-2">
-                {documents.map((doc: any) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium text-sm">{doc.documentType}</div>
-                        {doc.description && (
-                          <div className="text-xs text-muted-foreground">{doc.description}</div>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
+            {/* Uploaded Documents */}
+            <div>
+              <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Uploaded Documents:</label>
+              {documents.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {documents.map((doc: any) => (
+                    <div 
+                      key={doc.id} 
+                      className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}
                     >
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No service documentation uploaded yet</p>
-                <p className="text-xs mt-1">Use the buttons above to upload documents</p>
-              </div>
-            )}
+                      <FileText className="h-5 w-5 text-red-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{doc.documentType}</div>
+                        <div className="text-xs text-muted-foreground uppercase">
+                          {doc.fileName?.split('.').pop() || 'FILE'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No maintenance documents uploaded yet</p>
+                </div>
+              )}
+            </div>
+
+            {/* View All Documents Link */}
+            <Link href={`/documents?vehicleId=${vehicle?.id || ''}&reservationId=${reservation?.id || ''}`}>
+              <Button variant="link" size="sm" className="mt-3 p-0 h-auto" data-testid="button-view-all-documents">
+                View All Documents →
+              </Button>
+            </Link>
           </div>
         </div>
       </DialogContent>
