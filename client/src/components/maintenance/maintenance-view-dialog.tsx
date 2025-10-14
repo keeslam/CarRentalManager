@@ -55,6 +55,7 @@ export function MaintenanceViewDialog({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingSpare, setEditingSpare] = useState<number | null>(null);
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
 
   // Fetch reservation data
   const { data: reservation, isLoading } = useQuery<Reservation>({
@@ -279,6 +280,7 @@ export function MaintenanceViewDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -708,15 +710,79 @@ export function MaintenanceViewDialog({
               )}
             </div>
 
-            {/* View All Documents Link */}
-            <Link href={`/documents?vehicleId=${vehicle?.id || ''}&reservationId=${reservation?.id || ''}`}>
-              <Button variant="link" size="sm" className="mt-3 p-0 h-auto" data-testid="button-view-all-documents">
-                View All Documents →
-              </Button>
-            </Link>
+            {/* View All Documents Button */}
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="mt-3 p-0 h-auto" 
+              data-testid="button-view-all-documents"
+              onClick={() => setShowAllDocuments(true)}
+            >
+              View All Documents →
+            </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* All Documents Dialog */}
+    <Dialog open={showAllDocuments} onOpenChange={setShowAllDocuments}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Maintenance Documents</DialogTitle>
+          <DialogDescription>
+            All documents for {vehicle?.brand} {vehicle?.model} ({displayLicensePlate(vehicle?.licensePlate || '')})
+          </DialogDescription>
+        </DialogHeader>
+
+        {documents.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {documents.map((doc: any) => {
+              const isImage = doc.contentType?.startsWith('image/');
+              const isPDF = doc.contentType === 'application/pdf';
+              
+              return (
+                <div 
+                  key={doc.id} 
+                  className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}
+                >
+                  {isImage ? (
+                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                      <img 
+                        src={`/api/documents/${doc.id}/download`} 
+                        alt={doc.documentType}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                      <FileText className="h-12 w-12 text-red-500" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium text-sm truncate">{doc.documentType}</div>
+                    <div className="text-xs text-muted-foreground uppercase">
+                      {doc.fileName?.split('.').pop() || 'FILE'}
+                    </div>
+                    {doc.notes && (
+                      <div className="text-xs text-muted-foreground mt-1 truncate">
+                        {doc.notes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p>No documents uploaded yet</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
