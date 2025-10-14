@@ -27,7 +27,7 @@ import {
   getDay,
   formatISO
 } from "date-fns";
-import { Vehicle, Reservation, Customer } from "@shared/schema";
+import { Vehicle, Reservation, Customer, Driver } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { formatReservationStatus } from "@/lib/format-utils";
@@ -399,6 +399,19 @@ export function ReservationCalendar() {
                                       {res.customer?.phone && <div className="text-xs text-gray-600">{res.customer?.phone}</div>}
                                     </div>
                                   </div>
+
+                                  {/* Driver indication */}
+                                  {res.driverId && (
+                                    <div className="px-3 py-1 flex items-start space-x-2 bg-blue-50 -mx-3 border-t border-blue-100">
+                                      <User className="h-4 w-4 text-blue-600 mt-0.5" />
+                                      <div>
+                                        <div className="font-medium text-sm text-blue-900">
+                                          Driver Assigned
+                                        </div>
+                                        <div className="text-xs text-blue-600">Click to view details</div>
+                                      </div>
+                                    </div>
+                                  )}
                                   
                                   {/* Dates */}
                                   <div className="px-3 py-1 flex items-start space-x-2">
