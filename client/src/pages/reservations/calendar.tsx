@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
-import { Vehicle, Reservation, Document } from "@shared/schema";
+import { Vehicle, Reservation, Document, Driver } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { 
@@ -977,6 +977,25 @@ export default function ReservationCalendarPage() {
                                         {res.customer?.phone && <div className="text-xs text-gray-600">{res.customer?.phone}</div>}
                                       </div>
                                     </div>
+
+                                    {/* Driver details */}
+                                    {res.driver && (
+                                      <div className="px-3 py-1 flex items-start space-x-2 bg-blue-50 -mx-3 border-t border-blue-100">
+                                        <User className="h-4 w-4 text-blue-600 mt-0.5" />
+                                        <div>
+                                          <div className="font-medium text-sm text-blue-900 flex items-center gap-1">
+                                            {res.driver.displayName}
+                                            {res.driver.isPrimaryDriver && (
+                                              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-[10px] px-1 py-0">Primary</Badge>
+                                            )}
+                                          </div>
+                                          {res.driver.phone && <div className="text-xs text-blue-700">{res.driver.phone}</div>}
+                                          {res.driver.driverLicenseNumber && (
+                                            <div className="text-xs text-blue-600">License: {res.driver.driverLicenseNumber}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                     
                                     {/* Dates */}
                                     <div className="px-3 py-1 flex items-start space-x-2">
@@ -1232,6 +1251,44 @@ export default function ReservationCalendarPage() {
                   )}
                 </div>
               </div>
+
+              {/* Driver Details */}
+              {selectedReservation.driver && (
+                <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                  <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center gap-2">
+                    <User className="h-4 w-4 text-blue-700" />
+                    Driver Information
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="font-medium text-blue-900 flex items-center gap-2">
+                      {selectedReservation.driver.displayName}
+                      {selectedReservation.driver.isPrimaryDriver && (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-300">Primary Driver</Badge>
+                      )}
+                    </div>
+                    {selectedReservation.driver.email && (
+                      <div className="text-sm text-blue-700">{selectedReservation.driver.email}</div>
+                    )}
+                    {selectedReservation.driver.phone && (
+                      <div className="text-sm text-blue-700">{selectedReservation.driver.phone}</div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-2 border-t border-blue-200">
+                      {selectedReservation.driver.driverLicenseNumber && (
+                        <div className="text-xs">
+                          <span className="text-blue-600 font-medium">License:</span>{' '}
+                          <span className="text-blue-900">{selectedReservation.driver.driverLicenseNumber}</span>
+                        </div>
+                      )}
+                      {selectedReservation.driver.licenseExpiry && (
+                        <div className="text-xs">
+                          <span className="text-blue-600 font-medium">Expires:</span>{' '}
+                          <span className="text-blue-900">{selectedReservation.driver.licenseExpiry}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Dates and Duration */}
               {/* Date and Duration Info - Different layout for maintenance */}

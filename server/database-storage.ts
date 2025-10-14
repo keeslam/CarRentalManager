@@ -552,10 +552,11 @@ export class DatabaseStorage implements IStorage {
     
     const result: Reservation[] = [];
     
-    // Fetch vehicle and customer data for each reservation
+    // Fetch vehicle, customer, and driver data for each reservation
     for (const reservation of reservationsData) {
       const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
       let customer = null;
+      let driver = null;
       
       // For maintenance blocks, try to find customer from active open-ended rental
       if (reservation.type === 'maintenance_block' && !reservation.customerId && reservation.vehicleId) {
@@ -588,10 +589,17 @@ export class DatabaseStorage implements IStorage {
         customer = directCustomer;
       }
       
+      // Fetch driver data if driverId is present
+      if (reservation.driverId) {
+        const [driverData] = await db.select().from(drivers).where(eq(drivers.id, reservation.driverId));
+        driver = driverData;
+      }
+      
       result.push({
         ...reservation,
         vehicle,
-        customer
+        customer,
+        driver
       });
     }
     

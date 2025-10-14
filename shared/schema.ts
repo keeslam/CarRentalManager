@@ -522,6 +522,7 @@ export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Reservation = typeof reservations.$inferSelect & {
   vehicle?: Vehicle;
   customer?: Customer;
+  driver?: Driver;
 };
 export type InsertReservation = z.infer<typeof insertReservationSchema>;
 
