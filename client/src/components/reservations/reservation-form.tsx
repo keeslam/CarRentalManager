@@ -1945,19 +1945,27 @@ export function ReservationForm({
               {/* Document Management - Always visible */}
               {form.watch("vehicleId") && (
                 <div className="space-y-3 border rounded-lg p-4 bg-blue-50">
-                  <label className="text-sm font-semibold text-gray-800">📄 Contract & Documents</label>
+                  <label className="text-sm font-semibold text-gray-800">
+                    {initialData?.type === 'maintenance_block' ? '🔧 Service Documentation' : '📄 Contract & Documents'}
+                  </label>
                   
                   {/* Quick Upload Buttons */}
                   <div className="flex flex-wrap gap-2 p-3 bg-white rounded-md border border-gray-200">
                     <span className="text-xs text-gray-600 w-full mb-1 font-medium">
                       {!createdReservationId && !editMode ? 'Quick Upload (available after creating reservation):' : 'Quick Upload:'}
                     </span>
-                    {[
+                    {(initialData?.type === 'maintenance_block' ? [
+                      { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
+                      { type: 'Damage Report PDF', accept: '.pdf' },
+                      { type: 'Invoice', accept: '.pdf' },
+                      { type: 'Receipt', accept: '.pdf,.jpg,.jpeg,.png' },
+                      { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
+                    ] : [
                       { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
                       { type: 'Damage Report PDF', accept: '.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
-                    ].map(({ type, accept }) => (
+                    ]).map(({ type, accept }) => (
                       <Button
                         key={type}
                         type="button"
