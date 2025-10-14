@@ -854,9 +854,10 @@ export function ReservationForm({
       URL.revokeObjectURL(url);
       
       // Refetch documents to show the new version
-      if (createdReservationId || initialData?.id) {
+      const reservationId = createdReservationId || initialData?.id;
+      if (reservationId) {
         queryClient.invalidateQueries({ 
-          queryKey: ['/api/documents/reservation', createdReservationId || initialData?.id] 
+          queryKey: [`/api/documents/reservation/${reservationId}`] 
         });
       }
       
