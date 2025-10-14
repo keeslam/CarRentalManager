@@ -48,10 +48,27 @@ const maintenanceEditSchema = z.object({
   ]),
   customerId: z.string().optional(), // Optional customer
   contactPhone: z.string().optional(), // Phone number for person dropping off vehicle
+  maintenanceType: z.enum([
+    "breakdown",
+    "tire_replacement",
+    "brake_service",
+    "engine_repair",
+    "transmission_repair",
+    "electrical_issue",
+    "air_conditioning",
+    "battery_replacement",
+    "oil_change",
+    "regular_maintenance",
+    "apk_inspection",
+    "warranty_service",
+    "accident_damage",
+    "other"
+  ]),
+  description: z.string().optional(), // Description/details of the maintenance
   startDate: z.string().min(1, "Date when vehicle comes in is required"),
   maintenanceDuration: z.number().min(1, "Duration must be at least 1 day").max(90, "Duration cannot exceed 90 days"),
   maintenanceStatus: z.enum(["scheduled", "in", "out"]).default("scheduled"),
-  notes: z.string().optional(),
+  notes: z.string().optional(), // Additional notes
 });
 
 type MaintenanceEditFormType = z.infer<typeof maintenanceEditSchema>;
@@ -146,18 +163,23 @@ export function MaintenanceEditDialog({
     };
   };
 
+  // Parse maintenance notes for initial values
+  const parsed = reservation ? parseMaintenanceNotes(reservation.notes || '') : { maintenanceType: '', description: '', notes: '' };
+
   // Initialize form with reservation data
   const form = useForm<MaintenanceEditFormType>({
     resolver: zodResolver(maintenanceEditSchema),
     defaultValues: {
       vehicleId: reservation?.vehicleId || undefined,
       customerId: reservation?.customerId?.toString() || "none",
+      maintenanceType: (parsed.maintenanceType as any) || "other",
+      description: parsed.description || "",
       startDate: reservation?.startDate || "",
       maintenanceDuration: reservation?.maintenanceDuration || 
         (reservation?.startDate && reservation?.endDate ? 
           Math.max(1, Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1),
       maintenanceStatus: (reservation?.maintenanceStatus === "in" || reservation?.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
-      notes: reservation?.notes || "",
+      notes: parsed.notes || "",
     },
   });
 
@@ -245,14 +267,17 @@ export function MaintenanceEditDialog({
         }
       }
       
+      const parsedNotes = parseMaintenanceNotes(reservation.notes || '');
       form.reset({
         vehicleId: reservation.vehicleId || undefined,
         customerId: customerIdToSet,
         contactPhone: contactPhoneToSet,
+        maintenanceType: (parsedNotes.maintenanceType as any) || "other",
+        description: parsedNotes.description || "",
         startDate: reservation.startDate,
         maintenanceDuration: duration,
         maintenanceStatus: (reservation.maintenanceStatus === "in" || reservation.maintenanceStatus === "out") ? reservation.maintenanceStatus : "in",
-        notes: reservation.notes || "",
+        notes: parsedNotes.notes || "",
       });
     }
   }, [reservation, open, form, overlappingRentals, isLoadingRentals, customers]);
@@ -265,20 +290,15 @@ export function MaintenanceEditDialog({
       // Calculate end date from start date + duration
       const endDate = calculateEndDate(data.startDate, data.maintenanceDuration);
       
-      // Build notes with contact phone if provided
-      let notesText = data.notes || "";
+      // Build notes with maintenance type, description, and contact phone
+      let notesText = `${data.maintenanceType}: ${data.description || ''}`;
+      
+      if (data.notes) {
+        notesText += `\n${data.notes}`;
+      }
+      
       if (data.contactPhone) {
-        // If notes don't already contain contact phone, append it
-        if (!notesText.includes("Contact Phone:")) {
-          notesText = notesText.trim();
-          if (notesText && !notesText.endsWith("\n")) {
-            notesText += "\n";
-          }
-          notesText += `Contact Phone: ${data.contactPhone}`;
-        } else {
-          // Update existing contact phone line
-          notesText = notesText.replace(/Contact Phone:.*$/m, `Contact Phone: ${data.contactPhone}`);
-        }
+        notesText += `\nContact Phone: ${data.contactPhone}`;
       }
       
       // If there are spare vehicle assignments, use the maintenance-with-spare endpoint
@@ -393,8 +413,6 @@ export function MaintenanceEditDialog({
     return null;
   }
 
-  const parsed = parseMaintenanceNotes(reservation.notes || '');
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -456,36 +474,61 @@ export function MaintenanceEditDialog({
               </div>
 
               {/* Maintenance Type - Editable */}
-              <div>
-                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Maintenance Type
-                </label>
-                <Select 
-                  value={parsed.maintenanceType} 
-                  disabled
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={parsed.maintenanceType || "Not specified"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="breakdown">Breakdown</SelectItem>
-                    <SelectItem value="tire_replacement">Tire Replacement</SelectItem>
-                    <SelectItem value="brake_service">Brake Service</SelectItem>
-                    <SelectItem value="engine_repair">Engine Repair</SelectItem>
-                    <SelectItem value="transmission_repair">Transmission Repair</SelectItem>
-                    <SelectItem value="electrical_issue">Electrical Issue</SelectItem>
-                    <SelectItem value="air_conditioning">Air Conditioning</SelectItem>
-                    <SelectItem value="battery_replacement">Battery Replacement</SelectItem>
-                    <SelectItem value="oil_change">Oil Change</SelectItem>
-                    <SelectItem value="regular_maintenance">Regular Maintenance</SelectItem>
-                    <SelectItem value="apk_inspection">APK Inspection</SelectItem>
-                    <SelectItem value="warranty_service">Warranty Service</SelectItem>
-                    <SelectItem value="accident_damage">Accident Damage</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Type cannot be changed after creation</p>
-              </div>
+              <FormField
+                control={form.control}
+                name="maintenanceType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maintenance Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-maintenance-type">
+                          <SelectValue placeholder="Select maintenance type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="breakdown">Breakdown</SelectItem>
+                        <SelectItem value="tire_replacement">Tire Replacement</SelectItem>
+                        <SelectItem value="brake_service">Brake Service</SelectItem>
+                        <SelectItem value="engine_repair">Engine Repair</SelectItem>
+                        <SelectItem value="transmission_repair">Transmission Repair</SelectItem>
+                        <SelectItem value="electrical_issue">Electrical Issue</SelectItem>
+                        <SelectItem value="air_conditioning">Air Conditioning</SelectItem>
+                        <SelectItem value="battery_replacement">Battery Replacement</SelectItem>
+                        <SelectItem value="oil_change">Oil Change</SelectItem>
+                        <SelectItem value="regular_maintenance">Regular Maintenance</SelectItem>
+                        <SelectItem value="apk_inspection">APK Inspection</SelectItem>
+                        <SelectItem value="warranty_service">Warranty Service</SelectItem>
+                        <SelectItem value="accident_damage">Accident Damage</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Brief description of the maintenance work"
+                        {...field}
+                        data-testid="input-maintenance-description"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      What needs to be done? (e.g., "front brakes", "oil and filter change")
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Customer (Display Only) */}
               <div>
