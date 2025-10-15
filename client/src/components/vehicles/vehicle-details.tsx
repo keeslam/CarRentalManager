@@ -1109,9 +1109,12 @@ Autolease Lam`;
                   )}
                 </div>
               )}
-              <p className="text-xs text-blue-600 mt-1">
-                Until {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
-              </p>
+              <div className="text-sm text-blue-700 mt-2 pt-2 border-t border-blue-200">
+                <p className="font-medium">Rental Period:</p>
+                <p className="text-xs mt-0.5">
+                  {formatDate(activeReservation.startDate)} - {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1141,9 +1144,12 @@ Autolease Lam`;
                   )}
                 </div>
               )}
-              <p className="text-xs text-green-600 mt-1">
-                Starts {formatDate(upcomingReservation.startDate)}
-              </p>
+              <div className="text-sm text-green-700 mt-2 pt-2 border-t border-green-200">
+                <p className="font-medium">Rental Period:</p>
+                <p className="text-xs mt-0.5">
+                  {formatDate(upcomingReservation.startDate)} - {formatDate(upcomingReservation.endDate)}
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
