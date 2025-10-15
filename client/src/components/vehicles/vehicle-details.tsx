@@ -45,7 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck } from "lucide-react";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -1868,40 +1868,55 @@ Autolease Lam`;
                                   Created by: {document.createdBy}
                                 </div>
                               )}
-                              <div className="flex justify-between mt-2">
-                                <div className="flex space-x-2">
-                                  <a 
-                                    href={`/api/documents/download/${document.id}`} 
-                                    className="text-primary-600 hover:text-primary-800 text-sm"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    Download
-                                  </a>
-                                  <a 
-                                    href={`/${document.filePath}`} 
-                                    className="text-primary-600 hover:text-primary-800 text-sm"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      const printWindow = window.open(
-                                        `/${document.filePath}`, 
-                                        'Print Preview',
-                                        'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
-                                      );
-                                      if (printWindow) {
-                                        printWindow.onload = () => {
-                                          printWindow.print();
-                                        };
-                                      }
-                                    }}
-                                  >
-                                    Print
-                                  </a>
-                                </div>
+                              <div className="flex justify-between items-center gap-2 mt-2">
                                 <button 
-                                  className="text-red-600 hover:text-red-800 text-sm"
+                                  onClick={() => window.open(
+                                    `/${document.filePath}`,
+                                    'Document Preview',
+                                    'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+                                  )}
+                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
+                                  data-testid={`button-view-document-${document.id}`}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  View
+                                </button>
+                                
+                                <a 
+                                  href={`/api/documents/download/${document.id}`} 
+                                  className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1 transition-colors"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  data-testid={`link-download-document-${document.id}`}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </a>
+                                
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    const printWindow = window.open(
+                                      `/${document.filePath}`, 
+                                      'Print Preview',
+                                      'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+                                    );
+                                    if (printWindow) {
+                                      printWindow.onload = () => {
+                                        printWindow.print();
+                                      };
+                                    }
+                                  }}
+                                  className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 transition-colors"
+                                  data-testid={`button-print-document-${document.id}`}
+                                >
+                                  <Printer className="h-3.5 w-3.5" />
+                                  Print
+                                </button>
+                                
+                                <button 
+                                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 transition-colors"
+                                  data-testid={`button-delete-document-${document.id}`}
                                   onClick={async () => {
                                     if (window.confirm(`Are you sure you want to delete the document "${document.fileName}"?`)) {
                                       try {
@@ -1932,6 +1947,7 @@ Autolease Lam`;
                                     }
                                   }}
                                 >
+                                  <Trash2 className="h-3.5 w-3.5" />
                                   Delete
                                 </button>
                               </div>
