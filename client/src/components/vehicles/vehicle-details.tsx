@@ -477,9 +477,27 @@ Autolease Lam`;
     queryKey: [`/api/documents/vehicle/${vehicleId}`],
   });
   
+  // Normalize document type to standard category
+  const normalizeDocumentType = (documentType: string): string => {
+    const type = documentType.toLowerCase().trim();
+    
+    if (type.includes('contract')) return 'Contracts';
+    if (type.includes('damage') && (type.includes('report') || type.includes('form'))) return 'Damage Reports';
+    if (type.includes('photo') || type.includes('image')) return 'Vehicle Photos';
+    if (type.includes('invoice') || type.includes('receipt')) return 'Invoices & Receipts';
+    if (type.includes('insurance')) return 'Insurance Documents';
+    if (type.includes('registration') || type.includes('title')) return 'Registration Documents';
+    if (type.includes('maintenance') || type.includes('service')) return 'Maintenance Records';
+    if (type.includes('inspection') || type.includes('apk')) return 'Inspection Reports';
+    if (type.includes('other')) return 'Other Documents';
+    
+    // If no match, return original with proper capitalization
+    return documentType.charAt(0).toUpperCase() + documentType.slice(1);
+  };
+  
   // Group documents by category
   const documentsByCategory = documents?.reduce((grouped, document) => {
-    const category = document.documentType;
+    const category = normalizeDocumentType(document.documentType);
     if (!grouped[category]) {
       grouped[category] = [];
     }
