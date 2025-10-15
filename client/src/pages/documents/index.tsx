@@ -24,7 +24,7 @@ import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import { FileEdit, Star, Trash2, Printer } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer, Eye } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,6 +148,15 @@ export default function DocumentsIndex() {
     return emailableTypes.some(type => documentType.toLowerCase().includes(type));
   };
   
+  // Handle view document
+  const handleViewDocument = (document: Document) => {
+    window.open(
+      `/${document.filePath}`,
+      'Document Preview',
+      'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+    );
+  };
+
   // Handle print document
   const handlePrintDocument = (document: Document) => {
     const printWindow = window.open(
@@ -530,9 +539,18 @@ export default function DocumentsIndex() {
                                       </div>
                                       
                                       <div className="flex justify-between items-center gap-2">
+                                        <button 
+                                          onClick={() => handleViewDocument(doc)}
+                                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
+                                          data-testid={`button-view-document-${doc.id}`}
+                                        >
+                                          <Eye className="h-3.5 w-3.5" />
+                                          View
+                                        </button>
+                                        
                                         <a 
                                           href={`/api/documents/download/${doc.id}`} 
-                                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
+                                          className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1 transition-colors"
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           data-testid={`link-download-document-${doc.id}`}
