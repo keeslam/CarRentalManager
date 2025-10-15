@@ -1603,23 +1603,46 @@ export function ReservationForm({
                         <FormMessage />
                         {selectedDriver && (
                           <div className="mt-2 text-sm bg-muted p-2 rounded-md">
-                            <div className="font-medium flex items-center gap-2 mb-1">
-                              <span>{selectedDriver.displayName || `${selectedDriver.firstName} ${selectedDriver.lastName}`.trim()}</span>
-                              {selectedDriver.isPrimaryDriver && (
-                                <Badge variant="default" className="text-xs">Primary Driver</Badge>
-                              )}
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="font-medium flex items-center gap-2">
+                                <span>{selectedDriver.displayName || `${selectedDriver.firstName} ${selectedDriver.lastName}`.trim()}</span>
+                                {selectedDriver.isPrimaryDriver && (
+                                  <Badge variant="default" className="text-xs">Primary Driver</Badge>
+                                )}
+                              </div>
+                              <DriverDialog
+                                customerId={Number(customerIdWatch)}
+                                driver={selectedDriver}
+                                onSuccess={async () => {
+                                  await queryClient.invalidateQueries({ 
+                                    queryKey: [`/api/customers/${customerIdWatch}/drivers`] 
+                                  });
+                                }}
+                              >
+                                <Button type="button" variant="ghost" size="sm" className="h-6 px-2">
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Edit
+                                </Button>
+                              </DriverDialog>
                             </div>
-                            {selectedDriver.phone && (
-                              <div className="flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                              </svg>
+                              <span>{selectedDriver.phone || 'No phone'}</span>
+                            </div>
+                            {selectedDriver.email && (
+                              <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect>
+                                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
                                 </svg>
-                                <span>{selectedDriver.phone}</span>
+                                <span>{selectedDriver.email}</span>
                               </div>
                             )}
                             {selectedDriver.driverLicenseNumber && (
-                              <div className="flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                              <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <rect width="20" height="14" x="2" y="5" rx="2"/>
                                   <line x1="2" x2="22" y1="10" y2="10"/>
                                 </svg>
