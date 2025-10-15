@@ -75,6 +75,7 @@ const formSchema = z.object({
       message: "File type not supported.",
     }),
   notes: z.string().optional(),
+  apkDate: z.string().optional(), // Optional APK date for APK Inspection documents
 });
 
 interface InlineDocumentUploadProps {
@@ -99,8 +100,12 @@ export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, pres
       vehicleId: vehicleId,
       documentType: preselectedType || "",
       notes: "",
+      apkDate: "",
     },
   });
+
+  // Watch document type to show/hide APK date field
+  const documentType = form.watch("documentType");
 
   // Update document type when preselectedType changes
   useEffect(() => {
@@ -146,6 +151,11 @@ export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, pres
         formData.append("notes", data.notes);
       }
       
+      // Include APK date if provided for APK Inspection documents
+      if (data.apkDate) {
+        formData.append("apkDate", data.apkDate);
+      }
+      
       return await fetch("/api/documents", {
         method: "POST",
         body: formData,
@@ -177,6 +187,7 @@ export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, pres
         vehicleId: vehicleId,
         documentType: preselectedType || "",
         notes: "",
+        apkDate: "",
       });
       
       // Call onSuccess callback if provided
@@ -309,6 +320,30 @@ export function InlineDocumentUpload({ vehicleId, reservationId, onSuccess, pres
                   />
                 </div>
               </div>
+            )}
+            
+            {/* APK Date - only shown for APK Inspection documents */}
+            {documentType === "APK Inspection" && (
+              <FormField
+                control={form.control}
+                name="apkDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New APK Expiration Date</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        data-testid="input-apk-date"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Update the vehicle's APK expiration date (optional)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
             
             {/* Notes */}

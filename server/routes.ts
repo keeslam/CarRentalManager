@@ -3906,6 +3906,19 @@ Car Rental Management System`
       
       const document = await storage.createDocument(documentData);
       
+      // If this is an APK Inspection document and an APK date is provided, update the vehicle
+      if (req.body.documentType === "APK Inspection" && req.body.apkDate && req.body.vehicleId) {
+        try {
+          await storage.updateVehicle(req.body.vehicleId, {
+            apkDate: req.body.apkDate,
+            updatedBy: user ? user.username : null
+          });
+        } catch (error) {
+          console.error("Error updating vehicle APK date:", error);
+          // Continue anyway - the document was uploaded successfully
+        }
+      }
+      
       // Broadcast real-time update to all connected clients
       realtimeEvents.documents.created(document);
       
