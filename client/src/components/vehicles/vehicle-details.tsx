@@ -1879,13 +1879,13 @@ Autolease Lam`;
                                     Download
                                   </a>
                                   <a 
-                                    href={`/api/documents/download/${document.id}`} 
+                                    href={`/${document.filePath}`} 
                                     className="text-primary-600 hover:text-primary-800 text-sm"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      const printWindow = window.open(`/api/documents/download/${document.id}`, '_blank');
+                                      const printWindow = window.open(`/${document.filePath}`, '_blank');
                                       if (printWindow) {
                                         printWindow.onload = () => {
                                           printWindow.print();
