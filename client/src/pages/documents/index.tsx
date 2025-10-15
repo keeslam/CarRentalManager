@@ -150,17 +150,16 @@ export default function DocumentsIndex() {
   
   // Handle print document
   const handlePrintDocument = (document: Document) => {
-    setDocumentToPrint(document);
-    setPrintDialogOpen(true);
-    setIframeError(false);
-    
-    // Auto-fallback after 5 seconds if iframe doesn't work
-    setTimeout(() => {
-      if (printDialogOpen && !iframeError) {
-        // If dialog is still open and no error detected yet, show fallback
-        setIframeError(true);
-      }
-    }, 5000);
+    const printWindow = window.open(
+      `/${document.filePath}`,
+      'Print Preview',
+      'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+    );
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
   };
   
   // Print the document directly without downloads
