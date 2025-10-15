@@ -702,6 +702,14 @@ export function ReservationViewDialog({
           <DialogFooter className="flex gap-2">
             <Button 
               variant="outline"
+              onClick={() => onOpenChange(false)}
+              data-testid="button-close-reservation"
+            >
+              Close
+            </Button>
+            
+            <Button 
+              variant="outline"
               onClick={() => onEdit?.(reservationId)}
               data-testid="button-edit-reservation"
             >
