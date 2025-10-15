@@ -1885,8 +1885,12 @@ Autolease Lam`;
                                     rel="noopener noreferrer"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      window.open(`/api/documents/download/${document.id}`, '_blank');
-                                      setTimeout(() => { window.print(); }, 1000);
+                                      const printWindow = window.open(`/api/documents/download/${document.id}`, '_blank');
+                                      if (printWindow) {
+                                        printWindow.onload = () => {
+                                          printWindow.print();
+                                        };
+                                      }
                                     }}
                                   >
                                     Print
