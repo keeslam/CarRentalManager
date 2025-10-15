@@ -45,7 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download } from "lucide-react";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download, ChevronDown, ChevronRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -92,6 +92,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -1848,115 +1849,150 @@ Autolease Lam`;
               ) : (
                 <div className="space-y-6">
                   {/* Document categories */}
-                  {Object.entries(documentsByCategory).map(([category, docs]) => (
-                    <div key={category} className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">{category}</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {docs.map((document) => (
-                          <Card key={document.id} className="overflow-hidden">
-                            <div className="bg-gray-100 p-6 flex items-center justify-center">
-                              <DocumentIcon type={document.contentType} />
+                  {Object.entries(documentsByCategory).map(([category, docs]) => {
+                    const isExpanded = expandedCategories.has(category);
+                    const toggleCategory = () => {
+                      setExpandedCategories(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(category)) {
+                          newSet.delete(category);
+                        } else {
+                          newSet.add(category);
+                        }
+                        return newSet;
+                      });
+                    };
+                    
+                    return (
+                      <div key={category} className="border rounded-lg overflow-hidden">
+                        <button
+                          onClick={toggleCategory}
+                          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                          data-testid={`toggle-category-${category}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-5 w-5 text-gray-600" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5 text-gray-600" />
+                            )}
+                            <h3 className="text-lg font-medium">{category}</h3>
+                          </div>
+                          <Badge variant="outline" className="ml-2">
+                            {docs.length} {docs.length === 1 ? 'document' : 'documents'}
+                          </Badge>
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {docs.map((document) => (
+                                <Card key={document.id} className="overflow-hidden">
+                                  <div className="bg-gray-100 p-6 flex items-center justify-center">
+                                    <DocumentIcon type={document.contentType} />
+                                  </div>
+                                  <CardContent className="p-4">
+                                    <h3 className="font-medium mb-1 truncate" title={document.fileName}>{document.fileName}</h3>
+                                    <div className="flex items-center text-sm text-gray-500 mb-2">
+                                      <Badge variant="outline" className="mr-2">{document.documentType}</Badge>
+                                      <span>{formatDate(document.uploadDate?.toString() || "")}</span>
+                                    </div>
+                                    {document.createdBy && (
+                                      <div className="text-xs text-gray-500 mb-2">
+                                        Created by: {document.createdBy}
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between items-center gap-2 mt-2">
+                                      <button 
+                                        onClick={() => window.open(
+                                          `/${document.filePath}`,
+                                          'Document Preview',
+                                          'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+                                        )}
+                                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
+                                        data-testid={`button-view-document-${document.id}`}
+                                      >
+                                        <Eye className="h-3.5 w-3.5" />
+                                        View
+                                      </button>
+                                      
+                                      <a 
+                                        href={`/api/documents/download/${document.id}`} 
+                                        className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1 transition-colors"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        data-testid={`link-download-document-${document.id}`}
+                                      >
+                                        <Download className="h-3.5 w-3.5" />
+                                        Download
+                                      </a>
+                                      
+                                      <button 
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          const printWindow = window.open(
+                                            `/${document.filePath}`, 
+                                            'Print Preview',
+                                            'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
+                                          );
+                                          if (printWindow) {
+                                            printWindow.onload = () => {
+                                              printWindow.print();
+                                            };
+                                          }
+                                        }}
+                                        className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 transition-colors"
+                                        data-testid={`button-print-document-${document.id}`}
+                                      >
+                                        <Printer className="h-3.5 w-3.5" />
+                                        Print
+                                      </button>
+                                      
+                                      <button 
+                                        className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 transition-colors"
+                                        data-testid={`button-delete-document-${document.id}`}
+                                        onClick={async () => {
+                                          if (window.confirm(`Are you sure you want to delete the document "${document.fileName}"?`)) {
+                                            try {
+                                              const response = await fetch(`/api/documents/${document.id}`, {
+                                                method: 'DELETE',
+                                              });
+                                              
+                                              if (response.ok) {
+                                                queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                                                queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                                                toast({
+                                                  title: "Document deleted",
+                                                  description: "The document has been deleted successfully.",
+                                                });
+                                              } else {
+                                                const errorData = await response.json();
+                                                throw new Error(errorData.message || "Failed to delete document");
+                                              }
+                                            } catch (error) {
+                                              console.error("Error deleting document:", error);
+                                              toast({
+                                                title: "Error",
+                                                description: error instanceof Error ? error.message : "Failed to delete document",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
                             </div>
-                            <CardContent className="p-4">
-                              <h3 className="font-medium mb-1 truncate" title={document.fileName}>{document.fileName}</h3>
-                              <div className="flex items-center text-sm text-gray-500 mb-2">
-                                <Badge variant="outline" className="mr-2">{document.documentType}</Badge>
-                                <span>{formatDate(document.uploadDate?.toString() || "")}</span>
-                              </div>
-                              {document.createdBy && (
-                                <div className="text-xs text-gray-500 mb-2">
-                                  Created by: {document.createdBy}
-                                </div>
-                              )}
-                              <div className="flex justify-between items-center gap-2 mt-2">
-                                <button 
-                                  onClick={() => window.open(
-                                    `/${document.filePath}`,
-                                    'Document Preview',
-                                    'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
-                                  )}
-                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors"
-                                  data-testid={`button-view-document-${document.id}`}
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                  View
-                                </button>
-                                
-                                <a 
-                                  href={`/api/documents/download/${document.id}`} 
-                                  className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1 transition-colors"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  data-testid={`link-download-document-${document.id}`}
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                  Download
-                                </a>
-                                
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    const printWindow = window.open(
-                                      `/${document.filePath}`, 
-                                      'Print Preview',
-                                      'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
-                                    );
-                                    if (printWindow) {
-                                      printWindow.onload = () => {
-                                        printWindow.print();
-                                      };
-                                    }
-                                  }}
-                                  className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 transition-colors"
-                                  data-testid={`button-print-document-${document.id}`}
-                                >
-                                  <Printer className="h-3.5 w-3.5" />
-                                  Print
-                                </button>
-                                
-                                <button 
-                                  className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 transition-colors"
-                                  data-testid={`button-delete-document-${document.id}`}
-                                  onClick={async () => {
-                                    if (window.confirm(`Are you sure you want to delete the document "${document.fileName}"?`)) {
-                                      try {
-                                        const response = await fetch(`/api/documents/${document.id}`, {
-                                          method: 'DELETE',
-                                        });
-                                        
-                                        if (response.ok) {
-                                          // Refresh document list after successful deletion
-                                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-                                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                                          toast({
-                                            title: "Document deleted",
-                                            description: "The document has been deleted successfully.",
-                                          });
-                                        } else {
-                                          const errorData = await response.json();
-                                          throw new Error(errorData.message || "Failed to delete document");
-                                        }
-                                      } catch (error) {
-                                        console.error("Error deleting document:", error);
-                                        toast({
-                                          title: "Error",
-                                          description: error instanceof Error ? error.message : "Failed to delete document",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  Delete
-                                </button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
