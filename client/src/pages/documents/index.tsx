@@ -24,7 +24,7 @@ import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import { FileEdit, Star, Trash2, Printer, Eye } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +40,9 @@ export default function DocumentsIndex() {
   const [emailRecipients, setEmailRecipients] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
+  const [expandedVehicles, setExpandedVehicles] = useState<Set<string>>(new Set());
+  const [itemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -356,6 +359,26 @@ export default function DocumentsIndex() {
       : `Vehicle #${vehicleId}`;
   };
   
+  // Toggle vehicle expansion
+  const toggleVehicle = (vehicleId: string) => {
+    setExpandedVehicles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(vehicleId)) {
+        newSet.delete(vehicleId);
+      } else {
+        newSet.add(vehicleId);
+      }
+      return newSet;
+    });
+  };
+  
+  // Pagination logic
+  const vehicleIds = Object.keys(documentsByVehicle);
+  const totalPages = Math.ceil(vehicleIds.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedVehicleIds = vehicleIds.slice(startIndex, endIndex);
+  
   const [activeTab, setActiveTab] = useState("library");
   
   return (
@@ -439,22 +462,93 @@ export default function DocumentsIndex() {
                   No documents found matching your filters.
                 </div>
               ) : (
-                <div className="space-y-8">
-                  {Object.entries(documentsByVehicle).map(([vehicleId, categoriesByType]) => {
-                    const totalDocs = Object.values(categoriesByType).reduce((sum, docs) => sum + docs.length, 0);
-                    return (
-                      <div key={vehicleId} className="space-y-6">
-                        <div className="flex items-center justify-between border-b pb-3">
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {getVehicleName(parseInt(vehicleId))}
-                          </h3>
-                          <Badge variant="secondary" className="text-sm">
-                            {totalDocs} document{totalDocs !== 1 ? 's' : ''}
-                          </Badge>
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500">Total Vehicles</p>
+                            <p className="text-2xl font-bold">{vehicleIds.length}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                              <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+                              <circle cx="6.5" cy="16.5" r="2.5"/>
+                              <circle cx="16.5" cy="16.5" r="2.5"/>
+                            </svg>
+                          </div>
                         </div>
-                        
-                        <div className="space-y-6">
-                          {Object.entries(categoriesByType).map(([documentType, docs]) => (
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500">Total Documents</p>
+                            <p className="text-2xl font-bold">{filteredDocuments?.length || 0}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                              <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500">Document Types</p>
+                            <p className="text-2xl font-bold">{documentTypes.length - 1}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-600">
+                              <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="space-y-4">
+                    {paginatedVehicleIds.map((vehicleId) => {
+                      const categoriesByType = documentsByVehicle[vehicleId as unknown as number];
+                      const totalDocs = Object.values(categoriesByType).reduce((sum: number, docs) => sum + (docs as Document[]).length, 0);
+                      const isExpanded = expandedVehicles.has(vehicleId);
+                      
+                      return (
+                        <Card key={vehicleId} className="overflow-hidden">
+                          <button
+                            onClick={() => toggleVehicle(vehicleId)}
+                            className="w-full text-left p-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                                )}
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  {getVehicleName(parseInt(vehicleId))}
+                                </h3>
+                              </div>
+                              <Badge variant="secondary" className="text-sm">
+                                {totalDocs} document{totalDocs !== 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                          </button>
+                          
+                          {isExpanded && (
+                            <div className="border-t p-4 space-y-6">
+                              {Object.entries(categoriesByType).map(([documentType, docs]) => {
+                                const documentList = docs as Document[];
+                                return (
                             <div key={`${vehicleId}-${documentType}`} className="space-y-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2">
@@ -502,13 +596,13 @@ export default function DocumentsIndex() {
                                     {documentType}
                                   </h4>
                                   <Badge variant="outline" className="ml-2">
-                                    {docs.length}
+                                    {documentList.length}
                                   </Badge>
                                 </div>
                               </div>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-11">
-                                {docs.map((doc) => (
+                                {documentList.map((doc) => (
                                   <Card key={doc.id} className="overflow-hidden hover:shadow-md transition-shadow">
                                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 flex items-center justify-center">
                                       {getDocumentIcon(doc.contentType)}
@@ -599,12 +693,50 @@ export default function DocumentsIndex() {
                                 ))}
                               </div>
                             </div>
-                          ))}
-                        </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-2">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-10"
+                          >
+                            {page}
+                          </Button>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
