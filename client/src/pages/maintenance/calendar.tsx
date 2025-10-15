@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, addDays, subDays, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { format, addDays, subDays, addWeeks, isSameDay, parseISO, startOfMonth, endOfMonth, getDate, getDay, getMonth, getYear, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, isBefore, isAfter, differenceInDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +74,7 @@ interface MaintenanceEvent {
   title: string;
   description: string;
   needsSpareVehicle?: boolean;
+  hasUpcomingRentals?: boolean;
   currentReservations?: Reservation[];
   priority?: 'low' | 'medium' | 'high' | 'urgent';
 }
@@ -465,6 +466,33 @@ export default function MaintenanceCalendar() {
       
       // Actual due date
       const { shiftedDate: shiftedDue, wasShifted: wasShiftedDue } = shiftWeekendToMonday(dueDate);
+      
+      // Check for overlapping and upcoming reservations
+      const vehicleReservations = reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || [];
+      const apkDueDate = shiftedDue;
+      const threeWeeksLater = addWeeks(apkDueDate, 3);
+      
+      // Check if any reservation overlaps with the APK due date
+      const hasOverlappingReservation = vehicleReservations.some((r: Reservation) => {
+        const resStart = parseISO(r.startDate);
+        const resEnd = r.endDate ? parseISO(r.endDate) : null;
+        
+        // Check if APK date falls within reservation period
+        if (resEnd) {
+          return (isBefore(resStart, apkDueDate) || isSameDay(resStart, apkDueDate)) && 
+                 (isAfter(resEnd, apkDueDate) || isSameDay(resEnd, apkDueDate));
+        } else {
+          // Open-ended reservation
+          return isBefore(resStart, apkDueDate) || isSameDay(resStart, apkDueDate);
+        }
+      });
+      
+      // Check if there are reservations within 3 weeks (but not overlapping)
+      const hasUpcomingReservations = !hasOverlappingReservation && vehicleReservations.some((r: Reservation) => {
+        const resStart = parseISO(r.startDate);
+        return isAfter(resStart, apkDueDate) && (isBefore(resStart, threeWeeksLater) || isSameDay(resStart, threeWeeksLater));
+      });
+      
       events.push({
         id: `apk_due_${vehicle.id}`,
         vehicleId: vehicle.id,
@@ -473,9 +501,10 @@ export default function MaintenanceCalendar() {
         date: format(shiftedDue, 'yyyy-MM-dd'),
         title: 'APK Inspection Due' + (wasShiftedDue ? ' (Moved from weekend)' : ''),
         description: `APK inspection required for ${vehicle.brand} ${vehicle.model}` + (wasShiftedDue ? ' (Moved from weekend to Monday)' : ''),
-        needsSpareVehicle: true,
+        needsSpareVehicle: hasOverlappingReservation,
+        hasUpcomingRentals: hasUpcomingReservations,
         priority: 'urgent',
-        currentReservations: reservations?.filter((r: Reservation) => r.vehicleId === vehicle.id) || []
+        currentReservations: vehicleReservations
       });
     };
     
@@ -1017,6 +1046,11 @@ export default function MaintenanceCalendar() {
                                         Spare needed
                                       </Badge>
                                     )}
+                                    {event.hasUpcomingRentals && !event.needsSpareVehicle && (
+                                      <Badge className="bg-blue-500 text-white text-xs mt-1">
+                                        Rental coming up
+                                      </Badge>
+                                    )}
                                   </div>
                                 </HoverCardTrigger>
                                 <HoverCardContent className="w-80">
@@ -1180,6 +1214,11 @@ export default function MaintenanceCalendar() {
                           {event.needsSpareVehicle && event.currentReservations && event.currentReservations.length > 0 && (
                             <Badge className="bg-orange-100 text-orange-800">
                               Spare vehicle needed
+                            </Badge>
+                          )}
+                          {event.hasUpcomingRentals && !event.needsSpareVehicle && (
+                            <Badge className="bg-blue-100 text-blue-800">
+                              Rental coming up (within 3 weeks)
                             </Badge>
                           )}
                         </div>
