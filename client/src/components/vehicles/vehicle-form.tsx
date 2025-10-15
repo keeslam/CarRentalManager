@@ -698,13 +698,26 @@ export function VehicleForm({
         description: `The vehicle has been ${editMode ? "updated" : "added"} to your fleet.`,
       });
       
-      // Navigate to the appropriate page
-      if (editMode && initialData?.id) {
-        // Navigate to vehicle details page when updating
-        navigate(`/vehicles/${initialData.id}`);
+      // If a success callback was provided, call it with the response data
+      if (onSuccess && typeof onSuccess === 'function') {
+        console.log("Calling onSuccess callback from onSubmit");
+        onSuccess(responseData);
+        // When a callback is provided, we assume it will handle navigation
+        return;
+      }
+      
+      // Only navigate if redirectToList is true and we didn't call onSuccess
+      if (redirectToList) {
+        console.log("Navigating from onSubmit based on redirectToList flag");
+        if (editMode && initialData?.id) {
+          // Navigate to vehicle details page when updating
+          navigate(`/vehicles/${initialData.id}`);
+        } else {
+          // Navigate to vehicles list for new vehicles
+          navigate("/vehicles");
+        }
       } else {
-        // Navigate to vehicles list for new vehicles
-        navigate("/vehicles");
+        console.log("Not navigating from onSubmit because redirectToList is false");
       }
     } catch (error: any) {
       console.error("API request failed:", error);
