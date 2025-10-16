@@ -2668,21 +2668,24 @@ Car Rental Management System`
         req.body.fuelNotes = null;
       }
       
-      const reservationData = insertReservationSchema.parse(req.body);
+      // For updates, use partial schema to allow updating only some fields
+      const reservationData = insertReservationSchema.partial().parse(req.body);
       
-      // Check for conflicts
-      const conflicts = await storage.checkReservationConflicts(
-        reservationData.vehicleId,
-        reservationData.startDate,
-        reservationData.endDate,
-        id
-      );
-      
-      if (conflicts.length > 0) {
-        return res.status(409).json({ 
-          message: "Reservation conflicts with existing bookings",
-          conflicts
-        });
+      // Check for conflicts only if vehicle, startDate or endDate are being updated
+      if (reservationData.vehicleId && reservationData.startDate) {
+        const conflicts = await storage.checkReservationConflicts(
+          reservationData.vehicleId,
+          reservationData.startDate,
+          reservationData.endDate || null,
+          id
+        );
+        
+        if (conflicts.length > 0) {
+          return res.status(409).json({ 
+            message: "Reservation conflicts with existing bookings",
+            conflicts
+          });
+        }
       }
       
       // Add user tracking information for updates
