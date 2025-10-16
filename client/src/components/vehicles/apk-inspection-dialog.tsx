@@ -96,17 +96,18 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
     mutationFn: async (data: ApkInspectionFormData) => {
       const maintenanceData = {
         vehicleId: vehicle.id,
-        customerId: null, // APK inspection doesn't require customer
-        maintenanceType: "apk_inspection",
-        scheduledDate: data.scheduledDate,
+        customerId: null,
+        startDate: data.scheduledDate,
+        endDate: data.scheduledDate,
+        status: "scheduled",
+        type: "maintenance_block",
+        notes: `apk_inspection:\n${data.notes || "Scheduled APK inspection"}`,
+        totalPrice: 0,
         maintenanceDuration: data.duration,
         maintenanceStatus: "scheduled",
-        description: `APK Inspection for ${formatLicensePlate(vehicle.licensePlate)}`,
-        notes: data.notes || "",
-        needsSpareVehicle: data.needsSpareVehicle,
       };
 
-      const response = await apiRequest("POST", "/api/reservations/maintenance", maintenanceData);
+      const response = await apiRequest("POST", "/api/reservations", maintenanceData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to schedule APK inspection");
