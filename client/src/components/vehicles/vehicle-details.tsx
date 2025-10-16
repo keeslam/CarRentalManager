@@ -193,13 +193,20 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
 
   // Fetch APK email template
   const { data: apkTemplate } = useQuery({
-    queryKey: ['/api/email-templates', 'apk'],
+    queryKey: ['/api/email-templates'],
     enabled: isApkReminderOpen, // Only fetch when dialog is open
     queryFn: async () => {
-      const response = await fetch('/api/email-templates?category=apk');
+      const response = await fetch('/api/email-templates');
       if (!response.ok) throw new Error('Failed to fetch template');
       const templates = await response.json();
-      return templates[0] || null; // Get first APK template
+      
+      // Find APK template by category or name (case-insensitive)
+      const apkTemplate = templates.find((t: any) => 
+        t.category?.toLowerCase() === 'apk' || 
+        t.name?.toLowerCase().includes('apk')
+      );
+      
+      return apkTemplate || null;
     }
   });
 
@@ -2229,7 +2236,7 @@ Autolease Lam`;
                             Send APK Reminder - {vehicle?.licensePlate}
                           </DialogTitle>
                           <DialogDescription>
-                            Send an APK inspection reminder to customers with active reservations. 
+                            Send an APK inspection reminder to customers who have rented this vehicle. 
                             Review and edit customer emails, customize the message template, and send personalized reminders.
                           </DialogDescription>
                         </DialogHeader>
@@ -2287,8 +2294,8 @@ Autolease Lam`;
                               ) : (
                                 <div className="border rounded-lg p-6 text-center text-gray-500">
                                   <User className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                  <p>No customers with active reservations found for this vehicle.</p>
-                                  <p className="text-sm">Only customers with current reservations can receive APK reminders.</p>
+                                  <p>No customers found for this vehicle.</p>
+                                  <p className="text-sm">This vehicle has not been rented yet, or customers don't have email addresses on file.</p>
                                 </div>
                               )}
                             </div>

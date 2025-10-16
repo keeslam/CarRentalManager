@@ -3642,7 +3642,7 @@ Car Rental Management System`
   });
 
   // ==================== VEHICLE-SPECIFIC CUSTOMER ROUTES ====================
-  // Get customers with active reservations for a specific vehicle
+  // Get customers who have rented a specific vehicle (for APK reminders, etc.)
   app.get('/api/vehicles/:vehicleId/customers-with-reservations', requireAuth, async (req: Request, res: Response) => {
     try {
       const vehicleId = parseInt(req.params.vehicleId);
@@ -3650,29 +3650,31 @@ Car Rental Management System`
       if (isNaN(vehicleId)) {
         return res.status(400).json({ error: 'Invalid vehicle ID' });
       }
-
-      const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
       
-      // Get customers with active reservations for this specific vehicle
-      // First, get all reservations for this vehicle
+      // Get ALL reservations for this vehicle (past and present)
       const vehicleReservations = await storage.getReservationsByVehicle(vehicleId);
       
-      // Filter for active reservations and get customer details
-      const customersWithReservations = [];
+      // Get unique customer details with their most recent reservation
+      const customersMap = new Map();
       
       for (const reservation of vehicleReservations) {
-        // Check if reservation is currently active
-        const startDate = new Date(reservation.startDate);
-        const endDate = new Date(reservation.endDate);
-        const todayDate = new Date(today);
+        // Skip maintenance blocks (they don't have customers)
+        if (reservation.type === 'maintenance_block' || !reservation.customerId) {
+          continue;
+        }
         
-        if (startDate <= todayDate && endDate >= todayDate) {
-          // Get customer details
-          const customer = await storage.getCustomer(reservation.customerId);
-          const vehicle = await storage.getVehicle(vehicleId);
+        // Get customer details
+        const customer = await storage.getCustomer(reservation.customerId);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (customer && vehicle) {
+          // Use customer ID as key to avoid duplicates
+          // Keep the most recent reservation for each customer
+          const existingEntry = customersMap.get(customer.id);
+          const reservationDate = new Date(reservation.startDate);
           
-          if (customer && customer.email && vehicle) {
-            customersWithReservations.push({
+          if (!existingEntry || new Date(existingEntry.reservation.startDate) < reservationDate) {
+            customersMap.set(customer.id, {
               vehicle,
               customer,
               reservation
@@ -3680,8 +3682,11 @@ Car Rental Management System`
           }
         }
       }
+      
+      // Convert Map to array
+      const customersWithReservations = Array.from(customersMap.values());
 
-      console.log(`Found ${customersWithReservations.length} customers with active reservations for vehicle ${vehicleId}`);
+      console.log(`Found ${customersWithReservations.length} unique customers who have rented vehicle ${vehicleId}`);
       
       res.json(customersWithReservations);
     } catch (error) {
