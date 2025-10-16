@@ -450,13 +450,6 @@ export function VehicleForm({
     // Process the form data before submission
     const formattedData: any = { ...data };
     
-    // Remove all registration tracking fields from the form data
-    // as these should only be modified by the server-side tracking endpoints
-    delete formattedData.registeredToBy;
-    delete formattedData.companyBy;
-    delete formattedData.registeredToDate;
-    delete formattedData.companyDate;
-    
     console.log("Original form data:", data);
     
     // Handle empty string values for numeric fields
@@ -490,6 +483,24 @@ export function VehicleForm({
       }
     } else {
       formattedData.company = false;
+    }
+    
+    // For NEW vehicles only: ensure date fields are set when booleans are true
+    if (!editMode) {
+      if (formattedData.registeredTo === true && (!formattedData.registeredToDate || formattedData.registeredToDate === '')) {
+        const todayDate = new Date().toISOString().split('T')[0];
+        formattedData.registeredToDate = todayDate;
+        console.log(`🔧 Auto-set registeredToDate to ${todayDate} for new vehicle with registeredTo=true`);
+      }
+      if (formattedData.company === true && (!formattedData.companyDate || formattedData.companyDate === '')) {
+        const todayDate = new Date().toISOString().split('T')[0];
+        formattedData.companyDate = todayDate;
+        console.log(`🔧 Auto-set companyDate to ${todayDate} for new vehicle with company=true`);
+      }
+      
+      // For new vehicles, clean up the "By" tracking fields (they'll be set by backend)
+      delete formattedData.registeredToBy;
+      delete formattedData.companyBy;
     }
     
     // Separate normal boolean fields from string-boolean fields
