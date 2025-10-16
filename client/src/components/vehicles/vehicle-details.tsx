@@ -236,20 +236,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   // Initialize template content and customer emails when dialog opens
   React.useEffect(() => {
     if (isApkReminderOpen && vehicle && customersWithReservations.length > 0) {
-      // Initialize editable emails with customer data (prioritize APK/MOT email)
-      const emailsMap: { [customerId: number]: string } = {};
-      customersWithReservations.forEach((item: any) => {
-        if (item.customer) {
-          // Prioritize emailForMOT for APK reminders, then fall back to other emails
-          emailsMap[item.customer.id] = 
-            item.customer.emailForMOT || 
-            item.customer.email || 
-            item.customer.emailForInvoices || 
-            item.customer.emailGeneral || 
-            '';
-        }
-      });
-      setEditableEmails(emailsMap);
+      // DO NOT auto-fill emails - let user select manually
+      // Only reset to empty if dialog just opened
+      setEditableEmails({});
       
       // Auto-select first APK template if available and no template is selected
       if (!selectedTemplateId && emailTemplates.length > 0) {
@@ -2270,32 +2259,51 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                                             <Label htmlFor={`email-${item.customer?.id}`} className="text-sm font-medium">
                                               Email Address
                                             </Label>
+                                            
                                             {customerEmails.length > 1 ? (
-                                              <Select
-                                                value={editableEmails[item.customer?.id] || customerEmails[0]?.value || ''}
-                                                onValueChange={(value) => 
-                                                  setEditableEmails(prev => ({
-                                                    ...prev,
-                                                    [item.customer?.id]: value
-                                                  }))
-                                                }
-                                              >
-                                                <SelectTrigger className="mt-1" data-testid={`select-email-${item.customer?.id}`}>
-                                                  <SelectValue placeholder="Select email address" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  {customerEmails.map((emailOption, idx) => (
-                                                    <SelectItem key={idx} value={emailOption.value}>
-                                                      {emailOption.label}: {emailOption.value}
-                                                    </SelectItem>
-                                                  ))}
-                                                </SelectContent>
-                                              </Select>
+                                              <div className="space-y-2">
+                                                {/* Dropdown to select which email */}
+                                                <Select
+                                                  value=""
+                                                  onValueChange={(value) => 
+                                                    setEditableEmails(prev => ({
+                                                      ...prev,
+                                                      [item.customer?.id]: value
+                                                    }))
+                                                  }
+                                                >
+                                                  <SelectTrigger className="mt-1" data-testid={`select-email-${item.customer?.id}`}>
+                                                    <SelectValue placeholder={`Select from ${customerEmails.length} emails`} />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {customerEmails.map((emailOption, idx) => (
+                                                      <SelectItem key={idx} value={emailOption.value}>
+                                                        {emailOption.label}: {emailOption.value}
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                                
+                                                {/* Editable input field */}
+                                                <Input
+                                                  id={`email-${item.customer?.id}`}
+                                                  type="email"
+                                                  value={editableEmails[item.customer?.id] || ''}
+                                                  onChange={(e) => 
+                                                    setEditableEmails(prev => ({
+                                                      ...prev,
+                                                      [item.customer?.id]: e.target.value
+                                                    }))
+                                                  }
+                                                  placeholder="Type or select email above"
+                                                  data-testid={`input-email-${item.customer?.id}`}
+                                                />
+                                              </div>
                                             ) : (
                                               <Input
                                                 id={`email-${item.customer?.id}`}
                                                 type="email"
-                                                value={editableEmails[item.customer?.id] || customerEmails[0]?.value || ''}
+                                                value={editableEmails[item.customer?.id] || ''}
                                                 onChange={(e) => 
                                                   setEditableEmails(prev => ({
                                                     ...prev,
@@ -2306,11 +2314,6 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                                                 className="mt-1"
                                                 data-testid={`input-email-${item.customer?.id}`}
                                               />
-                                            )}
-                                            {customerEmails.length > 1 && (
-                                              <p className="text-xs text-gray-500 mt-1">
-                                                {customerEmails.length} email addresses available
-                                              </p>
                                             )}
                                           </div>
                                         </div>
@@ -2444,10 +2447,19 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                               subject: templateSubject,
                               customerEmails: editableEmails
                             })}
-                            disabled={sendApkReminderMutation.isPending || customersWithReservations.length === 0}
+                            disabled={
+                              sendApkReminderMutation.isPending || 
+                              customersWithReservations.length === 0 ||
+                              Object.keys(editableEmails).length === 0 ||
+                              Object.values(editableEmails).some(email => !email || email.trim() === '')
+                            }
                             data-testid="button-send-reminder"
                           >
-                            {sendApkReminderMutation.isPending ? "Sending..." : `Send to ${customersWithReservations.length} Customer(s)`}
+                            {sendApkReminderMutation.isPending 
+                              ? "Sending..." 
+                              : Object.keys(editableEmails).length === 0
+                              ? "Select email addresses to send"
+                              : `Send to ${Object.keys(editableEmails).length} Customer(s)`}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
