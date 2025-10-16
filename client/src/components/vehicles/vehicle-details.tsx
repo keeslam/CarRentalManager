@@ -86,6 +86,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [templateSubject, setTemplateSubject] = useState("");
   const [templateContent, setTemplateContent] = useState("");
   const [editableEmails, setEditableEmails] = useState<{ [customerId: number]: string }>({});
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
   const [viewReservationDialogOpen, setViewReservationDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -191,80 +192,51 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     }
   });
 
-  // Fetch APK email template
-  const { data: apkTemplate } = useQuery({
+  // Fetch all email templates for selection
+  const { data: emailTemplates = [] } = useQuery({
     queryKey: ['/api/email-templates'],
     enabled: isApkReminderOpen, // Only fetch when dialog is open
     queryFn: async () => {
       const response = await fetch('/api/email-templates');
-      if (!response.ok) throw new Error('Failed to fetch template');
-      const templates = await response.json();
-      
-      // Find APK template by category or name (case-insensitive)
-      const apkTemplate = templates.find((t: any) => 
-        t.category?.toLowerCase() === 'apk' || 
-        t.name?.toLowerCase().includes('apk')
-      );
-      
-      return apkTemplate || null;
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      return response.json();
     }
   });
 
-  // Generate template preview based on vehicle and customer data
-  const generateTemplatePreview = () => {
-    if (!vehicle || !customersWithReservations.length) return { subject: '', content: '' };
+  // Replace placeholders in template text
+  const replacePlaceholders = (text: string, customer: any) => {
+    if (!vehicle || !text) return text;
     
-    const customer = customersWithReservations[0]?.customer || { firstName: 'Customer', lastName: '' };
-    const customerName = `${customer.firstName} ${customer.lastName}`.trim();
+    const customerName = customer ? `${customer.firstName} ${customer.lastName}`.trim() : 'Customer';
     const expiryDate = vehicle.apkDate ? new Date(vehicle.apkDate).toLocaleDateString('nl-NL') : 'Not set';
     
-    // Default APK template
-    const defaultSubject = `APK Reminder - ${formatLicensePlate(vehicle.licensePlate)} expires soon`;
-    const defaultContent = `Dear ${customerName},
-
-This is a friendly reminder that your vehicle ${formatLicensePlate(vehicle.licensePlate)} requires an APK inspection.
-
-APK Expiry Date: ${expiryDate}
-
-Please schedule your APK inspection as soon as possible to ensure your vehicle remains roadworthy and legal.
-
-Contact us to schedule your appointment.
-
-Best regards,
-Autolease Lam`;
-
-    // Get template content from database or use default
-    let subject = apkTemplate?.subject || defaultSubject;
-    let content = apkTemplate?.content || defaultContent;
-
-    // Replace placeholders with actual values
-    const replacePlaceholders = (text: string) => {
-      return text
-        .replace(/\{customerName\}/g, customerName)
-        .replace(/\{vehiclePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
-        .replace(/\{vehicleBrand\}/g, vehicle.brand || 'N/A')
-        .replace(/\{vehicleModel\}/g, vehicle.model || 'N/A')
-        .replace(/\{apkDate\}/g, expiryDate)
-        .replace(/\{licensePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
-        .replace(/\{firstName\}/g, customer.firstName || 'Customer')
-        .replace(/\{lastName\}/g, customer.lastName || '')
-        .replace(/\{email\}/g, customer.email || 'N/A');
-    };
-
-    return {
-      subject: replacePlaceholders(subject),
-      content: replacePlaceholders(content)
-    };
+    return text
+      .replace(/\{customerName\}/g, customerName)
+      .replace(/\{vehiclePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
+      .replace(/\{vehicleBrand\}/g, vehicle.brand || 'N/A')
+      .replace(/\{vehicleModel\}/g, vehicle.model || 'N/A')
+      .replace(/\{apkDate\}/g, expiryDate)
+      .replace(/\{licensePlate\}/g, formatLicensePlate(vehicle.licensePlate) || 'N/A')
+      .replace(/\{firstName\}/g, customer?.firstName || 'Customer')
+      .replace(/\{lastName\}/g, customer?.lastName || '')
+      .replace(/\{email\}/g, customer?.email || 'N/A');
   };
 
-  // Initialize template content when dialog opens
+  // Handle template selection
+  const handleTemplateSelect = (templateId: string) => {
+    const template = emailTemplates.find((t: any) => t.id === parseInt(templateId));
+    if (template && vehicle && customersWithReservations.length > 0) {
+      const firstCustomer = customersWithReservations[0]?.customer;
+      setSelectedTemplateId(template.id);
+      setTemplateSubject(replacePlaceholders(template.subject, firstCustomer));
+      setTemplateContent(replacePlaceholders(template.content, firstCustomer));
+    }
+  };
+
+  // Initialize template content and customer emails when dialog opens
   React.useEffect(() => {
-    if (isApkReminderOpen && vehicle) {
-      const preview = generateTemplatePreview();
-      setTemplateSubject(preview.subject);
-      setTemplateContent(preview.content);
-      
-      // Initialize editable emails
+    if (isApkReminderOpen && vehicle && customersWithReservations.length > 0) {
+      // Initialize editable emails with customer data
       const emailsMap: { [customerId: number]: string } = {};
       customersWithReservations.forEach((item: any) => {
         if (item.customer) {
@@ -272,8 +244,23 @@ Autolease Lam`;
         }
       });
       setEditableEmails(emailsMap);
+      
+      // Auto-select first APK template if available and no template is selected
+      if (!selectedTemplateId && emailTemplates.length > 0) {
+        const apkTemplate = emailTemplates.find((t: any) => 
+          t.category?.toLowerCase() === 'apk' || 
+          t.name?.toLowerCase().includes('apk')
+        );
+        
+        if (apkTemplate) {
+          const firstCustomer = customersWithReservations[0]?.customer;
+          setSelectedTemplateId(apkTemplate.id);
+          setTemplateSubject(replacePlaceholders(apkTemplate.subject, firstCustomer));
+          setTemplateContent(replacePlaceholders(apkTemplate.content, firstCustomer));
+        }
+      }
     }
-  }, [isApkReminderOpen, vehicle, customersWithReservations, apkTemplate]);
+  }, [isApkReminderOpen, vehicle, customersWithReservations, emailTemplates, selectedTemplateId]);
 
   // New reservation form schema
   const newReservationSchema = insertReservationSchemaBase.extend({
@@ -2306,10 +2293,43 @@ Autolease Lam`;
                             <div className="space-y-4">
                               <div className="flex items-center gap-2">
                                 <Eye className="h-4 w-4" />
-                                <h3 className="text-lg font-medium">Email Template Preview & Editing</h3>
+                                <h3 className="text-lg font-medium">Email Template Selection</h3>
                               </div>
                               
                               <div className="space-y-4">
+                                {/* Template Selector */}
+                                <div>
+                                  <Label htmlFor="template-select" className="text-sm font-medium">
+                                    Select Email Template
+                                  </Label>
+                                  <Select
+                                    value={selectedTemplateId?.toString() || ""}
+                                    onValueChange={handleTemplateSelect}
+                                  >
+                                    <SelectTrigger className="mt-1" data-testid="select-email-template">
+                                      <SelectValue placeholder="Choose a template from Communications" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {emailTemplates.length > 0 ? (
+                                        emailTemplates.map((template: any) => (
+                                          <SelectItem key={template.id} value={template.id.toString()}>
+                                            {template.name} {template.category ? `(${template.category})` : ''}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="no-templates" disabled>
+                                          No templates available
+                                        </SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Select a pre-made template from your Communications page
+                                  </p>
+                                </div>
+
+                                <Separator />
+
                                 <div>
                                   <Label htmlFor="template-subject" className="text-sm font-medium">
                                     Email Subject
@@ -2369,6 +2389,7 @@ Autolease Lam`;
                               setTemplateSubject("");
                               setTemplateContent("");
                               setEditableEmails({});
+                              setSelectedTemplateId(null);
                             }}
                             data-testid="button-cancel-reminder"
                           >
