@@ -51,7 +51,7 @@ export interface IStorage {
   getUpcomingReservations(): Promise<Reservation[]>;
   getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
   getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
-  checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null): Promise<Reservation[]>;
+  checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null, isMaintenanceBlock?: boolean): Promise<Reservation[]>;
   
   // Spare vehicle management methods
   getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]>;
@@ -806,7 +806,8 @@ export class MemStorage implements IStorage {
     vehicleId: number, 
     startDate: string, 
     endDate: string, 
-    excludeReservationId: number | null
+    excludeReservationId: number | null,
+    isMaintenanceBlock: boolean = false
   ): Promise<Reservation[]> {
     const conflicts = Array.from(this.reservations.values()).filter(r => {
       // Skip the reservation we're checking against (for updates)
@@ -817,6 +818,19 @@ export class MemStorage implements IStorage {
       // Skip cancelled reservations
       if (r.status === "cancelled") {
         return false;
+      }
+      
+      // If this is a maintenance block, only check for conflicts with OTHER maintenance blocks
+      // Regular rentals can continue during maintenance (with spare vehicles)
+      if (isMaintenanceBlock) {
+        if (r.type !== 'maintenance_block') {
+          return false;
+        }
+      } else {
+        // For regular rentals, maintenance blocks don't cause conflicts (rentals continue during maintenance)
+        if (r.type === 'maintenance_block') {
+          return false;
+        }
       }
       
       // Check if this is for the same vehicle and if dates overlap

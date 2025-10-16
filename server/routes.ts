@@ -2674,11 +2674,15 @@ Car Rental Management System`
       
       // Check for conflicts only if vehicle, startDate or endDate are being updated
       if (reservationData.vehicleId && reservationData.startDate) {
+        // Determine if this is a maintenance block
+        const isMaintenanceBlock = reservationData.type === 'maintenance_block';
+        
         const conflicts = await storage.checkReservationConflicts(
           reservationData.vehicleId,
           reservationData.startDate,
           reservationData.endDate || null,
-          id
+          id,
+          isMaintenanceBlock
         );
         
         if (conflicts.length > 0) {

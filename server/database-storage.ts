@@ -699,49 +699,43 @@ export class DatabaseStorage implements IStorage {
     vehicleId: number, 
     startDate: string, 
     endDate: string | null, 
-    excludeReservationId: number | null
+    excludeReservationId: number | null,
+    isMaintenanceBlock: boolean = false
   ): Promise<Reservation[]> {
     // For open-ended rentals (null endDate), use a far-future date for conflict checking
     // This ensures that an open-ended rental conflicts with all future reservations
     const effectiveEndDate = endDate || '9999-12-31';
     
-    // Maintenance blocks should NOT cause conflicts since rentals continue during maintenance (monthly payment)
-    let query = db
-      .select()
-      .from(reservations)
-      .where(
-        and(
-          eq(reservations.vehicleId, vehicleId),
-          sql`${reservations.status} != 'cancelled'`,
-          sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
-          isNull(reservations.deletedAt),
-          sql`(
-            (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
-            OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
-          )`
-        )
-      );
+    // Build the base conditions
+    const baseConditions = [
+      eq(reservations.vehicleId, vehicleId),
+      sql`${reservations.status} != 'cancelled'`,
+      isNull(reservations.deletedAt),
+      sql`(
+        (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
+        OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
+      )`
+    ];
     
-    if (excludeReservationId !== null) {
-      query = db
-        .select()
-        .from(reservations)
-        .where(
-          and(
-            eq(reservations.vehicleId, vehicleId),
-            sql`${reservations.status} != 'cancelled'`,
-            sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
-            isNull(reservations.deletedAt),
-            sql`(
-              (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
-              OR (${reservations.startDate} <= ${effectiveEndDate} AND (${reservations.endDate} IS NULL OR ${reservations.endDate} = 'undefined'))
-            )`,
-            sql`${reservations.id} != ${excludeReservationId}`
-          )
-        );
+    // If this is a maintenance block, only check for conflicts with OTHER maintenance blocks
+    // Regular rentals can continue during maintenance (with spare vehicles)
+    if (isMaintenanceBlock) {
+      baseConditions.push(sql`${reservations.type} = 'maintenance_block'`);
+    } else {
+      // For regular rentals, maintenance blocks don't cause conflicts (rentals continue during maintenance)
+      baseConditions.push(sql`${reservations.type} != 'maintenance_block'`);
     }
     
-    const reservationsData = await query;
+    // Add exclusion if provided
+    if (excludeReservationId !== null) {
+      baseConditions.push(sql`${reservations.id} != ${excludeReservationId}`);
+    }
+    
+    const reservationsData = await db
+      .select()
+      .from(reservations)
+      .where(and(...baseConditions));
+    
     const result: Reservation[] = [];
     
     // Fetch vehicle and customer data for each reservation
