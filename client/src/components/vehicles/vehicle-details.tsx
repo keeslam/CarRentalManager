@@ -51,6 +51,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertReservationSchema, insertReservationSchemaBase } from "@shared/schema";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
+import { ApkInspectionDialog } from "@/components/vehicles/apk-inspection-dialog";
 import { 
   Form, 
   FormControl, 
@@ -80,6 +81,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("general");
   const [isApkReminderOpen, setIsApkReminderOpen] = useState(false);
+  const [isApkInspectionOpen, setIsApkInspectionOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [templateSubject, setTemplateSubject] = useState("");
   const [templateContent, setTemplateContent] = useState("");
@@ -2200,7 +2202,12 @@ Autolease Lam`;
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <Button size="sm" variant={daysUntilApk <= 30 ? "default" : "outline"}>
+                    <Button 
+                      size="sm" 
+                      variant={daysUntilApk <= 30 ? "default" : "outline"}
+                      onClick={() => setIsApkInspectionOpen(true)}
+                      data-testid="button-schedule-apk-inspection"
+                    >
                       Schedule APK Inspection
                     </Button>
                     <Dialog open={isApkReminderOpen} onOpenChange={setIsApkReminderOpen}>
@@ -2694,6 +2701,20 @@ Autolease Lam`;
           setEditReservationId(null);
         }}
       />
+
+      {/* APK Inspection Scheduling Dialog */}
+      {vehicle && (
+        <ApkInspectionDialog
+          open={isApkInspectionOpen}
+          onOpenChange={setIsApkInspectionOpen}
+          vehicle={vehicle}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: vehicleQueryKey });
+            queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+          }}
+        />
+      )}
     </div>
   );
 }
