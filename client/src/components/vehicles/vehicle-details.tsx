@@ -236,11 +236,17 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   // Initialize template content and customer emails when dialog opens
   React.useEffect(() => {
     if (isApkReminderOpen && vehicle && customersWithReservations.length > 0) {
-      // Initialize editable emails with customer data
+      // Initialize editable emails with customer data (prioritize APK/MOT email)
       const emailsMap: { [customerId: number]: string } = {};
       customersWithReservations.forEach((item: any) => {
         if (item.customer) {
-          emailsMap[item.customer.id] = item.customer.email || '';
+          // Prioritize emailForMOT for APK reminders, then fall back to other emails
+          emailsMap[item.customer.id] = 
+            item.customer.emailForMOT || 
+            item.customer.email || 
+            item.customer.emailForInvoices || 
+            item.customer.emailGeneral || 
+            '';
         }
       });
       setEditableEmails(emailsMap);
@@ -2240,43 +2246,80 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                               
                               {customersWithReservations.length > 0 ? (
                                 <div className="space-y-3">
-                                  {customersWithReservations.map((item: any, index: number) => (
-                                    <div key={item.customer?.id || index} className="border rounded-lg p-4">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                          <Label className="text-sm font-medium">Customer Name</Label>
-                                          <p className="text-sm">
-                                            {item.customer ? `${item.customer.firstName} ${item.customer.lastName}` : 'Unknown Customer'}
-                                          </p>
-                                          <p className="text-xs text-gray-500">
-                                            Customer ID: {item.customer?.id || 'N/A'}
-                                          </p>
+                                  {customersWithReservations.map((item: any, index: number) => {
+                                    // Collect all available email addresses for this customer
+                                    const customerEmails = [];
+                                    if (item.customer?.emailForMOT) customerEmails.push({ label: 'APK/MOT Email', value: item.customer.emailForMOT });
+                                    if (item.customer?.email) customerEmails.push({ label: 'Main Email', value: item.customer.email });
+                                    if (item.customer?.emailForInvoices) customerEmails.push({ label: 'Invoice Email', value: item.customer.emailForInvoices });
+                                    if (item.customer?.emailGeneral) customerEmails.push({ label: 'General Email', value: item.customer.emailGeneral });
+                                    
+                                    return (
+                                      <div key={item.customer?.id || index} className="border rounded-lg p-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <Label className="text-sm font-medium">Customer Name</Label>
+                                            <p className="text-sm">
+                                              {item.customer ? `${item.customer.firstName} ${item.customer.lastName}` : 'Unknown Customer'}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              Customer ID: {item.customer?.id || 'N/A'}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <Label htmlFor={`email-${item.customer?.id}`} className="text-sm font-medium">
+                                              Email Address
+                                            </Label>
+                                            {customerEmails.length > 1 ? (
+                                              <Select
+                                                value={editableEmails[item.customer?.id] || customerEmails[0]?.value || ''}
+                                                onValueChange={(value) => 
+                                                  setEditableEmails(prev => ({
+                                                    ...prev,
+                                                    [item.customer?.id]: value
+                                                  }))
+                                                }
+                                              >
+                                                <SelectTrigger className="mt-1" data-testid={`select-email-${item.customer?.id}`}>
+                                                  <SelectValue placeholder="Select email address" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {customerEmails.map((emailOption, idx) => (
+                                                    <SelectItem key={idx} value={emailOption.value}>
+                                                      {emailOption.label}: {emailOption.value}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <Input
+                                                id={`email-${item.customer?.id}`}
+                                                type="email"
+                                                value={editableEmails[item.customer?.id] || customerEmails[0]?.value || ''}
+                                                onChange={(e) => 
+                                                  setEditableEmails(prev => ({
+                                                    ...prev,
+                                                    [item.customer?.id]: e.target.value
+                                                  }))
+                                                }
+                                                placeholder="Enter email address"
+                                                className="mt-1"
+                                                data-testid={`input-email-${item.customer?.id}`}
+                                              />
+                                            )}
+                                            {customerEmails.length > 1 && (
+                                              <p className="text-xs text-gray-500 mt-1">
+                                                {customerEmails.length} email addresses available
+                                              </p>
+                                            )}
+                                          </div>
                                         </div>
-                                        <div>
-                                          <Label htmlFor={`email-${item.customer?.id}`} className="text-sm font-medium">
-                                            Email Address
-                                          </Label>
-                                          <Input
-                                            id={`email-${item.customer?.id}`}
-                                            type="email"
-                                            value={editableEmails[item.customer?.id] || ''}
-                                            onChange={(e) => 
-                                              setEditableEmails(prev => ({
-                                                ...prev,
-                                                [item.customer?.id]: e.target.value
-                                              }))
-                                            }
-                                            placeholder="Enter email address"
-                                            className="mt-1"
-                                            data-testid={`input-email-${item.customer?.id}`}
-                                          />
+                                        <div className="mt-2 text-xs text-gray-500">
+                                          Reservation: {item.reservation?.startDate} to {item.reservation?.endDate}
                                         </div>
                                       </div>
-                                      <div className="mt-2 text-xs text-gray-500">
-                                        Reservation: {item.reservation?.startDate} to {item.reservation?.endDate}
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 <div className="border rounded-lg p-6 text-center text-gray-500">
