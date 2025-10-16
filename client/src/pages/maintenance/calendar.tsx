@@ -117,6 +117,9 @@ export default function MaintenanceCalendar() {
   // Maintenance list dialog
   const [maintenanceListDialogOpen, setMaintenanceListDialogOpen] = useState(false);
   
+  // Completed maintenance dialog
+  const [completedMaintenanceDialogOpen, setCompletedMaintenanceDialogOpen] = useState(false);
+  
   // Vehicle view dialog
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
@@ -356,7 +359,14 @@ export default function MaintenanceCalendar() {
   const { data: maintenanceBlocks = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations'],
     select: (reservations: Reservation[]) => 
-      reservations.filter(r => r.type === 'maintenance_block')
+      reservations.filter(r => r.type === 'maintenance_block' && r.maintenanceStatus !== 'out') // Exclude completed maintenance
+  });
+
+  // Fetch completed maintenance blocks separately
+  const { data: completedMaintenanceBlocks = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    select: (reservations: Reservation[]) => 
+      reservations.filter(r => r.type === 'maintenance_block' && r.maintenanceStatus === 'out') // Only completed maintenance
   });
 
   // Helper function to shift weekend dates to next Monday
@@ -831,6 +841,17 @@ export default function MaintenanceCalendar() {
               <line x1="3" x2="3" y1="18" y2="18" />
             </svg>
             List View
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setCompletedMaintenanceDialogOpen(true)}
+            data-testid="button-view-completed"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle mr-2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            View Completed ({completedMaintenanceBlocks.length})
           </Button>
           <Button onClick={() => {
             setSelectedScheduleDate(null); // No pre-selected date from header button
@@ -1764,6 +1785,142 @@ export default function MaintenanceCalendar() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Completed Maintenance Dialog */}
+      <Dialog open={completedMaintenanceDialogOpen} onOpenChange={setCompletedMaintenanceDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Completed Maintenance History</DialogTitle>
+            <DialogDescription>
+              View, edit, revert, or delete completed maintenance records
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {completedMaintenanceBlocks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No completed maintenance records found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {[...completedMaintenanceBlocks]
+                  .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                  .map((maintenance) => {
+                    const vehicle = vehicles.find(v => v.id === maintenance.vehicleId);
+                    const maintenanceType = maintenance.notes?.split(':')[0] || 'Maintenance';
+                    const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
+                    const categoryBadge = maintenance.maintenanceCategory === 'scheduled_maintenance' ? 'Scheduled' : 'Repair';
+                    const categoryColor = maintenance.maintenanceCategory === 'scheduled_maintenance' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
+                    
+                    return (
+                      <div key={maintenance.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium">{maintenanceType}</h4>
+                              <Badge className={categoryColor}>{categoryBadge}</Badge>
+                              <Badge variant="outline">
+                                {vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.licensePlate})` : 'Unknown Vehicle'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              Completed: {format(parseISO(maintenance.startDate), 'MMM d, yyyy')}
+                            </p>
+                            {maintenanceDetails && (
+                              <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await apiRequest('PATCH', `/api/reservations/${maintenance.id}`, {
+                                    maintenanceStatus: 'in'
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                  toast({
+                                    title: "Maintenance Reverted",
+                                    description: "Maintenance has been marked as active again"
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to revert maintenance",
+                                    variant: "destructive"
+                                  });
+                                }
+                              }}
+                              data-testid={`button-revert-${maintenance.id}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                                <path d="M8 16H3v5"/>
+                              </svg>
+                              Revert
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                  data-testid={`button-delete-${maintenance.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Completed Maintenance?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this maintenance record. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={async () => {
+                                      try {
+                                        await apiRequest('DELETE', `/api/reservations/${maintenance.id}`);
+                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                        toast({
+                                          title: "Maintenance Deleted",
+                                          description: "The maintenance record has been permanently deleted"
+                                        });
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to delete maintenance",
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompletedMaintenanceDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
