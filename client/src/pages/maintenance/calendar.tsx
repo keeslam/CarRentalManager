@@ -15,6 +15,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   HoverCard,
   HoverCardContent,
@@ -130,6 +131,7 @@ export default function MaintenanceCalendar() {
   const [apkDateInput, setApkDateInput] = useState<string>('');
   const [completingReservation, setCompletingReservation] = useState<any>(null);
   const [apkFormFile, setApkFormFile] = useState<File | null>(null);
+  const [maintenanceDetails, setMaintenanceDetails] = useState<string>('');
   
   // Calculate next APK date based on vehicle type and age
   const calculateNextApkDate = (vehicle: Vehicle, completionDate: Date = new Date()): string => {
@@ -1611,6 +1613,20 @@ export default function MaintenanceCalendar() {
                 Leave empty if not applicable
               </p>
             </div>
+            <div>
+              <label className="text-sm font-medium">Maintenance Details</label>
+              <Textarea
+                value={maintenanceDetails}
+                onChange={(e) => setMaintenanceDetails(e.target.value)}
+                placeholder="Describe what maintenance was performed (e.g., oil change, brake service, tire rotation, etc.)"
+                className="mt-2"
+                rows={4}
+                data-testid="textarea-maintenance-details"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Record what work was done on the vehicle
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -1620,6 +1636,7 @@ export default function MaintenanceCalendar() {
                   setWarrantyDateInput('');
                   setApkDateInput('');
                   setApkFormFile(null);
+                  setMaintenanceDetails('');
                 }}
               >
                 Cancel
@@ -1652,30 +1669,39 @@ export default function MaintenanceCalendar() {
                       }
                     }
 
-                    // Build update payload
-                    const updates: any = {
+                    // Build vehicle update payload
+                    const vehicleUpdates: any = {
                       maintenanceStatus: 'ok',
                     };
 
                     // Add APK date if provided
                     if (apkDateInput) {
-                      updates.apkDate = apkDateInput;
+                      vehicleUpdates.apkDate = apkDateInput;
                     }
 
                     // Add warranty date if provided
                     if (warrantyDateInput) {
-                      updates.warrantyEndDate = warrantyDateInput;
+                      vehicleUpdates.warrantyEndDate = warrantyDateInput;
                     }
 
                     // Update vehicle with new dates
-                    await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, updates);
+                    await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, vehicleUpdates);
 
-                    // Delete the maintenance reservation
-                    await apiRequest('DELETE', `/api/reservations/${completingReservation.id}`);
+                    // Update maintenance reservation to mark as complete with details
+                    const maintenanceType = completingReservation.notes?.split(':')[0] || 'Maintenance';
+                    const updatedNotes = maintenanceDetails 
+                      ? `${maintenanceType}:\n${maintenanceDetails}`
+                      : completingReservation.notes || 'Maintenance completed';
+                    
+                    await apiRequest('PATCH', `/api/reservations/${completingReservation.id}`, {
+                      maintenanceStatus: 'out',
+                      notes: updatedNotes
+                    });
 
-                    // Refresh calendar
+                    // Refresh calendar and maintenance history
                     queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
                     queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                    queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${completingReservation.vehicleId}`] });
                     queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
                     queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
 
@@ -1684,12 +1710,13 @@ export default function MaintenanceCalendar() {
                     setWarrantyDateInput('');
                     setApkDateInput('');
                     setApkFormFile(null);
+                    setMaintenanceDetails('');
                     closeDayDialog();
 
                     toast({
                       title: "Maintenance Completed",
-                      description: apkFormFile 
-                        ? "Vehicle maintenance tracking has been updated and APK form uploaded."
+                      description: maintenanceDetails
+                        ? `Maintenance completed: ${maintenanceDetails.substring(0, 50)}${maintenanceDetails.length > 50 ? '...' : ''}`
                         : "Vehicle maintenance tracking has been updated.",
                     });
                   } catch (error) {

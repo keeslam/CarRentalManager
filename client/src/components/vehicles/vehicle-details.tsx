@@ -205,10 +205,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
 
   // Fetch maintenance history (maintenance_block reservations)
   const { data: maintenanceHistory = [] } = useQuery({
-    queryKey: [`/api/vehicles/${vehicleId}/maintenance-history`],
+    queryKey: [`/api/reservations/vehicle/${vehicleId}`],
     enabled: !!vehicleId,
     queryFn: async () => {
-      const response = await fetch(`/api/vehicles/${vehicleId}/reservations`);
+      const response = await fetch(`/api/reservations/vehicle/${vehicleId}`);
       if (!response.ok) throw new Error('Failed to fetch maintenance history');
       const allReservations = await response.json();
       // Filter for maintenance_block reservations only
