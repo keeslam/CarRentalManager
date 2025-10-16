@@ -203,6 +203,19 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     }
   });
 
+  // Fetch maintenance history (maintenance_block reservations)
+  const { data: maintenanceHistory = [] } = useQuery({
+    queryKey: [`/api/vehicles/${vehicleId}/maintenance-history`],
+    enabled: !!vehicleId,
+    queryFn: async () => {
+      const response = await fetch(`/api/vehicles/${vehicleId}/reservations`);
+      if (!response.ok) throw new Error('Failed to fetch maintenance history');
+      const allReservations = await response.json();
+      // Filter for maintenance_block reservations only
+      return allReservations.filter((r: any) => r.type === 'maintenance_block');
+    }
+  });
+
   // Replace placeholders in template text
   const replacePlaceholders = (text: string, customer: any) => {
     if (!vehicle || !text) return text;
@@ -2487,6 +2500,60 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       Update Warranty Information
                     </Button>
                   </div>
+                </div>
+
+                {/* Maintenance History Section */}
+                <div className="border p-4 rounded-lg">
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Maintenance History
+                  </h3>
+                  {maintenanceHistory.length > 0 ? (
+                    <div className="space-y-3">
+                      {maintenanceHistory
+                        .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                        .map((maintenance: any) => {
+                          const maintenanceType = maintenance.notes?.split(':')[0] || 'General Maintenance';
+                          const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
+                          
+                          return (
+                            <div key={maintenance.id} className="border rounded-lg p-3 bg-gray-50">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-medium">{maintenanceType}</h4>
+                                    {maintenance.maintenanceStatus && (
+                                      <Badge variant={
+                                        maintenance.maintenanceStatus === 'out' ? 'default' : 
+                                        maintenance.maintenanceStatus === 'in' ? 'secondary' : 
+                                        'outline'
+                                      }>
+                                        {maintenance.maintenanceStatus === 'out' ? 'Completed' : 
+                                         maintenance.maintenanceStatus === 'in' ? 'In Progress' : 
+                                         'Scheduled'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">{formatDate(maintenance.startDate)}</p>
+                                  {maintenanceDetails && (
+                                    <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
+                                  )}
+                                  {maintenance.notes && !maintenanceDetails && (
+                                    <p className="text-sm mt-2 text-gray-700">{maintenance.notes}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                      <p>No maintenance history recorded yet</p>
+                      <p className="text-sm">Completed maintenance will appear here</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
