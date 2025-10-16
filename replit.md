@@ -6,6 +6,20 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Maintenance History Tracking**: Complete maintenance tracking system for vehicles
+  - **Maintenance History Section**: Added to vehicle details Maintenance tab
+    - Displays all completed maintenance work in chronological order
+    - Shows maintenance type, date, status (Scheduled/In Progress/Completed), and details
+    - Empty state guidance when no maintenance history exists
+  - **Maintenance Details Recording**: Enhanced complete maintenance dialog
+    - Textarea field to record what maintenance work was performed
+    - Details are preserved in maintenance record for future reference
+    - Toast notification shows maintenance details upon completion
+  - **Preservation of History**: Changed from deletion to update approach
+    - Maintenance reservations are now marked as complete (maintenanceStatus='out') instead of deleted
+    - Creates permanent maintenance history for each vehicle
+    - Maintenance details stored in notes field with format: `{MaintenanceType}:\n{Details}`
+  - **Real-time Updates**: Proper cache invalidation ensures maintenance history refreshes immediately after completion
 - **Multi-Driver Management System**: Complete driver management for corporate customers
   - **Drivers Table**: Separate drivers table with full contact and license information
   - **Customer Association**: Multiple drivers per customer with primary driver designation
