@@ -105,6 +105,11 @@ export const vehicles = pgTable("vehicles", {
   maintenanceStatus: text("maintenance_status").default("ok").notNull(), // 'ok' | 'needs_service' | 'in_service'
   maintenanceNote: text("maintenance_note"), // Optional note about maintenance
   
+  // Mileage tracking for service scheduling
+  currentMileage: integer("current_mileage"),
+  lastServiceDate: text("last_service_date"),
+  lastServiceMileage: integer("last_service_mileage"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

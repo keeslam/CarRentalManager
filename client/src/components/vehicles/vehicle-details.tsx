@@ -216,6 +216,46 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     }
   });
 
+  // Calculate next service due based on 30,000km or 1 year
+  const serviceDueInfo = useMemo(() => {
+    if (!vehicle) return null;
+    
+    const serviceInterval = 30000; // 30,000 km
+    const serviceIntervalDays = 365; // 1 year
+
+    let nextServiceByDate = null;
+    let nextServiceByMileage = null;
+    let daysUntilService = null;
+    let kmUntilService = null;
+
+    // Calculate by date (1 year from last service)
+    if (vehicle.lastServiceDate) {
+      const lastService = parseISO(vehicle.lastServiceDate);
+      nextServiceByDate = addDays(lastService, serviceIntervalDays);
+      daysUntilService = getDaysUntil(format(nextServiceByDate, 'yyyy-MM-dd'));
+    }
+
+    // Calculate by mileage (30,000 km from last service)
+    if (vehicle.lastServiceMileage && vehicle.currentMileage) {
+      const kmSinceService = vehicle.currentMileage - vehicle.lastServiceMileage;
+      kmUntilService = serviceInterval - kmSinceService;
+      nextServiceByMileage = vehicle.lastServiceMileage + serviceInterval;
+    }
+
+    const isDueByDate = daysUntilService !== null && daysUntilService <= 0;
+    const isDueByMileage = kmUntilService !== null && kmUntilService <= 0;
+
+    return {
+      nextServiceByDate,
+      nextServiceByMileage,
+      daysUntilService,
+      kmUntilService,
+      isDueByDate,
+      isDueByMileage,
+      isServiceDue: isDueByDate || isDueByMileage,
+    };
+  }, [vehicle]);
+
   // Replace placeholders in template text
   const replacePlaceholders = (text: string, customer: any) => {
     if (!vehicle || !text) return text;
@@ -2501,6 +2541,45 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     </Button>
                   </div>
                 </div>
+
+                {/* Service Due Alert Section */}
+                {serviceDueInfo && (vehicle.lastServiceDate || vehicle.lastServiceMileage) && (
+                  <div className={`border p-4 rounded-lg ${serviceDueInfo.isServiceDue ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                    <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Next Service Due
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {serviceDueInfo.nextServiceByDate && (
+                        <div>
+                          <p className="text-sm text-gray-500">Service Due By Date</p>
+                          <p className="text-lg font-medium">{formatDate(format(serviceDueInfo.nextServiceByDate, 'yyyy-MM-dd'))}</p>
+                          <Badge className={serviceDueInfo.isDueByDate ? 'bg-red-600' : 'bg-green-600'}>
+                            {serviceDueInfo.isDueByDate ? 'Overdue' : `${serviceDueInfo.daysUntilService} days`}
+                          </Badge>
+                        </div>
+                      )}
+                      {serviceDueInfo.nextServiceByMileage && (
+                        <div>
+                          <p className="text-sm text-gray-500">Service Due At Mileage</p>
+                          <p className="text-lg font-medium">{serviceDueInfo.nextServiceByMileage.toLocaleString()} km</p>
+                          <Badge className={serviceDueInfo.isDueByMileage ? 'bg-red-600' : 'bg-green-600'}>
+                            {serviceDueInfo.isDueByMileage ? 'Overdue' : `${serviceDueInfo.kmUntilService} km remaining`}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 text-sm text-gray-600">
+                      <p>Last service: {vehicle.lastServiceDate ? formatDate(vehicle.lastServiceDate) : 'Not recorded'}</p>
+                      {vehicle.lastServiceMileage && (
+                        <p>Last service mileage: {vehicle.lastServiceMileage.toLocaleString()} km</p>
+                      )}
+                      {vehicle.currentMileage && (
+                        <p>Current mileage: {vehicle.currentMileage.toLocaleString()} km</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Scheduled Maintenance History Section */}
                 <div className="border p-4 rounded-lg">

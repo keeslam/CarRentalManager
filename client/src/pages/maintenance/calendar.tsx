@@ -133,6 +133,7 @@ export default function MaintenanceCalendar() {
   const [apkFormFile, setApkFormFile] = useState<File | null>(null);
   const [maintenanceDetails, setMaintenanceDetails] = useState<string>('');
   const [maintenanceCategory, setMaintenanceCategory] = useState<string>('scheduled_maintenance');
+  const [currentMileage, setCurrentMileage] = useState<string>('');
   
   // Calculate next APK date based on vehicle type and age
   const calculateNextApkDate = (vehicle: Vehicle, completionDate: Date = new Date()): string => {
@@ -1617,6 +1618,20 @@ export default function MaintenanceCalendar() {
               </p>
             </div>
             <div>
+              <label className="text-sm font-medium">Current Mileage (km)</label>
+              <Input
+                type="number"
+                value={currentMileage}
+                onChange={(e) => setCurrentMileage(e.target.value)}
+                placeholder="Enter current odometer reading"
+                className="mt-2"
+                data-testid="input-current-mileage"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Record the vehicle's current mileage for service tracking
+              </p>
+            </div>
+            <div>
               <label className="text-sm font-medium">Maintenance Details</label>
               <Textarea
                 value={maintenanceDetails}
@@ -1644,6 +1659,7 @@ export default function MaintenanceCalendar() {
                   setApkFormFile(null);
                   setMaintenanceDetails('');
                   setMaintenanceCategory('scheduled_maintenance');
+                  setCurrentMileage('');
                 }}
               >
                 Cancel
@@ -1686,6 +1702,16 @@ export default function MaintenanceCalendar() {
                       vehicleUpdates.apkDate = apkDateInput;
                     }
 
+                    // Add mileage data to vehicle updates if provided
+                    if (currentMileage && parseInt(currentMileage) > 0) {
+                      vehicleUpdates.currentMileage = parseInt(currentMileage);
+                      // Only update last service date/mileage for scheduled maintenance
+                      if (maintenanceCategory === 'scheduled_maintenance') {
+                        vehicleUpdates.lastServiceDate = format(new Date(), 'yyyy-MM-dd');
+                        vehicleUpdates.lastServiceMileage = parseInt(currentMileage);
+                      }
+                    }
+
                     // Update vehicle with new dates
                     await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, vehicleUpdates);
 
@@ -1714,6 +1740,7 @@ export default function MaintenanceCalendar() {
                     setApkFormFile(null);
                     setMaintenanceDetails('');
                     setMaintenanceCategory('scheduled_maintenance');
+                    setCurrentMileage('');
                     closeDayDialog();
 
                     toast({
