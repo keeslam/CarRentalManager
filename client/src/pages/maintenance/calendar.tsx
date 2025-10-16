@@ -1589,40 +1589,45 @@ export default function MaintenanceCalendar() {
               Review and update APK and warranty dates for this vehicle
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-            <div>
-              <label className="text-sm font-medium">Completion Date</label>
-              <Input
-                type="date"
-                value={completingReservation?.startDate ? format(parseISO(completingReservation.startDate), 'yyyy-MM-dd') : ''}
-                onChange={(e) => {
-                  if (completingReservation) {
-                    setCompletingReservation({
-                      ...completingReservation,
-                      startDate: e.target.value
-                    });
-                  }
-                }}
-                className="mt-2"
-                data-testid="input-completion-date"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                When was the maintenance actually completed? (Default: scheduled date)
-              </p>
+          <div className="space-y-4">
+            {/* Row 1: Dates side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Completion Date</label>
+                <Input
+                  type="date"
+                  value={completingReservation?.startDate ? format(parseISO(completingReservation.startDate), 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    if (completingReservation) {
+                      setCompletingReservation({
+                        ...completingReservation,
+                        startDate: e.target.value
+                      });
+                    }
+                  }}
+                  className="mt-2"
+                  data-testid="input-completion-date"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  When was maintenance completed?
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">APK Date</label>
+                <Input
+                  type="date"
+                  value={apkDateInput}
+                  onChange={(e) => setApkDateInput(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-apk-date"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  APK expiry date (if updated)
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">APK Date</label>
-              <Input
-                type="date"
-                value={apkDateInput}
-                onChange={(e) => setApkDateInput(e.target.value)}
-                className="mt-2"
-                data-testid="input-apk-date"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Review and adjust if needed (automatically calculated based on vehicle type)
-              </p>
-            </div>
+
+            {/* Row 2: APK Form full width */}
             <div>
               <label className="text-sm font-medium">APK Inspection Form (Optional)</label>
               <Input
@@ -1637,44 +1642,47 @@ export default function MaintenanceCalendar() {
                 className="mt-2"
                 data-testid="input-apk-form"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Upload the APK inspection certificate if available
-              </p>
               {apkFormFile && (
                 <p className="text-xs text-green-600 mt-1">
                   Selected: {apkFormFile.name}
                 </p>
               )}
             </div>
-            <div>
-              <label className="text-sm font-medium">Service Category</label>
-              <Select value={maintenanceCategory} onValueChange={setMaintenanceCategory}>
-                <SelectTrigger className="mt-2" data-testid="select-maintenance-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Choose whether this is routine maintenance or a repair
-              </p>
+
+            {/* Row 3: Category and Mileage side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Service Category</label>
+                <Select value={maintenanceCategory} onValueChange={setMaintenanceCategory}>
+                  <SelectTrigger className="mt-2" data-testid="select-maintenance-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
+                    <SelectItem value="repair">Repair</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Maintenance or repair?
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Current Mileage (km)</label>
+                <Input
+                  type="number"
+                  value={currentMileage}
+                  onChange={(e) => setCurrentMileage(e.target.value)}
+                  placeholder="Odometer reading"
+                  className="mt-2"
+                  data-testid="input-current-mileage"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Current vehicle mileage
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Current Mileage (km)</label>
-              <Input
-                type="number"
-                value={currentMileage}
-                onChange={(e) => setCurrentMileage(e.target.value)}
-                placeholder="Enter current odometer reading"
-                className="mt-2"
-                data-testid="input-current-mileage"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Record the vehicle's current mileage for service tracking
-              </p>
-            </div>
+
+            {/* Row 4: Maintenance Details full width */}
             <div>
               <label className="text-sm font-medium">Maintenance Details</label>
               <Textarea
@@ -1686,11 +1694,11 @@ export default function MaintenanceCalendar() {
                     : "Describe the repair performed (e.g., tire replacement, brake repair, battery, window fix, damage repair)"
                 }
                 className="mt-2"
-                rows={4}
+                rows={3}
                 data-testid="textarea-maintenance-details"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Record what work was done on the vehicle
+                What work was done on the vehicle?
               </p>
             </div>
             <div className="flex justify-end gap-2">
