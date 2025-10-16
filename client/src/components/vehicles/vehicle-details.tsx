@@ -96,6 +96,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [isDragActive, setIsDragActive] = useState(false);
   const [isEditVehicleDialogOpen, setIsEditVehicleDialogOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showAllScheduledMaintenance, setShowAllScheduledMaintenance] = useState(false);
+  const [showAllRepairs, setShowAllRepairs] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -2588,45 +2590,67 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     Scheduled Maintenance History
                   </h3>
                   {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'scheduled_maintenance').length > 0 ? (
-                    <div className="space-y-3">
-                      {maintenanceHistory
-                        .filter((m: any) => m.maintenanceCategory === 'scheduled_maintenance')
-                        .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-                        .map((maintenance: any) => {
-                          const maintenanceType = maintenance.notes?.split(':')[0] || 'General Maintenance';
-                          const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
-                          
-                          return (
-                            <div key={maintenance.id} className="border rounded-lg p-3 bg-blue-50">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-medium">{maintenanceType}</h4>
-                                    {maintenance.maintenanceStatus && (
-                                      <Badge variant={
-                                        maintenance.maintenanceStatus === 'out' ? 'default' : 
-                                        maintenance.maintenanceStatus === 'in' ? 'secondary' : 
-                                        'outline'
-                                      }>
-                                        {maintenance.maintenanceStatus === 'out' ? 'Completed' : 
-                                         maintenance.maintenanceStatus === 'in' ? 'In Progress' : 
-                                         'Scheduled'}
-                                      </Badge>
+                    <>
+                      <div className="space-y-3">
+                        {maintenanceHistory
+                          .filter((m: any) => m.maintenanceCategory === 'scheduled_maintenance')
+                          .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                          .slice(0, showAllScheduledMaintenance ? undefined : 5)
+                          .map((maintenance: any) => {
+                            const maintenanceType = maintenance.notes?.split(':')[0] || 'General Maintenance';
+                            const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
+                            
+                            return (
+                              <div key={maintenance.id} className="border rounded-lg p-3 bg-blue-50">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-medium">{maintenanceType}</h4>
+                                      {maintenance.maintenanceStatus && (
+                                        <Badge variant={
+                                          maintenance.maintenanceStatus === 'out' ? 'default' : 
+                                          maintenance.maintenanceStatus === 'in' ? 'secondary' : 
+                                          'outline'
+                                        }>
+                                          {maintenance.maintenanceStatus === 'out' ? 'Completed' : 
+                                           maintenance.maintenanceStatus === 'in' ? 'In Progress' : 
+                                           'Scheduled'}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">{formatDate(maintenance.startDate)}</p>
+                                    {maintenanceDetails && (
+                                      <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
+                                    )}
+                                    {maintenance.notes && !maintenanceDetails && (
+                                      <p className="text-sm mt-2 text-gray-700">{maintenance.notes}</p>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-600 mt-1">{formatDate(maintenance.startDate)}</p>
-                                  {maintenanceDetails && (
-                                    <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
-                                  )}
-                                  {maintenance.notes && !maintenanceDetails && (
-                                    <p className="text-sm mt-2 text-gray-700">{maintenance.notes}</p>
-                                  )}
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                    </div>
+                            );
+                          })}
+                      </div>
+                      {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'scheduled_maintenance').length > 5 && (
+                        <Button
+                          variant="ghost"
+                          className="w-full mt-3"
+                          onClick={() => setShowAllScheduledMaintenance(!showAllScheduledMaintenance)}
+                        >
+                          {showAllScheduledMaintenance ? (
+                            <>
+                              <ChevronDown className="h-4 w-4 mr-2" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronRight className="h-4 w-4 mr-2" />
+                              Show {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'scheduled_maintenance').length - 5} more
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-6 text-gray-500">
                       <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
@@ -2643,45 +2667,67 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     Repair History
                   </h3>
                   {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'repair').length > 0 ? (
-                    <div className="space-y-3">
-                      {maintenanceHistory
-                        .filter((m: any) => m.maintenanceCategory === 'repair')
-                        .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-                        .map((maintenance: any) => {
-                          const maintenanceType = maintenance.notes?.split(':')[0] || 'Repair';
-                          const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
-                          
-                          return (
-                            <div key={maintenance.id} className="border rounded-lg p-3 bg-orange-50">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-medium">{maintenanceType}</h4>
-                                    {maintenance.maintenanceStatus && (
-                                      <Badge variant={
-                                        maintenance.maintenanceStatus === 'out' ? 'default' : 
-                                        maintenance.maintenanceStatus === 'in' ? 'secondary' : 
-                                        'outline'
-                                      }>
-                                        {maintenance.maintenanceStatus === 'out' ? 'Completed' : 
-                                         maintenance.maintenanceStatus === 'in' ? 'In Progress' : 
-                                         'Scheduled'}
-                                      </Badge>
+                    <>
+                      <div className="space-y-3">
+                        {maintenanceHistory
+                          .filter((m: any) => m.maintenanceCategory === 'repair')
+                          .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                          .slice(0, showAllRepairs ? undefined : 5)
+                          .map((maintenance: any) => {
+                            const maintenanceType = maintenance.notes?.split(':')[0] || 'Repair';
+                            const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
+                            
+                            return (
+                              <div key={maintenance.id} className="border rounded-lg p-3 bg-orange-50">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-medium">{maintenanceType}</h4>
+                                      {maintenance.maintenanceStatus && (
+                                        <Badge variant={
+                                          maintenance.maintenanceStatus === 'out' ? 'default' : 
+                                          maintenance.maintenanceStatus === 'in' ? 'secondary' : 
+                                          'outline'
+                                        }>
+                                          {maintenance.maintenanceStatus === 'out' ? 'Completed' : 
+                                           maintenance.maintenanceStatus === 'in' ? 'In Progress' : 
+                                           'Scheduled'}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">{formatDate(maintenance.startDate)}</p>
+                                    {maintenanceDetails && (
+                                      <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
+                                    )}
+                                    {maintenance.notes && !maintenanceDetails && (
+                                      <p className="text-sm mt-2 text-gray-700">{maintenance.notes}</p>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-600 mt-1">{formatDate(maintenance.startDate)}</p>
-                                  {maintenanceDetails && (
-                                    <p className="text-sm mt-2 text-gray-700">{maintenanceDetails}</p>
-                                  )}
-                                  {maintenance.notes && !maintenanceDetails && (
-                                    <p className="text-sm mt-2 text-gray-700">{maintenance.notes}</p>
-                                  )}
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                    </div>
+                            );
+                          })}
+                      </div>
+                      {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'repair').length > 5 && (
+                        <Button
+                          variant="ghost"
+                          className="w-full mt-3"
+                          onClick={() => setShowAllRepairs(!showAllRepairs)}
+                        >
+                          {showAllRepairs ? (
+                            <>
+                              <ChevronDown className="h-4 w-4 mr-2" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronRight className="h-4 w-4 mr-2" />
+                              Show {maintenanceHistory.filter((m: any) => m.maintenanceCategory === 'repair').length - 5} more
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-6 text-gray-500">
                       <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
