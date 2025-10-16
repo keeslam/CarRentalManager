@@ -1591,6 +1591,26 @@ export default function MaintenanceCalendar() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
+              <label className="text-sm font-medium">Completion Date</label>
+              <Input
+                type="date"
+                value={completingReservation?.startDate ? format(parseISO(completingReservation.startDate), 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  if (completingReservation) {
+                    setCompletingReservation({
+                      ...completingReservation,
+                      startDate: e.target.value
+                    });
+                  }
+                }}
+                className="mt-2"
+                data-testid="input-completion-date"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                When was the maintenance actually completed? (Default: scheduled date)
+              </p>
+            </div>
+            <div>
               <label className="text-sm font-medium">APK Date</label>
               <Input
                 type="date"
@@ -1726,12 +1746,15 @@ export default function MaintenanceCalendar() {
                       vehicleUpdates.apkDate = apkDateInput;
                     }
 
+                    // Get the actual completion date (may be different from scheduled date)
+                    const completionDate = completingReservation.startDate;
+
                     // Add mileage data to vehicle updates if provided
                     if (currentMileage && parseInt(currentMileage) > 0) {
                       vehicleUpdates.currentMileage = parseInt(currentMileage);
                       // Only update last service date/mileage for scheduled maintenance
                       if (maintenanceCategory === 'scheduled_maintenance') {
-                        vehicleUpdates.lastServiceDate = format(new Date(), 'yyyy-MM-dd');
+                        vehicleUpdates.lastServiceDate = completionDate;
                         vehicleUpdates.lastServiceMileage = parseInt(currentMileage);
                       }
                     }
@@ -1746,6 +1769,8 @@ export default function MaintenanceCalendar() {
                       : completingReservation.notes || 'Maintenance completed';
                     
                     await apiRequest('PATCH', `/api/reservations/${completingReservation.id}`, {
+                      startDate: completionDate,
+                      endDate: completionDate,
                       maintenanceStatus: 'out',
                       maintenanceCategory: maintenanceCategory,
                       notes: updatedNotes
