@@ -1582,14 +1582,14 @@ export default function MaintenanceCalendar() {
 
       {/* Maintenance Completion Dialog */}
       <Dialog open={warrantyDateDialogOpen} onOpenChange={setWarrantyDateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Complete Maintenance</DialogTitle>
             <DialogDescription>
               Review and update APK and warranty dates for this vehicle
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
               <label className="text-sm font-medium">Completion Date</label>
               <Input
