@@ -269,6 +269,7 @@ export const reservations = pgTable("reservations", {
   // Maintenance-specific fields
   maintenanceDuration: integer("maintenance_duration"), // Duration in days for maintenance_block type
   maintenanceStatus: text("maintenance_status"), // 'scheduled' | 'in' | 'out' for maintenance_block type
+  maintenanceCategory: text("maintenance_category"), // 'scheduled_maintenance' | 'repair' to distinguish service types
   spareAssignmentDecision: text("spare_assignment_decision"), // 'spare_assigned' | 'customer_arranging' | 'not_handled' for maintenance tracking
   affectedRentalId: integer("affected_rental_id"), // FK to the rental that's affected by this maintenance
   
@@ -334,6 +335,7 @@ export const insertReservationSchemaBase = createInsertSchema(reservations).omit
   affectedRentalId: z.number().optional().or(z.null()), // Allow null
   maintenanceDuration: z.number().optional().or(z.null()), // Allow null
   maintenanceStatus: z.string().optional().or(z.null()), // Allow null
+  maintenanceCategory: z.string().optional().or(z.null()), // Allow null
   spareAssignmentDecision: z.string().optional().or(z.null()), // Allow null
 });
 

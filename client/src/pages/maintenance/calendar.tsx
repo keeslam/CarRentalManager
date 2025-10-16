@@ -132,6 +132,7 @@ export default function MaintenanceCalendar() {
   const [completingReservation, setCompletingReservation] = useState<any>(null);
   const [apkFormFile, setApkFormFile] = useState<File | null>(null);
   const [maintenanceDetails, setMaintenanceDetails] = useState<string>('');
+  const [maintenanceCategory, setMaintenanceCategory] = useState<string>('scheduled_maintenance');
   
   // Calculate next APK date based on vehicle type and age
   const calculateNextApkDate = (vehicle: Vehicle, completionDate: Date = new Date()): string => {
@@ -1601,16 +1602,18 @@ export default function MaintenanceCalendar() {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">Warranty End Date (Optional)</label>
-              <Input
-                type="date"
-                value={warrantyDateInput}
-                onChange={(e) => setWarrantyDateInput(e.target.value)}
-                className="mt-2"
-                data-testid="input-warranty-date"
-              />
+              <label className="text-sm font-medium">Service Category</label>
+              <Select value={maintenanceCategory} onValueChange={setMaintenanceCategory}>
+                <SelectTrigger className="mt-2" data-testid="select-maintenance-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
+                  <SelectItem value="repair">Repair</SelectItem>
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Leave empty if not applicable
+                Choose whether this is routine maintenance or a repair
               </p>
             </div>
             <div>
@@ -1618,7 +1621,11 @@ export default function MaintenanceCalendar() {
               <Textarea
                 value={maintenanceDetails}
                 onChange={(e) => setMaintenanceDetails(e.target.value)}
-                placeholder="Describe what maintenance was performed (e.g., oil change, brake service, tire rotation, etc.)"
+                placeholder={
+                  maintenanceCategory === 'scheduled_maintenance'
+                    ? "Describe the maintenance performed (e.g., oil change, air filter, spark plugs, cabin filter)"
+                    : "Describe the repair performed (e.g., tire replacement, brake repair, battery, window fix, damage repair)"
+                }
                 className="mt-2"
                 rows={4}
                 data-testid="textarea-maintenance-details"
@@ -1633,10 +1640,10 @@ export default function MaintenanceCalendar() {
                 onClick={() => {
                   setWarrantyDateDialogOpen(false);
                   setCompletingReservation(null);
-                  setWarrantyDateInput('');
                   setApkDateInput('');
                   setApkFormFile(null);
                   setMaintenanceDetails('');
+                  setMaintenanceCategory('scheduled_maintenance');
                 }}
               >
                 Cancel
@@ -1679,11 +1686,6 @@ export default function MaintenanceCalendar() {
                       vehicleUpdates.apkDate = apkDateInput;
                     }
 
-                    // Add warranty date if provided
-                    if (warrantyDateInput) {
-                      vehicleUpdates.warrantyEndDate = warrantyDateInput;
-                    }
-
                     // Update vehicle with new dates
                     await apiRequest('PATCH', `/api/vehicles/${completingReservation.vehicleId}`, vehicleUpdates);
 
@@ -1695,6 +1697,7 @@ export default function MaintenanceCalendar() {
                     
                     await apiRequest('PATCH', `/api/reservations/${completingReservation.id}`, {
                       maintenanceStatus: 'out',
+                      maintenanceCategory: maintenanceCategory,
                       notes: updatedNotes
                     });
 
@@ -1707,10 +1710,10 @@ export default function MaintenanceCalendar() {
 
                     setWarrantyDateDialogOpen(false);
                     setCompletingReservation(null);
-                    setWarrantyDateInput('');
                     setApkDateInput('');
                     setApkFormFile(null);
                     setMaintenanceDetails('');
+                    setMaintenanceCategory('scheduled_maintenance');
                     closeDayDialog();
 
                     toast({
