@@ -39,6 +39,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit-dialog";
