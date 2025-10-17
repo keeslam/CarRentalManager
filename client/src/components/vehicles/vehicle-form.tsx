@@ -804,20 +804,29 @@ export function VehicleForm({
                             {...field}
                             onChange={(e) => {
                               // Remove existing dashes and convert to uppercase
-                              let value = e.target.value.replace(/-/g, '').toUpperCase();
+                              let clean = e.target.value.replace(/-/g, '').toUpperCase();
                               
-                              // Add dashes at positions 2 and 4 (XX-XX-XX format)
-                              if (value.length > 2) {
-                                value = value.slice(0, 2) + '-' + value.slice(2);
+                              // Limit to 6 characters (without dashes)
+                              clean = clean.slice(0, 6);
+                              
+                              // Auto-format with dashes between letter/number groups
+                              let formatted = '';
+                              let prevIsLetter = null;
+                              
+                              for (let i = 0; i < clean.length; i++) {
+                                const char = clean[i];
+                                const isLetter = /[A-Z]/.test(char);
+                                
+                                // Add dash when switching from letters to numbers or vice versa
+                                if (prevIsLetter !== null && prevIsLetter !== isLetter && formatted.length > 0) {
+                                  formatted += '-';
+                                }
+                                
+                                formatted += char;
+                                prevIsLetter = isLetter;
                               }
-                              if (value.length > 5) {
-                                value = value.slice(0, 5) + '-' + value.slice(5);
-                              }
                               
-                              // Limit to 8 characters total (including dashes)
-                              value = value.slice(0, 8);
-                              
-                              field.onChange(value);
+                              field.onChange(formatted);
                             }}
                           />
                         </FormControl>
