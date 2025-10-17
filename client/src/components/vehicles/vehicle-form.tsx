@@ -799,7 +799,15 @@ export function VehicleForm({
                       <FormLabel>License Plate</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
-                          <Input placeholder="AB-123-C" {...field} />
+                          <Input 
+                            placeholder="j-794-gh" 
+                            {...field}
+                            onChange={(e) => {
+                              // Auto-format to uppercase for RDW lookup compatibility
+                              const formatted = e.target.value.toUpperCase();
+                              field.onChange(formatted);
+                            }}
+                          />
                         </FormControl>
                         <Button 
                           type="button" 
