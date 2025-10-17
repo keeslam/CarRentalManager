@@ -1614,22 +1614,8 @@ export function VehicleForm({
                 type="button" 
                 disabled={createVehicleMutation.isPending}
                 onClick={() => {
-                  // Get form values manually
-                  if (form.formState.isValid) {
-                    const data = form.getValues();
-                    onSubmit(data);
-                  } else {
-                    // Trigger form validation
-                    form.handleSubmit(onSubmit)();
-                    
-                    // Show validation errors
-                    console.error("Form validation errors:", form.formState.errors);
-                    toast({
-                      title: "Validation Error",
-                      description: "Please check the form for errors",
-                      variant: "destructive",
-                    });
-                  }
+                  // Always trigger form validation and submission
+                  form.handleSubmit(onSubmit)();
                 }}
               >
                 {createVehicleMutation.isPending ? (
