@@ -803,9 +803,21 @@ export function VehicleForm({
                             placeholder="j-794-gh" 
                             {...field}
                             onChange={(e) => {
-                              // Auto-format to uppercase for RDW lookup compatibility
-                              const formatted = e.target.value.toUpperCase();
-                              field.onChange(formatted);
+                              // Remove existing dashes and convert to uppercase
+                              let value = e.target.value.replace(/-/g, '').toUpperCase();
+                              
+                              // Add dashes at positions 2 and 4 (XX-XX-XX format)
+                              if (value.length > 2) {
+                                value = value.slice(0, 2) + '-' + value.slice(2);
+                              }
+                              if (value.length > 5) {
+                                value = value.slice(0, 5) + '-' + value.slice(5);
+                              }
+                              
+                              // Limit to 8 characters total (including dashes)
+                              value = value.slice(0, 8);
+                              
+                              field.onChange(value);
                             }}
                           />
                         </FormControl>
