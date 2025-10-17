@@ -38,38 +38,11 @@ import {
 } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { useLocation } from "wouter";
+import { formatLicensePlate } from "@/lib/format-utils";
 
 // Utility function to handle null values for form inputs
 const handleFieldValue = (value: any): string => {
   return value === null || value === undefined ? '' : String(value);
-};
-
-// Format license plate with dashes between letter/number groups
-const formatLicensePlate = (input: string): string => {
-  // Remove existing dashes and convert to uppercase
-  let clean = input.replace(/-/g, '').toUpperCase();
-  
-  // Limit to 6 characters (without dashes)
-  clean = clean.slice(0, 6);
-  
-  // Auto-format with dashes between letter/number groups
-  let formatted = '';
-  let prevIsLetter = null;
-  
-  for (let i = 0; i < clean.length; i++) {
-    const char = clean[i];
-    const isLetter = /[A-Z]/.test(char);
-    
-    // Add dash when switching from letters to numbers or vice versa
-    if (prevIsLetter !== null && prevIsLetter !== isLetter && formatted.length > 0) {
-      formatted += '-';
-    }
-    
-    formatted += char;
-    prevIsLetter = isLetter;
-  }
-  
-  return formatted;
 };
 
 // Extended schema with validation
