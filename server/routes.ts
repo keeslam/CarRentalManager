@@ -709,40 +709,43 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       console.log("Sanitized vehicle data:", JSON.stringify(sanitizedData));
       
+      // Validate with Zod schema
+      let vehicleData;
       try {
-        const vehicleData = insertVehicleSchema.parse(sanitizedData);
-        
-        // Add user tracking information
-        const user = req.user;
-        const dataWithTracking = {
-          ...vehicleData,
-          createdBy: user ? user.username : null,
-          updatedBy: user ? user.username : null
-        };
-        
-        // Set registeredToBy when registeredTo is true
-        if (dataWithTracking.registeredTo === "true" && dataWithTracking.registeredToDate) {
-          dataWithTracking.registeredToBy = user ? user.username : null;
-        }
-        
-        // Set companyBy when company is true
-        if (dataWithTracking.company === "true" && dataWithTracking.companyDate) {
-          dataWithTracking.companyBy = user ? user.username : null;
-        }
-        
-        const vehicle = await storage.createVehicle(dataWithTracking);
-        
-        // Broadcast real-time update to all connected clients
-        realtimeEvents.vehicles.created(vehicle);
-        
-        res.status(201).json(vehicle);
+        vehicleData = insertVehicleSchema.parse(sanitizedData);
       } catch (parseError) {
         console.error("Validation error:", parseError);
-        res.status(400).json({ 
+        return res.status(400).json({ 
           message: "Invalid vehicle data format", 
           error: parseError 
         });
       }
+      
+      // Add user tracking information
+      const user = req.user;
+      const dataWithTracking = {
+        ...vehicleData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null
+      };
+      
+      // Set registeredToBy when registeredTo is true
+      if (dataWithTracking.registeredTo === "true" && dataWithTracking.registeredToDate) {
+        dataWithTracking.registeredToBy = user ? user.username : null;
+      }
+      
+      // Set companyBy when company is true
+      if (dataWithTracking.company === "true" && dataWithTracking.companyDate) {
+        dataWithTracking.companyBy = user ? user.username : null;
+      }
+      
+      // Create vehicle in database (this will throw on duplicate key)
+      const vehicle = await storage.createVehicle(dataWithTracking);
+      
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.vehicles.created(vehicle);
+      
+      res.status(201).json(vehicle);
     } catch (error) {
       console.error("Error creating vehicle:", error);
       

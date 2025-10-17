@@ -28,7 +28,10 @@ export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps)
       const response = await apiRequest("POST", "/api/vehicles", data);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create vehicle");
+        const error: any = new Error(errorData.message || "Failed to create vehicle");
+        error.status = response.status;
+        error.data = errorData;
+        throw error;
       }
       return await response.json();
     },
@@ -49,9 +52,19 @@ export function VehicleQuickForm({ onSuccess, onCancel }: VehicleQuickFormProps)
     },
     onError: (error: any) => {
       console.error("Failed to create vehicle in quick form:", error);
+      
+      // Check for duplicate license plate error
+      const isDuplicate = 
+        error.status === 409 || 
+        error.message?.includes("license plate already exists") ||
+        error.message?.includes("duplicate key");
+      
+      const title = isDuplicate ? "Duplicate License Plate" : "Error";
+      const description = error.message || "Failed to create vehicle";
+      
       toast({
-        title: "Error",
-        description: `Failed to create vehicle: ${error.message}`,
+        title,
+        description,
         variant: "destructive",
       });
     }
