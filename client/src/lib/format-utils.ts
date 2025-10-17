@@ -134,3 +134,47 @@ export function formatPhoneNumber(phoneNumber: string | null | undefined): strin
   // Return the cleaned number as is if no pattern matches
   return cleaned;
 }
+
+/**
+ * Capitalize the first letter of each word in a string
+ * Example: "john doe" -> "John Doe", "main street" -> "Main Street"
+ */
+export function capitalizeWords(text: string): string {
+  if (!text) return '';
+  
+  return text
+    .split(' ')
+    .map(word => {
+      if (!word) return word;
+      // Capitalize first letter, keep rest as typed
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+/**
+ * Capitalize proper names (handles prefixes like "van", "de", "van der")
+ * Example: "jan van der berg" -> "Jan van der Berg"
+ */
+export function capitalizeName(name: string): string {
+  if (!name) return '';
+  
+  const lowercasePrefixes = ['van', 'de', 'der', 'den', 'het', 'ten', 'ter'];
+  
+  return name
+    .split(' ')
+    .map((word, index) => {
+      if (!word) return word;
+      
+      const lowerWord = word.toLowerCase();
+      
+      // Keep prefixes lowercase unless they're the first word
+      if (index > 0 && lowercasePrefixes.includes(lowerWord)) {
+        return lowerWord;
+      }
+      
+      // Capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}

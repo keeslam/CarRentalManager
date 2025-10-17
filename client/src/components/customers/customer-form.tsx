@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { capitalizeName, capitalizeWords } from "@/lib/format-utils";
 
 // Extended schema with validation
 const formSchema = insertCustomerSchema.extend({
@@ -295,7 +296,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John Doe" {...field} />
+                              <Input 
+                                placeholder="John Doe" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -311,7 +316,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>First Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John" {...field} />
+                              <Input 
+                                placeholder="John" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -325,7 +334,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>Last Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Doe" {...field} />
+                              <Input 
+                                placeholder="Doe" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -341,7 +354,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>Driver Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John Doe" {...field} />
+                              <Input 
+                                placeholder="John Doe" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -375,7 +392,11 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel>Street Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Main Street" {...field} />
+                            <Input 
+                              placeholder="Main Street" 
+                              {...field}
+                              onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -389,7 +410,11 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel>Street Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="123 Main St" {...field} />
+                            <Input 
+                              placeholder="123 Main St" 
+                              {...field}
+                              onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -418,7 +443,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>City</FormLabel>
                             <FormControl>
-                              <Input placeholder="Amsterdam" {...field} />
+                              <Input 
+                                placeholder="Amsterdam" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -554,7 +583,11 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel>Company Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Acme Corporation" {...field} />
+                            <Input 
+                              placeholder="Acme Corporation" 
+                              {...field}
+                              onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -568,7 +601,11 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel>Contact Person</FormLabel>
                           <FormControl>
-                            <Input placeholder="Jane Smith" {...field} />
+                            <Input 
+                              placeholder="Jane Smith" 
+                              {...field}
+                              onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -632,7 +669,11 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel>Billing Contact Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John Smith" {...field} />
+                            <Input 
+                              placeholder="John Smith" 
+                              {...field}
+                              onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -710,7 +751,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>Billing Address</FormLabel>
                             <FormControl>
-                              <Input placeholder="123 Business Street" {...field} />
+                              <Input 
+                                placeholder="123 Business Street" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -724,7 +769,11 @@ export function CustomerForm({
                           <FormItem>
                             <FormLabel>Billing City</FormLabel>
                             <FormControl>
-                              <Input placeholder="Amsterdam" {...field} />
+                              <Input 
+                                placeholder="Amsterdam" 
+                                {...field}
+                                onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

@@ -14,8 +14,8 @@ import { PDFDocument, rgb, StandardFonts, TextAlignment } from 'pdf-lib';
  * Removes dashes and spaces, then formats according to Dutch license plate standards
  */
 function formatLicensePlate(licensePlate: string): string {
-  // Remove any existing dashes or spaces
-  const sanitized = licensePlate.replace(/[-\s]/g, '');
+  // Remove any existing dashes or spaces and convert to uppercase
+  const sanitized = licensePlate.replace(/[-\s]/g, '').toUpperCase();
   
   // Standard Dutch license plate formats
   const formats = [
@@ -40,8 +40,8 @@ function formatLicensePlate(licensePlate: string): string {
     }
   }
   
-  // If no standard format matches, return as-is but uppercase
-  return sanitized.toUpperCase();
+  // If no standard format matches, return as-is (already uppercase)
+  return sanitized;
 }
 
 /**

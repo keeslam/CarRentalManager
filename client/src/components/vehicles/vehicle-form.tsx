@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { useLocation } from "wouter";
-import { formatLicensePlate } from "@/lib/format-utils";
+import { formatLicensePlate, capitalizeWords } from "@/lib/format-utils";
 
 // Utility function to handle null values for form inputs
 const handleFieldValue = (value: any): string => {
@@ -862,7 +862,11 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Brand</FormLabel>
                         <FormControl>
-                          <Input placeholder="Volkswagen" {...field} />
+                          <Input 
+                            placeholder="Volkswagen" 
+                            {...field}
+                            onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -876,7 +880,11 @@ export function VehicleForm({
                       <FormItem>
                         <FormLabel>Model</FormLabel>
                         <FormControl>
-                          <Input placeholder="Golf" {...field} />
+                          <Input 
+                            placeholder="Golf" 
+                            {...field}
+                            onChange={(e) => field.onChange(capitalizeWords(e.target.value))}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

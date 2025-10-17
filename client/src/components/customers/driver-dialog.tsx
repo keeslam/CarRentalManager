@@ -6,6 +6,7 @@ import { insertDriverSchema, Driver } from "@shared/schema";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { capitalizeName } from "@/lib/format-utils";
 import {
   Dialog,
   DialogContent,
@@ -181,7 +182,12 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                   <FormItem className="md:col-span-2">
                     <FormLabel>Display Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="John Doe" data-testid="input-display-name" />
+                      <Input 
+                        {...field} 
+                        placeholder="John Doe" 
+                        data-testid="input-display-name"
+                        onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -195,7 +201,13 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="John" data-testid="input-first-name" />
+                      <Input 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        placeholder="John" 
+                        data-testid="input-first-name"
+                        onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,7 +221,13 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="Doe" data-testid="input-last-name" />
+                      <Input 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        placeholder="Doe" 
+                        data-testid="input-last-name"
+                        onChange={(e) => field.onChange(capitalizeName(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
