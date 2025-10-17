@@ -44,6 +44,34 @@ const handleFieldValue = (value: any): string => {
   return value === null || value === undefined ? '' : String(value);
 };
 
+// Format license plate with dashes between letter/number groups
+const formatLicensePlate = (input: string): string => {
+  // Remove existing dashes and convert to uppercase
+  let clean = input.replace(/-/g, '').toUpperCase();
+  
+  // Limit to 6 characters (without dashes)
+  clean = clean.slice(0, 6);
+  
+  // Auto-format with dashes between letter/number groups
+  let formatted = '';
+  let prevIsLetter = null;
+  
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    const isLetter = /[A-Z]/.test(char);
+    
+    // Add dash when switching from letters to numbers or vice versa
+    if (prevIsLetter !== null && prevIsLetter !== isLetter && formatted.length > 0) {
+      formatted += '-';
+    }
+    
+    formatted += char;
+    prevIsLetter = isLetter;
+  }
+  
+  return formatted;
+};
+
 // Extended schema with validation
 export const formSchema = insertVehicleSchema.extend({
   licensePlate: z.string().min(1, "License plate is required"),
@@ -426,6 +454,11 @@ export function VehicleForm({
             value = value === "true" || value === true;
           }
           
+          // Format license plate with proper dashes
+          if (key === 'licensePlate' && typeof value === 'string') {
+            value = formatLicensePlate(value);
+          }
+          
           // Mark fields as touched and dirty so form knows it's been modified
           form.setValue(key as any, value, { 
             shouldDirty: true, 
@@ -803,29 +836,7 @@ export function VehicleForm({
                             placeholder="j-794-gh" 
                             {...field}
                             onChange={(e) => {
-                              // Remove existing dashes and convert to uppercase
-                              let clean = e.target.value.replace(/-/g, '').toUpperCase();
-                              
-                              // Limit to 6 characters (without dashes)
-                              clean = clean.slice(0, 6);
-                              
-                              // Auto-format with dashes between letter/number groups
-                              let formatted = '';
-                              let prevIsLetter = null;
-                              
-                              for (let i = 0; i < clean.length; i++) {
-                                const char = clean[i];
-                                const isLetter = /[A-Z]/.test(char);
-                                
-                                // Add dash when switching from letters to numbers or vice versa
-                                if (prevIsLetter !== null && prevIsLetter !== isLetter && formatted.length > 0) {
-                                  formatted += '-';
-                                }
-                                
-                                formatted += char;
-                                prevIsLetter = isLetter;
-                              }
-                              
+                              const formatted = formatLicensePlate(e.target.value);
                               field.onChange(formatted);
                             }}
                           />
