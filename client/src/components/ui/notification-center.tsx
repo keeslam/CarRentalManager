@@ -154,7 +154,7 @@ export function NotificationCenter() {
                         title={`Reservation #${reservation.id} starts tomorrow`}
                         description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
                         date={reservation.startDate}
-                        link={`/reservations/${reservation.id}`}
+                        link={`/reservations/calendar?openReservation=${reservation.id}`}
                       />
                     </div>
                   ))}
@@ -171,7 +171,7 @@ export function NotificationCenter() {
                         title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
                         description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
                         date={vehicle.apkDate || ""}
-                        link={`/vehicles/${vehicle.id}`}
+                        link={`/vehicles/${vehicle.id}?openApkDialog=true`}
                       />
                     </div>
                   ))}
@@ -257,7 +257,7 @@ export function NotificationCenter() {
                       title={`Reservation #${reservation.id} starts soon`}
                       description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
                       date={reservation.startDate}
-                      link={`/reservations/${reservation.id}`}
+                      link={`/reservations/calendar?openReservation=${reservation.id}`}
                     />
                   </div>
                 ))
@@ -281,7 +281,7 @@ export function NotificationCenter() {
                       title={`APK expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
                       description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
                       date={vehicle.apkDate || ""}
-                      link={`/vehicles/${vehicle.id}`}
+                      link={`/vehicles/${vehicle.id}?openApkDialog=true`}
                     />
                   </div>
                 ))

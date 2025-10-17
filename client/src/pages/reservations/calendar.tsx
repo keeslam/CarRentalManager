@@ -350,6 +350,26 @@ export default function ReservationCalendarPage() {
     queryKey: [`/api/documents/reservation/${selectedReservation?.id}`],
     enabled: !!selectedReservation?.id
   });
+
+  // Auto-open reservation dialog from URL parameter (from notifications)
+  useEffect(() => {
+    if (!reservations) return;
+    
+    // Get query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const openReservationId = urlParams.get('openReservation');
+    
+    if (openReservationId && !viewDialogOpen) {
+      const reservationId = parseInt(openReservationId);
+      const reservation = reservations.find(r => r.id === reservationId);
+      
+      if (reservation) {
+        handleViewReservation(reservation);
+        // Remove the query parameter from URL after opening
+        navigate('/reservations/calendar', { replace: true });
+      }
+    }
+  }, [reservations, viewDialogOpen, navigate]);
   
   // Memoized maintenance map for O(1) lookups with pre-normalized dates (performance optimization)
   const maintenanceByVehicle = useMemo(() => {

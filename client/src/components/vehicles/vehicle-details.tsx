@@ -144,6 +144,21 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     enabled: !!vehicleId
   });
 
+  // Auto-open APK dialog from URL parameter (from notifications)
+  React.useEffect(() => {
+    if (!vehicle) return;
+    
+    // Get query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldOpenApkDialog = urlParams.get('openApkDialog');
+    
+    if (shouldOpenApkDialog === 'true' && !isApkInspectionOpen) {
+      setIsApkInspectionOpen(true);
+      // Remove the query parameter from URL after opening
+      navigate(`/vehicles/${vehicleId}`, { replace: true });
+    }
+  }, [vehicle, isApkInspectionOpen, vehicleId, navigate]);
+
   // Send APK reminder mutation
   const sendApkReminderMutation = useMutation({
     mutationFn: async ({ message, subject, customerEmails }: { 
