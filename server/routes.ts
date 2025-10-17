@@ -720,6 +720,16 @@ export async function registerRoutes(app: Express): Promise<void> {
           updatedBy: user ? user.username : null
         };
         
+        // Set registeredToBy when registeredTo is true
+        if (dataWithTracking.registeredTo === "true" && dataWithTracking.registeredToDate) {
+          dataWithTracking.registeredToBy = user ? user.username : null;
+        }
+        
+        // Set companyBy when company is true
+        if (dataWithTracking.company === "true" && dataWithTracking.companyDate) {
+          dataWithTracking.companyBy = user ? user.username : null;
+        }
+        
         const vehicle = await storage.createVehicle(dataWithTracking);
         
         // Broadcast real-time update to all connected clients
