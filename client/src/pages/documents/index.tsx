@@ -274,15 +274,11 @@ export default function DocumentsIndex() {
     setIframeError(true);
   };
   
-  // Helper function to normalize versioned contract types
+  // Helper function to normalize document types - combine all contract types
   const normalizeDocumentType = (type: string): string => {
-    // Normalize "Contract (Unsigned) 2, 3, etc." to "Contract (Unsigned)"
-    if (type.match(/^Contract \(Unsigned\)(?: \d+)?$/)) {
-      return "Contract (Unsigned)";
-    }
-    // Normalize "Contract (Signed) 2, 3, etc." to "Contract (Signed)"
-    if (type.match(/^Contract \(Signed\)(?: \d+)?$/)) {
-      return "Contract (Signed)";
+    // Combine all contract types into a single "Contracts" category
+    if (type.toLowerCase().includes('contract')) {
+      return "Contracts";
     }
     return type;
   };
@@ -310,15 +306,16 @@ export default function DocumentsIndex() {
     return matchesSearch && matchesVehicle && matchesType;
   });
   
-  // Group documents by vehicle, then by category
+  // Group documents by vehicle, then by category (using normalized types)
   const documentsByVehicle = filteredDocuments?.reduce((acc, doc) => {
+    const normalizedType = normalizeDocumentType(doc.documentType);
     if (!acc[doc.vehicleId]) {
       acc[doc.vehicleId] = {};
     }
-    if (!acc[doc.vehicleId][doc.documentType]) {
-      acc[doc.vehicleId][doc.documentType] = [];
+    if (!acc[doc.vehicleId][normalizedType]) {
+      acc[doc.vehicleId][normalizedType] = [];
     }
-    acc[doc.vehicleId][doc.documentType].push(doc);
+    acc[doc.vehicleId][normalizedType].push(doc);
     return acc;
   }, {} as Record<number, Record<string, Document[]>>) || {};
   
@@ -580,6 +577,15 @@ export default function DocumentsIndex() {
                                   )}
                                   
                                   {/* Category-specific icon */}
+                                  {documentType.toLowerCase().includes('contract') && (
+                                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <path d="M9 15h6M9 11h6"/>
+                                      </svg>
+                                    </div>
+                                  )}
                                   {documentType.toLowerCase().includes('damage') && (
                                     <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
                                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
@@ -609,7 +615,7 @@ export default function DocumentsIndex() {
                                       </svg>
                                     </div>
                                   )}
-                                  {!['damage', 'apk', 'maintenance', 'insurance'].some(keyword => 
+                                  {!['contract', 'damage', 'apk', 'maintenance', 'insurance'].some(keyword => 
                                     documentType.toLowerCase().includes(keyword)) && (
                                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
