@@ -371,7 +371,7 @@ export default function ReservationCalendarPage() {
         console.log('[Calendar] Opening reservation dialog for:', reservationId);
         handleViewReservation(reservation);
         // Remove the query parameter from URL after opening
-        window.history.replaceState({}, '', '/reservations/calendar');
+        window.history.replaceState({}, '', '/reservations');
       }
     }
   }, [reservations, viewDialogOpen]);
