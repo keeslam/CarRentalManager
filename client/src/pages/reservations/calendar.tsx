@@ -701,14 +701,17 @@ export default function ReservationCalendarPage() {
                         onClick={(e) => {
                           if (isCurrentMonth) {
                             const allDayReservations = getReservationsForDate(day);
-                            if (allDayReservations.length > 0) {
-                              // If there are reservations, show them in dialog
+                            // Filter out maintenance blocks - they shouldn't prevent adding new reservations
+                            const rentalReservations = allDayReservations.filter(r => r.type !== 'maintenance_block');
+                            
+                            if (rentalReservations.length > 0) {
+                              // If there are rental reservations, show them in dialog
                               console.log('Date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
                               openDayDialog(day);
                             } else {
-                              // If no reservations, open new reservation dialog
+                              // If no rental reservations (only maintenance or empty), open new reservation dialog
                               const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
-                              console.log('Date box clicked - no reservations, opening add dialog');
+                              console.log('Date box clicked - no rental reservations, opening add dialog');
                               setSelectedDate(formattedDate);
                               setAddDialogOpen(true);
                             }
