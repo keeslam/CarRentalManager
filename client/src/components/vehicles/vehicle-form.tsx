@@ -421,7 +421,12 @@ export function VehicleForm({
         if (form.getValues(key as any) !== undefined) {
           // Convert null values to empty strings for form compatibility
           const value = vehicleData[key] === null ? "" : vehicleData[key];
-          form.setValue(key as any, value);
+          // Mark fields as touched and dirty so form knows it's been modified
+          form.setValue(key as any, value, { 
+            shouldDirty: true, 
+            shouldTouch: true, 
+            shouldValidate: true 
+          });
         }
       });
       
