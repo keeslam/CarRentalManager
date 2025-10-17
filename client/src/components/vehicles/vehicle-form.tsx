@@ -419,8 +419,13 @@ export function VehicleForm({
       // Fill form with retrieved data, converting null values to empty strings
       Object.keys(vehicleData).forEach((key) => {
         if (form.getValues(key as any) !== undefined) {
-          // Convert null values to empty strings for form compatibility
-          const value = vehicleData[key] === null ? "" : vehicleData[key];
+          let value = vehicleData[key] === null ? "" : vehicleData[key];
+          
+          // Convert string "true"/"false" to actual booleans for registeredTo and company fields
+          if (key === 'registeredTo' || key === 'company') {
+            value = value === "true" || value === true;
+          }
+          
           // Mark fields as touched and dirty so form knows it's been modified
           form.setValue(key as any, value, { 
             shouldDirty: true, 
