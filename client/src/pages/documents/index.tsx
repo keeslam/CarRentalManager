@@ -41,6 +41,7 @@ export default function DocumentsIndex() {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
   const [expandedVehicles, setExpandedVehicles] = useState<Set<string>>(new Set());
+  const [expandedDocumentTypes, setExpandedDocumentTypes] = useState<Set<string>>(new Set());
   const [itemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -371,6 +372,20 @@ export default function DocumentsIndex() {
       return newSet;
     });
   };
+
+  // Toggle document type expansion
+  const toggleDocumentType = (vehicleId: string, documentType: string) => {
+    const key = `${vehicleId}-${documentType}`;
+    setExpandedDocumentTypes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
   
   // Pagination logic
   const vehicleIds = Object.keys(documentsByVehicle);
@@ -548,10 +563,22 @@ export default function DocumentsIndex() {
                             <div className="border-t p-4 space-y-6">
                               {Object.entries(categoriesByType).map(([documentType, docs]) => {
                                 const documentList = docs as Document[];
+                                const typeKey = `${vehicleId}-${documentType}`;
+                                const isTypeExpanded = expandedDocumentTypes.has(typeKey);
+                                
                                 return (
-                            <div key={`${vehicleId}-${documentType}`} className="space-y-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
+                            <div key={typeKey} className="space-y-4">
+                              <button
+                                onClick={() => toggleDocumentType(vehicleId, documentType)}
+                                className="w-full flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                              >
+                                <div className="flex items-center gap-2 flex-1">
+                                  {isTypeExpanded ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                                  )}
+                                  
                                   {/* Category-specific icon */}
                                   {documentType.toLowerCase().includes('damage') && (
                                     <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
@@ -599,8 +626,9 @@ export default function DocumentsIndex() {
                                     {documentList.length}
                                   </Badge>
                                 </div>
-                              </div>
+                              </button>
                               
+                              {isTypeExpanded && (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-11">
                                 {documentList.map((doc) => (
                                   <Card key={doc.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -692,6 +720,7 @@ export default function DocumentsIndex() {
                                   </Card>
                                 ))}
                               </div>
+                              )}
                             </div>
                                 );
                               })}
