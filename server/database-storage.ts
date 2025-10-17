@@ -15,7 +15,7 @@ import {
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
 import { IStorage } from "./storage";
 
 // Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
@@ -622,7 +622,8 @@ export class DatabaseStorage implements IStorage {
         and(
           sql`${reservations.startDate} >= ${today}`,
           sql`${reservations.status} != 'cancelled'`,
-          isNull(reservations.deletedAt)
+          isNull(reservations.deletedAt),
+          isNotNull(reservations.vehicleId) // Exclude placeholder reservations (vehicleId is null)
         )
       )
       .orderBy(reservations.startDate)
