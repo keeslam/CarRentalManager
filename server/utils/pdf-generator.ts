@@ -10,6 +10,41 @@ import * as path from 'path';
 import { PDFDocument, rgb, StandardFonts, TextAlignment } from 'pdf-lib';
 
 /**
+ * Format a license plate consistently throughout the application
+ * Removes dashes and spaces, then formats according to Dutch license plate standards
+ */
+function formatLicensePlate(licensePlate: string): string {
+  // Remove any existing dashes or spaces
+  const sanitized = licensePlate.replace(/[-\s]/g, '');
+  
+  // Standard Dutch license plate formats
+  const formats = [
+    { pattern: /^([A-Z]{2})(\d{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-00-00
+    { pattern: /^(\d{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // 00-XX-00
+    { pattern: /^([A-Z]{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-XX-00
+    { pattern: /^([A-Z]{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // XX-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-XX-XX
+    { pattern: /^([A-Z])(\d{3})([A-Z]{2})$/, format: '$1-$2-$3' }, // X-000-XX
+    { pattern: /^([A-Z]{2})(\d{3})([A-Z])$/, format: '$1-$2-$3' }, // XX-000-X
+    { pattern: /^([A-Z])(\d{2})([A-Z]{3})$/, format: '$1-$2-$3' }, // X-00-XXX
+    { pattern: /^([A-Z]{3})(\d{2})([A-Z])$/, format: '$1-$2-$3' }, // XXX-00-X
+    { pattern: /^(\d{1})([A-Z]{3})(\d{2})$/, format: '$1-$2-$3' }, // 0-XXX-00
+    { pattern: /^(\d{2})([A-Z]{3})(\d{1})$/, format: '$1-$2-$3' }, // 00-XXX-0
+  ];
+  
+  // Try to match and format the license plate
+  for (const { pattern, format } of formats) {
+    if (pattern.test(sanitized)) {
+      return sanitized.replace(pattern, format);
+    }
+  }
+  
+  // If no standard format matches, return as-is but uppercase
+  return sanitized.toUpperCase();
+}
+
+/**
  * Generates a rental contract PDF using a custom template
  * @param reservation Reservation data
  * @param template Optional PDF template. If not provided, the default template will be used.
@@ -696,7 +731,7 @@ export function prepareContractData(reservation: Reservation) {
   return {
     contractNumber: `C-${reservation.id}-${format(new Date(), 'yyyyMMdd')}`,
     contractDate: format(new Date(), 'MMMM d, yyyy'),
-    licensePlate: vehicle.licensePlate,
+    licensePlate: formatLicensePlate(vehicle.licensePlate),
     brand: vehicle.brand,
     model: vehicle.model,
     chassisNumber: vehicle.chassisNumber || "Unknown",
