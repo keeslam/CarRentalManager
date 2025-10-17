@@ -430,8 +430,8 @@ function NotificationItem({
       onClick();
     }
     
-    // Navigate to the link
-    navigate(link);
+    // Navigate to the link - use window.location to preserve query parameters
+    window.location.href = link;
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -443,7 +443,7 @@ function NotificationItem({
   };
 
   return (
-    <div className="cursor-pointer">
+    <div className="cursor-pointer" onClick={handleClick}>
       <div className={`p-4 border-b hover:bg-gray-50 transition-colors ${isPortalRequest ? 'bg-blue-50/50' : ''}`}>
         <div className="flex">
           <div className="mr-3 mt-0.5">

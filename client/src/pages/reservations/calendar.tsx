@@ -359,17 +359,22 @@ export default function ReservationCalendarPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const openReservationId = urlParams.get('openReservation');
     
+    console.log('[Calendar] Checking for openReservation param:', openReservationId);
+    
     if (openReservationId && !viewDialogOpen) {
       const reservationId = parseInt(openReservationId);
       const reservation = reservations.find(r => r.id === reservationId);
       
+      console.log('[Calendar] Found reservation:', reservation);
+      
       if (reservation) {
+        console.log('[Calendar] Opening reservation dialog for:', reservationId);
         handleViewReservation(reservation);
         // Remove the query parameter from URL after opening
-        navigate('/reservations/calendar', { replace: true });
+        window.history.replaceState({}, '', '/reservations/calendar');
       }
     }
-  }, [reservations, viewDialogOpen, navigate]);
+  }, [reservations, viewDialogOpen]);
   
   // Memoized maintenance map for O(1) lookups with pre-normalized dates (performance optimization)
   const maintenanceByVehicle = useMemo(() => {

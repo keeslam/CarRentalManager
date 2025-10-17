@@ -152,12 +152,16 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     const urlParams = new URLSearchParams(window.location.search);
     const shouldOpenApkDialog = urlParams.get('openApkDialog');
     
+    console.log('[VehicleDetails] Checking for openApkDialog param:', shouldOpenApkDialog);
+    console.log('[VehicleDetails] Vehicle loaded:', vehicle?.id, 'isApkInspectionOpen:', isApkInspectionOpen);
+    
     if (shouldOpenApkDialog === 'true' && !isApkInspectionOpen) {
+      console.log('[VehicleDetails] Opening APK inspection dialog');
       setIsApkInspectionOpen(true);
       // Remove the query parameter from URL after opening
-      navigate(`/vehicles/${vehicleId}`, { replace: true });
+      window.history.replaceState({}, '', `/vehicles/${vehicleId}`);
     }
-  }, [vehicle, isApkInspectionOpen, vehicleId, navigate]);
+  }, [vehicle, isApkInspectionOpen, vehicleId]);
 
   // Send APK reminder mutation
   const sendApkReminderMutation = useMutation({
