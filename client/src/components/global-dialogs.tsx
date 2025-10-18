@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useGlobalDialog } from '@/contexts/GlobalDialogContext';
-import { ReservationEditDialog } from '@/components/reservations/reservation-edit-dialog';
+import { ReservationViewDialog } from '@/components/reservations/reservation-view-dialog';
 import { SpareVehicleDialog } from '@/components/reservations/spare-vehicle-dialog';
 import { ApkInspectionDialog } from '@/components/vehicles/apk-inspection-dialog';
 import { Vehicle, Reservation } from '@shared/schema';
@@ -41,13 +41,10 @@ export function GlobalDialogs() {
   return (
     <>
       {/* Reservation Details Dialog */}
-      <ReservationEditDialog
+      <ReservationViewDialog
         open={dialogState.reservation.open}
         onOpenChange={closeReservationDialog}
         reservationId={dialogState.reservation.id}
-        onSuccess={() => {
-          closeReservationDialog();
-        }}
       />
 
       {/* Spare Assignment Dialog */}
