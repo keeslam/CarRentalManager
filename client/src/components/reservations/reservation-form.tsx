@@ -179,6 +179,18 @@ export function ReservationForm({
   const [startMileage, setStartMileage] = useState<number | undefined>(
     initialData?.startMileage || undefined
   );
+  const [fuelLevelPickup, setFuelLevelPickup] = useState<string | undefined>(
+    initialData?.fuelLevelPickup || undefined
+  );
+  const [fuelLevelReturn, setFuelLevelReturn] = useState<string | undefined>(
+    initialData?.fuelLevelReturn || undefined
+  );
+  const [fuelCost, setFuelCost] = useState<string | undefined>(
+    initialData?.fuelCost || undefined
+  );
+  const [fuelCardNumber, setFuelCardNumber] = useState<string | undefined>(
+    initialData?.fuelCardNumber || undefined
+  );
   const [createdReservationId, setCreatedReservationId] = useState<number | null>(
     editMode && initialData ? initialData.id : null
   );
@@ -1054,6 +1066,10 @@ export function ReservationForm({
       ...data,
       endDate: data.isOpenEnded ? undefined : data.endDate,
       contractPreviewToken: contractPreviewToken, // Include the preview token
+      fuelLevelPickup: fuelLevelPickup,
+      fuelLevelReturn: fuelLevelReturn,
+      fuelCost: fuelCost,
+      fuelCardNumber: fuelCardNumber,
     };
     
     // Remove the isOpenEnded field as it's not part of the backend schema
@@ -1097,6 +1113,10 @@ export function ReservationForm({
       const submissionData = {
         ...data,
         endDate: data.isOpenEnded ? undefined : data.endDate,
+        fuelLevelPickup: fuelLevelPickup,
+        fuelLevelReturn: fuelLevelReturn,
+        fuelCost: fuelCost,
+        fuelCardNumber: fuelCardNumber,
       };
       delete submissionData.isOpenEnded;
       
@@ -1843,7 +1863,13 @@ export function ReservationForm({
                         <select
                           id="fuelLevelPickup"
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          defaultValue=""
+                          value={fuelLevelPickup || ""}
+                          onChange={(e) => {
+                            const value = e.target.value || undefined;
+                            setFuelLevelPickup(value);
+                            form.setValue("fuelLevelPickup" as any, value);
+                          }}
+                          data-testid="select-fuel-level-pickup"
                         >
                           <option value="">Select fuel level</option>
                           <option value="empty">Empty</option>
@@ -1894,7 +1920,13 @@ export function ReservationForm({
                         <select
                           id="fuelLevelReturn"
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          defaultValue=""
+                          value={fuelLevelReturn || ""}
+                          onChange={(e) => {
+                            const value = e.target.value || undefined;
+                            setFuelLevelReturn(value);
+                            form.setValue("fuelLevelReturn" as any, value);
+                          }}
+                          data-testid="select-fuel-level-return"
                         >
                           <option value="">Select fuel level</option>
                           <option value="empty">Empty</option>
@@ -1920,7 +1952,13 @@ export function ReservationForm({
                           step="0.01"
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           placeholder="0.00"
-                          defaultValue=""
+                          value={fuelCost || ""}
+                          onChange={(e) => {
+                            const value = e.target.value || undefined;
+                            setFuelCost(value);
+                            form.setValue("fuelCost" as any, value);
+                          }}
+                          data-testid="input-fuel-cost"
                         />
                         <p className="text-[0.8rem] text-muted-foreground">
                           Fuel cost charged to customer (if applicable)
