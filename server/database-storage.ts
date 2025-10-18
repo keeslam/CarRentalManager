@@ -298,7 +298,8 @@ export class DatabaseStorage implements IStorage {
     const todayStr = today.toISOString().split('T')[0];
     const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
     
-    return await db
+    // Get all vehicles with APK expiring soon
+    const expiringVehicles = await db
       .select()
       .from(vehicles)
       .where(
@@ -308,6 +309,28 @@ export class DatabaseStorage implements IStorage {
           sql`${vehicles.apkDate} <= ${futureStr}`
         )
       );
+    
+    // Get all vehicles that already have a scheduled APK inspection
+    const scheduledApkInspections = await db
+      .select({ vehicleId: reservations.vehicleId })
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.type, 'maintenance_block'),
+          sql`${reservations.notes} LIKE '%apk_inspection:%'`,
+          or(
+            eq(reservations.maintenanceStatus, 'scheduled'),
+            eq(reservations.maintenanceStatus, 'in_progress')
+          )
+        )
+      );
+    
+    const vehiclesWithScheduledApk = new Set(
+      scheduledApkInspections.map(row => row.vehicleId).filter(id => id !== null)
+    );
+    
+    // Filter out vehicles that already have a scheduled APK inspection
+    return expiringVehicles.filter(vehicle => !vehiclesWithScheduledApk.has(vehicle.id));
   }
 
   async getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]> {
