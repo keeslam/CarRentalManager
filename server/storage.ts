@@ -8,8 +8,6 @@ import {
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
-  customerUsers, type CustomerUser, type InsertCustomerUser,
-  extensionRequests, type ExtensionRequest, type InsertExtensionRequest, type UpdateExtensionRequest,
   drivers, type Driver, type InsertDriver
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
@@ -114,27 +112,6 @@ export interface IStorage {
   createAppSetting(setting: InsertAppSettings): Promise<AppSettings>;
   updateAppSetting(id: number, settingData: Partial<InsertAppSettings>): Promise<AppSettings | undefined>;
   deleteAppSetting(id: number): Promise<boolean>;
-  
-  // Customer User methods (for portal authentication)
-  getCustomerUser(id: number): Promise<CustomerUser | undefined>;
-  getCustomerUserByEmail(email: string): Promise<CustomerUser | undefined>;
-  getCustomerUserByCustomerId(customerId: number): Promise<CustomerUser | undefined>;
-  createCustomerUser(customerUser: InsertCustomerUser): Promise<CustomerUser>;
-  updateCustomerUser(id: number, customerUserData: Partial<InsertCustomerUser>): Promise<CustomerUser | undefined>;
-  updateCustomerUserPassword(id: number, hashedPassword: string): Promise<boolean>;
-  deleteCustomerUser(id: number): Promise<boolean>;
-  
-  // Extension Request methods
-  getAllExtensionRequests(): Promise<ExtensionRequest[]>;
-  getExtensionRequest(id: number): Promise<ExtensionRequest | undefined>;
-  getExtensionRequestsByCustomer(customerId: number): Promise<ExtensionRequest[]>;
-  getExtensionRequestsByReservation(reservationId: number): Promise<ExtensionRequest[]>;
-  getPendingExtensionRequests(): Promise<ExtensionRequest[]>;
-  createExtensionRequest(request: InsertExtensionRequest): Promise<ExtensionRequest>;
-  updateExtensionRequest(id: number, requestData: UpdateExtensionRequest): Promise<ExtensionRequest | undefined>;
-  approveExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
-  rejectExtensionRequest(id: number, reviewedBy: number, staffNotes?: string): Promise<ExtensionRequest | undefined>;
-  deleteExtensionRequest(id: number): Promise<boolean>;
   
   // Driver methods
   getAllDrivers(): Promise<Driver[]>;
