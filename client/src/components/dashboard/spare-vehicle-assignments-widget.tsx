@@ -46,30 +46,32 @@ export function SpareVehicleAssignmentsWidget() {
   
   // Auto-open spare assignment dialog from sessionStorage (from notifications)
   useEffect(() => {
-    if (!pendingAssignments || pendingAssignments.length === 0) return;
-    
     // Check sessionStorage for spare assignment flag
     const openSpareId = sessionStorage.getItem('openSpare');
     
-    if (openSpareId) {
-      console.log('[SpareVehicleAssignments] Checking for openSpare in sessionStorage:', openSpareId);
-      
-      // Find the placeholder reservation by ID
-      const placeholder = pendingAssignments.find(p => p.id === parseInt(openSpareId));
-      
-      if (placeholder && !assignmentDialogOpen) {
-        console.log('[SpareVehicleAssignments] Opening spare assignment dialog for placeholder:', placeholder.id);
-        setSelectedPlaceholder(placeholder);
-        setAssignmentDialogOpen(true);
-        // Clear the sessionStorage after opening
-        sessionStorage.removeItem('openSpare');
-      } else if (!placeholder) {
-        console.log('[SpareVehicleAssignments] Placeholder not found in pending assignments');
-        // Clear anyway to prevent infinite attempts
-        sessionStorage.removeItem('openSpare');
-      }
+    if (!openSpareId) return;
+    
+    // Clear immediately to prevent multiple triggers
+    sessionStorage.removeItem('openSpare');
+    
+    console.log('[SpareVehicleAssignments] Found openSpare in sessionStorage:', openSpareId);
+    
+    if (!pendingAssignments || pendingAssignments.length === 0) {
+      console.log('[SpareVehicleAssignments] No pending assignments loaded yet');
+      return;
     }
-  }, [pendingAssignments, assignmentDialogOpen]);
+    
+    // Find the placeholder reservation by ID
+    const placeholder = pendingAssignments.find(p => p.id === parseInt(openSpareId));
+    
+    if (placeholder) {
+      console.log('[SpareVehicleAssignments] Opening spare assignment dialog for placeholder:', placeholder.id);
+      setSelectedPlaceholder(placeholder);
+      setAssignmentDialogOpen(true);
+    } else {
+      console.log('[SpareVehicleAssignments] Placeholder not found in pending assignments');
+    }
+  }, [pendingAssignments]);
 
   // Filter all reservations for assigned spare vehicles (not yet picked up)
   const upcomingAssigned = [...(allReservations ?? [])]
