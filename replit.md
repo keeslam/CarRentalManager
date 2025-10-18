@@ -6,12 +6,12 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
-- **Customer Portal Removed** (Oct 18, 2025): Completely removed the customer self-service portal functionality
+- **Customer Portal & Extension Requests Removed** (Oct 18, 2025): Completely removed customer portal and extension request functionality
   - Removed customer portal login/dashboard pages and all related UI components
   - Removed customer authentication system and API endpoints
   - Removed customer_users and extension_requests database tables
   - Removed customer portal email templates
-  - **Staff Extension Request Management**: Retained for internal staff use - staff can still view and manage all extension requests through the /extension-requests page
+  - Removed extension requests page and all extension request management endpoints
 
 - **Maintenance History Tracking**: Complete maintenance tracking system for vehicles
   - **Maintenance History Section**: Added to vehicle details Maintenance tab
