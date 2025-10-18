@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Set up authentication routes and middleware
-  const { requireAuth, requireCustomerAuth } = setupAuth(app);
+  const { requireAuth } = setupAuth(app);
 
   // Initialize backup service
   const backupService = new BackupService();
