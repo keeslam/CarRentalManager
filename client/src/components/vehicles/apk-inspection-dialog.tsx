@@ -117,23 +117,14 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
     });
   };
 
-  // Watch for date/duration changes and auto-check spare vehicle if needed
+  // Watch for date/duration changes to detect conflicts (but don't auto-check)
   const scheduledDate = form.watch('scheduledDate');
   const duration = form.watch('duration');
-  
-  useEffect(() => {
-    if (scheduledDate && duration) {
-      const conflictingRental = checkRentalConflict(scheduledDate, duration);
-      if (conflictingRental) {
-        // Auto-check the spare vehicle checkbox
-        form.setValue('needsSpareVehicle', true);
-      }
-    }
-  }, [scheduledDate, duration, vehicleRentals]);
 
   // Schedule APK inspection mutation
   const scheduleApkMutation = useMutation({
     mutationFn: async (data: ApkInspectionFormData) => {
+      // Create the maintenance block
       const maintenanceData = {
         vehicleId: vehicle.id,
         customerId: null,
@@ -152,15 +143,51 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
         const error = await response.json();
         throw new Error(error.message || "Failed to schedule APK inspection");
       }
-      return response.json();
+      
+      const maintenanceBlock = await response.json();
+
+      // If spare vehicle is needed and there's a conflicting rental, create placeholder
+      if (data.needsSpareVehicle) {
+        const conflictingRental = checkRentalConflict(data.scheduledDate, data.duration);
+        if (conflictingRental) {
+          // Create a placeholder spare vehicle reservation
+          const spareData = {
+            vehicleId: null, // Placeholder - no vehicle assigned yet
+            customerId: conflictingRental.customerId,
+            driverId: conflictingRental.driverId,
+            startDate: data.scheduledDate,
+            endDate: format(addDays(parseISO(data.scheduledDate), data.duration - 1), 'yyyy-MM-dd'),
+            status: "pending",
+            type: "replacement",
+            replacementForReservationId: conflictingRental.id,
+            placeholderSpare: true,
+            spareVehicleStatus: "assigned",
+            notes: `Spare vehicle needed during APK inspection`,
+            totalPrice: 0,
+          };
+
+          const spareResponse = await apiRequest("POST", "/api/reservations", spareData);
+          if (!spareResponse.ok) {
+            console.error("Failed to create spare vehicle placeholder");
+          }
+        }
+      }
+
+      return maintenanceBlock;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const needsSpare = variables.needsSpareVehicle && checkRentalConflict(variables.scheduledDate, variables.duration);
+      
       toast({
         title: "APK Inspection Scheduled",
-        description: `APK inspection for ${formatLicensePlate(vehicle.licensePlate)} has been scheduled successfully.`,
+        description: needsSpare 
+          ? `APK inspection scheduled. Spare vehicle assignment created and added to assignment queue.`
+          : `APK inspection for ${formatLicensePlate(vehicle.licensePlate)} has been scheduled successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations/needing-assignment'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
       form.reset();
       setSelectedDate(null);
       onOpenChange(false);
@@ -481,12 +508,12 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
                           </FormControl>
                           <div className="space-y-1 leading-none">
                             <FormLabel className={conflictingRental ? 'text-orange-900 font-semibold' : ''}>
-                              Needs Spare Vehicle {conflictingRental ? '(Required)' : ''}
+                              Request Spare Vehicle Assignment
                             </FormLabel>
                             <FormDescription className={conflictingRental ? 'text-orange-700' : ''}>
                               {conflictingRental 
-                                ? 'Customer has an active rental - spare vehicle is required' 
-                                : 'Check if customer needs a replacement vehicle during APK inspection'}
+                                ? 'Creates a spare vehicle assignment request - you can assign a vehicle now or later from the Spare Assignments tab' 
+                                : 'Check this to create a spare vehicle assignment request (optional - customer may arrange their own transportation)'}
                             </FormDescription>
                           </div>
                         </FormItem>
