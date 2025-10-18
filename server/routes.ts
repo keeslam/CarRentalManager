@@ -6065,6 +6065,112 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================
+  // APP SETTINGS ROUTES
+  // ============================================
+
+  // Get all app settings
+  app.get("/api/app-settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getAllAppSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching app settings:", error);
+      res.status(500).json({ message: "Error fetching app settings" });
+    }
+  });
+
+  // Get app settings by category
+  app.get("/api/app-settings/:category", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { category } = req.params;
+      const settings = await storage.getAppSettingsByCategory(category);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching app settings by category:", error);
+      res.status(500).json({ message: "Error fetching app settings" });
+    }
+  });
+
+  // Create or update app setting (upsert by key)
+  app.post("/api/app-settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const { key, value, category, description } = req.body;
+
+      // Check if setting with this key already exists
+      const existing = await storage.getAppSettingByKey(key);
+
+      if (existing) {
+        // Update existing setting
+        const updated = await storage.updateAppSetting(existing.id, {
+          value,
+          category,
+          description,
+          updatedBy: user ? user.username : null,
+        });
+        res.json(updated);
+      } else {
+        // Create new setting
+        const created = await storage.createAppSetting({
+          key,
+          value,
+          category,
+          description,
+          createdBy: user ? user.username : null,
+          updatedBy: user ? user.username : null,
+        });
+        res.json(created);
+      }
+    } catch (error) {
+      console.error("Error creating/updating app setting:", error);
+      res.status(500).json({ message: "Error saving app setting" });
+    }
+  });
+
+  // Update app setting by ID
+  app.put("/api/app-settings/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const id = parseInt(req.params.id);
+      const { key, value, category, description } = req.body;
+
+      const updated = await storage.updateAppSetting(id, {
+        key,
+        value,
+        category,
+        description,
+        updatedBy: user ? user.username : null,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "App setting not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating app setting:", error);
+      res.status(500).json({ message: "Error updating app setting" });
+    }
+  });
+
+  // Delete app setting
+  app.delete("/api/app-settings/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAppSetting(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "App setting not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting app setting:", error);
+      res.status(500).json({ message: "Error deleting app setting" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
