@@ -186,6 +186,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
       });
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
       queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations/needing-assignment'] });
       queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
       form.reset();
