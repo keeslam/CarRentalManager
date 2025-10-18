@@ -186,6 +186,7 @@ export function NotificationCenter() {
                           description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                           date={placeholder.startDate}
                           link={`/?openSpare=${placeholder.id}`}
+                          isSpare={true}
                           onClick={() => setOpen(false)}
                         />
                       </div>
@@ -317,6 +318,7 @@ export function NotificationCenter() {
                         description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                         date={placeholder.startDate}
                         link={`/?openSpare=${placeholder.id}`}
+                        isSpare={true}
                         onClick={() => setOpen(false)}
                       />
                     </div>
@@ -606,6 +608,18 @@ function NotificationItem({
                 )}
               </Button>
             )}
+            {isSpare && (
+              <Button 
+                size="sm" 
+                onClick={handleActionClick}
+                className="w-full mt-2"
+                variant="default"
+                data-testid="button-assign-spare"
+              >
+                <Car className="mr-2 h-3 w-3" />
+                Assign Spare Vehicle
+              </Button>
+            )}
             {isCustom && !isPortalRequest && (
               <Button 
                 size="sm" 
@@ -617,6 +631,18 @@ function NotificationItem({
               >
                 <ClipboardCheck className="mr-2 h-3 w-3" />
                 {markAsReadMutation.isPending ? "Marking..." : "Mark as Complete"}
+              </Button>
+            )}
+            {!isCustom && !isPortalRequest && !isSpare && (
+              <Button 
+                size="sm" 
+                onClick={handleActionClick}
+                className="w-full mt-2"
+                variant="outline"
+                data-testid="button-view-details"
+              >
+                <ArrowRight className="mr-2 h-3 w-3" />
+                View Details
               </Button>
             )}
           </div>
