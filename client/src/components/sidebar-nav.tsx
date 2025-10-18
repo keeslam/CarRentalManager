@@ -14,7 +14,6 @@ export function SidebarNav() {
     { href: "/customers", label: "Customers", icon: "people" },
     { href: "/reservations", label: "Reservations", icon: "event" },
     { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
-    { href: "/extension-requests", label: "Extensions", icon: "extension" },
     { href: "/expenses", label: "Expenses", icon: "euro" },
     { href: "/documents", label: "Documents", icon: "description" },
     { href: "/communications", label: "Communications", icon: "email" },
