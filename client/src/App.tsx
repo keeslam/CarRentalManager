@@ -39,8 +39,6 @@ import ExtensionRequestsPage from "@/pages/extension-requests/index";
 import SettingsPage from "@/pages/settings/index";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
-import CustomerLogin from "@/pages/customer-portal/login";
-import CustomerDashboard from "@/pages/customer-portal/dashboard";
 import MainLayout from "@/layouts/MainLayout";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { SocketProvider } from "@/hooks/use-socket";
@@ -53,10 +51,6 @@ function AppRoutes() {
   
   return (
     <Switch>
-      {/* Customer Portal Routes - No MainLayout */}
-      <Route path="/customer-portal/login" component={CustomerLogin} />
-      <Route path="/customer-portal/dashboard" component={CustomerDashboard} />
-      
       {/* Staff Routes - With MainLayout */}
       <Route>
         {() => (
