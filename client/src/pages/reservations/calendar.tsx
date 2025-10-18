@@ -214,9 +214,17 @@ export default function ReservationCalendarPage() {
       queryClient.getQueryCache().getAll().forEach(query => {
         const key = query.queryKey[0];
         if (typeof key === 'string' && key.includes('reservations')) {
-          queryClient.setQueryData<Reservation[]>(query.queryKey, (old) => 
-            old?.filter(r => r.id !== reservationId) || []
-          );
+          queryClient.setQueryData(query.queryKey, (old: any) => {
+            // Only filter if old is an array
+            if (Array.isArray(old)) {
+              return old.filter(r => r.id !== reservationId);
+            }
+            // For single reservation objects, invalidate if it's the deleted one
+            if (old && typeof old === 'object' && old.id === reservationId) {
+              return undefined;
+            }
+            return old;
+          });
         }
       });
 
