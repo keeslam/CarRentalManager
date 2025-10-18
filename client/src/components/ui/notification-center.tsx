@@ -430,8 +430,20 @@ function NotificationItem({
       onClick();
     }
     
-    // Navigate to the link using wouter's navigate
-    navigate(link);
+    // Parse the link to separate path and query parameters
+    const [path, queryString] = link.split('?');
+    
+    // Use wouter to navigate to the path
+    navigate(path);
+    
+    // If there are query parameters, add them using history API
+    // This needs to be done after navigation, so use a small timeout
+    if (queryString) {
+      setTimeout(() => {
+        const newUrl = `${path}?${queryString}`;
+        window.history.replaceState({}, '', newUrl);
+      }, 10);
+    }
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
