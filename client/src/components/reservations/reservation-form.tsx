@@ -83,6 +83,14 @@ const formSchema = insertReservationSchemaBase.extend({
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
   ]).optional(),
+  fuelLevelPickup: z.string().optional(),
+  fuelLevelReturn: z.string().optional(),
+  fuelCost: z.union([
+    z.number().optional(),
+    z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
+  ]).optional(),
+  fuelCardNumber: z.string().optional(),
+  fuelNotes: z.string().optional(),
 }).refine((data) => {
   // If not open-ended, end date is required
   if (!data.isOpenEnded && (!data.endDate || data.endDate === "")) {
@@ -312,7 +320,12 @@ export function ReservationForm({
       isOpenEnded: isOpenEnded,
       status: "pending",
       totalPrice: 0,
-      notes: ""
+      notes: "",
+      fuelLevelPickup: undefined,
+      fuelLevelReturn: undefined,
+      fuelCost: undefined,
+      fuelCardNumber: undefined,
+      fuelNotes: undefined,
     },
   });
   
@@ -1066,10 +1079,6 @@ export function ReservationForm({
       ...data,
       endDate: data.isOpenEnded ? undefined : data.endDate,
       contractPreviewToken: contractPreviewToken, // Include the preview token
-      fuelLevelPickup: fuelLevelPickup,
-      fuelLevelReturn: fuelLevelReturn,
-      fuelCost: fuelCost,
-      fuelCardNumber: fuelCardNumber,
     };
     
     // Remove the isOpenEnded field as it's not part of the backend schema
@@ -1113,10 +1122,6 @@ export function ReservationForm({
       const submissionData = {
         ...data,
         endDate: data.isOpenEnded ? undefined : data.endDate,
-        fuelLevelPickup: fuelLevelPickup,
-        fuelLevelReturn: fuelLevelReturn,
-        fuelCost: fuelCost,
-        fuelCardNumber: fuelCardNumber,
       };
       delete submissionData.isOpenEnded;
       
@@ -1855,34 +1860,39 @@ export function ReservationForm({
                       </div>
                     </div>
                     
-                    <div className="col-span-1">
-                      <div className="flex flex-col space-y-1.5">
-                        <label htmlFor="fuelLevelPickup" className="text-sm font-medium leading-none">
-                          Fuel Level at Pickup
-                        </label>
-                        <select
-                          id="fuelLevelPickup"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={fuelLevelPickup || ""}
-                          onChange={(e) => {
-                            const value = e.target.value || undefined;
-                            setFuelLevelPickup(value);
-                            form.setValue("fuelLevelPickup" as any, value);
-                          }}
-                          data-testid="select-fuel-level-pickup"
-                        >
-                          <option value="">Select fuel level</option>
-                          <option value="empty">Empty</option>
-                          <option value="1/4">1/4</option>
-                          <option value="1/2">1/2</option>
-                          <option value="3/4">3/4</option>
-                          <option value="full">Full</option>
-                        </select>
-                        <p className="text-[0.8rem] text-muted-foreground">
-                          Record the fuel level when vehicle was picked up
-                        </p>
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="fuelLevelPickup"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fuel Level at Pickup</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value === "" ? undefined : value);
+                              setFuelLevelPickup(value || undefined);
+                            }} 
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-fuel-level-pickup">
+                                <SelectValue placeholder="Select fuel level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">Not recorded</SelectItem>
+                              <SelectItem value="empty">Empty</SelectItem>
+                              <SelectItem value="1/4">1/4</SelectItem>
+                              <SelectItem value="1/2">1/2</SelectItem>
+                              <SelectItem value="3/4">3/4</SelectItem>
+                              <SelectItem value="full">Full</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Record the fuel level when vehicle was picked up
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                   </>
                 )}
                 
@@ -1912,59 +1922,66 @@ export function ReservationForm({
                       </div>
                     </div>
                     
-                    <div className="col-span-1">
-                      <div className="flex flex-col space-y-1.5">
-                        <label htmlFor="fuelLevelReturn" className="text-sm font-medium leading-none">
-                          Fuel Level at Return
-                        </label>
-                        <select
-                          id="fuelLevelReturn"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={fuelLevelReturn || ""}
-                          onChange={(e) => {
-                            const value = e.target.value || undefined;
-                            setFuelLevelReturn(value);
-                            form.setValue("fuelLevelReturn" as any, value);
-                          }}
-                          data-testid="select-fuel-level-return"
-                        >
-                          <option value="">Select fuel level</option>
-                          <option value="empty">Empty</option>
-                          <option value="1/4">1/4</option>
-                          <option value="1/2">1/2</option>
-                          <option value="3/4">3/4</option>
-                          <option value="full">Full</option>
-                        </select>
-                        <p className="text-[0.8rem] text-muted-foreground">
-                          Record the fuel level when vehicle was returned
-                        </p>
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="fuelLevelReturn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fuel Level at Return</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value === "" ? undefined : value);
+                              setFuelLevelReturn(value || undefined);
+                            }} 
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-fuel-level-return">
+                                <SelectValue placeholder="Select fuel level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">Not recorded</SelectItem>
+                              <SelectItem value="empty">Empty</SelectItem>
+                              <SelectItem value="1/4">1/4</SelectItem>
+                              <SelectItem value="1/2">1/2</SelectItem>
+                              <SelectItem value="3/4">3/4</SelectItem>
+                              <SelectItem value="full">Full</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Record the fuel level when vehicle was returned
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                     
-                    <div className="col-span-1">
-                      <div className="flex flex-col space-y-1.5">
-                        <label htmlFor="fuelCost" className="text-sm font-medium leading-none">
-                          Fuel Cost (€)
-                        </label>
-                        <input
-                          id="fuelCost"
-                          type="number"
-                          step="0.01"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="0.00"
-                          value={fuelCost || ""}
-                          onChange={(e) => {
-                            const value = e.target.value || undefined;
-                            setFuelCost(value);
-                            form.setValue("fuelCost" as any, value);
-                          }}
-                          data-testid="input-fuel-cost"
-                        />
-                        <p className="text-[0.8rem] text-muted-foreground">
-                          Fuel cost charged to customer (if applicable)
-                        </p>
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="fuelCost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fuel Cost (€)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                field.onChange(e.target.value === "" ? undefined : e.target.value);
+                                setFuelCost(e.target.value || undefined);
+                              }}
+                              data-testid="input-fuel-cost"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Fuel cost charged to customer (if applicable)
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                   </>
                 )}
                 
