@@ -25,6 +25,7 @@ import { UserPlus } from "lucide-react";
 import { ArrowRight } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Link, useLocation } from "wouter";
+import { useGlobalDialog } from "@/contexts/GlobalDialogContext";
 
 export function NotificationCenter() {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -478,6 +479,12 @@ function NotificationItem({
 }: NotificationItemProps) {
   const navigate = useLocation()[1];
   const queryClient = useQueryClient();
+  const {
+    openReservationDialog,
+    openSpareAssignmentDialog,
+    openAPKDialog,
+    openMaintenanceDialog,
+  } = useGlobalDialog();
   
   // Calculate days until date
   const today = new Date();
