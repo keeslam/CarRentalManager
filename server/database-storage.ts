@@ -9,8 +9,6 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   backupSettings, type BackupSettings, type InsertBackupSettings,
   appSettings, type AppSettings, type InsertAppSettings,
-  customerUsers, type CustomerUser, type InsertCustomerUser,
-  extensionRequests, type ExtensionRequest, type InsertExtensionRequest,
   drivers, type Driver, type InsertDriver
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
