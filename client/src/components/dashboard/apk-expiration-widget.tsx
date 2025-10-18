@@ -33,7 +33,7 @@ export function ApkExpirationWidget() {
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/apk-expiring"],
@@ -47,15 +47,20 @@ export function ApkExpirationWidget() {
   
   // Function to handle clicking on a vehicle to schedule APK inspection
   const handleScheduleClick = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
+    setSelectedVehicleId(vehicle.id);
     setScheduleDialogOpen(true);
   };
   
   const handleScheduleSuccess = () => {
-    setScheduleDialogOpen(false);
-    setSelectedVehicle(null);
     queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
     queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+  };
+  
+  const handleDialogClose = (isOpen: boolean) => {
+    setScheduleDialogOpen(isOpen);
+    if (!isOpen) {
+      setSelectedVehicleId(null);
+    }
   };
   
   return (
@@ -124,15 +129,13 @@ export function ApkExpirationWidget() {
         </div>
       </CardContent>
       
-      {selectedVehicle && (
-        <ScheduleMaintenanceDialog
-          open={scheduleDialogOpen}
-          onOpenChange={setScheduleDialogOpen}
-          onSuccess={handleScheduleSuccess}
-          initialVehicleId={selectedVehicle.id}
-          initialMaintenanceType="apk_inspection"
-        />
-      )}
+      <ScheduleMaintenanceDialog
+        open={scheduleDialogOpen}
+        onOpenChange={handleDialogClose}
+        onSuccess={handleScheduleSuccess}
+        initialVehicleId={selectedVehicleId || undefined}
+        initialMaintenanceType="apk_inspection"
+      />
     </Card>
   );
 }
