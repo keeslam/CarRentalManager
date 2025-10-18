@@ -167,6 +167,8 @@ export function NotificationCenter() {
                         description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
                         date={reservation.startDate}
                         link={`/reservations?openReservation=${reservation.id}`}
+                        id={reservation.id}
+                        notificationType="reservation"
                       />
                     </div>
                   ))}
@@ -186,7 +188,8 @@ export function NotificationCenter() {
                           description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                           date={placeholder.startDate}
                           link={`/?openSpare=${placeholder.id}`}
-                          isSpare={true}
+                          id={placeholder.id}
+                          notificationType="spare"
                           onClick={() => setOpen(false)}
                         />
                       </div>
@@ -206,6 +209,8 @@ export function NotificationCenter() {
                         description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
                         date={vehicle.apkDate || ""}
                         link={`/vehicles/${vehicle.id}?openApkDialog=true`}
+                        id={vehicle.id}
+                        notificationType="apk"
                       />
                     </div>
                   ))}
@@ -223,6 +228,8 @@ export function NotificationCenter() {
                         description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
                         date={vehicle.warrantyEndDate || ""}
                         link={`/vehicles/${vehicle.id}?openMaintenanceTab=true`}
+                        id={vehicle.id}
+                        notificationType="warranty"
                       />
                     </div>
                   ))}
@@ -292,6 +299,8 @@ export function NotificationCenter() {
                       description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
                       date={reservation.startDate}
                       link={`/reservations?openReservation=${reservation.id}`}
+                      id={reservation.id}
+                      notificationType="reservation"
                     />
                   </div>
                 ))
@@ -318,7 +327,8 @@ export function NotificationCenter() {
                         description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                         date={placeholder.startDate}
                         link={`/?openSpare=${placeholder.id}`}
-                        isSpare={true}
+                        id={placeholder.id}
+                        notificationType="spare"
                         onClick={() => setOpen(false)}
                       />
                     </div>
@@ -345,6 +355,8 @@ export function NotificationCenter() {
                       description={`APK for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.apkDate || "")}`}
                       date={vehicle.apkDate || ""}
                       link={`/vehicles/${vehicle.id}?openApkDialog=true`}
+                      id={vehicle.id}
+                      notificationType="apk"
                     />
                   </div>
                 ))
@@ -369,6 +381,8 @@ export function NotificationCenter() {
                       description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
                       date={vehicle.warrantyEndDate || ""}
                       link={`/vehicles/${vehicle.id}?openMaintenanceTab=true`}
+                      id={vehicle.id}
+                      notificationType="warranty"
                     />
                   </div>
                 ))
@@ -445,9 +459,9 @@ interface NotificationItemProps {
   description: string;
   date: string;
   link: string;
-  id?: number; // Optional ID for custom notifications
+  id?: number; // Optional ID for custom notifications or reservation ID
   isCustom?: boolean; // Flag to identify custom notifications
-  isSpare?: boolean; // Flag to identify spare vehicle assignment notifications
+  notificationType?: 'reservation' | 'spare' | 'apk' | 'warranty' | 'custom'; // Type of notification
   onClick?: () => void; // Optional click handler to close the popover
 }
 
@@ -459,7 +473,7 @@ function NotificationItem({
   link, 
   id, 
   isCustom = false,
-  isSpare = false,
+  notificationType,
   onClick
 }: NotificationItemProps) {
   const navigate = useLocation()[1];
@@ -562,8 +576,28 @@ function NotificationItem({
   
   const handleCompleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
     if (id && isCustom) {
+      // For custom notifications, mark as read in the database
       await markAsReadMutation.mutateAsync(id);
+    } else if (id && notificationType) {
+      // For other notification types, store dismissal in localStorage
+      const dismissedKey = `dismissed_${notificationType}_${id}`;
+      localStorage.setItem(dismissedKey, Date.now().toString());
+      
+      // Trigger a re-render by invalidating relevant queries
+      if (notificationType === 'reservation') {
+        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      } else if (notificationType === 'spare') {
+        queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations/needing-assignment'] });
+      } else if (notificationType === 'apk' || notificationType === 'warranty') {
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      }
+      
+      // Close popover after dismissing
+      if (onClick) {
+        onClick();
+      }
     }
   };
 
@@ -608,19 +642,7 @@ function NotificationItem({
                 )}
               </Button>
             )}
-            {isSpare && (
-              <Button 
-                size="sm" 
-                onClick={handleActionClick}
-                className="w-full mt-2"
-                variant="default"
-                data-testid="button-assign-spare"
-              >
-                <Car className="mr-2 h-3 w-3" />
-                Assign Spare Vehicle
-              </Button>
-            )}
-            {isCustom && !isPortalRequest && (
+            {!isPortalRequest && (
               <Button 
                 size="sm" 
                 onClick={handleCompleteClick}
@@ -631,18 +653,6 @@ function NotificationItem({
               >
                 <ClipboardCheck className="mr-2 h-3 w-3" />
                 {markAsReadMutation.isPending ? "Marking..." : "Mark as Complete"}
-              </Button>
-            )}
-            {!isCustom && !isPortalRequest && !isSpare && (
-              <Button 
-                size="sm" 
-                onClick={handleActionClick}
-                className="w-full mt-2"
-                variant="outline"
-                data-testid="button-view-details"
-              >
-                <ArrowRight className="mr-2 h-3 w-3" />
-                View Details
               </Button>
             )}
           </div>
