@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import {
   Popover,
@@ -474,6 +474,23 @@ function NotificationItem({
   const isPortalRequest = title === "Portal Access Request";
   const isExistingCustomer = description.includes("✅ Customer exists");
   const isNewCustomer = description.includes("⚠️ New customer");
+  
+  // Mutation to mark custom notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      const response = await fetch(`/api/custom-notifications/${notificationId}/mark-read`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to mark notification as read');
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate the queries to refresh the notification list
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications'] });
+    },
+  });
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -523,6 +540,13 @@ function NotificationItem({
     }
     navigate(link);
   };
+  
+  const handleCompleteClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (id && isCustom) {
+      await markAsReadMutation.mutateAsync(id);
+    }
+  };
 
   return (
     <div className="cursor-pointer" onClick={handleClick}>
@@ -563,6 +587,19 @@ function NotificationItem({
                     Take Action
                   </>
                 )}
+              </Button>
+            )}
+            {isCustom && !isPortalRequest && (
+              <Button 
+                size="sm" 
+                onClick={handleCompleteClick}
+                className="w-full mt-2"
+                variant="outline"
+                disabled={markAsReadMutation.isPending}
+                data-testid="button-mark-complete"
+              >
+                <ClipboardCheck className="mr-2 h-3 w-3" />
+                {markAsReadMutation.isPending ? "Marking..." : "Mark as Complete"}
               </Button>
             )}
           </div>
