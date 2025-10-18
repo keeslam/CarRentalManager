@@ -312,7 +312,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    // Get all vehicles that already have a scheduled APK inspection
+    // Get all vehicles that already have a scheduled APK inspection (exclude soft-deleted)
     const scheduledApkInspections = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
@@ -323,7 +323,8 @@ export class DatabaseStorage implements IStorage {
           or(
             eq(reservations.maintenanceStatus, 'scheduled'),
             eq(reservations.maintenanceStatus, 'in_progress')
-          )
+          ),
+          sql`${reservations.deletedAt} IS NULL` // Exclude soft-deleted reservations
         )
       );
     
