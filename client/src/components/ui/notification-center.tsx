@@ -527,50 +527,32 @@ function NotificationItem({
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // No longer automatically mark notification as read when clicked
-    // Users will now manually mark notifications as read/unread
-    
-    // If onClick callback is provided, execute it (closes the popover)
+    // Close the popover
     if (onClick) {
       onClick();
     }
     
-    // Parse the link to separate path and query parameters
-    const [path, queryString] = link.split('?');
-    const currentPath = window.location.pathname;
-    
-    // If there are query parameters, store them in sessionStorage
-    // so the destination page can read them
-    if (queryString) {
-      const params = new URLSearchParams(queryString);
-      const openReservation = params.get('openReservation');
-      const openApkDialog = params.get('openApkDialog');
-      const openMaintenanceTab = params.get('openMaintenanceTab');
-      const openSpare = params.get('openSpare');
-      
-      if (openReservation) {
-        sessionStorage.setItem('openReservation', openReservation);
-      }
-      if (openApkDialog) {
-        sessionStorage.setItem('openApkDialog', openApkDialog);
-      }
-      if (openMaintenanceTab) {
-        sessionStorage.setItem('openMaintenanceTab', openMaintenanceTab);
-      }
-      if (openSpare) {
-        sessionStorage.setItem('openSpare', openSpare);
-      }
-      
-      // If we're already on the target page, dispatch a storage event
-      // to trigger the dialog opening immediately
-      if (currentPath === path) {
-        // Dispatch a custom event that the target page can listen to
-        window.dispatchEvent(new Event('storage'));
+    // Open the appropriate dialog based on notification type
+    if (id && notificationType) {
+      switch (notificationType) {
+        case 'reservation':
+          openReservationDialog(id);
+          break;
+        case 'spare':
+          openSpareAssignmentDialog(id);
+          break;
+        case 'apk':
+          openAPKDialog(id);
+          break;
+        case 'warranty':
+          openMaintenanceDialog(id);
+          break;
+        default:
+          // For custom notifications or unknown types, do nothing on click
+          // (they have their own action buttons)
+          break;
       }
     }
-    
-    // Navigate to the path (or stay if already there)
-    navigate(path);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -578,7 +560,27 @@ function NotificationItem({
     if (onClick) {
       onClick();
     }
-    navigate(link);
+    
+    // For portal access requests, still navigate
+    if (isPortalRequest) {
+      navigate(link);
+    } else if (id && notificationType) {
+      // For other types, open the dialog
+      switch (notificationType) {
+        case 'reservation':
+          openReservationDialog(id);
+          break;
+        case 'spare':
+          openSpareAssignmentDialog(id);
+          break;
+        case 'apk':
+          openAPKDialog(id);
+          break;
+        case 'warranty':
+          openMaintenanceDialog(id);
+          break;
+      }
+    }
   };
   
   const handleCompleteClick = async (e: React.MouseEvent) => {

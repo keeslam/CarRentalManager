@@ -45,6 +45,8 @@ import MainLayout from "@/layouts/MainLayout";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { SocketProvider } from "@/hooks/use-socket";
 import { ProtectedRoute } from "@/components/protected-route";
+import { GlobalDialogProvider } from "@/contexts/GlobalDialogContext";
+import { GlobalDialogs } from "@/components/global-dialogs";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -118,7 +120,10 @@ function App() {
   return (
     <SocketProvider>
       <AuthProvider>
-        <AppRoutes />
+        <GlobalDialogProvider>
+          <AppRoutes />
+          <GlobalDialogs />
+        </GlobalDialogProvider>
       </AuthProvider>
     </SocketProvider>
   );
