@@ -185,7 +185,7 @@ export function NotificationCenter() {
                           title={`Spare vehicle needed for ${customer?.name || "Customer"}`}
                           description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                           date={placeholder.startDate}
-                          link={`/dashboard?openSpare=${placeholder.id}`}
+                          link={`/?openSpare=${placeholder.id}`}
                           onClick={() => setOpen(false)}
                         />
                       </div>
@@ -316,7 +316,7 @@ export function NotificationCenter() {
                         title={`Spare vehicle needed for ${customer?.name || "Customer"}`}
                         description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
                         date={placeholder.startDate}
-                        link={`/dashboard?openSpare=${placeholder.id}`}
+                        link={`/?openSpare=${placeholder.id}`}
                         onClick={() => setOpen(false)}
                       />
                     </div>
