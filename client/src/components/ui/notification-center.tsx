@@ -430,8 +430,8 @@ function NotificationItem({
       onClick();
     }
     
-    // Navigate to the link - use window.location to preserve query parameters
-    window.location.href = link;
+    // Navigate to the link using wouter's navigate
+    navigate(link);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
