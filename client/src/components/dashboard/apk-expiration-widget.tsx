@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invalidateByPrefix } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { formatDate } from "@/lib/format-utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useLocation } from "wouter";
 import { Vehicle } from "@shared/schema";
+import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 
 // Function to get days until a date
 function getDaysUntil(dateStr: string): number {
@@ -30,6 +32,9 @@ function getUrgencyClass(days: number): string {
 export function ApkExpirationWidget() {
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/apk-expiring"],
   });
@@ -40,12 +45,17 @@ export function ApkExpirationWidget() {
     daysUntilExpiration: getDaysUntil(vehicle.apkDate || '')
   })).sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
   
-  // Function to handle clicking on a vehicle to view its details
-  const handleViewClick = (vehicle: Vehicle) => {
-    // Use prefix-based invalidation to ensure fresh data
-    invalidateByPrefix(`/api/vehicles/${vehicle.id}`);
-    // Navigate to the vehicle details page
-    navigate(`/vehicles/${vehicle.id}`);
+  // Function to handle clicking on a vehicle to schedule APK inspection
+  const handleScheduleClick = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setScheduleDialogOpen(true);
+  };
+  
+  const handleScheduleSuccess = () => {
+    setScheduleDialogOpen(false);
+    setSelectedVehicle(null);
+    queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
   };
   
   return (
@@ -97,7 +107,8 @@ export function ApkExpirationWidget() {
                     variant="ghost" 
                     size="icon" 
                     className="text-warning-600 hover:bg-warning-50 rounded"
-                    onClick={() => handleViewClick(vehicle)}
+                    onClick={() => handleScheduleClick(vehicle)}
+                    data-testid={`button-schedule-apk-${vehicle.id}`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
                       <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
@@ -112,6 +123,16 @@ export function ApkExpirationWidget() {
           )}
         </div>
       </CardContent>
+      
+      {selectedVehicle && (
+        <ScheduleMaintenanceDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          onSuccess={handleScheduleSuccess}
+          initialVehicleId={selectedVehicle.id}
+          initialMaintenanceType="apk_inspection"
+        />
+      )}
     </Card>
   );
 }
