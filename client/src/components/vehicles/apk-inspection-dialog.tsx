@@ -72,6 +72,16 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
     select: (data) => data.filter(r => r.type === 'maintenance_block'),
   });
 
+  // Fetch active rentals for this vehicle to check for conflicts
+  const { data: vehicleRentals = [] } = useQuery<Reservation[]>({
+    queryKey: [`/api/reservations/vehicle/${vehicle.id}`],
+    enabled: open,
+    select: (data) => data.filter(r => 
+      r.type === 'standard' && 
+      (r.status === 'confirmed' || r.status === 'pending')
+    ),
+  });
+
   // Generate calendar days
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
@@ -90,6 +100,36 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
       return day >= start && day <= end;
     });
   };
+
+  // Check if APK period overlaps with any active rental
+  const checkRentalConflict = (apkStartDate: string, duration: number) => {
+    if (!apkStartDate || !duration) return null;
+    
+    const apkStart = parseISO(apkStartDate);
+    const apkEnd = addDays(apkStart, duration - 1);
+    
+    return vehicleRentals.find(rental => {
+      const rentalStart = parseISO(rental.startDate);
+      const rentalEnd = rental.endDate ? parseISO(rental.endDate) : addDays(new Date(), 365); // Open-ended rentals
+      
+      // Check if ranges overlap
+      return (apkStart <= rentalEnd && apkEnd >= rentalStart);
+    });
+  };
+
+  // Watch for date/duration changes and auto-check spare vehicle if needed
+  const scheduledDate = form.watch('scheduledDate');
+  const duration = form.watch('duration');
+  
+  useEffect(() => {
+    if (scheduledDate && duration) {
+      const conflictingRental = checkRentalConflict(scheduledDate, duration);
+      if (conflictingRental) {
+        // Auto-check the spare vehicle checkbox
+        form.setValue('needsSpareVehicle', true);
+      }
+    }
+  }, [scheduledDate, duration, vehicleRentals]);
 
   // Schedule APK inspection mutation
   const scheduleApkMutation = useMutation({
@@ -390,30 +430,68 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
                     )}
                   />
 
+                  {/* Rental Conflict Warning */}
+                  {(() => {
+                    const conflictingRental = scheduledDate && duration ? checkRentalConflict(scheduledDate, duration) : null;
+                    if (conflictingRental) {
+                      return (
+                        <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
+                          <div className="flex gap-2">
+                            <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm space-y-2">
+                              <p className="font-medium text-orange-900">Active Rental Detected</p>
+                              <p className="text-orange-700">
+                                This vehicle has an active rental during the APK inspection period:
+                              </p>
+                              <div className="bg-orange-100 rounded p-2 space-y-1">
+                                <p className="font-medium text-orange-900">
+                                  {conflictingRental.customer?.name || 'Customer'}
+                                </p>
+                                <p className="text-orange-700 text-xs">
+                                  Rental: {format(parseISO(conflictingRental.startDate), 'MMM d, yyyy')} - 
+                                  {conflictingRental.endDate ? format(parseISO(conflictingRental.endDate), 'MMM d, yyyy') : 'Open-ended'}
+                                </p>
+                              </div>
+                              <p className="text-orange-700 font-medium">
+                                ⚠️ A spare vehicle assignment will be required for this customer.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <FormField
                     control={form.control}
                     name="needsSpareVehicle"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value}
-                            onChange={field.onChange}
-                            className="h-4 w-4 rounded border-gray-300"
-                            data-testid="checkbox-needs-spare"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Needs Spare Vehicle
-                          </FormLabel>
-                          <FormDescription>
-                            Check if customer needs a replacement vehicle during APK inspection
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const conflictingRental = scheduledDate && duration ? checkRentalConflict(scheduledDate, duration) : null;
+                      return (
+                        <FormItem className={`flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 ${conflictingRental ? 'border-orange-300 bg-orange-50' : ''}`}>
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={field.onChange}
+                              className="h-4 w-4 rounded border-gray-300"
+                              data-testid="checkbox-needs-spare"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className={conflictingRental ? 'text-orange-900 font-semibold' : ''}>
+                              Needs Spare Vehicle {conflictingRental ? '(Required)' : ''}
+                            </FormLabel>
+                            <FormDescription className={conflictingRental ? 'text-orange-700' : ''}>
+                              {conflictingRental 
+                                ? 'Customer has an active rental - spare vehicle is required' 
+                                : 'Check if customer needs a replacement vehicle during APK inspection'}
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
