@@ -244,8 +244,6 @@ export default function MaintenanceCalendar() {
 
       // Invalidate all relevant queries to refresh the calendar
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ 
         queryKey: ['/api/reservations/range', {
@@ -253,6 +251,13 @@ export default function MaintenanceCalendar() {
           endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
         }]
       });
+      
+      // Force refetch after a short delay to ensure database transaction is committed
+      // This prevents race conditions where the query runs before deletion is fully committed
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+        queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      }, 100);
 
       // Close dialogs if open
       setDeleteDialogOpen(false);
