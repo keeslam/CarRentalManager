@@ -217,7 +217,7 @@ export function NotificationCenter() {
                         title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
                         description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
                         date={vehicle.warrantyEndDate || ""}
-                        link={`/vehicles/${vehicle.id}`}
+                        link={`/vehicles/${vehicle.id}?openMaintenanceTab=true`}
                       />
                     </div>
                   ))}
@@ -361,7 +361,7 @@ export function NotificationCenter() {
                       title={`Warranty expiring for ${formatLicensePlate(vehicle.licensePlate)}`}
                       description={`Warranty for ${vehicle.brand} ${vehicle.model} expires on ${formatDate(vehicle.warrantyEndDate || "")}`}
                       date={vehicle.warrantyEndDate || ""}
-                      link={`/vehicles/${vehicle.id}`}
+                      link={`/vehicles/${vehicle.id}?openMaintenanceTab=true`}
                     />
                   </div>
                 ))
@@ -495,12 +495,20 @@ function NotificationItem({
       const params = new URLSearchParams(queryString);
       const openReservation = params.get('openReservation');
       const openApkDialog = params.get('openApkDialog');
+      const openMaintenanceTab = params.get('openMaintenanceTab');
+      const openSpare = params.get('openSpare');
       
       if (openReservation) {
         sessionStorage.setItem('openReservation', openReservation);
       }
       if (openApkDialog) {
         sessionStorage.setItem('openApkDialog', openApkDialog);
+      }
+      if (openMaintenanceTab) {
+        sessionStorage.setItem('openMaintenanceTab', openMaintenanceTab);
+      }
+      if (openSpare) {
+        sessionStorage.setItem('openSpare', openSpare);
       }
     }
     

@@ -161,6 +161,21 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       sessionStorage.removeItem('openApkDialog');
     }
   }, [vehicle, isApkInspectionOpen, vehicleId]);
+  
+  // Auto-switch to maintenance tab from sessionStorage (from warranty notifications)
+  React.useEffect(() => {
+    if (!vehicle) return;
+    
+    // Check sessionStorage for maintenance tab flag
+    const shouldOpenMaintenanceTab = sessionStorage.getItem('openMaintenanceTab');
+    
+    if (shouldOpenMaintenanceTab === 'true') {
+      console.log('[VehicleDetails] Switching to maintenance tab from notification');
+      setActiveTab('maintenance');
+      // Clear the sessionStorage after switching
+      sessionStorage.removeItem('openMaintenanceTab');
+    }
+  }, [vehicle, vehicleId]);
 
   // Send APK reminder mutation
   const sendApkReminderMutation = useMutation({
