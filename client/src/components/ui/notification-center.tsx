@@ -45,6 +45,11 @@ export function NotificationCenter() {
   const { data: customNotifications = [] } = useQuery<CustomNotification[]>({
     queryKey: ["/api/custom-notifications/unread"],
   });
+  
+  // Fetch placeholder reservations needing assignment
+  const { data: placeholderReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ["/api/placeholder-reservations/needing-assignment"],
+  });
 
   // Calculate notifications
   const apkExpiringItems = vehicles
@@ -85,6 +90,7 @@ export function NotificationCenter() {
     apkExpiringItems.length + 
     warrantyExpiringItems.length + 
     upcomingReservationItems.length + 
+    placeholderReservations.length +
     customNotifications.length;
 
   return (
@@ -112,12 +118,15 @@ export function NotificationCenter() {
           </p>
         </div>
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 m-2">
+          <TabsList className="grid grid-cols-6 m-2">
             <TabsTrigger value="all" className="text-xs">
               All
             </TabsTrigger>
             <TabsTrigger value="reservations" className="text-xs">
               Reservations
+            </TabsTrigger>
+            <TabsTrigger value="spare" className="text-xs">
+              Spare
             </TabsTrigger>
             <TabsTrigger value="apk" className="text-xs">
               APK
@@ -158,6 +167,26 @@ export function NotificationCenter() {
                       />
                     </div>
                   ))}
+                  
+                  {placeholderReservations.length > 0 && (
+                    <div className="px-4 py-2 bg-gray-50">
+                      <h5 className="text-xs font-medium">Spare Vehicle Assignment Needed</h5>
+                    </div>
+                  )}
+                  {placeholderReservations.map(placeholder => {
+                    const customer = placeholder.customer;
+                    return (
+                      <div key={`spare-${placeholder.id}`} onClick={() => setOpen(false)}>
+                        <NotificationItem
+                          icon={<Car className="text-orange-500" />}
+                          title={`Spare vehicle needed for ${customer?.name || "Customer"}`}
+                          description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
+                          date={placeholder.startDate}
+                          link={`/dashboard?openSpare=${placeholder.id}`}
+                        />
+                      </div>
+                    );
+                  })}
                   
                   {apkExpiringItems.length > 0 && (
                     <div className="px-4 py-2 bg-gray-50">
@@ -261,6 +290,33 @@ export function NotificationCenter() {
                     />
                   </div>
                 ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="spare" className="m-0">
+              {placeholderReservations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[280px] text-center p-4">
+                  <Car className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
+                  <h3 className="font-medium">No spare assignments needed</h3>
+                  <p className="text-sm text-muted-foreground">
+                    All placeholder reservations have been assigned spare vehicles.
+                  </p>
+                </div>
+              ) : (
+                placeholderReservations.map(placeholder => {
+                  const customer = placeholder.customer;
+                  return (
+                    <div key={`spare-tab-${placeholder.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={<Car className="text-orange-500" />}
+                        title={`Spare vehicle needed for ${customer?.name || "Customer"}`}
+                        description={`Placeholder reservation #${placeholder.id} from ${formatDate(placeholder.startDate)} needs a spare vehicle assignment`}
+                        date={placeholder.startDate}
+                        link={`/dashboard?openSpare=${placeholder.id}`}
+                      />
+                    </div>
+                  );
+                })
               )}
             </TabsContent>
 
