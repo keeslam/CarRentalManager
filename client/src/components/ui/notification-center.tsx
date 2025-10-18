@@ -62,11 +62,29 @@ export function NotificationCenter() {
     queryKey: ["/api/placeholder-reservations/needing-assignment"],
   });
 
-  // Filter out dismissed notifications using localStorage
+  // Helper function to check if a dismissal is still valid (not expired)
+  const isDismissed = (key: string): boolean => {
+    const dismissedTimestamp = localStorage.getItem(key);
+    if (!dismissedTimestamp) return false;
+    
+    // Check if dismissal has expired (older than 7 days)
+    const dismissedDate = new Date(parseInt(dismissedTimestamp));
+    const daysSinceDismissal = differenceInDays(today, dismissedDate);
+    
+    if (daysSinceDismissal > 7) {
+      // Dismissal has expired, remove it
+      localStorage.removeItem(key);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Filter out dismissed notifications using localStorage with expiration
   const apkExpiringItems = apkExpiringVehicles
     .filter(vehicle => {
       const dismissedKey = `dismissed_apk_${vehicle.id}`;
-      return !localStorage.getItem(dismissedKey);
+      return !isDismissed(dismissedKey);
     })
     .sort((a, b) => {
       if (!a.apkDate || !b.apkDate) return 0;
@@ -76,7 +94,7 @@ export function NotificationCenter() {
   const warrantyExpiringItems = warrantyExpiringVehicles
     .filter(vehicle => {
       const dismissedKey = `dismissed_warranty_${vehicle.id}`;
-      return !localStorage.getItem(dismissedKey);
+      return !isDismissed(dismissedKey);
     })
     .sort((a, b) => {
       if (!a.warrantyEndDate || !b.warrantyEndDate) return 0;
