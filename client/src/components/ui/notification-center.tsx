@@ -32,9 +32,19 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const today = new Date();
 
-  // Fetch vehicles
+  // Fetch vehicles for general display
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+
+  // Fetch APK expiring vehicles (backend already filters out vehicles with scheduled APK)
+  const { data: apkExpiringVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/apk-expiring"],
+  });
+
+  // Fetch warranty expiring vehicles
+  const { data: warrantyExpiringVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles/warranty-expiring"],
   });
 
   // Fetch upcoming reservations
@@ -52,25 +62,21 @@ export function NotificationCenter() {
     queryKey: ["/api/placeholder-reservations/needing-assignment"],
   });
 
-  // Calculate notifications
-  const apkExpiringItems = vehicles
+  // Filter out dismissed notifications using localStorage
+  const apkExpiringItems = apkExpiringVehicles
     .filter(vehicle => {
-      if (!vehicle.apkDate) return false;
-      const apkDate = new Date(vehicle.apkDate);
-      const daysUntil = differenceInDays(apkDate, today);
-      return daysUntil >= 0 && daysUntil <= 60; // 2 months
+      const dismissedKey = `dismissed_apk_${vehicle.id}`;
+      return !localStorage.getItem(dismissedKey);
     })
     .sort((a, b) => {
       if (!a.apkDate || !b.apkDate) return 0;
       return new Date(a.apkDate).getTime() - new Date(b.apkDate).getTime();
     });
 
-  const warrantyExpiringItems = vehicles
+  const warrantyExpiringItems = warrantyExpiringVehicles
     .filter(vehicle => {
-      if (!vehicle.warrantyEndDate) return false;
-      const warrantyDate = new Date(vehicle.warrantyEndDate);
-      const daysUntil = differenceInDays(warrantyDate, today);
-      return daysUntil >= 0 && daysUntil <= 60; // 2 months
+      const dismissedKey = `dismissed_warranty_${vehicle.id}`;
+      return !localStorage.getItem(dismissedKey);
     })
     .sort((a, b) => {
       if (!a.warrantyEndDate || !b.warrantyEndDate) return 0;
@@ -596,11 +602,13 @@ function NotificationItem({
       
       // Trigger a re-render by invalidating relevant queries
       if (notificationType === 'reservation') {
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
       } else if (notificationType === 'spare') {
         queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations/needing-assignment'] });
-      } else if (notificationType === 'apk' || notificationType === 'warranty') {
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+      } else if (notificationType === 'apk') {
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+      } else if (notificationType === 'warranty') {
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
       }
       
       // Close popover after dismissing
