@@ -86,12 +86,15 @@ export function NotificationCenter() {
       return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     });
 
+  // Filter out spare-related custom notifications (they're shown in Spare tab)
+  const nonSpareCustomNotifications = customNotifications.filter(n => !n.title.includes("Spare Vehicle Assignment"));
+  
   const totalNotifications = 
     apkExpiringItems.length + 
     warrantyExpiringItems.length + 
     upcomingReservationItems.length + 
     placeholderReservations.length +
-    customNotifications.length;
+    nonSpareCustomNotifications.length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -223,12 +226,12 @@ export function NotificationCenter() {
                     </div>
                   ))}
                   
-                  {customNotifications.length > 0 && (
+                  {nonSpareCustomNotifications.length > 0 && (
                     <div className="px-4 py-2 bg-gray-50">
                       <h5 className="text-xs font-medium">Custom Notifications</h5>
                     </div>
                   )}
-                  {customNotifications.map(notification => {
+                  {nonSpareCustomNotifications.map(notification => {
                     // Determine icon based on notification.icon field
                     let iconComponent;
                     switch (notification.icon) {
@@ -371,7 +374,7 @@ export function NotificationCenter() {
             </TabsContent>
             
             <TabsContent value="custom" className="m-0">
-              {customNotifications.length === 0 ? (
+              {customNotifications.filter(n => !n.title.includes("Spare Vehicle Assignment")).length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[280px] text-center p-4">
                   <MessageSquare className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
                   <h3 className="font-medium">No custom notifications</h3>
@@ -380,7 +383,9 @@ export function NotificationCenter() {
                   </p>
                 </div>
               ) : (
-                customNotifications.map(notification => {
+                customNotifications
+                  .filter(notification => !notification.title.includes("Spare Vehicle Assignment"))
+                  .map(notification => {
                   // Determine icon based on notification.icon field
                   let iconComponent;
                   switch (notification.icon) {
