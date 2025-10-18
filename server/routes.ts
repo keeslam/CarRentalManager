@@ -2287,8 +2287,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Check for conflicts only if vehicle, startDate or endDate are being updated
       if (reservationData.vehicleId && reservationData.startDate) {
-        // Determine if this is a maintenance block
-        const isMaintenanceBlock = reservationData.type === 'maintenance_block';
+        // Get the existing reservation to check its type
+        const existingReservation = await storage.getReservation(id);
+        if (!existingReservation) {
+          return res.status(404).json({ message: "Reservation not found" });
+        }
+        
+        // Determine if this is a maintenance block - check both the update data and existing reservation
+        const isMaintenanceBlock = (reservationData.type === 'maintenance_block') || 
+                                   (existingReservation.type === 'maintenance_block');
         
         const conflicts = await storage.checkReservationConflicts(
           reservationData.vehicleId,
