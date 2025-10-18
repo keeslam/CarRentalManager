@@ -445,6 +445,7 @@ interface NotificationItemProps {
   link: string;
   id?: number; // Optional ID for custom notifications
   isCustom?: boolean; // Flag to identify custom notifications
+  isSpare?: boolean; // Flag to identify spare vehicle assignment notifications
   onClick?: () => void; // Optional click handler to close the popover
 }
 
@@ -456,6 +457,7 @@ function NotificationItem({
   link, 
   id, 
   isCustom = false,
+  isSpare = false,
   onClick
 }: NotificationItemProps) {
   const navigate = useLocation()[1];
