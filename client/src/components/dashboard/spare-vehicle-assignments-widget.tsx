@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, Car, Clock, CheckCircle, Truck, AlertCircle } from "lucide-react";
 import { Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SpareVehicleAssignmentDialog } from "@/components/reservations/spare-vehicle-assignment-dialog";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +43,33 @@ export function SpareVehicleAssignmentsWidget() {
   const sortedPending = [...(pendingAssignments ?? [])].sort((a, b) => 
     new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
+  
+  // Auto-open spare assignment dialog from sessionStorage (from notifications)
+  useEffect(() => {
+    if (!pendingAssignments || pendingAssignments.length === 0) return;
+    
+    // Check sessionStorage for spare assignment flag
+    const openSpareId = sessionStorage.getItem('openSpare');
+    
+    if (openSpareId) {
+      console.log('[SpareVehicleAssignments] Checking for openSpare in sessionStorage:', openSpareId);
+      
+      // Find the placeholder reservation by ID
+      const placeholder = pendingAssignments.find(p => p.id === parseInt(openSpareId));
+      
+      if (placeholder && !assignmentDialogOpen) {
+        console.log('[SpareVehicleAssignments] Opening spare assignment dialog for placeholder:', placeholder.id);
+        setSelectedPlaceholder(placeholder);
+        setAssignmentDialogOpen(true);
+        // Clear the sessionStorage after opening
+        sessionStorage.removeItem('openSpare');
+      } else if (!placeholder) {
+        console.log('[SpareVehicleAssignments] Placeholder not found in pending assignments');
+        // Clear anyway to prevent infinite attempts
+        sessionStorage.removeItem('openSpare');
+      }
+    }
+  }, [pendingAssignments, assignmentDialogOpen]);
 
   // Filter all reservations for assigned spare vehicles (not yet picked up)
   const upcomingAssigned = [...(allReservations ?? [])]
