@@ -227,6 +227,15 @@ export default function MaintenanceCalendar() {
         ? `${reservation.vehicle.brand} ${reservation.vehicle.model} (${displayLicensePlate(reservation.vehicle.licensePlate)})`
         : `Vehicle ${reservation.vehicleId}`;
 
+      // Clear localStorage dismissals for APK/warranty notifications when deleting that type
+      // This ensures the notification will reappear after deletion
+      const notes = reservation.notes?.toLowerCase() || '';
+      if (notes.includes('apk_inspection:') || notes.includes('apk')) {
+        localStorage.removeItem(`dismissed_apk_${reservation.vehicleId}`);
+      } else if (notes.includes('warranty_service:') || notes.includes('warranty') || notes.includes('garantie')) {
+        localStorage.removeItem(`dismissed_warranty_${reservation.vehicleId}`);
+      }
+
       // Show success toast
       toast({
         title: "Maintenance deleted",
