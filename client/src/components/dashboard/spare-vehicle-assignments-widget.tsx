@@ -46,31 +46,43 @@ export function SpareVehicleAssignmentsWidget() {
   
   // Auto-open spare assignment dialog from sessionStorage (from notifications)
   useEffect(() => {
-    // Check sessionStorage for spare assignment flag
-    const openSpareId = sessionStorage.getItem('openSpare');
+    const checkForOpenSpare = () => {
+      // Check sessionStorage for spare assignment flag
+      const openSpareId = sessionStorage.getItem('openSpare');
+      
+      if (!openSpareId) return;
+      
+      // Clear immediately to prevent multiple triggers
+      sessionStorage.removeItem('openSpare');
+      
+      console.log('[SpareVehicleAssignments] Found openSpare in sessionStorage:', openSpareId);
+      
+      if (!pendingAssignments || pendingAssignments.length === 0) {
+        console.log('[SpareVehicleAssignments] No pending assignments loaded yet');
+        return;
+      }
+      
+      // Find the placeholder reservation by ID
+      const placeholder = pendingAssignments.find(p => p.id === parseInt(openSpareId));
+      
+      if (placeholder) {
+        console.log('[SpareVehicleAssignments] Opening spare assignment dialog for placeholder:', placeholder.id);
+        setSelectedPlaceholder(placeholder);
+        setAssignmentDialogOpen(true);
+      } else {
+        console.log('[SpareVehicleAssignments] Placeholder not found in pending assignments');
+      }
+    };
     
-    if (!openSpareId) return;
+    // Check immediately when component mounts or data changes
+    checkForOpenSpare();
     
-    // Clear immediately to prevent multiple triggers
-    sessionStorage.removeItem('openSpare');
+    // Also listen for storage events (triggered when clicking notification while already on dashboard)
+    window.addEventListener('storage', checkForOpenSpare);
     
-    console.log('[SpareVehicleAssignments] Found openSpare in sessionStorage:', openSpareId);
-    
-    if (!pendingAssignments || pendingAssignments.length === 0) {
-      console.log('[SpareVehicleAssignments] No pending assignments loaded yet');
-      return;
-    }
-    
-    // Find the placeholder reservation by ID
-    const placeholder = pendingAssignments.find(p => p.id === parseInt(openSpareId));
-    
-    if (placeholder) {
-      console.log('[SpareVehicleAssignments] Opening spare assignment dialog for placeholder:', placeholder.id);
-      setSelectedPlaceholder(placeholder);
-      setAssignmentDialogOpen(true);
-    } else {
-      console.log('[SpareVehicleAssignments] Placeholder not found in pending assignments');
-    }
+    return () => {
+      window.removeEventListener('storage', checkForOpenSpare);
+    };
   }, [pendingAssignments]);
 
   // Filter all reservations for assigned spare vehicles (not yet picked up)

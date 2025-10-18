@@ -512,6 +512,7 @@ function NotificationItem({
     
     // Parse the link to separate path and query parameters
     const [path, queryString] = link.split('?');
+    const currentPath = window.location.pathname;
     
     // If there are query parameters, store them in sessionStorage
     // so the destination page can read them
@@ -534,9 +535,16 @@ function NotificationItem({
       if (openSpare) {
         sessionStorage.setItem('openSpare', openSpare);
       }
+      
+      // If we're already on the target page, dispatch a storage event
+      // to trigger the dialog opening immediately
+      if (currentPath === path) {
+        // Dispatch a custom event that the target page can listen to
+        window.dispatchEvent(new Event('storage'));
+      }
     }
     
-    // Navigate to the path
+    // Navigate to the path (or stay if already there)
     navigate(path);
   };
 
