@@ -668,32 +668,6 @@ export const insertAppSettingsSchema = createInsertSchema(appSettings).omit({
 export type AppSettings = typeof appSettings.$inferSelect;
 export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
 
-// Customer Users table - for customer portal authentication (separate from admin users)
-export const customerUsers = pgTable("customer_users", {
-  id: serial("id").primaryKey(),
-  customerId: integer("customer_id").notNull().unique().references(() => customers.id),
-  email: text("email").notNull().unique(), // Login email (could be different from customer.email)
-  password: text("password").notNull(), // Hashed password
-  portalEnabled: boolean("portal_enabled").notNull().default(true),
-  lastLogin: timestamp("last_login"),
-  passwordResetToken: text("password_reset_token"),
-  passwordResetExpires: timestamp("password_reset_expires"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  createdBy: text("created_by"),
-  updatedBy: text("updated_by"),
-});
-
-export const insertCustomerUserSchema = createInsertSchema(customerUsers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLogin: true,
-});
-
-export type CustomerUser = typeof customerUsers.$inferSelect;
-export type InsertCustomerUser = z.infer<typeof insertCustomerUserSchema>;
-
 // Vehicle Waitlist table - for tracking customers waiting for unavailable vehicles
 export const vehicleWaitlist = pgTable("vehicle_waitlist", {
   id: serial("id").primaryKey(),
@@ -727,46 +701,3 @@ export type VehicleWaitlist = typeof vehicleWaitlist.$inferSelect & {
   vehicle?: Vehicle;
 };
 export type InsertVehicleWaitlist = z.infer<typeof insertVehicleWaitlistSchema>;
-
-// Extension Requests table - for tracking rental extension requests from customers
-export const extensionRequests = pgTable("extension_requests", {
-  id: serial("id").primaryKey(),
-  reservationId: integer("reservation_id").notNull().references(() => reservations.id),
-  customerId: integer("customer_id").notNull().references(() => customers.id),
-  vehicleId: integer("vehicle_id").references(() => vehicles.id), // Nullable to support placeholder/maintenance reservations
-  currentEndDate: text("current_end_date"), // Original/current end date (text to match reservations.endDate type, null for open-ended)
-  requestedEndDate: text("requested_end_date").notNull(), // New end date requested (text to match reservations.endDate type)
-  reason: text("reason"), // Customer's reason for extension
-  status: text("status").notNull().default("pending"), // 'pending' | 'approved' | 'rejected' | 'cancelled'
-  staffNotes: text("staff_notes"), // Internal notes from staff
-  reviewedBy: integer("reviewed_by").references(() => users.id), // Staff user who reviewed
-  reviewedAt: timestamp("reviewed_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const insertExtensionRequestSchema = createInsertSchema(extensionRequests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  status: true, // Status is set automatically
-  reviewedBy: true,
-  reviewedAt: true,
-});
-
-// Update schema for extension requests (allows status changes for staff review)
-export const updateExtensionRequestSchema = createInsertSchema(extensionRequests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  reservationId: true,
-  customerId: true,
-  vehicleId: true,
-  currentEndDate: true,
-  requestedEndDate: true,
-  reason: true,
-}).partial(); // All fields optional for updates
-
-export type ExtensionRequest = typeof extensionRequests.$inferSelect;
-export type InsertExtensionRequest = z.infer<typeof insertExtensionRequestSchema>;
-export type UpdateExtensionRequest = z.infer<typeof updateExtensionRequestSchema>;
