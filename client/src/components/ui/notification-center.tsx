@@ -136,7 +136,7 @@ export function NotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 md:w-96 p-0" align="end">
+      <PopoverContent className="w-96 md:w-[480px] p-0" align="end">
         <div className="p-4 border-b">
           <h4 className="font-semibold">Notifications</h4>
           <p className="text-xs text-muted-foreground">
