@@ -298,15 +298,15 @@ export class DatabaseStorage implements IStorage {
     const todayStr = today.toISOString().split('T')[0];
     const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
     
-    // Get all vehicles with APK expiring soon
+    // Get all vehicles with APK expiring soon (including overdue)
+    // Show APK dates that are: overdue OR expiring within next 2 months
     const expiringVehicles = await db
       .select()
       .from(vehicles)
       .where(
         and(
           sql`${vehicles.apkDate} IS NOT NULL`,
-          sql`${vehicles.apkDate} > ${todayStr}`,
-          sql`${vehicles.apkDate} <= ${futureStr}`
+          sql`${vehicles.apkDate} <= ${futureStr}` // Include overdue and upcoming within 2 months
         )
       );
     
@@ -339,14 +339,15 @@ export class DatabaseStorage implements IStorage {
     const todayStr = today.toISOString().split('T')[0];
     const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
     
+    // Get all vehicles with warranty expiring soon (including overdue)
+    // Show warranty dates that are: overdue OR expiring within next 2 months
     return await db
       .select()
       .from(vehicles)
       .where(
         and(
           sql`${vehicles.warrantyEndDate} IS NOT NULL`,
-          sql`${vehicles.warrantyEndDate} > ${todayStr}`,
-          sql`${vehicles.warrantyEndDate} <= ${futureStr}`
+          sql`${vehicles.warrantyEndDate} <= ${futureStr}` // Include overdue and upcoming within 2 months
         )
       );
   }
