@@ -351,15 +351,14 @@ export default function ReservationCalendarPage() {
     enabled: !!selectedReservation?.id
   });
 
-  // Auto-open reservation dialog from URL parameter (from notifications)
+  // Auto-open reservation dialog from sessionStorage (from notifications)
   useEffect(() => {
     if (!reservations) return;
     
-    // Get query parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const openReservationId = urlParams.get('openReservation');
+    // Check sessionStorage for reservation to open
+    const openReservationId = sessionStorage.getItem('openReservation');
     
-    console.log('[Calendar] Checking for openReservation param:', openReservationId);
+    console.log('[Calendar] Checking for openReservation in sessionStorage:', openReservationId);
     
     if (openReservationId && !viewDialogOpen) {
       const reservationId = parseInt(openReservationId);
@@ -370,8 +369,8 @@ export default function ReservationCalendarPage() {
       if (reservation) {
         console.log('[Calendar] Opening reservation dialog for:', reservationId);
         handleViewReservation(reservation);
-        // Remove the query parameter from URL after opening
-        window.history.replaceState({}, '', '/reservations');
+        // Clear the sessionStorage after opening
+        sessionStorage.removeItem('openReservation');
       }
     }
   }, [reservations, viewDialogOpen]);

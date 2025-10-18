@@ -144,22 +144,21 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     enabled: !!vehicleId
   });
 
-  // Auto-open APK dialog from URL parameter (from notifications)
+  // Auto-open APK dialog from sessionStorage (from notifications)
   React.useEffect(() => {
     if (!vehicle) return;
     
-    // Get query parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldOpenApkDialog = urlParams.get('openApkDialog');
+    // Check sessionStorage for APK dialog flag
+    const shouldOpenApkDialog = sessionStorage.getItem('openApkDialog');
     
-    console.log('[VehicleDetails] Checking for openApkDialog param:', shouldOpenApkDialog);
+    console.log('[VehicleDetails] Checking for openApkDialog in sessionStorage:', shouldOpenApkDialog);
     console.log('[VehicleDetails] Vehicle loaded:', vehicle?.id, 'isApkInspectionOpen:', isApkInspectionOpen);
     
     if (shouldOpenApkDialog === 'true' && !isApkInspectionOpen) {
       console.log('[VehicleDetails] Opening APK inspection dialog');
       setIsApkInspectionOpen(true);
-      // Remove the query parameter from URL after opening
-      window.history.replaceState({}, '', `/vehicles/${vehicleId}`);
+      // Clear the sessionStorage after opening
+      sessionStorage.removeItem('openApkDialog');
     }
   }, [vehicle, isApkInspectionOpen, vehicleId]);
 

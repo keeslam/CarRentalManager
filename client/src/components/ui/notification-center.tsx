@@ -433,17 +433,23 @@ function NotificationItem({
     // Parse the link to separate path and query parameters
     const [path, queryString] = link.split('?');
     
-    // Use wouter to navigate to the path
-    navigate(path);
-    
-    // If there are query parameters, add them using history API
-    // This needs to be done after navigation, so use a small timeout
+    // If there are query parameters, store them in sessionStorage
+    // so the destination page can read them
     if (queryString) {
-      setTimeout(() => {
-        const newUrl = `${path}?${queryString}`;
-        window.history.replaceState({}, '', newUrl);
-      }, 10);
+      const params = new URLSearchParams(queryString);
+      const openReservation = params.get('openReservation');
+      const openApkDialog = params.get('openApkDialog');
+      
+      if (openReservation) {
+        sessionStorage.setItem('openReservation', openReservation);
+      }
+      if (openApkDialog) {
+        sessionStorage.setItem('openApkDialog', openApkDialog);
+      }
     }
+    
+    // Navigate to the path
+    navigate(path);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
