@@ -337,7 +337,9 @@ export function ScheduleMaintenanceDialog({
         setConflictingReservations(result.conflictingReservations);
         setMaintenanceData({
           ...result.maintenanceData,
-          maintenanceId: result.maintenanceReservationId // Store the created maintenance ID
+          maintenanceId: result.maintenanceReservationId, // Store the created maintenance ID
+          maintenanceType: data.maintenanceType, // Store maintenance type for later
+          vehicleId: data.vehicleId // Store vehicle ID for later
         });
         
         // Close the maintenance dialog before showing spare dialog
@@ -353,8 +355,16 @@ export function ScheduleMaintenanceDialog({
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       if (result === null) return; // Spare vehicle dialog will handle this
+      
+      // Clear localStorage dismissals for APK/warranty notifications when scheduling that type
+      // This ensures if the user deletes the maintenance, the notification will reappear
+      if (variables.maintenanceType === 'apk_inspection') {
+        localStorage.removeItem(`dismissed_apk_${variables.vehicleId}`);
+      } else if (variables.maintenanceType === 'warranty_service') {
+        localStorage.removeItem(`dismissed_warranty_${variables.vehicleId}`);
+      }
       
       // Use aggressive cache invalidation that catches all query variations
       queryClient.invalidateQueries({ 
@@ -556,6 +566,14 @@ export function ScheduleMaintenanceDialog({
       return { success: true };
     },
     onSuccess: () => {
+      // Clear localStorage dismissals for APK/warranty notifications when scheduling that type
+      // This ensures if the user deletes the maintenance, the notification will reappear
+      if (maintenanceData?.maintenanceType === 'apk_inspection') {
+        localStorage.removeItem(`dismissed_apk_${maintenanceData.vehicleId}`);
+      } else if (maintenanceData?.maintenanceType === 'warranty_service') {
+        localStorage.removeItem(`dismissed_warranty_${maintenanceData.vehicleId}`);
+      }
+      
       // Show success message first
       toast({
         title: "Maintenance scheduled",

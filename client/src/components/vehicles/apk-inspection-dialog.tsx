@@ -184,6 +184,11 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
           ? `APK inspection scheduled. Spare vehicle assignment created and added to assignment queue.`
           : `APK inspection for ${formatLicensePlate(vehicle.licensePlate)} has been scheduled successfully.`,
       });
+      
+      // Clear any localStorage dismissal for this vehicle's APK notification
+      // This ensures if the user deletes the maintenance, the notification will reappear
+      localStorage.removeItem(`dismissed_apk_${vehicle.id}`);
+      
       queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
