@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarClock, RotateCw, Search } from "lucide-react";
+import { CalendarClock, RotateCw, Search, Wrench, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface VehicleReservationsStatusDialogProps {
@@ -228,6 +228,7 @@ export function VehicleReservationsStatusDialog({
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 z-10">
                           <tr className="bg-slate-100 border-b">
+                            <th className="px-4 py-3 text-left font-medium">Type</th>
                             <th className="px-4 py-3 text-left font-medium">ID</th>
                             <th className="px-4 py-3 text-left font-medium">Customer</th>
                             <th className="px-4 py-3 text-left font-medium">Period</th>
@@ -236,45 +237,61 @@ export function VehicleReservationsStatusDialog({
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredReservations.map((reservation) => (
-                            <tr key={reservation.id} className="border-t hover:bg-muted/20">
-                              <td className="px-4 py-3">#{reservation.id}</td>
-                              <td className="px-4 py-3 font-medium">
-                                {reservation.customer?.name || 'Unknown'}
-                              </td>
-                              <td className="px-4 py-3">
-                                {reservation.startDate && reservation.endDate ? (
-                                  <>
-                                    {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
-                                  </>
-                                ) : (
-                                  <span className="text-muted-foreground">No dates specified</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`
-                                  inline-block rounded-full px-2 py-1 text-xs border
-                                  ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
-                                  ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
-                                  ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' : ''}
-                                  ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' : ''}
-                                `}>
-                                  {formatReservationStatus(reservation.status || '')}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedReservationId(reservation.id)}
-                                  className="bg-primary-50 hover:bg-primary-100 text-primary-600"
-                                >
-                                  <CalendarClock className="mr-1 h-3 w-3" />
-                                  Change Status
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
+                          {filteredReservations.map((reservation) => {
+                            const isMaintenance = reservation.type === 'maintenance_block';
+                            return (
+                              <tr key={reservation.id} className={`border-t hover:bg-muted/20 ${isMaintenance ? 'bg-orange-50/30' : ''}`}>
+                                <td className="px-4 py-3">
+                                  {isMaintenance ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                      <Wrench className="h-3 w-3" />
+                                      Maintenance
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      <User className="h-3 w-3" />
+                                      Rental
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">#{reservation.id}</td>
+                                <td className="px-4 py-3 font-medium">
+                                  {reservation.customer?.name || 'Unknown'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {reservation.startDate && reservation.endDate ? (
+                                    <>
+                                      {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground">No dates specified</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`
+                                    inline-block rounded-full px-2 py-1 text-xs border
+                                    ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                    ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                    ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' : ''}
+                                    ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' : ''}
+                                  `}>
+                                    {formatReservationStatus(reservation.status || '')}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSelectedReservationId(reservation.id)}
+                                    className="bg-primary-50 hover:bg-primary-100 text-primary-600"
+                                  >
+                                    <CalendarClock className="mr-1 h-3 w-3" />
+                                    Change Status
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
