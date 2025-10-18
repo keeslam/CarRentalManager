@@ -154,7 +154,7 @@ export function NotificationCenter() {
                         title={`Reservation #${reservation.id} starts tomorrow`}
                         description={`Reservation for ${vehicles.find(v => v.id === reservation.vehicleId)?.brand || "Unknown"} ${vehicles.find(v => v.id === reservation.vehicleId)?.model || ""} starts on ${formatDate(reservation.startDate)}`}
                         date={reservation.startDate}
-                        link={`/reservations/calendar?openReservation=${reservation.id}`}
+                        link={`/reservations?openReservation=${reservation.id}`}
                       />
                     </div>
                   ))}
