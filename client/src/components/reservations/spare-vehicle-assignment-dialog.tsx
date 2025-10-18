@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Car, Calendar, User } from "lucide-react";
+import { Loader2, Car, Calendar, User, Wrench } from "lucide-react";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle } from "@shared/schema";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
@@ -72,6 +72,23 @@ export function SpareVehicleAssignmentDialog({
 
   // Use provided placeholders directly (they're already filtered by context)
   const filteredPlaceholders = placeholderReservations;
+
+  // Fetch original reservations to get vehicle info being replaced
+  const originalReservationIds = filteredPlaceholders
+    .map((p: Reservation) => p.replacementForReservationId)
+    .filter(Boolean);
+  
+  const { data: originalReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    enabled: open && originalReservationIds.length > 0,
+  });
+
+  // Create a map of original reservations by ID for quick lookup
+  const originalReservationsMap = new Map(
+    originalReservations
+      .filter((r: Reservation) => originalReservationIds.includes(r.id))
+      .map((r: Reservation) => [r.id, r])
+  );
 
   // Get date range for availability checking
   const dateRange = filteredPlaceholders.length > 0 ? {
@@ -208,24 +225,35 @@ export function SpareVehicleAssignmentDialog({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-4">
-                {filteredPlaceholders.map((placeholder: Reservation, index: number) => (
-                  <Card key={placeholder.id} className="border-orange-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        {/* Placeholder Info */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-orange-100 text-orange-800">
-                              TBD Spare #{placeholder.id}
-                            </Badge>
-                            {placeholder.replacementForReservationId && (
-                              <Badge variant="outline">
-                                For Reservation #{placeholder.replacementForReservationId}
+                {filteredPlaceholders.map((placeholder: Reservation, index: number) => {
+                  const originalReservation = placeholder.replacementForReservationId 
+                    ? originalReservationsMap.get(placeholder.replacementForReservationId)
+                    : null;
+                  
+                  return (
+                    <Card key={placeholder.id} className="border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Placeholder Info */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className="bg-orange-100 text-orange-800">
+                                TBD Spare #{placeholder.id}
                               </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                              {placeholder.replacementForReservationId && (
+                                <Badge variant="outline">
+                                  For Reservation #{placeholder.replacementForReservationId}
+                                </Badge>
+                              )}
+                              {originalReservation?.vehicle && (
+                                <Badge className="bg-blue-100 text-blue-800 border border-blue-300">
+                                  <Wrench className="h-3 w-3 mr-1" />
+                                  Replacing: {formatLicensePlate(originalReservation.vehicle.licensePlate)} {originalReservation.vehicle.brand} {originalReservation.vehicle.model}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                             {/* Customer Info */}
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-gray-500" />
@@ -282,7 +310,8 @@ export function SpareVehicleAssignmentDialog({
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
 
               <DialogFooter>
