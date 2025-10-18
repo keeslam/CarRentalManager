@@ -1926,6 +1926,8 @@ export default function MaintenanceCalendar() {
                                       try {
                                         await apiRequest('DELETE', `/api/reservations/${maintenance.id}`);
                                         queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
                                         toast({
                                           title: "Maintenance Deleted",
                                           description: "The maintenance record has been permanently deleted"
