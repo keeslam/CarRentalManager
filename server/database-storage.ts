@@ -294,19 +294,21 @@ export class DatabaseStorage implements IStorage {
 
   async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
     const today = new Date();
+    const twoMonthsAgo = addMonths(today, -2);
     const twoMonthsFromNow = addMonths(today, 2);
-    const todayStr = today.toISOString().split('T')[0];
+    const pastStr = twoMonthsAgo.toISOString().split('T')[0];
     const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
     
-    // Get all vehicles with APK expiring soon (including overdue)
-    // Show APK dates that are: overdue OR expiring within next 2 months
+    // Get all vehicles with APK expiring soon (including overdue up to 2 months)
+    // Show APK dates within a 4-month window: 2 months overdue to 2 months in future
     const expiringVehicles = await db
       .select()
       .from(vehicles)
       .where(
         and(
           sql`${vehicles.apkDate} IS NOT NULL`,
-          sql`${vehicles.apkDate} <= ${futureStr}` // Include overdue and upcoming within 2 months
+          sql`${vehicles.apkDate} >= ${pastStr}`, // Not more than 2 months overdue
+          sql`${vehicles.apkDate} <= ${futureStr}` // Not more than 2 months in future
         )
       );
     
@@ -335,19 +337,21 @@ export class DatabaseStorage implements IStorage {
 
   async getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]> {
     const today = new Date();
+    const twoMonthsAgo = addMonths(today, -2);
     const twoMonthsFromNow = addMonths(today, 2);
-    const todayStr = today.toISOString().split('T')[0];
+    const pastStr = twoMonthsAgo.toISOString().split('T')[0];
     const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
     
-    // Get all vehicles with warranty expiring soon (including overdue)
-    // Show warranty dates that are: overdue OR expiring within next 2 months
+    // Get all vehicles with warranty expiring soon (including overdue up to 2 months)
+    // Show warranty dates within a 4-month window: 2 months overdue to 2 months in future
     return await db
       .select()
       .from(vehicles)
       .where(
         and(
           sql`${vehicles.warrantyEndDate} IS NOT NULL`,
-          sql`${vehicles.warrantyEndDate} <= ${futureStr}` // Include overdue and upcoming within 2 months
+          sql`${vehicles.warrantyEndDate} >= ${pastStr}`, // Not more than 2 months overdue
+          sql`${vehicles.warrantyEndDate} <= ${futureStr}` // Not more than 2 months in future
         )
       );
   }
