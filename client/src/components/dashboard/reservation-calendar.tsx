@@ -12,6 +12,13 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   format,
   addMonths,
   subMonths,
@@ -44,6 +51,8 @@ export function ReservationCalendar() {
   const queryClient = useQueryClient();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedPlaceholderReservations, setSelectedPlaceholderReservations] = useState<any[]>([]);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<any | null>(null);
 
   // Safe date parsing and formatting functions to prevent errors
   const safeParseDateISO = (dateString: string | null | undefined): Date | null => {
@@ -317,7 +326,10 @@ export function ReservationCalendar() {
                               <HoverCardTrigger asChild>
                                 <div 
                                   className={`px-1 py-0.5 text-xs truncate ${getReservationStyle(res.status, isPickupDay, isReturnDay)} group/res relative cursor-pointer hover:brightness-95`}
-                                  onClick={() => navigate(`/reservations/${res.id}`)}
+                                  onClick={() => {
+                                    setSelectedReservation(res);
+                                    setViewDialogOpen(true);
+                                  }}
                                 >
                                   <div className="flex justify-between items-center">
                                     <div className="truncate">
@@ -468,7 +480,10 @@ export function ReservationCalendar() {
                                       size="sm" 
                                       variant="outline"
                                       className="h-8 text-xs"
-                                      onClick={() => navigate(`/reservations/${res.id}`)}
+                                      onClick={() => {
+                                        setSelectedReservation(res);
+                                        setViewDialogOpen(true);
+                                      }}
                                     >
                                       <Eye className="mr-1 h-3 w-3" />
                                       View
@@ -535,6 +550,136 @@ export function ReservationCalendar() {
           )}
         </div>
       </CardContent>
+      
+      {/* View Reservation Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+        setViewDialogOpen(open);
+        if (!open) {
+          setSelectedReservation(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reservation Details</DialogTitle>
+            <DialogDescription>
+              {selectedReservation ? `Reservation #${selectedReservation.id} - ${selectedReservation.customer?.name || 'No customer'}` : 'View detailed reservation information'}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedReservation && (
+            <div className="space-y-4">
+              {/* Status Badge */}
+              <div>
+                <Badge 
+                  className={`${
+                    selectedReservation.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 border-green-200' : 
+                    selectedReservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    selectedReservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                    'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}
+                  variant="outline"
+                >
+                  {formatReservationStatus(selectedReservation.status)}
+                </Badge>
+              </div>
+
+              {/* Vehicle & Customer */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Car className="h-4 w-4" />
+                    Vehicle
+                  </h3>
+                  <div className="space-y-1">
+                    {selectedReservation.placeholderSpare ? (
+                      <div className="text-orange-700 font-medium">TBD Spare Vehicle</div>
+                    ) : (
+                      <>
+                        <div className="font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</div>
+                        <div className="text-sm text-gray-600">{formatLicensePlate(selectedReservation.vehicle?.licensePlate || '')}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer
+                  </h3>
+                  <div className="space-y-1">
+                    <div className="font-medium">{selectedReservation.customer?.name || 'No customer specified'}</div>
+                    {selectedReservation.customer?.email && (
+                      <div className="text-sm text-gray-600">{selectedReservation.customer.email}</div>
+                    )}
+                    {selectedReservation.customer?.phone && (
+                      <div className="text-sm text-gray-600">{selectedReservation.customer.phone}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates and Price */}
+              <div className="bg-gray-50 p-3 rounded-md">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Start Date</label>
+                    <p className="text-sm font-medium mt-1">{selectedReservation.startDate ? safeFormat(safeParseDateISO(selectedReservation.startDate), 'MMM d, yyyy', 'Invalid') : 'Not set'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">End Date</label>
+                    <p className="text-sm font-medium mt-1">{selectedReservation.endDate ? safeFormat(safeParseDateISO(selectedReservation.endDate), 'MMM d, yyyy', 'Open-ended') : 'Open-ended'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Duration</label>
+                    <p className="text-sm font-medium mt-1">
+                      {(() => {
+                        if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
+                        const startDate = safeParseDateISO(selectedReservation.startDate);
+                        const endDate = safeParseDateISO(selectedReservation.endDate);
+                        if (!startDate || !endDate) return 'Invalid';
+                        const duration = differenceInDays(endDate, startDate) + 1;
+                        return `${duration} ${duration === 1 ? 'day' : 'days'}`;
+                      })()}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Price</label>
+                    <p className="text-sm font-semibold mt-1">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedReservation.notes && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-md">
+                  <label className="text-xs font-medium text-amber-700 uppercase">Notes</label>
+                  <p className="text-sm text-amber-900 mt-1 whitespace-pre-wrap">{selectedReservation.notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    navigate(`/reservations/edit/${selectedReservation.id}`);
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Reservation
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setViewDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       {/* Spare Vehicle Assignment Dialog */}
       <SpareVehicleAssignmentDialog
