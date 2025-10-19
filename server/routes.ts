@@ -7249,29 +7249,113 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/vehicles/:id/damage-check-pdf", requireAuth, async (req: Request, res: Response) => {
     try {
       const vehicleId = parseInt(req.params.id);
+      
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+      
       const vehicle = await storage.getVehicle(vehicleId);
       
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
       }
 
-      // Find matching template or use default
-      let template = await storage.getDamageCheckTemplatesByVehicle(
+      // Find best matching template with strict prioritization:
+      // 1. Exact match (make + model + type) - all three must match
+      // 2. Make + model match (no type specified in template)
+      // 3. Make + type match
+      // 4. Type match only
+      // 5. Default template
+      let template: any = null;
+      const allTemplates = await storage.getDamageCheckTemplatesByVehicle(
         vehicle.brand,
         vehicle.model,
         vehicle.vehicleType || undefined
-      ).then(templates => templates[0]);
+      );
       
+      if (allTemplates.length > 0) {
+        // 1. Exact match: make + model + type all specified and match
+        if (vehicle.vehicleType) {
+          template = allTemplates.find(t => 
+            t.vehicleMake === vehicle.brand && 
+            t.vehicleModel === vehicle.model &&
+            t.vehicleType === vehicle.vehicleType
+          );
+        }
+        
+        // 2. Make + model match (template has no type restriction)
+        if (!template) {
+          template = allTemplates.find(t => 
+            t.vehicleMake === vehicle.brand && 
+            t.vehicleModel === vehicle.model &&
+            !t.vehicleType
+          );
+        }
+        
+        // 3. Make + type match (template has no model restriction)
+        if (!template && vehicle.vehicleType) {
+          template = allTemplates.find(t => 
+            t.vehicleMake === vehicle.brand && 
+            t.vehicleType === vehicle.vehicleType &&
+            !t.vehicleModel
+          );
+        }
+        
+        // 4. Type match only (generic template for this vehicle type)
+        if (!template && vehicle.vehicleType) {
+          template = allTemplates.find(t => 
+            t.vehicleType === vehicle.vehicleType &&
+            !t.vehicleMake &&
+            !t.vehicleModel
+          );
+        }
+      }
+      
+      // 5. Fallback to default template if no specific match found
       if (!template) {
         template = await storage.getDefaultDamageCheckTemplate();
       }
 
       if (!template) {
-        return res.status(404).json({ message: "No damage check template found" });
+        return res.status(404).json({ 
+          message: "No damage check template found. Please create a default template first." 
+        });
       }
 
       // Import PDF generator
       const { generateDamageCheckPDF } = await import('./pdf-damage-check-generator');
+      
+      // Get current or upcoming reservation for this vehicle (optional)
+      let reservationData;
+      try {
+        const reservations = await storage.getVehicleReservations(vehicleId);
+        const currentReservation = reservations.find(r => {
+          const start = new Date(r.startDate);
+          const end = new Date(r.endDate);
+          const now = new Date();
+          return start <= now && end >= now;
+        }) || reservations[0];
+        
+        if (currentReservation) {
+          const customer = currentReservation.customerId 
+            ? await storage.getCustomer(currentReservation.customerId)
+            : null;
+          
+          const startDate = new Date(currentReservation.startDate);
+          const endDate = new Date(currentReservation.endDate);
+          const rentalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          reservationData = {
+            contractNumber: `#${currentReservation.id}`,
+            customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'N/A',
+            startDate: format(startDate, 'dd-MM-yyyy'),
+            endDate: format(endDate, 'dd-MM-yyyy'),
+            rentalDays
+          };
+        }
+      } catch (err) {
+        console.warn("Could not fetch reservation data:", err);
+      }
       
       const pdfBuffer = await generateDamageCheckPDF(
         {
@@ -7280,18 +7364,23 @@ export async function registerRoutes(app: Express): Promise<void> {
           licensePlate: vehicle.licensePlate,
           buildYear: vehicle.productionDate,
           fuel: vehicle.fuel || undefined,
+          mileage: vehicle.mileage || undefined,
         },
-        template
+        template,
+        reservationData
       );
 
-      const filename = `damage-check-${vehicle.licensePlate}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      const filename = `damage-check-${vehicle.licensePlate.replace(/\s+/g, '')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
     } catch (error) {
       console.error("Error generating damage check PDF:", error);
-      res.status(500).json({ message: "Error generating damage check PDF" });
+      res.status(500).json({ 
+        message: "Error generating damage check PDF", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
