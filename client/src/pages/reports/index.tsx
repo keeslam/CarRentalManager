@@ -20,8 +20,9 @@ import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithin
 import { 
   Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
   DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench,
-  Printer, RefreshCw, Search, XCircle
+  Printer, RefreshCw, Search, XCircle, ExternalLink, Database, LineChart
 } from "lucide-react";
+import { Link } from "wouter";
 import { DateRange } from "react-day-picker";
 
 /**
@@ -1229,6 +1230,47 @@ export default function ReportsPage() {
             </Button>
           )}
         </div>
+      </div>
+      
+      {/* Quick Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/reports/builder">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Database className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Custom Report Builder</CardTitle>
+                    <CardDescription>Build custom reports with filters and aggregations</CardDescription>
+                  </div>
+                </div>
+                <ExternalLink className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
+        </Link>
+        
+        <Link href="/reports/maintenance-costs">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <LineChart className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Maintenance Cost Analysis</CardTitle>
+                    <CardDescription>Analyze vehicle maintenance costs and trends</CardDescription>
+                  </div>
+                </div>
+                <ExternalLink className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
+        </Link>
       </div>
       
       {/* Filter Controls */}
