@@ -1117,6 +1117,9 @@ export function ReservationForm({
 
   // Handle reservation form submission (in edit mode only)
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    console.log('📝 Form submitted!', { editMode, data });
+    console.log('📋 Form errors:', form.formState.errors);
+    
     if (editMode) {
       // In edit mode, directly update the reservation
       const submissionData = {
@@ -1125,6 +1128,7 @@ export function ReservationForm({
       };
       delete submissionData.isOpenEnded;
       
+      console.log('✅ Submitting update:', submissionData);
       createReservationMutation.mutate(submissionData);
     } else {
       // In create mode, go to preview
