@@ -41,6 +41,7 @@ import MaintenanceCalendar from "@/pages/maintenance/calendar";
 import SettingsPage from "@/pages/settings/index";
 import WhatsAppSettingsPage from "@/pages/settings/whatsapp";
 import WhatsAppTemplatesPage from "@/pages/settings/whatsapp-templates";
+import WhatsAppMessagingPage from "@/pages/whatsapp/messaging";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
@@ -105,6 +106,7 @@ function AppRoutes() {
               <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
               <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
               <ProtectedRoute path="/admin/backup" component={BackupPage} />
+              <ProtectedRoute path="/whatsapp/messaging" component={WhatsAppMessagingPage} />
               <ProtectedRoute path="/settings/whatsapp/templates" component={WhatsAppTemplatesPage} />
               <ProtectedRoute path="/settings/whatsapp" component={WhatsAppSettingsPage} />
               <ProtectedRoute path="/settings" component={SettingsPage} />

@@ -9,7 +9,9 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   backupSettings, type BackupSettings, type InsertBackupSettings,
   appSettings, type AppSettings, type InsertAppSettings,
-  drivers, type Driver, type InsertDriver
+  drivers, type Driver, type InsertDriver,
+  savedReports, type SavedReport, type InsertSavedReport,
+  whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -1918,5 +1920,41 @@ export class DatabaseStorage implements IStorage {
 
     const results = await db.execute(sql.raw(query));
     return results.rows;
+  }
+
+  // WhatsApp Messages methods
+  async getAllWhatsAppMessages(): Promise<WhatsappMessage[]> {
+    return await db.select().from(whatsappMessages).orderBy(desc(whatsappMessages.createdAt));
+  }
+
+  async getWhatsAppMessage(id: number): Promise<WhatsappMessage | undefined> {
+    const [message] = await db.select().from(whatsappMessages).where(eq(whatsappMessages.id, id));
+    return message || undefined;
+  }
+
+  async getWhatsAppMessagesByCustomer(customerId: number): Promise<WhatsappMessage[]> {
+    return await db.select().from(whatsappMessages)
+      .where(eq(whatsappMessages.customerId, customerId))
+      .orderBy(whatsappMessages.createdAt);
+  }
+
+  async createWhatsAppMessage(message: InsertWhatsappMessage): Promise<WhatsappMessage> {
+    const [newMessage] = await db.insert(whatsappMessages).values(message).returning();
+    return newMessage;
+  }
+
+  async updateWhatsAppMessage(id: number, messageData: Partial<InsertWhatsappMessage>): Promise<WhatsappMessage | undefined> {
+    const updateData = {
+      ...messageData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedMessage] = await db
+      .update(whatsappMessages)
+      .set(updateData)
+      .where(eq(whatsappMessages.id, id))
+      .returning();
+      
+    return updatedMessage || undefined;
   }
 }

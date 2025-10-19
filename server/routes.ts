@@ -6427,6 +6427,104 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get WhatsApp conversations
+  app.get("/api/whatsapp/conversations", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Get all messages grouped by customer
+      const messages = await storage.getAllWhatsAppMessages();
+      const customers = await storage.getAllCustomers();
+      
+      // Group messages by customer
+      const conversationsMap = new Map();
+      messages.forEach(msg => {
+        if (msg.customerId) {
+          const existing = conversationsMap.get(msg.customerId);
+          if (!existing || new Date(msg.createdAt) > new Date(existing.lastMessageTime)) {
+            const customer = customers.find(c => c.id === msg.customerId);
+            conversationsMap.set(msg.customerId, {
+              customerId: msg.customerId,
+              customerName: customer?.name || 'Unknown',
+              customerPhone: customer?.phone || msg.toNumber || msg.fromNumber,
+              lastMessage: msg.content.substring(0, 100),
+              lastMessageTime: msg.createdAt,
+              unreadCount: 0 // TODO: Implement unread tracking
+            });
+          }
+        }
+      });
+      
+      const conversations = Array.from(conversationsMap.values()).sort((a, b) => 
+        new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+      );
+      
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Error fetching conversations" });
+    }
+  });
+
+  // Get WhatsApp messages for a customer
+  app.get("/api/whatsapp/messages/:customerId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const messages = await storage.getWhatsAppMessagesByCustomer(customerId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Error fetching messages" });
+    }
+  });
+
+  // Send WhatsApp message
+  app.post("/api/whatsapp/send", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const { customerId, content } = req.body;
+
+      if (!customerId || !content) {
+        return res.status(400).json({ message: "Customer ID and content are required" });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      if (!customer.phone) {
+        return res.status(400).json({ message: "Customer does not have a phone number" });
+      }
+
+      // Get WhatsApp settings
+      const whatsappSettings = await storage.getAppSettingByKey('whatsapp_phone');
+      const fromNumber = whatsappSettings?.value || '';
+
+      // Create message record
+      const message = await storage.createWhatsAppMessage({
+        direction: 'outbound',
+        status: 'queued',
+        fromNumber,
+        toNumber: customer.phone,
+        content,
+        customerId,
+        createdBy: user ? user.username : null,
+        createdByUserId: user ? user.id : null,
+      });
+
+      // TODO: Actual Twilio API integration
+      // For now, mark as sent immediately
+      await storage.updateWhatsAppMessage(message.id, {
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+      });
+
+      res.json(message);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Error sending message" });
+    }
+  });
+
   // ============================================
   // REPORTS & ANALYTICS ROUTES
   // ============================================
