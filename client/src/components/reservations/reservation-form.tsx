@@ -2372,10 +2372,11 @@ export function ReservationForm({
                       console.log('🔘 Button clicked!', { editMode, isPreviewMode });
                       console.log('🔍 Form state:', {
                         isValid: form.formState.isValid,
-                        errors: form.formState.errors,
                         isDirty: form.formState.isDirty,
                         isSubmitting: form.formState.isSubmitting
                       });
+                      console.log('❌ ERRORS:', JSON.stringify(form.formState.errors, null, 2));
+                      console.log('📋 Form values:', JSON.stringify(form.getValues(), null, 2));
                     }}
                   >
                     {createReservationMutation.isPending 
