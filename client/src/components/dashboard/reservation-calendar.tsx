@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ReservationForm } from "@/components/reservations/reservation-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   HoverCard,
@@ -52,6 +53,7 @@ export function ReservationCalendar() {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedPlaceholderReservations, setSelectedPlaceholderReservations] = useState<any[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any | null>(null);
 
   // Safe date parsing and formatting functions to prevent errors
@@ -663,7 +665,7 @@ export function ReservationCalendar() {
                 <Button 
                   onClick={() => {
                     setViewDialogOpen(false);
-                    navigate(`/reservations/edit/${selectedReservation.id}`);
+                    setEditDialogOpen(true);
                   }}
                 >
                   <Edit className="mr-2 h-4 w-4" />
@@ -677,6 +679,39 @@ export function ReservationCalendar() {
                 </Button>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Reservation Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setSelectedReservation(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation</DialogTitle>
+            <DialogDescription>
+              Modify reservation details including dates, customer information, vehicle selection, and pricing.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedReservation && (
+            <ReservationForm 
+              editMode={true} 
+              initialData={selectedReservation}
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                setSelectedReservation(null);
+                // Refresh calendar data
+                queryClient.invalidateQueries({ queryKey: ["/api/reservations/range", startDate, endDate] });
+              }}
+              onCancel={() => {
+                setEditDialogOpen(false);
+                setSelectedReservation(null);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
