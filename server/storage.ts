@@ -761,7 +761,7 @@ export class MemStorage implements IStorage {
       .filter(r => 
         r.startDate >= today && 
         r.type === 'maintenance_block' && 
-        r.maintenanceStatus === 'scheduled' &&
+        (r.maintenanceStatus === 'scheduled' || r.maintenanceStatus === 'in') &&
         r.status !== "cancelled"
       )
       .sort((a, b) => a.startDate.localeCompare(b.startDate));

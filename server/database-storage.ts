@@ -683,7 +683,7 @@ export class DatabaseStorage implements IStorage {
         and(
           sql`${reservations.startDate} >= ${today}`,
           sql`${reservations.type} = 'maintenance_block'`,
-          sql`${reservations.maintenanceStatus} = 'scheduled'`,
+          sql`(${reservations.maintenanceStatus} = 'scheduled' OR ${reservations.maintenanceStatus} = 'in')`,
           sql`${reservations.status} != 'cancelled'`,
           isNull(reservations.deletedAt)
         )
