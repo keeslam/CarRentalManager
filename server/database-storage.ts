@@ -673,6 +673,42 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getUpcomingMaintenanceReservations(): Promise<Reservation[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const reservationsData = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          sql`${reservations.startDate} >= ${today}`,
+          sql`${reservations.type} = 'maintenance_block'`,
+          sql`${reservations.maintenanceStatus} = 'scheduled'`,
+          sql`${reservations.status} != 'cancelled'`,
+          isNull(reservations.deletedAt)
+        )
+      )
+      .orderBy(reservations.startDate);
+    
+    const result: Reservation[] = [];
+    
+    // Fetch vehicle and customer data for each reservation
+    for (const reservation of reservationsData) {
+      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      const [customer] = reservation.customerId 
+        ? await db.select().from(customers).where(eq(customers.id, reservation.customerId))
+        : [undefined];
+      
+      result.push({
+        ...reservation,
+        vehicle,
+        customer
+      });
+    }
+    
+    return result;
+  }
+
   async getReservationsByVehicle(vehicleId: number): Promise<Reservation[]> {
     const reservationsData = await db
       .select()
