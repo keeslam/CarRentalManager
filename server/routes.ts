@@ -5518,8 +5518,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         throw new Error('DATABASE_URL not configured');
       }
 
-      // Restore database using psql
-      await execAsync(`psql "${databaseUrl}" < "${req.file.path}"`);
+      console.log('🔄 Starting database restore from:', req.file.path);
+      console.log('📊 File size:', req.file.size, 'bytes');
+
+      // Restore database using psql with verbose output
+      const { stdout, stderr } = await execAsync(
+        `psql "${databaseUrl}" -f "${req.file.path}" 2>&1`,
+        { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large restores
+      );
+
+      if (stdout) {
+        console.log('📝 psql stdout:', stdout.substring(0, 1000)); // Log first 1000 chars
+      }
+      if (stderr) {
+        console.log('⚠️ psql stderr:', stderr.substring(0, 1000));
+      }
+
+      console.log('✅ Database restore completed successfully');
 
       // Clean up uploaded file
       try {
@@ -5542,7 +5557,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      console.error("Error restoring app data:", error);
+      console.error("❌ Error restoring app data:", error);
       res.status(500).json({ 
         error: "Failed to restore app data",
         details: error instanceof Error ? error.message : "Unknown error"
