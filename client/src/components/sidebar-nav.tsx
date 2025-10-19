@@ -16,7 +16,6 @@ export function SidebarNav() {
     { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
     { href: "/expenses", label: "Expenses", icon: "euro" },
     { href: "/documents", label: "Documents", icon: "description" },
-    { href: "/whatsapp/messaging", label: "WhatsApp", icon: "whatsapp" },
     { href: "/communications", label: "Communications", icon: "email" },
     { href: "/reports", label: "Reports", icon: "assessment" }
   ];
