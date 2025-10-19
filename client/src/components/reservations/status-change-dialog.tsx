@@ -183,6 +183,8 @@ export function StatusChangeDialog({
   // Status change mutation
   const statusChangeMutation = useMutation({
     mutationFn: async (data: StatusChangeFormType) => {
+      console.log('📤 Form submission data:', data);
+      
       // Prepare reservation update data with status and fuel tracking
       const reservationUpdateData: any = { 
         status: data.status,
@@ -204,6 +206,8 @@ export function StatusChangeDialog({
       if (data.fuelNotes !== undefined && data.fuelNotes !== null && data.fuelNotes !== "") {
         reservationUpdateData.fuelNotes = data.fuelNotes;
       }
+      
+      console.log('📦 Sending to API:', reservationUpdateData);
       
       // We only need to update the vehicle if we have mileage data
       if (
