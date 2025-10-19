@@ -52,6 +52,11 @@ export function NotificationCenter() {
     queryKey: ["/api/reservations/upcoming"],
   });
   
+  // Fetch upcoming maintenance reservations
+  const { data: upcomingMaintenanceReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ["/api/reservations/upcoming-maintenance"],
+  });
+  
   // Fetch custom notifications (unread only)
   const { data: customNotifications = [] } = useQuery<CustomNotification[]>({
     queryKey: ["/api/custom-notifications/unread"],
@@ -111,6 +116,17 @@ export function NotificationCenter() {
       return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     });
 
+  // Filter maintenance reservations (show those starting in next 7 days)
+  const upcomingMaintenanceItems = upcomingMaintenanceReservations
+    .filter(reservation => {
+      const startDate = new Date(reservation.startDate);
+      const daysUntil = differenceInDays(startDate, today);
+      return daysUntil >= 0 && daysUntil <= 7; // Due in next 7 days
+    })
+    .sort((a, b) => {
+      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+    });
+  
   // Filter out spare-related custom notifications (they're shown in Spare tab)
   const nonSpareCustomNotifications = customNotifications.filter(n => !n.title.includes("Spare Vehicle Assignment"));
   
@@ -118,6 +134,7 @@ export function NotificationCenter() {
     apkExpiringItems.length + 
     warrantyExpiringItems.length + 
     upcomingReservationItems.length + 
+    upcomingMaintenanceItems.length +
     placeholderReservations.length +
     nonSpareCustomNotifications.length;
 
@@ -146,12 +163,15 @@ export function NotificationCenter() {
           </p>
         </div>
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-6 m-2">
+          <TabsList className="grid grid-cols-7 m-2">
             <TabsTrigger value="all" className="text-xs">
               All
             </TabsTrigger>
             <TabsTrigger value="reservations" className="text-xs">
               Reservations
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="text-xs">
+              Maintenance
             </TabsTrigger>
             <TabsTrigger value="spare" className="text-xs">
               Spare
@@ -197,6 +217,28 @@ export function NotificationCenter() {
                       />
                     </div>
                   ))}
+                  
+                  {upcomingMaintenanceItems.length > 0 && (
+                    <div className="px-4 py-2 bg-gray-50">
+                      <h5 className="text-xs font-medium">Upcoming Maintenance</h5>
+                    </div>
+                  )}
+                  {upcomingMaintenanceItems.map(maintenance => {
+                    const vehicle = vehicles.find(v => v.id === maintenance.vehicleId);
+                    return (
+                      <div key={`maintenance-${maintenance.id}`} onClick={() => setOpen(false)}>
+                        <NotificationItem
+                          icon={<ClipboardCheck className="text-purple-500" />}
+                          title={`Maintenance scheduled for ${formatLicensePlate(vehicle?.licensePlate || "")}`}
+                          description={`${maintenance.maintenanceCategory || "Maintenance"} for ${vehicle?.brand || "Unknown"} ${vehicle?.model || ""} scheduled on ${formatDate(maintenance.startDate)}`}
+                          date={maintenance.startDate}
+                          link={`/vehicles/${maintenance.vehicleId}?tab=maintenance`}
+                          id={maintenance.id}
+                          notificationType="reservation"
+                        />
+                      </div>
+                    );
+                  })}
                   
                   {placeholderReservations.length > 0 && (
                     <div className="px-4 py-2 bg-gray-50">
@@ -329,6 +371,35 @@ export function NotificationCenter() {
                     />
                   </div>
                 ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="maintenance" className="m-0">
+              {upcomingMaintenanceItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[280px] text-center p-4">
+                  <ClipboardCheck className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
+                  <h3 className="font-medium">No upcoming maintenance</h3>
+                  <p className="text-sm text-muted-foreground">
+                    No maintenance scheduled in the next 7 days.
+                  </p>
+                </div>
+              ) : (
+                upcomingMaintenanceItems.map(maintenance => {
+                  const vehicle = vehicles.find(v => v.id === maintenance.vehicleId);
+                  return (
+                    <div key={`maintenance-tab-${maintenance.id}`} onClick={() => setOpen(false)}>
+                      <NotificationItem
+                        icon={<ClipboardCheck className="text-purple-500" />}
+                        title={`Maintenance for ${formatLicensePlate(vehicle?.licensePlate || "")}`}
+                        description={`${maintenance.maintenanceCategory || "Maintenance"} for ${vehicle?.brand || "Unknown"} ${vehicle?.model || ""} scheduled on ${formatDate(maintenance.startDate)}`}
+                        date={maintenance.startDate}
+                        link={`/vehicles/${maintenance.vehicleId}?tab=maintenance`}
+                        id={maintenance.id}
+                        notificationType="reservation"
+                      />
+                    </div>
+                  );
+                })
               )}
             </TabsContent>
 

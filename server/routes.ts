@@ -1359,6 +1359,16 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(reservations);
   });
 
+  // Get upcoming maintenance reservations
+  app.get("/api/reservations/upcoming-maintenance", async (req, res) => {
+    // Disable HTTP caching to ensure fresh data
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    const reservations = await storage.getUpcomingMaintenanceReservations();
+    res.json(reservations);
+  });
+
   // Get reservations by vehicle
   app.get("/api/reservations/vehicle/:vehicleId", async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);

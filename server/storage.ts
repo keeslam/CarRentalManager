@@ -47,6 +47,7 @@ export interface IStorage {
   deleteReservation(id: number): Promise<boolean>;
   getReservationsInDateRange(startDate: string, endDate: string): Promise<Reservation[]>;
   getUpcomingReservations(): Promise<Reservation[]>;
+  getUpcomingMaintenanceReservations(): Promise<Reservation[]>;
   getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
   getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
   checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null, isMaintenanceBlock?: boolean): Promise<Reservation[]>;
@@ -746,6 +747,26 @@ export class MemStorage implements IStorage {
       .slice(0, 5); // Limit to 5 reservations
     
     // Populate vehicle and customer data
+    return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getUpcomingMaintenanceReservations(): Promise<Reservation[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const reservations = Array.from(this.reservations.values())
+      .filter(r => 
+        r.startDate >= today && 
+        r.type === 'maintenance_block' && 
+        r.maintenanceStatus === 'scheduled' &&
+        r.status !== "cancelled"
+      )
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    
+    // Populate vehicle data
     return reservations.map(reservation => ({
       ...reservation,
       vehicle: this.vehicles.get(reservation.vehicleId),
