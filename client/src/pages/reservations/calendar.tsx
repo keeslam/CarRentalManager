@@ -1211,7 +1211,7 @@ export default function ReservationCalendarPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedReservation && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* Status and type badges */}
               <div className="flex gap-2 flex-wrap">
                 <Badge 
@@ -1243,231 +1243,223 @@ export default function ReservationCalendarPage() {
                 )}
               </div>
 
-              {/* Vehicle Details */}
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <Car className="h-4 w-4" />
-                  Vehicle Information
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {selectedReservation.placeholderSpare ? (
-                      <>
-                        <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm font-semibold">
-                          TBD
-                        </span>
-                        <span className="font-medium text-orange-700">Spare Vehicle</span>
-                        <span className="text-sm text-gray-600">Awaiting assignment</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-semibold">
-                          {formatLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
-                        </span>
-                        <span className="font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</span>
-                      </>
-                    )}
-                    {selectedReservation.type === 'replacement' && (
-                      <span className="bg-orange-200 text-orange-900 text-xs px-2 py-1 rounded font-bold">
-                        🚗 SPARE
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
-                  </div>
-                  {selectedReservation.vehicle?.departureMileage !== null && selectedReservation.vehicle?.departureMileage !== undefined && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
-                      <div className="text-xs text-gray-500">Pickup Mileage</div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {selectedReservation.vehicle.departureMileage.toLocaleString()} km
-                      </div>
+              {/* Vehicle & Customer in 2 columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Vehicle Details */}
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Car className="h-3.5 w-3.5" />
+                    Vehicle
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      {selectedReservation.placeholderSpare ? (
+                        <>
+                          <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs font-semibold">
+                            TBD
+                          </span>
+                          <span className="text-sm font-medium text-orange-700">Spare Vehicle</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="bg-primary-100 text-primary-800 px-2 py-0.5 rounded text-xs font-semibold">
+                            {formatLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
+                          </span>
+                          <span className="text-sm font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</span>
+                        </>
+                      )}
                     </div>
-                  )}
+                    <div className="text-xs text-gray-600">
+                      {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
+                    </div>
+                    {selectedReservation.vehicle?.departureMileage !== null && selectedReservation.vehicle?.departureMileage !== undefined && (
+                      <div className="mt-1.5 pt-1.5 border-t border-gray-200">
+                        <div className="text-[10px] text-gray-500 uppercase">Pickup Mileage</div>
+                        <div className="text-xs font-semibold text-gray-900">
+                          {selectedReservation.vehicle.departureMileage.toLocaleString()} km
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Customer Details */}
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Customer Information
-                </h3>
-                <div className="space-y-2">
-                  <div className="font-medium">{selectedReservation.customer?.name || 'No customer specified'}</div>
-                  {selectedReservation.customer?.email && (
-                    <div className="text-sm text-gray-600">{selectedReservation.customer.email}</div>
-                  )}
-                  {selectedReservation.customer?.phone && (
-                    <div className="text-sm text-gray-600">{selectedReservation.customer.phone}</div>
-                  )}
+                {/* Customer Details */}
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <User className="h-3.5 w-3.5" />
+                    Customer
+                  </h3>
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium">{selectedReservation.customer?.name || 'No customer specified'}</div>
+                    {selectedReservation.customer?.email && (
+                      <div className="text-xs text-gray-600">{selectedReservation.customer.email}</div>
+                    )}
+                    {selectedReservation.customer?.phone && (
+                      <div className="text-xs text-gray-600">{selectedReservation.customer.phone}</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Driver Details */}
               {selectedReservation.driver && (
-                <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-                  <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-700" />
-                    Driver Information
+                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                  <h3 className="text-xs font-medium text-blue-900 mb-2 flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-blue-700" />
+                    Driver
                   </h3>
-                  <div className="space-y-2">
-                    <div className="font-medium text-blue-900 flex items-center gap-2">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-blue-900 flex items-center gap-2">
                       {selectedReservation.driver.displayName}
                       {selectedReservation.driver.isPrimaryDriver && (
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-300">Primary Driver</Badge>
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-[10px] px-1.5 py-0">Primary</Badge>
                       )}
                     </div>
-                    {selectedReservation.driver.email && (
-                      <div className="text-sm text-blue-700">{selectedReservation.driver.email}</div>
-                    )}
-                    {selectedReservation.driver.phone && (
-                      <div className="text-sm text-blue-700">{selectedReservation.driver.phone}</div>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-2 border-t border-blue-200">
-                      {selectedReservation.driver.driverLicenseNumber && (
-                        <div className="text-xs">
-                          <span className="text-blue-600 font-medium">License:</span>{' '}
-                          <span className="text-blue-900">{selectedReservation.driver.driverLicenseNumber}</span>
-                        </div>
-                      )}
-                      {selectedReservation.driver.licenseExpiry && (
-                        <div className="text-xs">
-                          <span className="text-blue-600 font-medium">Expires:</span>{' '}
-                          <span className="text-blue-900">{selectedReservation.driver.licenseExpiry}</span>
-                        </div>
-                      )}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-blue-700">
+                      {selectedReservation.driver.email && <div>{selectedReservation.driver.email}</div>}
+                      {selectedReservation.driver.phone && <div>{selectedReservation.driver.phone}</div>}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Dates and Duration */}
-              {/* Date and Duration Info - Different layout for maintenance */}
-              {selectedReservation.type === 'maintenance_block' ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Start Date</label>
-                    <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Duration</label>
-                    <p className="text-sm font-medium">
-                      {selectedReservation.maintenanceDuration ? `${selectedReservation.maintenanceDuration} ${selectedReservation.maintenanceDuration === 1 ? 'day' : 'days'}` : 'Not set'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Status</label>
-                    <div className="text-sm font-medium mt-1">
-                      {selectedReservation.maintenanceStatus ? (
-                        <Badge 
-                          variant={selectedReservation.maintenanceStatus === "in" ? "default" : "outline"} 
-                          className={
-                            selectedReservation.maintenanceStatus === "in" ? "bg-purple-500 text-white" :
-                            selectedReservation.maintenanceStatus === "out" ? "bg-green-500 text-white" :
-                            selectedReservation.maintenanceStatus === "scheduled" ? "bg-amber-500 text-white" :
-                            "bg-gray-500 text-white"
-                          }
-                        >
-                          {selectedReservation.maintenanceStatus.toUpperCase()}
-                        </Badge>
-                      ) : 'Not set'}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Start Date</label>
-                    <p className="text-sm font-medium">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PPP') : 'Invalid date'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">End Date</label>
-                    <p className="text-sm font-medium">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PPP') : 'Invalid date') : 'Open-ended'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Duration</label>
-                    <p className="text-sm font-medium">
-                      {(() => {
-                        if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
-                        const startDate = safeParseDateISO(selectedReservation.startDate);
-                        const endDate = safeParseDateISO(selectedReservation.endDate);
-                        if (!startDate || !endDate) return 'Invalid dates';
-                        const duration = differenceInDays(endDate, startDate) + 1;
-                        return `${duration} ${duration === 1 ? 'day' : 'days'}`;
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Price - hide for maintenance */}
-              {selectedReservation.type !== 'maintenance_block' && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Total Price</label>
-                  <p className="text-lg font-semibold">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
-                </div>
-              )}
-
-              {/* Notes */}
-              {selectedReservation.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Notes</label>
-                  <div className="bg-gray-50 p-3 rounded-md mt-1">
-                    <p className="text-sm whitespace-pre-wrap">{selectedReservation.notes}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Fuel Tracking Information */}
-              {(selectedReservation.fuelLevelPickup || selectedReservation.fuelLevelReturn || selectedReservation.fuelCost || selectedReservation.fuelCardNumber || selectedReservation.fuelNotes) && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Fuel Tracking</label>
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mt-1">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {selectedReservation.fuelLevelPickup && (
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">Fuel at Pickup</p>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelLevelPickup}</p>
-                        </div>
-                      )}
-                      {selectedReservation.fuelLevelReturn && (
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">Fuel at Return</p>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelLevelReturn}</p>
-                        </div>
-                      )}
-                      {selectedReservation.fuelCost && (
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">Fuel Cost</p>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">{formatCurrency(Number(selectedReservation.fuelCost))}</p>
-                        </div>
-                      )}
-                      {selectedReservation.fuelCardNumber && (
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">Fuel Card Number</p>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelCardNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                    {selectedReservation.fuelNotes && (
-                      <div className="mt-3 pt-3 border-t border-blue-200">
-                        <p className="text-xs text-blue-600 font-medium">Fuel Notes</p>
-                        <p className="text-sm text-blue-900 mt-1 whitespace-pre-wrap">{selectedReservation.fuelNotes}</p>
+                    {(selectedReservation.driver.driverLicenseNumber || selectedReservation.driver.licenseExpiry) && (
+                      <div className="grid grid-cols-2 gap-2 mt-1.5 pt-1.5 border-t border-blue-200 text-xs">
+                        {selectedReservation.driver.driverLicenseNumber && (
+                          <div>
+                            <span className="text-blue-600 font-medium">License:</span>{' '}
+                            <span className="text-blue-900">{selectedReservation.driver.driverLicenseNumber}</span>
+                          </div>
+                        )}
+                        {selectedReservation.driver.licenseExpiry && (
+                          <div>
+                            <span className="text-blue-600 font-medium">Expires:</span>{' '}
+                            <span className="text-blue-900">{selectedReservation.driver.licenseExpiry}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
+              {/* Dates, Duration and Price in compact grid */}
+              {selectedReservation.type === 'maintenance_block' ? (
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Start Date</label>
+                      <p className="text-xs font-medium mt-0.5">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PP') : 'Invalid'}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Duration</label>
+                      <p className="text-xs font-medium mt-0.5">
+                        {selectedReservation.maintenanceDuration ? `${selectedReservation.maintenanceDuration} ${selectedReservation.maintenanceDuration === 1 ? 'day' : 'days'}` : 'Not set'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Status</label>
+                      <div className="mt-0.5">
+                        {selectedReservation.maintenanceStatus ? (
+                          <Badge 
+                            variant={selectedReservation.maintenanceStatus === "in" ? "default" : "outline"} 
+                            className={`text-[10px] px-1.5 py-0 ${
+                              selectedReservation.maintenanceStatus === "in" ? "bg-purple-500 text-white" :
+                              selectedReservation.maintenanceStatus === "out" ? "bg-green-500 text-white" :
+                              selectedReservation.maintenanceStatus === "scheduled" ? "bg-amber-500 text-white" :
+                              "bg-gray-500 text-white"
+                            }`}
+                          >
+                            {selectedReservation.maintenanceStatus.toUpperCase()}
+                          </Badge>
+                        ) : <span className="text-xs">Not set</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Start Date</label>
+                      <p className="text-xs font-medium mt-0.5">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PP') : 'Invalid'}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">End Date</label>
+                      <p className="text-xs font-medium mt-0.5">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PP') : 'Invalid') : 'Open-ended'}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Duration</label>
+                      <p className="text-xs font-medium mt-0.5">
+                        {(() => {
+                          if (!selectedReservation.startDate || !selectedReservation.endDate) return 'Open-ended';
+                          const startDate = safeParseDateISO(selectedReservation.startDate);
+                          const endDate = safeParseDateISO(selectedReservation.endDate);
+                          if (!startDate || !endDate) return 'Invalid';
+                          const duration = differenceInDays(endDate, startDate) + 1;
+                          return `${duration} ${duration === 1 ? 'day' : 'days'}`;
+                        })()}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Price</label>
+                      <p className="text-xs font-semibold mt-0.5">{selectedReservation.totalPrice ? formatCurrency(Number(selectedReservation.totalPrice)) : 'Not set'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedReservation.notes && (
+                <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-md">
+                  <label className="text-[10px] font-medium text-amber-700 uppercase">Notes</label>
+                  <p className="text-xs text-amber-900 mt-1 whitespace-pre-wrap">{selectedReservation.notes}</p>
+                </div>
+              )}
+
+              {/* Fuel Tracking Information */}
+              {(selectedReservation.fuelLevelPickup || selectedReservation.fuelLevelReturn || selectedReservation.fuelCost || selectedReservation.fuelCardNumber || selectedReservation.fuelNotes) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-2.5">
+                  <label className="text-[10px] font-medium text-blue-700 uppercase mb-2 block">Fuel Tracking</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {selectedReservation.fuelLevelPickup && (
+                      <div>
+                        <p className="text-[10px] text-blue-600 font-medium">Pickup</p>
+                        <p className="text-xs font-semibold text-blue-900 mt-0.5">{selectedReservation.fuelLevelPickup}</p>
+                      </div>
+                    )}
+                    {selectedReservation.fuelLevelReturn && (
+                      <div>
+                        <p className="text-[10px] text-blue-600 font-medium">Return</p>
+                        <p className="text-xs font-semibold text-blue-900 mt-0.5">{selectedReservation.fuelLevelReturn}</p>
+                      </div>
+                    )}
+                    {selectedReservation.fuelCost && (
+                      <div>
+                        <p className="text-[10px] text-blue-600 font-medium">Cost</p>
+                        <p className="text-xs font-semibold text-blue-900 mt-0.5">{formatCurrency(Number(selectedReservation.fuelCost))}</p>
+                      </div>
+                    )}
+                    {selectedReservation.fuelCardNumber && (
+                      <div>
+                        <p className="text-[10px] text-blue-600 font-medium">Card #</p>
+                        <p className="text-xs font-semibold text-blue-900 mt-0.5">{selectedReservation.fuelCardNumber}</p>
+                      </div>
+                    )}
+                  </div>
+                  {selectedReservation.fuelNotes && (
+                    <div className="mt-2 pt-2 border-t border-blue-200">
+                      <p className="text-[10px] text-blue-600 font-medium">Notes</p>
+                      <p className="text-xs text-blue-900 mt-0.5 whitespace-pre-wrap">{selectedReservation.fuelNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Contract and Documents */}
               {selectedReservation.vehicleId && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-500">Contract & Documents</label>
+                <div className="bg-gray-50 p-2.5 rounded-md">
+                  <label className="text-[10px] font-medium text-gray-700 uppercase block mb-2">Documents</label>
                   
                   {/* Quick Upload Buttons */}
-                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
-                    <span className="text-xs text-gray-600 w-full mb-1">Quick Upload:</span>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    <span className="text-[10px] text-gray-600 w-full mb-0.5">Quick Upload:</span>
                     {[
                       { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
@@ -1524,7 +1516,7 @@ export default function ReservationCalendarPage() {
                           input.click();
                         }}
                         disabled={uploadingDoc}
-                        className="text-xs"
+                        className="text-[10px] h-7"
                       >
                         + {type}
                       </Button>
@@ -1533,9 +1525,9 @@ export default function ReservationCalendarPage() {
                   
                   {/* Uploaded Documents */}
                   {reservationDocuments && reservationDocuments.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-xs font-semibold text-gray-700">Uploaded Documents:</span>
-                      <div className="flex flex-wrap gap-2">
+                    <div>
+                      <span className="text-[10px] font-semibold text-gray-700 block mb-1.5">Uploaded:</span>
+                      <div className="flex flex-wrap gap-1.5">
                         {/* Group documents by type */}
                         {(() => {
                           const contractDocs = reservationDocuments.filter(d => 
