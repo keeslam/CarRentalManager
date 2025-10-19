@@ -1055,7 +1055,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await fetch('/api/documents/upload/damage-check', {
+      const response = await fetch('/api/documents', {
         method: 'POST',
         body: formData,
       });
