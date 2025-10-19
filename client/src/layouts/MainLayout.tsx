@@ -153,6 +153,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   };
 
   const openReservationDialog = (reservationId: number) => {
+    console.log('MainLayout openReservationDialog called with:', reservationId);
     setViewReservationId(reservationId);
     setViewReservationDialogOpen(true);
     setShowResults(false);
@@ -583,9 +584,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
       
       <ReservationViewDialog
         open={viewReservationDialogOpen}
-        onOpenChange={setViewReservationDialogOpen}
+        onOpenChange={(open) => {
+          console.log('MainLayout ReservationViewDialog onOpenChange:', open);
+          setViewReservationDialogOpen(open);
+        }}
         reservationId={viewReservationId}
-        onEdit={handleEditReservation}
+        onEdit={(id) => {
+          console.log('MainLayout onEdit called from ReservationViewDialog with:', id);
+          handleEditReservation(id);
+        }}
       />
       
       <ReservationEditDialog

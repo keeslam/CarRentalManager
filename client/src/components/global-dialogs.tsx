@@ -1,11 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGlobalDialog } from '@/contexts/GlobalDialogContext';
 import { ReservationViewDialog } from '@/components/reservations/reservation-view-dialog';
+import { ReservationEditDialog } from '@/components/reservations/reservation-edit-dialog';
 import { SpareVehicleDialog } from '@/components/reservations/spare-vehicle-dialog';
 import { ApkInspectionDialog } from '@/components/vehicles/apk-inspection-dialog';
 import { Vehicle, Reservation } from '@shared/schema';
 
 export function GlobalDialogs() {
+  const queryClient = useQueryClient();
+  const [editReservationId, setEditReservationId] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const {
     dialogState,
     closeReservationDialog,
@@ -13,6 +19,13 @@ export function GlobalDialogs() {
     closeAPKDialog,
     closeMaintenanceDialog,
   } = useGlobalDialog();
+  
+  const handleEditReservation = (reservationId: number) => {
+    console.log('GlobalDialogs handleEditReservation called with:', reservationId);
+    setEditReservationId(reservationId);
+    setEditDialogOpen(true);
+    closeReservationDialog();
+  };
 
   // Fetch reservation data when dialog is open
   const { data: reservation } = useQuery<Reservation>({
@@ -45,6 +58,18 @@ export function GlobalDialogs() {
         open={dialogState.reservation.open}
         onOpenChange={closeReservationDialog}
         reservationId={dialogState.reservation.id}
+        onEdit={handleEditReservation}
+      />
+      
+      {/* Reservation Edit Dialog */}
+      <ReservationEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        reservationId={editReservationId}
+        onSuccess={() => {
+          setEditDialogOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+        }}
       />
 
       {/* Spare Assignment Dialog */}

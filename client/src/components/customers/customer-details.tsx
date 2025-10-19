@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 import { DriverDialog } from "./driver-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
@@ -37,6 +38,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   const { toast } = useToast();
   const [viewReservationId, setViewReservationId] = useState<number | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [editReservationId, setEditReservationId] = useState<number | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Define query keys for easier reference
   const customerQueryKey = [`/api/customers/${customerId}`];
@@ -66,6 +69,14 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   } = useQuery<Driver[]>({
     queryKey: customerDriversQueryKey
   });
+  
+  // Handle edit reservation
+  const handleEditReservation = (reservationId: number) => {
+    console.log('CustomerDetails handleEditReservation called with:', reservationId);
+    setEditReservationId(reservationId);
+    setIsEditDialogOpen(true);
+    setIsViewDialogOpen(false);
+  };
   
   // Delete reservation mutation
   const deleteReservationMutation = useMutation({
@@ -755,6 +766,18 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
         reservationId={viewReservationId}
+        onEdit={handleEditReservation}
+      />
+      
+      {/* Reservation Edit Dialog */}
+      <ReservationEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        reservationId={editReservationId}
+        onSuccess={() => {
+          setIsEditDialogOpen(false);
+          queryClient.invalidateQueries({ queryKey: customerReservationsQueryKey });
+        }}
       />
     </div>
   );
