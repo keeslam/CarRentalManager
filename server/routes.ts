@@ -5521,7 +5521,23 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.log('🔄 Starting database restore from:', req.file.path);
       console.log('📊 File size:', req.file.size, 'bytes');
 
-      // Restore database using psql with verbose output
+      // Step 1: Drop all tables with CASCADE to remove dependencies
+      console.log('🗑️ Dropping all existing tables...');
+      const dropTablesQuery = `
+        DO $$ DECLARE
+          r RECORD;
+        BEGIN
+          FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+            EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+          END LOOP;
+        END $$;
+      `;
+      
+      await execAsync(`psql "${databaseUrl}" -c "${dropTablesQuery.replace(/\n/g, ' ')}"`);
+      console.log('✅ All tables dropped');
+
+      // Step 2: Restore database using psql
+      console.log('📥 Restoring database from backup...');
       const { stdout, stderr } = await execAsync(
         `psql "${databaseUrl}" -f "${req.file.path}" 2>&1`,
         { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large restores
