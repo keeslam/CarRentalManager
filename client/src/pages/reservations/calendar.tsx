@@ -1780,14 +1780,15 @@ export default function ReservationCalendarPage() {
             onStatusChanged={async () => {
               // Close the status dialog
               setStatusDialogOpen(false);
-              // Refresh calendar data (this will also update the view dialog if it's open)
-              await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-              // If view dialog is still open, refresh the selected reservation data
+              // Refetch the data to get the latest updates
+              const refetchedData = await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+              // If view dialog is still open, update the selected reservation with fresh data
               if (viewDialogOpen && selectedReservation) {
                 const updatedReservations = queryClient.getQueryData(["/api/reservations/range"]) as any[];
                 if (updatedReservations) {
                   const updatedReservation = updatedReservations.find((r: any) => r.id === selectedReservation.id);
                   if (updatedReservation) {
+                    console.log('Updating selected reservation with fresh data:', updatedReservation);
                     setSelectedReservation(updatedReservation);
                   }
                 }
