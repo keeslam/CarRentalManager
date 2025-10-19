@@ -20,10 +20,13 @@ import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithin
 import { 
   Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
   DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench,
-  Printer, RefreshCw, Search, XCircle, ExternalLink, Database, LineChart
+  Printer, RefreshCw, Search, XCircle, ExternalLink, Database, LineChart, X
 } from "lucide-react";
 import { Link } from "wouter";
 import { DateRange } from "react-day-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReportBuilderPage from "@/pages/reports/report-builder";
+import MaintenanceCostsPage from "@/pages/reports/maintenance-costs";
 
 /**
  * Reports Page - Generate and display reports for the car rental business
@@ -32,6 +35,10 @@ import { DateRange } from "react-day-picker";
 export default function ReportsPage() {
   // Tab state - default to operations tab
   const [activeTab, setActiveTab] = useState("operations");
+  
+  // Dialog states
+  const [reportBuilderOpen, setReportBuilderOpen] = useState(false);
+  const [maintenanceCostsOpen, setMaintenanceCostsOpen] = useState(false);
   
   // Date range state with default to last 30 days
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -1234,43 +1241,47 @@ export default function ReportsPage() {
       
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/reports/builder">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Database className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>Custom Report Builder</CardTitle>
-                    <CardDescription>Build custom reports with filters and aggregations</CardDescription>
-                  </div>
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => setReportBuilderOpen(true)}
+          data-testid="card-report-builder"
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Database className="h-6 w-6 text-primary" />
                 </div>
-                <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle>Custom Report Builder</CardTitle>
+                  <CardDescription>Build custom reports with filters and aggregations</CardDescription>
+                </div>
               </div>
-            </CardHeader>
-          </Card>
-        </Link>
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </CardHeader>
+        </Card>
         
-        <Link href="/reports/maintenance-costs">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <LineChart className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>Maintenance Cost Analysis</CardTitle>
-                    <CardDescription>Analyze vehicle maintenance costs and trends</CardDescription>
-                  </div>
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => setMaintenanceCostsOpen(true)}
+          data-testid="card-maintenance-costs"
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <LineChart className="h-6 w-6 text-primary" />
                 </div>
-                <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle>Maintenance Cost Analysis</CardTitle>
+                  <CardDescription>Analyze vehicle maintenance costs and trends</CardDescription>
+                </div>
               </div>
-            </CardHeader>
-          </Card>
-        </Link>
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </CardHeader>
+        </Card>
       </div>
       
       {/* Filter Controls */}
@@ -2267,6 +2278,50 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Report Builder Dialog */}
+      <Dialog open={reportBuilderOpen} onOpenChange={setReportBuilderOpen}>
+        <DialogContent className="max-w-[95vw] w-full h-[95vh] max-h-[95vh] p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl">Custom Report Builder</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setReportBuilderOpen(false)}
+                data-testid="button-close-report-builder"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="overflow-auto h-full">
+            <ReportBuilderPage />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maintenance Costs Dialog */}
+      <Dialog open={maintenanceCostsOpen} onOpenChange={setMaintenanceCostsOpen}>
+        <DialogContent className="max-w-[95vw] w-full h-[95vh] max-h-[95vh] p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl">Maintenance Cost Analysis</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMaintenanceCostsOpen(false)}
+                data-testid="button-close-maintenance-costs"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="overflow-auto h-full">
+            <MaintenanceCostsPage />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
