@@ -41,6 +41,7 @@ import MaintenanceCalendar from "@/pages/maintenance/calendar";
 import SettingsPage from "@/pages/settings/index";
 import WhatsAppSettingsPage from "@/pages/settings/whatsapp";
 import WhatsAppTemplatesPage from "@/pages/settings/whatsapp-templates";
+import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
 import WhatsAppMessagingPage from "@/pages/whatsapp/messaging";
 import CommunicationsPage from "@/pages/communications";
 import NotFound from "@/pages/not-found";
@@ -128,6 +129,7 @@ function AppRoutes() {
               <ProtectedRoute path="/communications" component={CommunicationsPage} />
               <ProtectedRoute path="/settings/whatsapp/templates" component={WhatsAppTemplatesPage} />
               <ProtectedRoute path="/settings/whatsapp" component={WhatsAppSettingsPage} />
+              <ProtectedRoute path="/settings/damage-check-templates" component={DamageCheckTemplatesPage} />
               <ProtectedRoute path="/settings" component={SettingsPage} />
               <Route path="/auth" component={AuthPage} />
               <Route component={NotFound} />
