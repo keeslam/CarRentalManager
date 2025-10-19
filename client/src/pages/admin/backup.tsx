@@ -667,18 +667,18 @@ export default function BackupPage() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-destructive">⚠️ Warning: Data Restore</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will replace ALL your current data with the backup file. This action cannot be undone.
-                            <br /><br />
-                            <strong>What will be replaced:</strong>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All vehicles, customers & reservations</li>
-                              <li>All expenses & documents</li>
-                              <li>All user accounts & settings</li>
-                              <li>All templates & notifications</li>
-                            </ul>
-                            <br />
-                            Your session will be reset and you'll need to refresh and log in again.
+                          <AlertDialogDescription asChild>
+                            <div>
+                              <p>This will replace ALL your current data with the backup file. This action cannot be undone.</p>
+                              <p className="mt-4"><strong>What will be replaced:</strong></p>
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>All vehicles, customers & reservations</li>
+                                <li>All expenses & documents</li>
+                                <li>All user accounts & settings</li>
+                                <li>All templates & notifications</li>
+                              </ul>
+                              <p className="mt-4">Your session will be reset and you'll need to refresh and log in again.</p>
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -777,18 +777,18 @@ export default function BackupPage() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-destructive">⚠️ Warning: Files Restore</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will replace ALL your uploaded files with the backup archive.
-                            <br /><br />
-                            <strong>What will be replaced:</strong>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All uploaded documents</li>
-                              <li>Driver licenses & contracts</li>
-                              <li>Expense receipts & photos</li>
-                              <li>PDF template backgrounds</li>
-                            </ul>
-                            <br />
-                            <strong>Note:</strong> Your database and code will NOT be affected. Only uploaded files will be restored.
+                          <AlertDialogDescription asChild>
+                            <div>
+                              <p>This will replace ALL your uploaded files with the backup archive.</p>
+                              <p className="mt-4"><strong>What will be replaced:</strong></p>
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>All uploaded documents</li>
+                                <li>Driver licenses & contracts</li>
+                                <li>Expense receipts & photos</li>
+                                <li>PDF template backgrounds</li>
+                              </ul>
+                              <p className="mt-4"><strong>Note:</strong> Your database and code will NOT be affected. Only uploaded files will be restored.</p>
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -887,17 +887,17 @@ export default function BackupPage() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-destructive">⚠️ Warning: Code Restore</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will replace ALL your application source code with the backup archive. The application will restart automatically.
-                            <br /><br />
-                            <strong>What will be replaced:</strong>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All source code files</li>
-                              <li>Configuration files</li>
-                              <li>Package dependencies</li>
-                            </ul>
-                            <br />
-                            <strong>Note:</strong> Your database and uploaded files will NOT be affected. Only code files will be restored.
+                          <AlertDialogDescription asChild>
+                            <div>
+                              <p>This will replace ALL your application source code with the backup archive. The application will restart automatically.</p>
+                              <p className="mt-4"><strong>What will be replaced:</strong></p>
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                <li>All source code files</li>
+                                <li>Configuration files</li>
+                                <li>Package dependencies</li>
+                              </ul>
+                              <p className="mt-4"><strong>Note:</strong> Your database and uploaded files will NOT be affected. Only code files will be restored.</p>
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
