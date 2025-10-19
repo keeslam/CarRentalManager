@@ -1404,6 +1404,47 @@ export default function ReservationCalendarPage() {
                 </div>
               )}
 
+              {/* Fuel Tracking Information */}
+              {(selectedReservation.fuelLevelPickup || selectedReservation.fuelLevelReturn || selectedReservation.fuelCost || selectedReservation.fuelCardNumber || selectedReservation.fuelNotes) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Fuel Tracking</label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mt-1">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {selectedReservation.fuelLevelPickup && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel at Pickup</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelLevelPickup}</p>
+                        </div>
+                      )}
+                      {selectedReservation.fuelLevelReturn && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel at Return</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelLevelReturn}</p>
+                        </div>
+                      )}
+                      {selectedReservation.fuelCost && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel Cost</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{formatCurrency(Number(selectedReservation.fuelCost))}</p>
+                        </div>
+                      )}
+                      {selectedReservation.fuelCardNumber && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel Card Number</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{selectedReservation.fuelCardNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedReservation.fuelNotes && (
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-xs text-blue-600 font-medium">Fuel Notes</p>
+                        <p className="text-sm text-blue-900 mt-1 whitespace-pre-wrap">{selectedReservation.fuelNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Contract and Documents */}
               {selectedReservation.vehicleId && (
                 <div className="space-y-3">
