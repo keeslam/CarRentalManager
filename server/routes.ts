@@ -7245,6 +7245,56 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Generate damage check PDF for a vehicle
+  app.get("/api/vehicles/:id/damage-check-pdf", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.id);
+      const vehicle = await storage.getVehicle(vehicleId);
+      
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // Find matching template or use default
+      let template = await storage.getDamageCheckTemplatesByVehicle(
+        vehicle.brand,
+        vehicle.model,
+        vehicle.vehicleType || undefined
+      ).then(templates => templates[0]);
+      
+      if (!template) {
+        template = await storage.getDefaultDamageCheckTemplate();
+      }
+
+      if (!template) {
+        return res.status(404).json({ message: "No damage check template found" });
+      }
+
+      // Import PDF generator
+      const { generateDamageCheckPDF } = await import('./pdf-damage-check-generator');
+      
+      const pdfBuffer = await generateDamageCheckPDF(
+        {
+          brand: vehicle.brand,
+          model: vehicle.model,
+          licensePlate: vehicle.licensePlate,
+          buildYear: vehicle.productionDate,
+          fuel: vehicle.fuel || undefined,
+        },
+        template
+      );
+
+      const filename = `damage-check-${vehicle.licensePlate}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating damage check PDF:", error);
+      res.status(500).json({ message: "Error generating damage check PDF" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
