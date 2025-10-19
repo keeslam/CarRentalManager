@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
@@ -47,6 +48,14 @@ const baseStatusChangeSchema = z.object({
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
   ]).optional(),
+  fuelLevelPickup: z.string().nullish(),
+  fuelLevelReturn: z.string().nullish(),
+  fuelCost: z.union([
+    z.number().nullish(),
+    z.string().transform(val => val === "" ? null : parseFloat(val) || null),
+  ]).nullish(),
+  fuelCardNumber: z.string().nullish(),
+  fuelNotes: z.string().nullish(),
 });
 
 // Create schema with custom validators
@@ -487,6 +496,41 @@ export function StatusChangeDialog({
               />
             )}
             
+            {/* Fuel Level at Pickup field when status is confirmed */}
+            {currentStatus === "confirmed" && (
+              <FormField
+                control={form.control}
+                name="fuelLevelPickup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fuel Level at Pickup</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "not_recorded"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select fuel level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="not_recorded">Not Recorded</SelectItem>
+                        <SelectItem value="empty">Empty</SelectItem>
+                        <SelectItem value="1/4">1/4</SelectItem>
+                        <SelectItem value="1/2">1/2</SelectItem>
+                        <SelectItem value="3/4">3/4</SelectItem>
+                        <SelectItem value="full">Full</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Record the fuel level when the customer picked up the vehicle
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
             {/* Departure Mileage field when status is completed */}
             {currentStatus === "completed" && vehicle && (
               <FormField
@@ -510,6 +554,113 @@ export function StatusChangeDialog({
                   </FormItem>
                 )}
               />
+            )}
+            
+            {/* Fuel tracking fields when status is completed */}
+            {currentStatus === "completed" && (
+              <>
+                {/* Fuel Level at Return */}
+                <FormField
+                  control={form.control}
+                  name="fuelLevelReturn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fuel Level at Return</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || "not_recorded"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select fuel level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="not_recorded">Not Recorded</SelectItem>
+                          <SelectItem value="empty">Empty</SelectItem>
+                          <SelectItem value="1/4">1/4</SelectItem>
+                          <SelectItem value="1/2">1/2</SelectItem>
+                          <SelectItem value="3/4">3/4</SelectItem>
+                          <SelectItem value="full">Full</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Record the fuel level when the vehicle was returned
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Fuel Cost */}
+                <FormField
+                  control={form.control}
+                  name="fuelCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fuel Cost (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter fuel cost if applicable"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter any fuel costs charged to the customer
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Fuel Card Number */}
+                <FormField
+                  control={form.control}
+                  name="fuelCardNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fuel Card Number (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="Enter fuel card number if used"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Record the fuel card number if a fuel card was used
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Fuel Notes */}
+                <FormField
+                  control={form.control}
+                  name="fuelNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fuel Notes (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter any additional fuel-related notes"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Add any relevant notes about fuel usage or refueling
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
             
             <DialogFooter>
