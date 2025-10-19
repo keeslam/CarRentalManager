@@ -609,6 +609,21 @@ export function StatusChangeDialog({
             {/* Fuel tracking fields when status is completed */}
             {currentStatus === "completed" && (
               <>
+                {/* Show Pickup Fuel Level (read-only) */}
+                {initialFuelData?.fuelLevelPickup && initialFuelData.fuelLevelPickup !== "not_recorded" && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-900">Fuel at Pickup</h4>
+                        <p className="text-xs text-blue-700 mt-0.5">Reference for comparison</p>
+                      </div>
+                      <Badge variant="outline" className="bg-white text-base font-semibold">
+                        {initialFuelData.fuelLevelPickup}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Fuel Level at Return */}
                 <FormField
                   control={form.control}
