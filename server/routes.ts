@@ -1603,6 +1603,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         bodyData.placeholderSpare = bodyData.placeholderSpare === 'true' || bodyData.placeholderSpare === true;
       }
       
+      if (bodyData.deliveryRequired !== undefined) {
+        bodyData.deliveryRequired = bodyData.deliveryRequired === 'true' || bodyData.deliveryRequired === true;
+      }
+      
       // Handle totalPrice properly - treat empty string and NaN as undefined
       if (bodyData.totalPrice === "" || bodyData.totalPrice === null) {
         bodyData.totalPrice = undefined;
