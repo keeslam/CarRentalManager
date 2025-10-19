@@ -7123,6 +7123,128 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================
+  // DAMAGE CHECK TEMPLATE ROUTES
+  // ============================================
+
+  // Get all damage check templates
+  app.get("/api/damage-check-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getAllDamageCheckTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching damage check templates:", error);
+      res.status(500).json({ message: "Error fetching damage check templates" });
+    }
+  });
+
+  // Get damage check template by ID
+  app.get("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getDamageCheckTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching damage check template:", error);
+      res.status(500).json({ message: "Error fetching damage check template" });
+    }
+  });
+
+  // Get templates by vehicle criteria
+  app.get("/api/damage-check-templates/by-vehicle", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { make, model, type } = req.query;
+      const templates = await storage.getDamageCheckTemplatesByVehicle(
+        make as string | undefined,
+        model as string | undefined,
+        type as string | undefined
+      );
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates by vehicle:", error);
+      res.status(500).json({ message: "Error fetching templates" });
+    }
+  });
+
+  // Get default damage check template
+  app.get("/api/damage-check-templates/default/template", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const template = await storage.getDefaultDamageCheckTemplate();
+      
+      if (!template) {
+        return res.status(404).json({ message: "No default template found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching default template:", error);
+      res.status(500).json({ message: "Error fetching default template" });
+    }
+  });
+
+  // Create new damage check template
+  app.post("/api/damage-check-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const templateData = {
+        ...req.body,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null,
+      };
+      
+      const template = await storage.createDamageCheckTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating damage check template:", error);
+      res.status(500).json({ message: "Error creating damage check template" });
+    }
+  });
+
+  // Update damage check template
+  app.put("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user;
+      const templateData = {
+        ...req.body,
+        updatedBy: user ? user.username : null,
+      };
+      
+      const updated = await storage.updateDamageCheckTemplate(id, templateData);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating damage check template:", error);
+      res.status(500).json({ message: "Error updating damage check template" });
+    }
+  });
+
+  // Delete damage check template
+  app.delete("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteDamageCheckTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting damage check template:", error);
+      res.status(500).json({ message: "Error deleting damage check template" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
