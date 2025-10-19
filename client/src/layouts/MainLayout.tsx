@@ -8,6 +8,13 @@ import { NotificationCenter } from "@/components/ui/notification-center";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X, ClipboardCheck } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -53,6 +60,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [showAllResultsDialog, setShowAllResultsDialog] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   
   const title = getPageTitle(location);
@@ -265,13 +273,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                           className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                           onClick={() => {
                             setShowResults(false);
-                            // If it looks like a license plate, try to standardize it for better search results
-                            const searchTerm = searchQuery.includes('-') || /^[A-Za-z0-9]{6,8}$/.test(searchQuery.trim()) 
-                              ? formatLicensePlate(searchQuery) 
-                              : searchQuery.trim();
-                            // Use only navigate with replace to avoid adding to browser history
-                            navigate(`/search-results?q=${encodeURIComponent(searchTerm)}`, { replace: true });
+                            setShowAllResultsDialog(true);
                           }}
+                          data-testid="button-view-all-results"
                         >
                           View all results
                         </button>
@@ -391,6 +395,135 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <main className="md:ml-64 pt-4 px-4 pb-12">
         {children}
       </main>
+
+      {/* All Results Dialog */}
+      <Dialog open={showAllResultsDialog} onOpenChange={setShowAllResultsDialog}>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>Search Results for "{searchQuery}"</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[calc(85vh-8rem)] pr-4">
+            {/* Vehicle Results */}
+            {vehicleResults?.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Vehicles ({vehicleResults.length})
+                </h3>
+                <div className="space-y-2">
+                  {vehicleResults.map((vehicle: SearchResultVehicle) => (
+                    <button
+                      key={`dialog-vehicle-${vehicle.id}`}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
+                      onClick={() => {
+                        setShowAllResultsDialog(false);
+                        navigate(`/vehicles/${vehicle.id}`);
+                      }}
+                      data-testid={`vehicle-result-${vehicle.id}`}
+                    >
+                      <Car className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
+                        <div className="text-sm text-gray-500">{formatLicensePlate(vehicle.licensePlate)}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Customer Results */}
+            {customerResults?.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Customers ({customerResults.length})
+                </h3>
+                <div className="space-y-2">
+                  {customerResults.map((customer: SearchResultCustomer) => (
+                    <button
+                      key={`dialog-customer-${customer.id}`}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
+                      onClick={() => {
+                        setShowAllResultsDialog(false);
+                        navigate(`/customers/${customer.id}`);
+                      }}
+                      data-testid={`customer-result-${customer.id}`}
+                    >
+                      <User className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{customer.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {customer.email || customer.phone || "No contact info"}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reservation Results */}
+            {reservationResults?.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Reservations ({reservationResults.length})
+                </h3>
+                <div className="space-y-2">
+                  {reservationResults.map((reservation: SearchResultReservation) => {
+                    const isMaintenance = reservation.type === 'maintenance_block';
+                    return (
+                      <button
+                        key={`dialog-reservation-${reservation.id}`}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
+                        onClick={() => {
+                          setShowAllResultsDialog(false);
+                          navigate(`/reservations/${reservation.id}`);
+                        }}
+                        data-testid={`reservation-result-${reservation.id}`}
+                      >
+                        {isMaintenance ? (
+                          <ClipboardCheck className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                        ) : (
+                          <Calendar className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium flex items-center gap-2 flex-wrap">
+                            <span>
+                              {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                              {reservation.vehicle?.licensePlate && ` (${formatLicensePlate(reservation.vehicle.licensePlate)})`}
+                            </span>
+                            {isMaintenance && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                Maintenance
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {isMaintenance ? (
+                              <>{reservation.maintenanceCategory || "Maintenance"} • {reservation.startDate}</>
+                            ) : (
+                              <>{reservation.customer?.name || "Unknown Customer"} • {reservation.startDate} to {reservation.endDate}</>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* No Results */}
+            {vehicleResults?.length === 0 && customerResults?.length === 0 && reservationResults?.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                No results found for "{searchQuery}"
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
