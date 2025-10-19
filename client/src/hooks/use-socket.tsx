@@ -122,6 +122,10 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
         type: 'active' // Only refetch currently active queries
       });
       
+      // Also invalidate (not just refetch) maintenance and upcoming reservations so they refresh even when not visible
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming-maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
+      
       // Also refetch these specific queries that depend on reservation data
       queryClient.refetchQueries({ 
         queryKey: ['/api/vehicles-with-reservations'],
