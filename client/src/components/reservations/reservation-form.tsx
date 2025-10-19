@@ -1834,155 +1834,157 @@ export function ReservationForm({
                   )}
                 />
                 
-                {/* Start Mileage field when status is confirmed */}
-                {currentStatus === "confirmed" && (
-                  <>
-                    <div className="col-span-1">
-                      <div className="flex flex-col space-y-1.5">
-                        <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Mileage When Picked Up
-                        </label>
-                        <input
-                          id="startMileage"
-                          type="number"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="Enter the starting mileage"
-                          value={startMileage || ""}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || undefined;
-                            setStartMileage(value);
-                            form.setValue("startMileage", value as any);
-                          }}
-                        />
-                        <p className="text-[0.8rem] text-muted-foreground">
-                          Enter the vehicle's odometer reading when it was picked up
-                        </p>
-                      </div>
+                {/* Start Mileage and Fuel at Pickup - shown for all statuses */}
+                {(currentStatus === "confirmed" || currentStatus === "completed") && (
+                  <div className="col-span-1">
+                    <div className="flex flex-col space-y-1.5">
+                      <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Mileage When Picked Up
+                      </label>
+                      <input
+                        id="startMileage"
+                        type="number"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Enter the starting mileage"
+                        value={startMileage || ""}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || undefined;
+                          setStartMileage(value);
+                          form.setValue("startMileage", value as any);
+                        }}
+                      />
+                      <p className="text-[0.8rem] text-muted-foreground">
+                        Enter the vehicle's odometer reading when it was picked up
+                      </p>
                     </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="fuelLevelPickup"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fuel Level at Pickup</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value === "" ? undefined : value);
-                              setFuelLevelPickup(value || undefined);
-                            }} 
-                            value={field.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-fuel-level-pickup">
-                                <SelectValue placeholder="Select fuel level" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="">Not recorded</SelectItem>
-                              <SelectItem value="empty">Empty</SelectItem>
-                              <SelectItem value="1/4">1/4</SelectItem>
-                              <SelectItem value="1/2">1/2</SelectItem>
-                              <SelectItem value="3/4">3/4</SelectItem>
-                              <SelectItem value="full">Full</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Record the fuel level when vehicle was picked up
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </>
+                  </div>
                 )}
                 
-                {/* Mileage When Returned field when status is completed */}
-                {currentStatus === "completed" && (
-                  <>
-                    <div className="col-span-1">
-                      <div className="flex flex-col space-y-1.5">
-                        <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Mileage When Returned
-                        </label>
-                        <input
-                          id="departureMileage"
-                          type="number"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="Enter the final mileage"
-                          value={departureMileage || ""}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || undefined;
-                            setDepartureMileage(value);
-                            form.setValue("departureMileage", value as any);
-                          }}
-                        />
-                        <p className="text-[0.8rem] text-muted-foreground">
-                          Enter the vehicle's odometer reading when it was returned
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="fuelLevelReturn"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fuel Level at Return</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value === "" ? undefined : value);
-                              setFuelLevelReturn(value || undefined);
-                            }} 
-                            value={field.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-fuel-level-return">
-                                <SelectValue placeholder="Select fuel level" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="">Not recorded</SelectItem>
-                              <SelectItem value="empty">Empty</SelectItem>
-                              <SelectItem value="1/4">1/4</SelectItem>
-                              <SelectItem value="1/2">1/2</SelectItem>
-                              <SelectItem value="3/4">3/4</SelectItem>
-                              <SelectItem value="full">Full</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Record the fuel level when vehicle was returned
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="fuelCost"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fuel Cost (€)</FormLabel>
+                {(currentStatus === "confirmed" || currentStatus === "completed") && (
+                  <FormField
+                    control={form.control}
+                    name="fuelLevelPickup"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fuel Level at Pickup</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value === "" ? undefined : value);
+                            setFuelLevelPickup(value || undefined);
+                          }} 
+                          value={field.value || ""}
+                        >
                           <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              {...field}
-                              value={field.value || ""}
-                              onChange={(e) => {
-                                field.onChange(e.target.value === "" ? undefined : e.target.value);
-                                setFuelCost(e.target.value || undefined);
-                              }}
-                              data-testid="input-fuel-cost"
-                            />
+                            <SelectTrigger data-testid="select-fuel-level-pickup">
+                              <SelectValue placeholder="Select fuel level" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormDescription>
-                            Fuel cost charged to customer (if applicable)
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </>
+                          <SelectContent>
+                            <SelectItem value="">Not recorded</SelectItem>
+                            <SelectItem value="empty">Empty</SelectItem>
+                            <SelectItem value="1/4">1/4</SelectItem>
+                            <SelectItem value="1/2">1/2</SelectItem>
+                            <SelectItem value="3/4">3/4</SelectItem>
+                            <SelectItem value="full">Full</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Record the fuel level when vehicle was picked up
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                {/* Mileage When Returned - only when status is completed */}
+                {currentStatus === "completed" && (
+                  <div className="col-span-1">
+                    <div className="flex flex-col space-y-1.5">
+                      <label htmlFor="departureMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Mileage When Returned
+                      </label>
+                      <input
+                        id="departureMileage"
+                        type="number"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Enter the final mileage"
+                        value={departureMileage || ""}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || undefined;
+                          setDepartureMileage(value);
+                          form.setValue("departureMileage", value as any);
+                        }}
+                      />
+                      <p className="text-[0.8rem] text-muted-foreground">
+                        Enter the vehicle's odometer reading when it was returned
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentStatus === "completed" && (
+                  <FormField
+                    control={form.control}
+                    name="fuelLevelReturn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fuel Level at Return</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value === "" ? undefined : value);
+                            setFuelLevelReturn(value || undefined);
+                          }} 
+                          value={field.value || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-fuel-level-return">
+                              <SelectValue placeholder="Select fuel level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Not recorded</SelectItem>
+                            <SelectItem value="empty">Empty</SelectItem>
+                            <SelectItem value="1/4">1/4</SelectItem>
+                            <SelectItem value="1/2">1/2</SelectItem>
+                            <SelectItem value="3/4">3/4</SelectItem>
+                            <SelectItem value="full">Full</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Record the fuel level when vehicle was returned
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                {currentStatus === "completed" && (
+                  <FormField
+                    control={form.control}
+                    name="fuelCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fuel Cost (€)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(e.target.value === "" ? undefined : e.target.value);
+                              setFuelCost(e.target.value || undefined);
+                            }}
+                            data-testid="input-fuel-cost"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Fuel cost charged to customer (if applicable)
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
                 )}
                 
                 {/* Price */}
