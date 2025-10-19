@@ -432,12 +432,12 @@ function TemplateEditor({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Select value={vehicleType} onValueChange={setVehicleType}>
+                <Select value={vehicleType || "all"} onValueChange={(val) => setVehicleType(val === "all" ? "" : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="sedan">Sedan</SelectItem>
                     <SelectItem value="suv">SUV</SelectItem>
                     <SelectItem value="van">Van</SelectItem>
