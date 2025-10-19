@@ -1869,10 +1869,11 @@ export function ReservationForm({
                         <FormLabel>Fuel Level at Pickup</FormLabel>
                         <Select 
                           onValueChange={(value) => {
-                            field.onChange(value === "" ? undefined : value);
-                            setFuelLevelPickup(value || undefined);
+                            const newValue = value === "not_recorded" ? undefined : value;
+                            field.onChange(newValue);
+                            setFuelLevelPickup(newValue);
                           }} 
-                          value={field.value || ""}
+                          value={field.value || "not_recorded"}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-fuel-level-pickup">
@@ -1880,7 +1881,7 @@ export function ReservationForm({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Not recorded</SelectItem>
+                            <SelectItem value="not_recorded">Not recorded</SelectItem>
                             <SelectItem value="empty">Empty</SelectItem>
                             <SelectItem value="1/4">1/4</SelectItem>
                             <SelectItem value="1/2">1/2</SelectItem>
@@ -1931,10 +1932,11 @@ export function ReservationForm({
                         <FormLabel>Fuel Level at Return</FormLabel>
                         <Select 
                           onValueChange={(value) => {
-                            field.onChange(value === "" ? undefined : value);
-                            setFuelLevelReturn(value || undefined);
+                            const newValue = value === "not_recorded" ? undefined : value;
+                            field.onChange(newValue);
+                            setFuelLevelReturn(newValue);
                           }} 
-                          value={field.value || ""}
+                          value={field.value || "not_recorded"}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-fuel-level-return">
@@ -1942,7 +1944,7 @@ export function ReservationForm({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Not recorded</SelectItem>
+                            <SelectItem value="not_recorded">Not recorded</SelectItem>
                             <SelectItem value="empty">Empty</SelectItem>
                             <SelectItem value="1/4">1/4</SelectItem>
                             <SelectItem value="1/2">1/2</SelectItem>
