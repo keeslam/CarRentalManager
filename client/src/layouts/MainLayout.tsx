@@ -15,6 +15,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
+import { CustomerDetails } from "@/components/customers/customer-details";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { DialogDescription } from "@/components/ui/dialog";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -62,6 +66,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [showResults, setShowResults] = useState(false);
   const [showAllResultsDialog, setShowAllResultsDialog] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  
+  // Dialog states for viewing details
+  const [viewVehicleId, setViewVehicleId] = useState<number | null>(null);
+  const [viewVehicleDialogOpen, setViewVehicleDialogOpen] = useState(false);
+  const [viewCustomerId, setViewCustomerId] = useState<number | null>(null);
+  const [viewCustomerDialogOpen, setViewCustomerDialogOpen] = useState(false);
+  const [viewReservationId, setViewReservationId] = useState<number | null>(null);
+  const [viewReservationDialogOpen, setViewReservationDialogOpen] = useState(false);
   
   const title = getPageTitle(location);
   
@@ -121,11 +133,26 @@ export default function MainLayout({ children }: MainLayoutProps) {
     };
   }, [searchRef]);
   
-  // Navigate to result and close search
-  const handleResultClick = (path: string) => {
-    navigate(path);
+  // Helper functions to open detail dialogs
+  const openVehicleDialog = (vehicleId: number) => {
+    setViewVehicleId(vehicleId);
+    setViewVehicleDialogOpen(true);
     setShowResults(false);
-    setSearchQuery("");
+    setShowAllResultsDialog(false);
+  };
+
+  const openCustomerDialog = (customerId: number) => {
+    setViewCustomerId(customerId);
+    setViewCustomerDialogOpen(true);
+    setShowResults(false);
+    setShowAllResultsDialog(false);
+  };
+
+  const openReservationDialog = (reservationId: number) => {
+    setViewReservationId(reservationId);
+    setViewReservationDialogOpen(true);
+    setShowResults(false);
+    setShowAllResultsDialog(false);
   };
   
   // If we're at the auth page or not logged in, render without layout
@@ -293,7 +320,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                             <li key={`vehicle-${vehicle.id}`} className="hover:bg-gray-50 rounded">
                               <button 
                                 className="flex items-center p-2 w-full text-left"
-                                onClick={() => handleResultClick(`/vehicles/${vehicle.id}`)}
+                                onClick={() => openVehicleDialog(vehicle.id)}
                               >
                                 <Car className="h-4 w-4 text-primary-500 mr-2" />
                                 <div>
@@ -318,7 +345,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                             <li key={`customer-${customer.id}`} className="hover:bg-gray-50 rounded">
                               <button 
                                 className="flex items-center p-2 w-full text-left"
-                                onClick={() => handleResultClick(`/customers/${customer.id}`)}
+                                onClick={() => openCustomerDialog(customer.id)}
                               >
                                 <User className="h-4 w-4 text-primary-500 mr-2" />
                                 <div>
@@ -347,7 +374,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                               <li key={`reservation-${reservation.id}`} className="hover:bg-gray-50 rounded">
                                 <button 
                                   className="flex items-center p-2 w-full text-left"
-                                  onClick={() => handleResultClick(`/reservations/${reservation.id}`)}
+                                  onClick={() => openReservationDialog(reservation.id)}
                                 >
                                   {isMaintenance ? (
                                     <ClipboardCheck className="h-4 w-4 text-purple-500 mr-2" />
@@ -415,10 +442,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <button
                       key={`dialog-vehicle-${vehicle.id}`}
                       className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
-                      onClick={() => {
-                        setShowAllResultsDialog(false);
-                        navigate(`/vehicles/${vehicle.id}`);
-                      }}
+                      onClick={() => openVehicleDialog(vehicle.id)}
                       data-testid={`vehicle-result-${vehicle.id}`}
                     >
                       <Car className="h-5 w-5 text-primary-500 flex-shrink-0" />
@@ -444,10 +468,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <button
                       key={`dialog-customer-${customer.id}`}
                       className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
-                      onClick={() => {
-                        setShowAllResultsDialog(false);
-                        navigate(`/customers/${customer.id}`);
-                      }}
+                      onClick={() => openCustomerDialog(customer.id)}
                       data-testid={`customer-result-${customer.id}`}
                     >
                       <User className="h-5 w-5 text-primary-500 flex-shrink-0" />
@@ -477,10 +498,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       <button
                         key={`dialog-reservation-${reservation.id}`}
                         className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors text-left"
-                        onClick={() => {
-                          setShowAllResultsDialog(false);
-                          navigate(`/reservations/${reservation.id}`);
-                        }}
+                        onClick={() => openReservationDialog(reservation.id)}
                         data-testid={`reservation-result-${reservation.id}`}
                       >
                         {isMaintenance ? (
@@ -524,6 +542,39 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* View Detail Dialogs */}
+      <VehicleViewDialog
+        open={viewVehicleDialogOpen}
+        onOpenChange={setViewVehicleDialogOpen}
+        vehicleId={viewVehicleId}
+      />
+      
+      <Dialog open={viewCustomerDialogOpen} onOpenChange={setViewCustomerDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customer Details</DialogTitle>
+            <DialogDescription>
+              View customer information and reservation history
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {viewCustomerId && (
+              <CustomerDetails 
+                customerId={viewCustomerId} 
+                inDialog={true}
+                onClose={() => setViewCustomerDialogOpen(false)}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <ReservationViewDialog
+        open={viewReservationDialogOpen}
+        onOpenChange={setViewReservationDialogOpen}
+        reservationId={viewReservationId}
+      />
     </div>
   );
 }
