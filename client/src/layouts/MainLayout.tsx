@@ -5,7 +5,7 @@ import { UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { NotificationCenter } from "@/components/ui/notification-center";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X, ClipboardCheck } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import {
@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { CustomerDetails } from "@/components/customers/customer-details";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
 import { DialogDescription } from "@/components/ui/dialog";
 
 interface MainLayoutProps {
@@ -62,6 +63,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [showAllResultsDialog, setShowAllResultsDialog] = useState(false);
@@ -74,6 +76,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [viewCustomerDialogOpen, setViewCustomerDialogOpen] = useState(false);
   const [viewReservationId, setViewReservationId] = useState<number | null>(null);
   const [viewReservationDialogOpen, setViewReservationDialogOpen] = useState(false);
+  const [editReservationId, setEditReservationId] = useState<number | null>(null);
+  const [editReservationDialogOpen, setEditReservationDialogOpen] = useState(false);
   
   const title = getPageTitle(location);
   
@@ -153,6 +157,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setViewReservationDialogOpen(true);
     setShowResults(false);
     setShowAllResultsDialog(false);
+  };
+
+  const handleEditReservation = (reservationId: number) => {
+    setEditReservationId(reservationId);
+    setEditReservationDialogOpen(true);
+    setViewReservationDialogOpen(false);
   };
   
   // If we're at the auth page or not logged in, render without layout
@@ -574,6 +584,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
         open={viewReservationDialogOpen}
         onOpenChange={setViewReservationDialogOpen}
         reservationId={viewReservationId}
+        onEdit={handleEditReservation}
+      />
+      
+      <ReservationEditDialog
+        open={editReservationDialogOpen}
+        onOpenChange={setEditReservationDialogOpen}
+        reservationId={editReservationId}
+        onSuccess={() => {
+          setEditReservationDialogOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+        }}
       />
     </div>
   );
