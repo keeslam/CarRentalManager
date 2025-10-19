@@ -1741,42 +1741,53 @@ export default function ReservationCalendarPage() {
       </Dialog>
 
       {/* Status Change Dialog */}
-      {selectedReservation && (
-        <StatusChangeDialog
-          open={statusDialogOpen}
-          onOpenChange={setStatusDialogOpen}
-          reservationId={selectedReservation.id}
-          initialStatus={selectedReservation.status || "pending"}
-          vehicle={selectedReservation.vehicle ? {
-            ...selectedReservation.vehicle,
-            currentMileage: selectedReservation.vehicle.currentMileage ?? undefined,
-            departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
-            returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
-          } : undefined}
-          customer={selectedReservation.customer ? {
-            ...selectedReservation.customer,
-            firstName: selectedReservation.customer.firstName ?? undefined,
-            lastName: selectedReservation.customer.lastName ?? undefined,
-            companyName: selectedReservation.customer.companyName ?? undefined,
-            phone: selectedReservation.customer.phone ?? undefined,
-            email: selectedReservation.customer.email ?? undefined
-          } : undefined}
-          initialFuelData={{
-            fuelLevelPickup: selectedReservation.fuelLevelPickup,
-            fuelLevelReturn: selectedReservation.fuelLevelReturn,
-            fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
-            fuelCardNumber: selectedReservation.fuelCardNumber,
-            fuelNotes: selectedReservation.fuelNotes,
-          }}
-          onStatusChanged={async () => {
-            // Close the dialog and refresh calendar data
-            setStatusDialogOpen(false);
-            setSelectedReservation(null);
-            // Refresh calendar data
-            queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-          }}
-        />
-      )}
+      {selectedReservation && (() => {
+        console.log('🚀 Rendering StatusChangeDialog with selectedReservation:', {
+          id: selectedReservation.id,
+          licensePlate: selectedReservation.vehicle?.licensePlate,
+          fuelLevelPickup: selectedReservation.fuelLevelPickup,
+          fuelLevelReturn: selectedReservation.fuelLevelReturn,
+          fuelCost: selectedReservation.fuelCost,
+          fuelCardNumber: selectedReservation.fuelCardNumber,
+          fuelNotes: selectedReservation.fuelNotes,
+        });
+        return (
+          <StatusChangeDialog
+            open={statusDialogOpen}
+            onOpenChange={setStatusDialogOpen}
+            reservationId={selectedReservation.id}
+            initialStatus={selectedReservation.status || "pending"}
+            vehicle={selectedReservation.vehicle ? {
+              ...selectedReservation.vehicle,
+              currentMileage: selectedReservation.vehicle.currentMileage ?? undefined,
+              departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
+              returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
+            } : undefined}
+            customer={selectedReservation.customer ? {
+              ...selectedReservation.customer,
+              firstName: selectedReservation.customer.firstName ?? undefined,
+              lastName: selectedReservation.customer.lastName ?? undefined,
+              companyName: selectedReservation.customer.companyName ?? undefined,
+              phone: selectedReservation.customer.phone ?? undefined,
+              email: selectedReservation.customer.email ?? undefined
+            } : undefined}
+            initialFuelData={{
+              fuelLevelPickup: selectedReservation.fuelLevelPickup,
+              fuelLevelReturn: selectedReservation.fuelLevelReturn,
+              fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
+              fuelCardNumber: selectedReservation.fuelCardNumber,
+              fuelNotes: selectedReservation.fuelNotes,
+            }}
+            onStatusChanged={async () => {
+              // Close the dialog and refresh calendar data
+              setStatusDialogOpen(false);
+              setSelectedReservation(null);
+              // Refresh calendar data
+              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+            }}
+          />
+        );
+      })()}
       
       {/* Day Reservations Dialog */}
       <Dialog open={dayDialogOpen} onOpenChange={(open) => {
