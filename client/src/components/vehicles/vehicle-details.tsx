@@ -1616,6 +1616,57 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 </div>
               </div>
               
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Latest Fuel Tracking</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {(() => {
+                    // Get the most recent reservation with fuel data
+                    const latestReservationWithFuel = reservations
+                      ?.filter(r => r.fuelLevelPickup || r.fuelLevelReturn)
+                      ?.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+                    
+                    if (!latestReservationWithFuel) {
+                      return (
+                        <div className="col-span-3 text-center py-4 text-gray-500">
+                          No fuel tracking data available
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <>
+                        {latestReservationWithFuel.fuelLevelPickup && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 mb-1">Last Pickup Level</h4>
+                            <p className="text-base font-semibold">{latestReservationWithFuel.fuelLevelPickup}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {formatDate(latestReservationWithFuel.startDate)}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {latestReservationWithFuel.fuelLevelReturn && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 mb-1">Last Return Level</h4>
+                            <p className="text-base font-semibold">{latestReservationWithFuel.fuelLevelReturn}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {latestReservationWithFuel.endDate ? formatDate(latestReservationWithFuel.endDate) : 'Ongoing'}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {latestReservationWithFuel.fuelCost && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 mb-1">Last Fuel Cost</h4>
+                            <p className="text-base font-semibold">{formatCurrency(Number(latestReservationWithFuel.fuelCost))}</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
               <div className="mb-0">
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4">Additional Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
