@@ -597,11 +597,6 @@ function NotificationItem({
     timeText = `In ${daysUntil} days`;
   }
 
-  // Check if this is a portal access request
-  const isPortalRequest = title === "Portal Access Request";
-  const isExistingCustomer = description.includes("✅ Customer exists");
-  const isNewCustomer = description.includes("⚠️ New customer");
-  
   // Mutation to mark custom notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
@@ -656,11 +651,8 @@ function NotificationItem({
       onClick();
     }
     
-    // For portal access requests, still navigate
-    if (isPortalRequest) {
-      navigate(link);
-    } else if (id && notificationType) {
-      // For other types, open the dialog
+    // Open the appropriate dialog based on notification type
+    if (id && notificationType) {
       switch (notificationType) {
         case 'reservation':
           openReservationDialog(id);
@@ -709,10 +701,10 @@ function NotificationItem({
 
   return (
     <div className="cursor-pointer" onClick={handleClick}>
-      <div className={`p-4 border-b hover:bg-gray-50 transition-colors ${isPortalRequest ? 'bg-blue-50/50' : ''}`}>
+      <div className="p-4 border-b hover:bg-gray-50 transition-colors">
         <div className="flex">
           <div className="mr-3 mt-0.5">
-            <div className={`h-6 w-6 rounded-full flex items-center justify-center ${isPortalRequest ? 'bg-blue-100' : 'bg-gray-100'}`}>
+            <div className="h-6 w-6 rounded-full flex items-center justify-center bg-gray-100">
               {icon}
             </div>
           </div>
@@ -722,45 +714,17 @@ function NotificationItem({
               <p className="text-xs text-muted-foreground font-medium">{timeText}</p>
             </div>
             <p className="text-xs text-muted-foreground whitespace-pre-line">{description}</p>
-            {isPortalRequest && (
-              <Button 
-                size="sm" 
-                onClick={handleActionClick}
-                className="w-full mt-2"
-                variant={isExistingCustomer ? "default" : "secondary"}
-                data-testid="button-portal-action"
-              >
-                {isExistingCustomer ? (
-                  <>
-                    <UserPlus className="mr-2 h-3 w-3" />
-                    Enable Portal Access
-                  </>
-                ) : isNewCustomer ? (
-                  <>
-                    <UserPlus className="mr-2 h-3 w-3" />
-                    Add New Customer
-                  </>
-                ) : (
-                  <>
-                    <ArrowRight className="mr-2 h-3 w-3" />
-                    Take Action
-                  </>
-                )}
-              </Button>
-            )}
-            {!isPortalRequest && (
-              <Button 
-                size="sm" 
-                onClick={handleCompleteClick}
-                className="w-full mt-2"
-                variant="outline"
-                disabled={markAsReadMutation.isPending}
-                data-testid="button-mark-complete"
-              >
-                <ClipboardCheck className="mr-2 h-3 w-3" />
-                {markAsReadMutation.isPending ? "Marking..." : "Mark as Complete"}
-              </Button>
-            )}
+            <Button 
+              size="sm" 
+              onClick={handleCompleteClick}
+              className="w-full mt-2"
+              variant="outline"
+              disabled={markAsReadMutation.isPending}
+              data-testid="button-mark-complete"
+            >
+              <ClipboardCheck className="mr-2 h-3 w-3" />
+              {markAsReadMutation.isPending ? "Marking..." : "Mark as Complete"}
+            </Button>
           </div>
         </div>
       </div>
