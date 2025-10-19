@@ -8,7 +8,8 @@ import {
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
-  drivers, type Driver, type InsertDriver
+  drivers, type Driver, type InsertDriver,
+  savedReports, type SavedReport, type InsertSavedReport
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -123,6 +124,13 @@ export interface IStorage {
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(id: number, driverData: Partial<InsertDriver>): Promise<Driver | undefined>;
   deleteDriver(id: number): Promise<boolean>;
+  
+  // Saved Reports methods
+  getAllSavedReports(): Promise<any[]>;
+  getSavedReport(id: number): Promise<any | undefined>;
+  createSavedReport(report: any): Promise<any>;
+  deleteSavedReport(id: number): Promise<boolean>;
+  executeReport(configuration: any): Promise<any[]>;
   
 }
 
@@ -1605,6 +1613,26 @@ export class MemStorage implements IStorage {
 
     this.reservations.set(newReservation.id, newReservation);
     return newReservation;
+  }
+
+  async getAllSavedReports(): Promise<any[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getSavedReport(id: number): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async createSavedReport(report: any): Promise<any> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async deleteSavedReport(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async executeReport(configuration: any): Promise<any[]> {
+    throw new Error('Not implemented in MemStorage');
   }
 }
 

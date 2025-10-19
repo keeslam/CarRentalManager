@@ -1828,4 +1828,95 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(drivers).where(eq(drivers.id, id));
     return result.rowCount > 0;
   }
+
+  // Saved Reports methods
+  async getAllSavedReports(): Promise<SavedReport[]> {
+    return await db.select().from(savedReports).orderBy(desc(savedReports.createdAt));
+  }
+
+  async getSavedReport(id: number): Promise<SavedReport | undefined> {
+    const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id));
+    return report || undefined;
+  }
+
+  async createSavedReport(report: InsertSavedReport): Promise<SavedReport> {
+    const [newReport] = await db.insert(savedReports).values(report).returning();
+    return newReport;
+  }
+
+  async deleteSavedReport(id: number): Promise<boolean> {
+    const result = await db.delete(savedReports).where(eq(savedReports.id, id));
+    return result.rowCount > 0;
+  }
+
+  async executeReport(configuration: any): Promise<any[]> {
+    const { columns, filters, groupBy, dataSources } = configuration;
+    
+    if (!columns || columns.length === 0) {
+      return [];
+    }
+
+    const mainTable = dataSources[0];
+    let query = '';
+    const selectedFields: string[] = [];
+
+    columns.forEach((col: any) => {
+      if (col.aggregation) {
+        selectedFields.push(`${col.aggregation}(${col.table}.${col.field}) as ${col.field}`);
+      } else {
+        selectedFields.push(`${col.table}.${col.field}`);
+      }
+    });
+
+    query = `SELECT ${selectedFields.join(', ')} FROM ${mainTable}`;
+
+    if (filters && filters.length > 0) {
+      const whereClause = filters.map((filter: any) => {
+        const { field, table, operator, value } = filter;
+        
+        switch (operator) {
+          case 'equals':
+            return `${table}.${field} = '${value}'`;
+          case 'not_equals':
+            return `${table}.${field} != '${value}'`;
+          case 'contains':
+            return `${table}.${field} LIKE '%${value}%'`;
+          case 'not_contains':
+            return `${table}.${field} NOT LIKE '%${value}%'`;
+          case 'starts_with':
+            return `${table}.${field} LIKE '${value}%'`;
+          case 'ends_with':
+            return `${table}.${field} LIKE '%${value}'`;
+          case 'greater_than':
+            return `${table}.${field} > ${value}`;
+          case 'less_than':
+            return `${table}.${field} < ${value}`;
+          case 'greater_or_equal':
+            return `${table}.${field} >= ${value}`;
+          case 'less_or_equal':
+            return `${table}.${field} <= ${value}`;
+          case 'is_null':
+            return `${table}.${field} IS NULL`;
+          case 'is_not_null':
+            return `${table}.${field} IS NOT NULL`;
+          default:
+            return '';
+        }
+      }).filter(Boolean);
+
+      if (whereClause.length > 0) {
+        query += ` WHERE ${whereClause.join(' AND ')}`;
+      }
+    }
+
+    if (groupBy && groupBy.length > 0) {
+      const groupFields = groupBy.map((g: any) => `${g.table}.${g.field}`);
+      query += ` GROUP BY ${groupFields.join(', ')}`;
+    }
+
+    query += ' LIMIT 1000';
+
+    const results = await db.execute(sql.raw(query));
+    return results.rows;
+  }
 }

@@ -6583,6 +6583,79 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================
+  // REPORT BUILDER ROUTES
+  // ============================================
+
+  // Get all saved reports
+  app.get("/api/reports/saved", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reports = await storage.getAllSavedReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching saved reports:", error);
+      res.status(500).json({ message: "Error fetching saved reports" });
+    }
+  });
+
+  // Save a new report
+  app.post("/api/reports/saved", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const config: any = req.body;
+
+      if (!config.name) {
+        return res.status(400).json({ message: "Report name is required" });
+      }
+
+      const report = await storage.createSavedReport({
+        name: config.name,
+        description: config.description || null,
+        reportType: 'custom',
+        configuration: config,
+        dataSources: config.dataSources || [],
+        enabled: true,
+        createdBy: user ? user.username : null,
+        createdByUserId: user ? user.id : null,
+        updatedBy: user ? user.username : null,
+      });
+
+      res.json(report);
+    } catch (error) {
+      console.error("Error saving report:", error);
+      res.status(500).json({ message: "Error saving report" });
+    }
+  });
+
+  // Delete a saved report
+  app.delete("/api/reports/saved/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteSavedReport(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).json({ message: "Error deleting report" });
+    }
+  });
+
+  // Execute a report
+  app.post("/api/reports/execute", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const config: any = req.body;
+
+      if (!config.columns || config.columns.length === 0) {
+        return res.status(400).json({ message: "No columns specified" });
+      }
+
+      const results = await storage.executeReport(config);
+      res.json(results);
+    } catch (error) {
+      console.error("Error executing report:", error);
+      res.status(500).json({ message: "Error executing report" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
