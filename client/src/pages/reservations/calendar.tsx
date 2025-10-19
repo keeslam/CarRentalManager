@@ -1276,6 +1276,14 @@ export default function ReservationCalendarPage() {
                   <div className="text-sm text-gray-600">
                     {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
                   </div>
+                  {selectedReservation.vehicle?.departureMileage !== null && selectedReservation.vehicle?.departureMileage !== undefined && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-xs text-gray-500">Pickup Mileage</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {selectedReservation.vehicle.departureMileage.toLocaleString()} km
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
