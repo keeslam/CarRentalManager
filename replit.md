@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Features and Implementations
 - **Damage Check Template Editor**: Customizable vehicle inspection templates matching Dutch rental industry format. Build year range filtering, Dutch categories (Interieur/Exterieur/Afweez Check), damage type options (Kapot/Gat/Kras/Deuk/Ster), vehicle diagram support, and JSON storage for inspection points.
+- **Damage Check PDF Generation**: Automated PDF generation service that creates professional Dutch-format damage check forms from templates. Features template-driven layout with dynamic damage types and categories, vehicle-specific diagram embedding, multi-page support with proper pagination, customer and reservation data integration, and intelligent template matching (exact vehicle match → make+model → make+type → type only → default). PDFs include all required sections: contract/customer details, vehicle information, damage check matrix with checkboxes, vehicle diagrams, and signature fields. Accessible via "Download Damage Check" button in vehicle details page.
 - **Backup System**: One-click download for database (SQL) and application code (tar.gz), with recovery instructions.
 - **Auto-Logout**: Inactivity detection logs users out after 2 minutes.
 - **Custom Report Builder**: Drag-and-drop interface for creating custom reports from various data sources with filtering and aggregation.
