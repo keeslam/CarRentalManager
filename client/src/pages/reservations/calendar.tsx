@@ -1672,7 +1672,6 @@ export default function ReservationCalendarPage() {
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    setViewDialogOpen(false);
                     handleStatusChange(selectedReservation);
                   }}
                   data-testid="button-change-status-dialog"
@@ -1779,11 +1778,20 @@ export default function ReservationCalendarPage() {
               fuelNotes: selectedReservation.fuelNotes,
             }}
             onStatusChanged={async () => {
-              // Close the dialog and refresh calendar data
+              // Close the status dialog
               setStatusDialogOpen(false);
-              setSelectedReservation(null);
-              // Refresh calendar data
-              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              // Refresh calendar data (this will also update the view dialog if it's open)
+              await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              // If view dialog is still open, refresh the selected reservation data
+              if (viewDialogOpen && selectedReservation) {
+                const updatedReservations = queryClient.getQueryData(["/api/reservations/range"]) as any[];
+                if (updatedReservations) {
+                  const updatedReservation = updatedReservations.find((r: any) => r.id === selectedReservation.id);
+                  if (updatedReservation) {
+                    setSelectedReservation(updatedReservation);
+                  }
+                }
+              }
             }}
           />
         );
