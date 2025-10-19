@@ -171,7 +171,8 @@ export function StatusChangeDialog({
     
     // Reset the current status
     setCurrentStatus(initialStatus);
-  }, [reservationId, initialStatus, vehicle, initialFuelData, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationId]); // Only reset when reservationId changes to prevent multiple resets
   
   // Update form when status changes
   useEffect(() => {
