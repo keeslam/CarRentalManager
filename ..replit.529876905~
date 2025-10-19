@@ -1,0 +1,88 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["poppler", "imagemagick", "ghostscript"]
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 33003
+externalPort = 6000
+
+[[ports]]
+localPort = 36695
+externalPort = 5000
+
+[[ports]]
+localPort = 37079
+externalPort = 8000
+
+[[ports]]
+localPort = 38369
+externalPort = 8080
+
+[[ports]]
+localPort = 38879
+externalPort = 3003
+
+[[ports]]
+localPort = 39355
+externalPort = 5173
+
+[[ports]]
+localPort = 40397
+externalPort = 4200
+
+[[ports]]
+localPort = 42221
+externalPort = 3002
+
+[[ports]]
+localPort = 44865
+externalPort = 3001
+
+[[ports]]
+localPort = 45413
+externalPort = 8008
+
+[[ports]]
+localPort = 46641
+externalPort = 6800
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[agent]
+integrations = ["javascript_openai:1.0.0", "javascript_gemini:1.0.0", "javascript_object_storage:1.0.0", "javascript_sendgrid:1.0.0"]

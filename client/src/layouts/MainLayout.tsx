@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { NotificationCenter } from "@/components/ui/notification-center";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Car, User, Calendar, X } from "lucide-react";
+import { Loader2, Car, User, Calendar, X, ClipboardCheck } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 
 interface MainLayoutProps {
@@ -35,6 +35,8 @@ interface SearchResultReservation {
   startDate: string;
   endDate: string;
   status: string;
+  type?: string;
+  maintenanceCategory?: string;
   vehicle?: {
     licensePlate: string;
     brand: string;
@@ -335,25 +337,43 @@ export default function MainLayout({ children }: MainLayoutProps) {
                           Reservations
                         </div>
                         <ul className="divide-y divide-gray-100">
-                          {reservationResults.map((reservation: SearchResultReservation) => (
-                            <li key={`reservation-${reservation.id}`} className="hover:bg-gray-50 rounded">
-                              <button 
-                                className="flex items-center p-2 w-full text-left"
-                                onClick={() => handleResultClick(`/reservations/${reservation.id}`)}
-                              >
-                                <Calendar className="h-4 w-4 text-primary-500 mr-2" />
-                                <div>
-                                  <div className="font-medium">
-                                    {reservation.vehicle?.brand} {reservation.vehicle?.model} 
-                                    {reservation.vehicle?.licensePlate && ` (${formatLicensePlate(reservation.vehicle.licensePlate)})`}
+                          {reservationResults.map((reservation: SearchResultReservation) => {
+                            const isMaintenance = reservation.type === 'maintenance_block';
+                            return (
+                              <li key={`reservation-${reservation.id}`} className="hover:bg-gray-50 rounded">
+                                <button 
+                                  className="flex items-center p-2 w-full text-left"
+                                  onClick={() => handleResultClick(`/reservations/${reservation.id}`)}
+                                >
+                                  {isMaintenance ? (
+                                    <ClipboardCheck className="h-4 w-4 text-purple-500 mr-2" />
+                                  ) : (
+                                    <Calendar className="h-4 w-4 text-primary-500 mr-2" />
+                                  )}
+                                  <div className="flex-1">
+                                    <div className="font-medium flex items-center gap-2">
+                                      <span>
+                                        {reservation.vehicle?.brand} {reservation.vehicle?.model} 
+                                        {reservation.vehicle?.licensePlate && ` (${formatLicensePlate(reservation.vehicle.licensePlate)})`}
+                                      </span>
+                                      {isMaintenance && (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                          Maintenance
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {isMaintenance ? (
+                                        <>{reservation.maintenanceCategory || "Maintenance"} • {reservation.startDate}</>
+                                      ) : (
+                                        <>{reservation.customer?.name || "Unknown Customer"} • {reservation.startDate} to {reservation.endDate}</>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    {reservation.customer?.name || "Unknown Customer"} • {reservation.startDate} to {reservation.endDate}
-                                  </div>
-                                </div>
-                              </button>
-                            </li>
-                          ))}
+                                </button>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     )}
