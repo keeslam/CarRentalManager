@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
+import { formatDate, formatCurrency, formatLicensePlate, formatReservationStatus } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer, Driver } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
 import { Wrench, Car, ArrowRightLeft, Trash2, Edit, FileText, Upload, FileCheck, X, Camera } from "lucide-react";
@@ -257,7 +257,7 @@ export function ReservationViewDialog({
                   <h3 className="text-sm font-medium text-gray-500">Status</h3>
                   <div className="flex gap-2 mt-1">
                     <Badge className={`${getStatusStyle(reservation.status)}`}>
-                      {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                      {formatReservationStatus(reservation.status)}
                     </Badge>
                     {reservation.type && reservation.type !== 'standard' && (() => {
                       const typeInfo = getReservationTypeInfo(reservation.type);
