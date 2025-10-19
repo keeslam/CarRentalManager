@@ -936,3 +936,43 @@ export const insertWhatsappTemplateSchema = createInsertSchema(whatsappTemplates
 
 export type WhatsappTemplate = typeof whatsappTemplates.$inferSelect;
 export type InsertWhatsappTemplate = z.infer<typeof insertWhatsappTemplateSchema>;
+
+// Damage Check Templates table - for creating custom vehicle inspection templates
+export const damageCheckTemplates = pgTable("damage_check_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Vehicle targeting - all optional for flexibility
+  vehicleMake: text("vehicle_make"), // e.g., "Toyota", "BMW", null for generic
+  vehicleModel: text("vehicle_model"), // e.g., "Camry", "X5", null for generic
+  vehicleType: text("vehicle_type"), // e.g., "sedan", "suv", "van", null for generic
+  
+  // Inspection points - array of check areas
+  inspectionPoints: jsonb("inspection_points").$type<Array<{
+    id: string;
+    name: string; // e.g., "Front Bumper", "Driver Door", "Hood"
+    category: string; // "exterior" | "interior" | "mechanical" | "tires"
+    position?: { x: number; y: number }; // Position on vehicle diagram
+    description?: string; // Optional description of what to check
+    required: boolean; // Whether this point must be checked
+  }>>().default([]).notNull(),
+  
+  // Template settings
+  isDefault: boolean("is_default").default(false).notNull(),
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertDamageCheckTemplateSchema = createInsertSchema(damageCheckTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type DamageCheckTemplate = typeof damageCheckTemplates.$inferSelect;
+export type InsertDamageCheckTemplate = z.infer<typeof insertDamageCheckTemplateSchema>;

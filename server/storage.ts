@@ -9,7 +9,8 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
   drivers, type Driver, type InsertDriver,
-  savedReports, type SavedReport, type InsertSavedReport
+  savedReports, type SavedReport, type InsertSavedReport,
+  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -138,6 +139,15 @@ export interface IStorage {
   getWhatsAppMessagesByCustomer(customerId: number): Promise<any[]>;
   createWhatsAppMessage(message: any): Promise<any>;
   updateWhatsAppMessage(id: number, messageData: any): Promise<any | undefined>;
+  
+  // Damage Check Template methods
+  getAllDamageCheckTemplates(): Promise<any[]>;
+  getDamageCheckTemplate(id: number): Promise<any | undefined>;
+  getDamageCheckTemplatesByVehicle(make?: string, model?: string, type?: string): Promise<any[]>;
+  getDefaultDamageCheckTemplate(): Promise<any | undefined>;
+  createDamageCheckTemplate(template: any): Promise<any>;
+  updateDamageCheckTemplate(id: number, templateData: any): Promise<any | undefined>;
+  deleteDamageCheckTemplate(id: number): Promise<boolean>;
   
 }
 
@@ -1659,6 +1669,34 @@ export class MemStorage implements IStorage {
   }
 
   async updateWhatsAppMessage(id: number, messageData: any): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getAllDamageCheckTemplates(): Promise<any[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getDamageCheckTemplate(id: number): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getDamageCheckTemplatesByVehicle(make?: string, model?: string, type?: string): Promise<any[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getDefaultDamageCheckTemplate(): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async createDamageCheckTemplate(template: any): Promise<any> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async updateDamageCheckTemplate(id: number, templateData: any): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async deleteDamageCheckTemplate(id: number): Promise<boolean> {
     throw new Error('Not implemented in MemStorage');
   }
 }

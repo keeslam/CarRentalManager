@@ -11,7 +11,8 @@ import {
   appSettings, type AppSettings, type InsertAppSettings,
   drivers, type Driver, type InsertDriver,
   savedReports, type SavedReport, type InsertSavedReport,
-  whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage
+  whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage,
+  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -1956,5 +1957,71 @@ export class DatabaseStorage implements IStorage {
       .returning();
       
     return updatedMessage || undefined;
+  }
+
+  // Damage Check Template methods
+  async getAllDamageCheckTemplates(): Promise<DamageCheckTemplate[]> {
+    return await db.select().from(damageCheckTemplates).orderBy(damageCheckTemplates.name);
+  }
+
+  async getDamageCheckTemplate(id: number): Promise<DamageCheckTemplate | undefined> {
+    const [template] = await db.select().from(damageCheckTemplates).where(eq(damageCheckTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getDamageCheckTemplatesByVehicle(make?: string, model?: string, type?: string): Promise<DamageCheckTemplate[]> {
+    const conditions = [];
+    
+    // Build filter conditions - match specific make/model/type or generic templates (null values)
+    if (make) {
+      conditions.push(or(eq(damageCheckTemplates.vehicleMake, make), isNull(damageCheckTemplates.vehicleMake)));
+    }
+    if (model) {
+      conditions.push(or(eq(damageCheckTemplates.vehicleModel, model), isNull(damageCheckTemplates.vehicleModel)));
+    }
+    if (type) {
+      conditions.push(or(eq(damageCheckTemplates.vehicleType, type), isNull(damageCheckTemplates.vehicleType)));
+    }
+    
+    if (conditions.length === 0) {
+      // No filters - return all templates
+      return await db.select().from(damageCheckTemplates).orderBy(damageCheckTemplates.name);
+    }
+    
+    return await db.select().from(damageCheckTemplates)
+      .where(and(...conditions))
+      .orderBy(damageCheckTemplates.name);
+  }
+
+  async getDefaultDamageCheckTemplate(): Promise<DamageCheckTemplate | undefined> {
+    const [template] = await db.select().from(damageCheckTemplates)
+      .where(eq(damageCheckTemplates.isDefault, true))
+      .limit(1);
+    return template || undefined;
+  }
+
+  async createDamageCheckTemplate(template: InsertDamageCheckTemplate): Promise<DamageCheckTemplate> {
+    const [newTemplate] = await db.insert(damageCheckTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateDamageCheckTemplate(id: number, templateData: Partial<InsertDamageCheckTemplate>): Promise<DamageCheckTemplate | undefined> {
+    const updateData = {
+      ...templateData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedTemplate] = await db
+      .update(damageCheckTemplates)
+      .set(updateData)
+      .where(eq(damageCheckTemplates.id, id))
+      .returning();
+      
+    return updatedTemplate || undefined;
+  }
+
+  async deleteDamageCheckTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(damageCheckTemplates).where(eq(damageCheckTemplates.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
