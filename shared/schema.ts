@@ -293,6 +293,16 @@ export const reservations = pgTable("reservations", {
   recurringDayOfWeek: integer("recurring_day_of_week"), // For weekly: 0-6 (Sunday-Saturday)
   recurringDayOfMonth: integer("recurring_day_of_month"), // For monthly: 1-31
   
+  // Delivery Service
+  deliveryRequired: boolean("delivery_required").default(false).notNull(), // Does customer need delivery
+  deliveryAddress: text("delivery_address"), // Full delivery address
+  deliveryCity: text("delivery_city"),
+  deliveryPostalCode: text("delivery_postal_code"),
+  deliveryFee: numeric("delivery_fee"), // Fee charged for delivery
+  deliveryStatus: text("delivery_status"), // 'pending' | 'scheduled' | 'en_route' | 'delivered' | 'completed'
+  deliveryStaffId: integer("delivery_staff_id").references(() => users.id), // Staff assigned to delivery
+  deliveryNotes: text("delivery_notes"), // Special delivery instructions
+  
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -701,3 +711,228 @@ export type VehicleWaitlist = typeof vehicleWaitlist.$inferSelect & {
   vehicle?: Vehicle;
 };
 export type InsertVehicleWaitlist = z.infer<typeof insertVehicleWaitlistSchema>;
+
+// ============= DELIVERY SERVICE FEATURE =============
+
+// Delivery Tasks table - for tracking vehicle delivery and pickup
+export const deliveryTasks = pgTable("delivery_tasks", {
+  id: serial("id").primaryKey(),
+  reservationId: integer("reservation_id").notNull().references(() => reservations.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // 'delivery' | 'pickup' | 'both'
+  
+  // Delivery details
+  deliveryAddress: text("delivery_address").notNull(),
+  deliveryCity: text("delivery_city"),
+  deliveryPostalCode: text("delivery_postal_code"),
+  deliveryLatitude: numeric("delivery_latitude"), // GPS coordinates for mapping
+  deliveryLongitude: numeric("delivery_longitude"),
+  
+  // Pickup details (for return)
+  pickupAddress: text("pickup_address"),
+  pickupCity: text("pickup_city"),
+  pickupPostalCode: text("pickup_postal_code"),
+  pickupLatitude: numeric("pickup_latitude"),
+  pickupLongitude: numeric("pickup_longitude"),
+  
+  // Scheduling
+  scheduledDeliveryTime: timestamp("scheduled_delivery_time"),
+  scheduledPickupTime: timestamp("scheduled_pickup_time"),
+  estimatedDeliveryTime: timestamp("estimated_delivery_time"),
+  estimatedPickupTime: timestamp("estimated_pickup_time"),
+  
+  // Status tracking
+  status: text("status").default("scheduled").notNull(), // 'scheduled' | 'en_route_delivery' | 'delivered' | 'en_route_pickup' | 'completed' | 'cancelled'
+  deliveryCompletedAt: timestamp("delivery_completed_at"),
+  pickupCompletedAt: timestamp("pickup_completed_at"),
+  
+  // Staff assignment
+  assignedStaffId: integer("assigned_staff_id").references(() => users.id),
+  assignedStaffName: text("assigned_staff_name"),
+  
+  // Proof of delivery
+  deliveryPhotoPath: text("delivery_photo_path"),
+  deliverySignaturePath: text("delivery_signature_path"),
+  deliveryMileage: integer("delivery_mileage"),
+  pickupPhotoPath: text("pickup_photo_path"),
+  pickupSignaturePath: text("pickup_signature_path"),
+  pickupMileage: integer("pickup_mileage"),
+  
+  // Pricing
+  deliveryFee: numeric("delivery_fee"),
+  pickupFee: numeric("pickup_fee"),
+  distanceKm: numeric("distance_km"),
+  
+  // Notes
+  deliveryNotes: text("delivery_notes"),
+  pickupNotes: text("pickup_notes"),
+  customerInstructions: text("customer_instructions"),
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertDeliveryTaskSchema = createInsertSchema(deliveryTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type DeliveryTask = typeof deliveryTasks.$inferSelect & {
+  reservation?: Reservation;
+  assignedStaff?: User;
+};
+export type InsertDeliveryTask = z.infer<typeof insertDeliveryTaskSchema>;
+
+// ============= CUSTOM REPORT BUILDER FEATURE =============
+
+// Saved Reports table - for storing user-created custom reports
+export const savedReports = pgTable("saved_reports", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Report configuration
+  dataSource: text("data_source").notNull(), // 'vehicles' | 'customers' | 'reservations' | 'expenses' | 'maintenance'
+  fields: jsonb("fields").$type<string[]>().default([]).notNull(), // Selected columns
+  filters: jsonb("filters").$type<Record<string, any>>().default({}).notNull(), // Filter conditions
+  groupBy: jsonb("group_by").$type<string[]>().default([]), // Group by fields
+  orderBy: jsonb("order_by").$type<Array<{field: string, direction: 'asc' | 'desc'}>>().default([]), // Sort order
+  calculations: jsonb("calculations").$type<Array<{type: 'sum' | 'avg' | 'count' | 'min' | 'max', field: string}>>().default([]), // Aggregate calculations
+  
+  // Visualization
+  visualizationType: text("visualization_type").default("table"), // 'table' | 'bar_chart' | 'line_chart' | 'pie_chart'
+  chartConfig: jsonb("chart_config").$type<Record<string, any>>().default({}), // Chart-specific configuration
+  
+  // Scheduling
+  isScheduled: boolean("is_scheduled").default(false).notNull(),
+  scheduleFrequency: text("schedule_frequency"), // 'daily' | 'weekly' | 'monthly'
+  scheduleDayOfWeek: integer("schedule_day_of_week"), // 0-6 for weekly
+  scheduleDayOfMonth: integer("schedule_day_of_month"), // 1-31 for monthly
+  scheduleTime: text("schedule_time"), // HH:MM format
+  emailRecipients: jsonb("email_recipients").$type<string[]>().default([]), // Email addresses to send to
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  
+  // Sharing
+  isPublic: boolean("is_public").default(false).notNull(), // Can other users view this report
+  sharedWithUsers: jsonb("shared_with_users").$type<number[]>().default([]), // User IDs with access
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+  updatedBy: text("updated_by"),
+});
+
+export const insertSavedReportSchema = createInsertSchema(savedReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastRunAt: true,
+  nextRunAt: true,
+});
+
+export type SavedReport = typeof savedReports.$inferSelect;
+export type InsertSavedReport = z.infer<typeof insertSavedReportSchema>;
+
+// ============= WHATSAPP INTEGRATION FEATURE =============
+
+// WhatsApp Messages table - for tracking all WhatsApp communications
+export const whatsappMessages = pgTable("whatsapp_messages", {
+  id: serial("id").primaryKey(),
+  
+  // Message details
+  messageId: text("message_id").unique(), // External message ID from WhatsApp API
+  direction: text("direction").notNull(), // 'outbound' | 'inbound'
+  status: text("status").notNull(), // 'queued' | 'sent' | 'delivered' | 'read' | 'failed'
+  
+  // Sender and recipient
+  fromNumber: text("from_number").notNull(),
+  toNumber: text("to_number").notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
+  
+  // Content
+  messageType: text("message_type").default("text").notNull(), // 'text' | 'media' | 'template'
+  messageBody: text("message_body"),
+  mediaUrl: text("media_url"), // For images, PDFs, etc.
+  templateName: text("template_name"), // WhatsApp template used
+  templateVariables: jsonb("template_variables").$type<Record<string, any>>(), // Template variable values
+  
+  // Context
+  reservationId: integer("reservation_id").references(() => reservations.id),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id),
+  context: text("context"), // 'booking_confirmation' | 'pickup_reminder' | 'payment_reminder' | 'general'
+  
+  // Error handling
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  
+  // Tracking
+  createdBy: text("created_by"),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+});
+
+export const insertWhatsappMessageSchema = createInsertSchema(whatsappMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentAt: true,
+  deliveredAt: true,
+  readAt: true,
+});
+
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect & {
+  customer?: Customer;
+  reservation?: Reservation;
+  vehicle?: Vehicle;
+};
+export type InsertWhatsappMessage = z.infer<typeof insertWhatsappMessageSchema>;
+
+// WhatsApp Templates table - for managing approved message templates
+export const whatsappTemplates = pgTable("whatsapp_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  category: text("category").notNull(), // 'booking' | 'reminder' | 'payment' | 'maintenance' | 'general'
+  language: text("language").default("en").notNull(),
+  
+  // Template content
+  messageBody: text("message_body").notNull(),
+  variables: jsonb("variables").$type<Array<{name: string, description: string}>>().default([]),
+  
+  // Status
+  status: text("status").default("draft").notNull(), // 'draft' | 'pending_approval' | 'approved' | 'rejected'
+  externalTemplateId: text("external_template_id"), // ID from WhatsApp Business API
+  
+  // Usage tracking
+  timesUsed: integer("times_used").default(0).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertWhatsappTemplateSchema = createInsertSchema(whatsappTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  timesUsed: true,
+  lastUsedAt: true,
+});
+
+export type WhatsappTemplate = typeof whatsappTemplates.$inferSelect;
+export type InsertWhatsappTemplate = z.infer<typeof insertWhatsappTemplateSchema>;
