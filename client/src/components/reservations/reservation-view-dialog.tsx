@@ -892,7 +892,10 @@ export function ReservationViewDialog({
             
             <Button 
               variant="outline"
-              onClick={() => onEdit?.(reservationId)}
+              onClick={() => {
+                console.log('Edit button clicked', { reservationId, onEdit });
+                onEdit?.(reservationId);
+              }}
               data-testid="button-edit-reservation"
             >
               <Edit className="mr-2 h-4 w-4" />

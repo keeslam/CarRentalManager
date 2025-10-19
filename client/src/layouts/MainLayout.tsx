@@ -160,6 +160,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   };
 
   const handleEditReservation = (reservationId: number) => {
+    console.log('handleEditReservation called with:', reservationId);
     setEditReservationId(reservationId);
     setEditReservationDialogOpen(true);
     setViewReservationDialogOpen(false);
