@@ -2138,10 +2138,27 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Add user tracking information for updates
       const user = req.user;
-      const dataWithTracking = {
+      const dataWithTracking: any = {
         status,
         updatedBy: user ? user.username : null
       };
+      
+      // Add fuel tracking fields if present in request body
+      if (req.body.fuelLevelPickup !== undefined) {
+        dataWithTracking.fuelLevelPickup = req.body.fuelLevelPickup;
+      }
+      if (req.body.fuelLevelReturn !== undefined) {
+        dataWithTracking.fuelLevelReturn = req.body.fuelLevelReturn;
+      }
+      if (req.body.fuelCost !== undefined) {
+        dataWithTracking.fuelCost = req.body.fuelCost;
+      }
+      if (req.body.fuelCardNumber !== undefined) {
+        dataWithTracking.fuelCardNumber = req.body.fuelCardNumber;
+      }
+      if (req.body.fuelNotes !== undefined) {
+        dataWithTracking.fuelNotes = req.body.fuelNotes;
+      }
       
       const reservation = await storage.updateReservation(id, dataWithTracking);
       
