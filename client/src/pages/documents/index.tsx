@@ -1102,7 +1102,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
     formData.append('file', uploadFile);
     formData.append('vehicleId', selectedVehicleId);
     formData.append('documentType', 'damage_check');
-    if (selectedReservationId) {
+    if (selectedReservationId && selectedReservationId !== 'none') {
       formData.append('reservationId', selectedReservationId);
     }
 
@@ -1255,7 +1255,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
                   <SelectValue placeholder="Link to a reservation (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Reservation</SelectItem>
+                  <SelectItem value="none">No Reservation</SelectItem>
                   {reservations?.map((reservation) => (
                     <SelectItem key={reservation.id} value={reservation.id.toString()}>
                       #{reservation.id} - {reservation.customerName} ({formatDate(reservation.pickupDate)})
