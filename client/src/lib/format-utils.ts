@@ -70,13 +70,13 @@ export function formatLicensePlate(licensePlate: string): string {
  * Format a reservation status to a human-readable string
  */
 export function formatReservationStatus(status: string): string {
-  switch (status) {
-    case 'booked':
+  switch (status.toLowerCase()) {
+    case 'pending':
       return 'Booked';
-    case 'vehicle_picked_up':
-      return 'Vehicle picked up';
-    case 'vehicle_returned':
-      return 'Vehicle returned';
+    case 'confirmed':
+      return 'Out';
+    case 'completed':
+      return 'Returned';
     case 'cancelled':
       return 'Cancelled';
     default:
