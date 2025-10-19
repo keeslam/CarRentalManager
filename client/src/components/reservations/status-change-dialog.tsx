@@ -530,7 +530,7 @@ export function StatusChangeDialog({
                               ? `Minimum ${vehicle.returnMileage}` 
                               : (vehicle.currentMileage && vehicle.currentMileage !== null ? vehicle.currentMileage.toString() : "Enter pickup mileage")}
                             {...field}
-                            value={field.value || (vehicle.returnMileage !== null ? vehicle.returnMileage : "")}
+                            value={field.value ?? ""}
                           />
                         </div>
                       </FormControl>
