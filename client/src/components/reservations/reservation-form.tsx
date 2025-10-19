@@ -2368,6 +2368,15 @@ export function ReservationForm({
                   <Button 
                     type="submit" 
                     disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
+                    onClick={(e) => {
+                      console.log('🔘 Button clicked!', { editMode, isPreviewMode });
+                      console.log('🔍 Form state:', {
+                        isValid: form.formState.isValid,
+                        errors: form.formState.errors,
+                        isDirty: form.formState.isDirty,
+                        isSubmitting: form.formState.isSubmitting
+                      });
+                    }}
                   >
                     {createReservationMutation.isPending 
                       ? "Saving..." 
