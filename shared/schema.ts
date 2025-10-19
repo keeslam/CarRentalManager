@@ -944,22 +944,32 @@ export const damageCheckTemplates = pgTable("damage_check_templates", {
   description: text("description"),
   
   // Vehicle targeting - all optional for flexibility
-  vehicleMake: text("vehicle_make"), // e.g., "Toyota", "BMW", null for generic
-  vehicleModel: text("vehicle_model"), // e.g., "Camry", "X5", null for generic
+  vehicleMake: text("vehicle_make"), // e.g., "Toyota", "BMW", "Audi", null for generic
+  vehicleModel: text("vehicle_model"), // e.g., "Camry", "X5", "A3", null for generic
   vehicleType: text("vehicle_type"), // e.g., "sedan", "suv", "van", null for generic
+  buildYearFrom: text("build_year_from"), // e.g., "2015" - start of year range
+  buildYearTo: text("build_year_to"), // e.g., "2020" - end of year range
   
-  // Inspection points - array of check areas
+  // Vehicle diagram images (paths or URLs)
+  diagramTopView: text("diagram_top_view"), // Path to top-view diagram image
+  diagramFrontView: text("diagram_front_view"), // Path to front-view diagram image
+  diagramRearView: text("diagram_rear_view"), // Path to rear-view diagram image
+  diagramSideView: text("diagram_side_view"), // Path to side-view diagram image
+  
+  // Inspection points - array of check areas with damage type options
   inspectionPoints: jsonb("inspection_points").$type<Array<{
     id: string;
-    name: string; // e.g., "Front Bumper", "Driver Door", "Hood"
-    category: string; // "exterior" | "interior" | "mechanical" | "tires"
-    position?: { x: number; y: number }; // Position on vehicle diagram
+    name: string; // e.g., "Voorruit" (Windshield), "Bumper voor" (Front Bumper)
+    category: string; // "interieur" | "exterieur" | "afweez_check" | "documents"
+    damageTypes: string[]; // e.g., ["Kapot", "Gat", "Kras", "Deuk", "Ster"] - available damage type checkboxes
+    position?: { x: number; y: number }; // Position on vehicle diagram for marking damage
     description?: string; // Optional description of what to check
     required: boolean; // Whether this point must be checked
   }>>().default([]).notNull(),
   
   // Template settings
   isDefault: boolean("is_default").default(false).notNull(),
+  language: text("language").default("nl").notNull(), // "nl" | "en" for Dutch or English
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),

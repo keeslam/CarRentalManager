@@ -16,6 +16,7 @@ interface InspectionPoint {
   id: string;
   name: string;
   category: string;
+  damageTypes: string[]; // e.g., ["Kapot", "Gat", "Kras", "Deuk"]
   description?: string;
   required: boolean;
   position?: { x: number; y: number };
@@ -28,8 +29,15 @@ interface DamageCheckTemplate {
   vehicleMake: string | null;
   vehicleModel: string | null;
   vehicleType: string | null;
+  buildYearFrom: string | null;
+  buildYearTo: string | null;
+  diagramTopView: string | null;
+  diagramFrontView: string | null;
+  diagramRearView: string | null;
+  diagramSideView: string | null;
   inspectionPoints: InspectionPoint[];
   isDefault: boolean;
+  language: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string | null;
@@ -37,11 +45,21 @@ interface DamageCheckTemplate {
 }
 
 const INSPECTION_CATEGORIES = [
-  { value: 'exterior', label: 'Exterior', color: 'bg-blue-100 text-blue-800' },
-  { value: 'interior', label: 'Interior', color: 'bg-green-100 text-green-800' },
-  { value: 'mechanical', label: 'Mechanical', color: 'bg-orange-100 text-orange-800' },
-  { value: 'tires', label: 'Tires & Wheels', color: 'bg-purple-100 text-purple-800' },
+  { value: 'interieur', label: 'Interieur', color: 'bg-green-100 text-green-800' },
+  { value: 'exterieur', label: 'Exterieur', color: 'bg-blue-100 text-blue-800' },
+  { value: 'afweez_check', label: 'Afweez Check', color: 'bg-orange-100 text-orange-800' },
   { value: 'documents', label: 'Documents', color: 'bg-gray-100 text-gray-800' },
+];
+
+const DAMAGE_TYPES = [
+  { value: 'kapot', label: 'Kapot' },
+  { value: 'gat', label: 'Gat' },
+  { value: 'kras', label: 'Kras' },
+  { value: 'deuk', label: 'Deuk' },
+  { value: 'ster', label: 'Ster' },
+  { value: 'beschadigd', label: 'Beschadigd' },
+  { value: 'vuil', label: 'Vuil' },
+  { value: 'ontbreekt', label: 'Ontbreekt' },
 ];
 
 export default function DamageCheckTemplates() {
@@ -281,6 +299,8 @@ function TemplateEditor({
   const [vehicleMake, setVehicleMake] = useState(template?.vehicleMake || "");
   const [vehicleModel, setVehicleModel] = useState(template?.vehicleModel || "");
   const [vehicleType, setVehicleType] = useState(template?.vehicleType || "");
+  const [buildYearFrom, setBuildYearFrom] = useState(template?.buildYearFrom || "");
+  const [buildYearTo, setBuildYearTo] = useState(template?.buildYearTo || "");
   const [isDefault, setIsDefault] = useState(template?.isDefault || false);
   const [inspectionPoints, setInspectionPoints] = useState<InspectionPoint[]>(
     template?.inspectionPoints || []
@@ -330,6 +350,9 @@ function TemplateEditor({
       vehicleMake: vehicleMake.trim() || null,
       vehicleModel: vehicleModel.trim() || null,
       vehicleType: vehicleType || null,
+      buildYearFrom: buildYearFrom.trim() || null,
+      buildYearTo: buildYearTo.trim() || null,
+      language: 'nl',
       isDefault,
       inspectionPoints,
     };
@@ -418,7 +441,7 @@ function TemplateEditor({
                   id="make"
                   value={vehicleMake}
                   onChange={(e) => setVehicleMake(e.target.value)}
-                  placeholder="e.g., Toyota"
+                  placeholder="e.g., Audi"
                 />
               </div>
               <div className="space-y-2">
@@ -427,7 +450,7 @@ function TemplateEditor({
                   id="model"
                   value={vehicleModel}
                   onChange={(e) => setVehicleModel(e.target.value)}
-                  placeholder="e.g., Camry"
+                  placeholder="e.g., A3"
                 />
               </div>
               <div className="space-y-2">
@@ -446,6 +469,28 @@ function TemplateEditor({
                     <SelectItem value="wagon">Wagon</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="buildYearFrom">Build Year From</Label>
+                <Input
+                  id="buildYearFrom"
+                  value={buildYearFrom}
+                  onChange={(e) => setBuildYearFrom(e.target.value)}
+                  placeholder="e.g., 2015"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="buildYearTo">Build Year To</Label>
+                <Input
+                  id="buildYearTo"
+                  value={buildYearTo}
+                  onChange={(e) => setBuildYearTo(e.target.value)}
+                  placeholder="e.g., 2020"
+                  type="number"
+                />
               </div>
             </div>
           </div>
@@ -560,9 +605,20 @@ function InspectionPointEditor({
   onSave: (point: InspectionPoint) => void;
 }) {
   const [name, setName] = useState(point?.name || "");
-  const [category, setCategory] = useState(point?.category || "exterior");
+  const [category, setCategory] = useState(point?.category || "exterieur");
   const [description, setDescription] = useState(point?.description || "");
   const [required, setRequired] = useState(point?.required || false);
+  const [selectedDamageTypes, setSelectedDamageTypes] = useState<string[]>(
+    point?.damageTypes || []
+  );
+
+  const toggleDamageType = (type: string) => {
+    setSelectedDamageTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -573,6 +629,7 @@ function InspectionPointEditor({
       id: point?.id || `point-${Date.now()}`,
       name: name.trim(),
       category,
+      damageTypes: selectedDamageTypes,
       description: description.trim() || undefined,
       required,
       position: point?.position,
@@ -628,6 +685,29 @@ function InspectionPointEditor({
               placeholder="What to check for this point..."
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Damage Types</Label>
+            <p className="text-xs text-gray-600 mb-2">
+              Select which types of damage can be recorded for this inspection point
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {DAMAGE_TYPES.map((damageType) => (
+                <div key={damageType.value} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={`damage-${damageType.value}`}
+                    checked={selectedDamageTypes.includes(damageType.value)}
+                    onChange={() => toggleDamageType(damageType.value)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor={`damage-${damageType.value}`} className="cursor-pointer text-sm">
+                    {damageType.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center space-x-2">
