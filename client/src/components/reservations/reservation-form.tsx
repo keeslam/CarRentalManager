@@ -83,14 +83,14 @@ const formSchema = insertReservationSchemaBase.extend({
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
   ]).optional(),
-  fuelLevelPickup: z.string().optional(),
-  fuelLevelReturn: z.string().optional(),
+  fuelLevelPickup: z.string().nullish(),
+  fuelLevelReturn: z.string().nullish(),
   fuelCost: z.union([
-    z.number().optional(),
-    z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
-  ]).optional(),
-  fuelCardNumber: z.string().optional(),
-  fuelNotes: z.string().optional(),
+    z.number().nullish(),
+    z.string().transform(val => val === "" ? null : parseFloat(val) || null),
+  ]).nullish(),
+  fuelCardNumber: z.string().nullish(),
+  fuelNotes: z.string().nullish(),
 }).refine((data) => {
   // If not open-ended, end date is required
   if (!data.isOpenEnded && (!data.endDate || data.endDate === "")) {
@@ -1117,9 +1117,6 @@ export function ReservationForm({
 
   // Handle reservation form submission (in edit mode only)
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log('📝 Form submitted!', { editMode, data });
-    console.log('📋 Form errors:', form.formState.errors);
-    
     if (editMode) {
       // In edit mode, directly update the reservation
       const submissionData = {
@@ -1128,7 +1125,6 @@ export function ReservationForm({
       };
       delete submissionData.isOpenEnded;
       
-      console.log('✅ Submitting update:', submissionData);
       createReservationMutation.mutate(submissionData);
     } else {
       // In create mode, go to preview
@@ -2368,16 +2364,6 @@ export function ReservationForm({
                   <Button 
                     type="submit" 
                     disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
-                    onClick={(e) => {
-                      console.log('🔘 Button clicked!', { editMode, isPreviewMode });
-                      console.log('🔍 Form state:', {
-                        isValid: form.formState.isValid,
-                        isDirty: form.formState.isDirty,
-                        isSubmitting: form.formState.isSubmitting
-                      });
-                      console.log('❌ ERRORS:', JSON.stringify(form.formState.errors, null, 2));
-                      console.log('📋 Form values:', JSON.stringify(form.getValues(), null, 2));
-                    }}
                   >
                     {createReservationMutation.isPending 
                       ? "Saving..." 
