@@ -3901,6 +3901,66 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get all damage check documents
+  app.get("/api/documents/damage-checks", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allDocuments = await storage.getAllDocuments();
+      const damageChecks = allDocuments.filter(doc => doc.documentType === 'damage_check');
+      res.json(damageChecks);
+    } catch (error) {
+      console.error("Error fetching damage checks:", error);
+      res.status(500).json({ message: "Failed to fetch damage checks" });
+    }
+  });
+
+  // Upload damage check PDF
+  app.post("/api/documents/upload/damage-check", requireAuth, documentUpload.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const vehicleId = parseInt(req.body.vehicleId);
+      const reservationId = req.body.reservationId ? parseInt(req.body.reservationId) : null;
+
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Valid vehicle ID is required" });
+      }
+
+      // Validate file type
+      if (req.file.mimetype !== 'application/pdf') {
+        return res.status(400).json({ message: "Only PDF files are allowed" });
+      }
+
+      const user = req.user;
+      const formattedFileName = path.basename(req.file.path);
+
+      const documentData = insertDocumentSchema.parse({
+        vehicleId,
+        reservationId,
+        documentType: 'damage_check',
+        fileName: formattedFileName,
+        filePath: getRelativePath(req.file.path),
+        fileSize: req.file.size,
+        contentType: req.file.mimetype,
+        createdBy: user ? user.username : null
+      });
+
+      const document = await storage.createDocument(documentData);
+
+      // Broadcast real-time update
+      realtimeEvents.documents.created(document);
+
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error uploading damage check:", error);
+      res.status(500).json({ 
+        message: "Failed to upload damage check", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // ==================== CONTRACT GENERATION ====================
   // Generate rental contract PDF
   app.get("/api/contracts/generate/:reservationId", requireAuth, async (req: Request, res: Response) => {
