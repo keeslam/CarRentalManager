@@ -132,19 +132,24 @@ export function StatusChangeDialog({
   const queryClient = useQueryClient();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   
+  // Create defaultValues object to ensure stable reference
+  const defaultValues = {
+    status: initialStatus,
+    startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
+    departureMileage: undefined,
+    fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
+    fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
+    fuelCost: initialFuelData?.fuelCost ?? undefined,
+    fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
+    fuelNotes: initialFuelData?.fuelNotes ?? undefined,
+  };
+  
+  console.log('💾 Creating form with defaultValues:', defaultValues);
+  
   // Form setup with vehicle return mileage as default for start mileage if available
   const form = useForm<StatusChangeFormType>({
     resolver: zodResolver(statusChangeSchema),
-    defaultValues: {
-      status: initialStatus,
-      startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
-      departureMileage: undefined,
-      fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
-      fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
-      fuelCost: initialFuelData?.fuelCost ?? undefined,
-      fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
-      fuelNotes: initialFuelData?.fuelNotes ?? undefined,
-    },
+    defaultValues,
   });
   
   // Reset form when a new reservation is selected (when reservationId changes)
@@ -390,7 +395,7 @@ export function StatusChangeDialog({
   };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} key={`dialog-${reservationId}`}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Update Reservation Status</DialogTitle>
