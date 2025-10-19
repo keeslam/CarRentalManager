@@ -26,7 +26,10 @@ interface DamageCheckTemplate {
   buildYearFrom?: number | null;
   buildYearTo?: number | null;
   inspectionPoints: InspectionPoint[];
-  diagramPath?: string | null;
+  diagramTopView?: string | null;
+  diagramFrontView?: string | null;
+  diagramRearView?: string | null;
+  diagramSideView?: string | null;
   isDefault?: boolean;
 }
 
@@ -317,81 +320,87 @@ export async function generateDamageCheckPDF(
   const diagramBoxWidth = (width - margin * 2 - 10) / 2;
   const diagramBoxHeight = 80;
   
-  // Check if template has a diagram path and try to load it
-  let diagramEmbedded = false;
-  if (template.diagramPath) {
+  // Helper function to load and embed a diagram
+  const loadDiagram = async (diagramPath: string | null | undefined) => {
+    if (!diagramPath) return null;
+    
     try {
-      const diagramFullPath = path.join(process.cwd(), template.diagramPath);
+      const diagramFullPath = path.join(process.cwd(), diagramPath);
       const diagramExists = await fs.access(diagramFullPath).then(() => true).catch(() => false);
       
       if (diagramExists) {
         const diagramBytes = await fs.readFile(diagramFullPath);
-        let diagramImage;
         
-        if (template.diagramPath.toLowerCase().endsWith('.png')) {
-          diagramImage = await pdfDoc.embedPng(diagramBytes);
-        } else if (template.diagramPath.toLowerCase().endsWith('.jpg') || template.diagramPath.toLowerCase().endsWith('.jpeg')) {
-          diagramImage = await pdfDoc.embedJpg(diagramBytes);
-        }
-        
-        if (diagramImage) {
-          const dims = diagramImage.scale(0.5);
-          const imgWidth = Math.min(dims.width, diagramBoxWidth * 2);
-          const imgHeight = Math.min(dims.height, diagramBoxHeight * 1.5);
-          
-          page.drawImage(diagramImage, {
-            x: margin,
-            y: yPosition - imgHeight,
-            width: imgWidth,
-            height: imgHeight,
-          });
-          
-          yPosition -= imgHeight + 10;
-          diagramEmbedded = true;
+        if (diagramPath.toLowerCase().endsWith('.png')) {
+          return await pdfDoc.embedPng(diagramBytes);
+        } else if (diagramPath.toLowerCase().endsWith('.jpg') || diagramPath.toLowerCase().endsWith('.jpeg')) {
+          return await pdfDoc.embedJpg(diagramBytes);
         }
       }
     } catch (error) {
-      console.warn('Could not load vehicle diagram:', error);
+      console.warn('Could not load vehicle diagram:', diagramPath, error);
     }
-  }
+    
+    return null;
+  };
   
-  // If no diagram was embedded, show placeholder boxes
-  if (!diagramEmbedded) {
-    // Top view
-    page.drawRectangle({
-      x: margin,
-      y: yPosition - diagramBoxHeight,
-      width: diagramBoxWidth,
-      height: diagramBoxHeight,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
-    page.drawText('BOVENAANZICHT', {
-      x: margin + diagramBoxWidth / 2 - 35,
-      y: yPosition - diagramBoxHeight / 2,
-      size: 9,
-      font: boldFont,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-    
-    // Side view
-    page.drawRectangle({
-      x: margin + diagramBoxWidth + 10,
-      y: yPosition - diagramBoxHeight,
-      width: diagramBoxWidth,
-      height: diagramBoxHeight,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
-    page.drawText('ZIJAANZICHT', {
-      x: margin + diagramBoxWidth + 10 + diagramBoxWidth / 2 - 30,
-      y: yPosition - diagramBoxHeight / 2,
-      size: 9,
-      font: boldFont,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-    
+  // Load all available diagrams
+  const topViewImage = await loadDiagram(template.diagramTopView);
+  const sideViewImage = await loadDiagram(template.diagramSideView);
+  const frontViewImage = await loadDiagram(template.diagramFrontView);
+  const rearViewImage = await loadDiagram(template.diagramRearView);
+  
+  const diagramEmbedded = !!(topViewImage || sideViewImage || frontViewImage || rearViewImage);
+  
+  // Display diagrams (top row: Top & Side, bottom row: Front & Rear)
+  const drawDiagramOrPlaceholder = (image: any, x: number, y: number, width: number, height: number, label: string) => {
+    if (image) {
+      const dims = image.scale(1);
+      const scale = Math.min(width / dims.width, height / dims.height);
+      const imgWidth = dims.width * scale;
+      const imgHeight = dims.height * scale;
+      const xOffset = (width - imgWidth) / 2;
+      const yOffset = (height - imgHeight) / 2;
+      
+      page.drawImage(image, {
+        x: x + xOffset,
+        y: y - height + yOffset,
+        width: imgWidth,
+        height: imgHeight,
+      });
+    } else {
+      page.drawRectangle({
+        x,
+        y: y - height,
+        width,
+        height,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
+      page.drawText(label, {
+        x: x + width / 2 - (label.length * 2.5),
+        y: y - height / 2,
+        size: 9,
+        font: boldFont,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+    }
+  };
+  
+  // Top row: Top view and Side view
+  drawDiagramOrPlaceholder(topViewImage, margin, yPosition, diagramBoxWidth, diagramBoxHeight, 'BOVENAANZICHT');
+  drawDiagramOrPlaceholder(sideViewImage, margin + diagramBoxWidth + 10, yPosition, diagramBoxWidth, diagramBoxHeight, 'ZIJAANZICHT');
+  
+  yPosition -= diagramBoxHeight + 10;
+  
+  // Bottom row: Front view and Rear view (if we have any diagrams at all)
+  if (diagramEmbedded) {
+    page = ensureSpace(diagramBoxHeight + 20);
+    drawDiagramOrPlaceholder(frontViewImage, margin, yPosition, diagramBoxWidth, diagramBoxHeight, 'VOORAANZICHT');
+    drawDiagramOrPlaceholder(rearViewImage, margin + diagramBoxWidth + 10, yPosition, diagramBoxWidth, diagramBoxHeight, 'ACHTERAANZICHT');
     yPosition -= diagramBoxHeight + 20;
+  } else {
+    yPosition -= 20;
   }
   
   // Ensure space for signatures

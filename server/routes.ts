@@ -123,6 +123,37 @@ export async function registerRoutes(app: Express): Promise<void> {
     },
   });
   
+  // Configure multer for diagram images (for damage check templates)
+  const diagramStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const diagPath = path.join(uploadsDir, 'vehicle-diagrams');
+      if (!fs.existsSync(diagPath)) {
+        fs.mkdirSync(diagPath, { recursive: true });
+      }
+      cb(null, diagPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+  });
+  
+  const diagramUpload = multer({
+    storage: diagramStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit for images
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+      if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PNG and JPEG images are allowed'));
+      }
+    },
+  });
+  
   // Set up authentication routes and middleware
   const { requireAuth } = setupAuth(app);
 
@@ -7184,6 +7215,37 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error fetching default template:", error);
       res.status(500).json({ message: "Error fetching default template" });
+    }
+  });
+
+  // Upload diagrams for damage check templates
+  app.post("/api/damage-check-templates/upload-diagrams", requireAuth, diagramUpload.fields([
+    { name: 'topView', maxCount: 1 },
+    { name: 'frontView', maxCount: 1 },
+    { name: 'rearView', maxCount: 1 },
+    { name: 'sideView', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const paths: any = {};
+      
+      if (files.topView) {
+        paths.diagramTopView = getRelativePath(files.topView[0].path);
+      }
+      if (files.frontView) {
+        paths.diagramFrontView = getRelativePath(files.frontView[0].path);
+      }
+      if (files.rearView) {
+        paths.diagramRearView = getRelativePath(files.rearView[0].path);
+      }
+      if (files.sideView) {
+        paths.diagramSideView = getRelativePath(files.sideView[0].path);
+      }
+      
+      res.json(paths);
+    } catch (error) {
+      console.error("Error uploading diagrams:", error);
+      res.status(500).json({ message: "Error uploading diagrams" });
     }
   });
 

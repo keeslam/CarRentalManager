@@ -307,6 +307,13 @@ function TemplateEditor({
   );
   const [editingPoint, setEditingPoint] = useState<InspectionPoint | null>(null);
   const [pointEditorOpen, setPointEditorOpen] = useState(false);
+  
+  // Diagram files
+  const [topViewFile, setTopViewFile] = useState<File | null>(null);
+  const [frontViewFile, setFrontViewFile] = useState<File | null>(null);
+  const [rearViewFile, setRearViewFile] = useState<File | null>(null);
+  const [sideViewFile, setSideViewFile] = useState<File | null>(null);
+  const [uploadingDiagrams, setUploadingDiagrams] = useState(false);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -334,7 +341,7 @@ function TemplateEditor({
     },
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast({
         title: "Validation Error",
@@ -342,6 +349,48 @@ function TemplateEditor({
         variant: "destructive",
       });
       return;
+    }
+
+    // Upload diagrams first if any files are selected
+    let diagramPaths = {
+      diagramTopView: template?.diagramTopView || null,
+      diagramFrontView: template?.diagramFrontView || null,
+      diagramRearView: template?.diagramRearView || null,
+      diagramSideView: template?.diagramSideView || null,
+    };
+
+    try {
+      if (topViewFile || frontViewFile || rearViewFile || sideViewFile) {
+        setUploadingDiagrams(true);
+        const formData = new FormData();
+        
+        if (topViewFile) formData.append('topView', topViewFile);
+        if (frontViewFile) formData.append('frontView', frontViewFile);
+        if (rearViewFile) formData.append('rearView', rearViewFile);
+        if (sideViewFile) formData.append('sideView', sideViewFile);
+
+        const response = await fetch('/api/damage-check-templates/upload-diagrams', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload diagrams');
+        }
+
+        const uploadedPaths = await response.json();
+        diagramPaths = { ...diagramPaths, ...uploadedPaths };
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload diagram images",
+        variant: "destructive",
+      });
+      setUploadingDiagrams(false);
+      return;
+    } finally {
+      setUploadingDiagrams(false);
     }
 
     const data = {
@@ -355,6 +404,7 @@ function TemplateEditor({
       language: 'nl',
       isDefault,
       inspectionPoints,
+      ...diagramPaths,
     };
 
     saveMutation.mutate(data);
@@ -495,6 +545,68 @@ function TemplateEditor({
             </div>
           </div>
 
+          {/* Vehicle Diagrams */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-700">Vehicle Diagrams</h3>
+            <p className="text-xs text-gray-600">
+              Upload vehicle diagram images that will appear on the damage check PDF
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="topView">Top View</Label>
+                <Input
+                  id="topView"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={(e) => setTopViewFile(e.target.files?.[0] || null)}
+                  data-testid="input-top-view"
+                />
+                {template?.diagramTopView && !topViewFile && (
+                  <p className="text-xs text-green-600">Current: {template.diagramTopView}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sideView">Side View</Label>
+                <Input
+                  id="sideView"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={(e) => setSideViewFile(e.target.files?.[0] || null)}
+                  data-testid="input-side-view"
+                />
+                {template?.diagramSideView && !sideViewFile && (
+                  <p className="text-xs text-green-600">Current: {template.diagramSideView}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="frontView">Front View</Label>
+                <Input
+                  id="frontView"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={(e) => setFrontViewFile(e.target.files?.[0] || null)}
+                  data-testid="input-front-view"
+                />
+                {template?.diagramFrontView && !frontViewFile && (
+                  <p className="text-xs text-green-600">Current: {template.diagramFrontView}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rearView">Rear View</Label>
+                <Input
+                  id="rearView"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={(e) => setRearViewFile(e.target.files?.[0] || null)}
+                  data-testid="input-rear-view"
+                />
+                {template?.diagramRearView && !rearViewFile && (
+                  <p className="text-xs text-green-600">Current: {template.diagramRearView}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Inspection Points */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -573,8 +685,8 @@ function TemplateEditor({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-template">
-            {saveMutation.isPending ? "Saving..." : template ? "Update Template" : "Create Template"}
+          <Button onClick={handleSave} disabled={saveMutation.isPending || uploadingDiagrams} data-testid="button-save-template">
+            {uploadingDiagrams ? "Uploading Diagrams..." : saveMutation.isPending ? "Saving..." : template ? "Update Template" : "Create Template"}
           </Button>
         </div>
 
