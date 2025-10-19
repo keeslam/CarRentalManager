@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **Type Safety**: Full TypeScript coverage
 
 ### Key Features and Implementations
-- **Damage Check Template Editor**: Customizable vehicle inspection templates with JSON storage for inspection points.
+- **Damage Check Template Editor**: Customizable vehicle inspection templates matching Dutch rental industry format. Build year range filtering, Dutch categories (Interieur/Exterieur/Afweez Check), damage type options (Kapot/Gat/Kras/Deuk/Ster), vehicle diagram support, and JSON storage for inspection points.
 - **Backup System**: One-click download for database (SQL) and application code (tar.gz), with recovery instructions.
 - **Auto-Logout**: Inactivity detection logs users out after 2 minutes.
 - **Custom Report Builder**: Drag-and-drop interface for creating custom reports from various data sources with filtering and aggregation.
