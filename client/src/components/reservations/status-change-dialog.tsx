@@ -392,7 +392,7 @@ export function StatusChangeDialog({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={`dialog-${reservationId}`}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update Reservation Status</DialogTitle>
           <DialogDescription>
@@ -666,28 +666,26 @@ export function StatusChangeDialog({
                   )}
                 />
                 
-                {/* Fuel Card Number */}
-                <FormField
-                  control={form.control}
-                  name="fuelCardNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fuel Card Number (optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Enter fuel card number if used"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Record the fuel card number if a fuel card was used
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Fuel Receipt Upload */}
+                <FormItem>
+                  <FormLabel>Fuel Receipt (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // TODO: Handle fuel receipt upload
+                          console.log('Fuel receipt selected:', file.name);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Upload a receipt if you refilled the vehicle to full
+                  </FormDescription>
+                </FormItem>
                 
                 {/* Fuel Notes */}
                 <FormField
