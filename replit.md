@@ -6,6 +6,35 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Advanced Reporting & Communication Features Added** (Oct 19, 2025): Three major features for custom reporting and WhatsApp integration
+  - **Custom Report Builder** (Full Implementation):
+    - Complete drag-drop interface for building custom reports from any data source
+    - Available data sources: Vehicles, Customers, Reservations, Expenses, Drivers, Documents
+    - Field selection with column configuration (select specific fields or all fields)
+    - Filter builder with comparison operators (equals, greater than, less than, contains, starts with, ends with, etc.)
+    - Aggregation functions: COUNT, SUM, AVG, MIN, MAX with grouping support
+    - Report execution engine that dynamically builds SQL queries from configuration
+    - Save reports with name and description to saved_reports table
+    - Preview results in table format with export capability
+    - Load and execute saved reports
+    - Route: `/reports/builder`
+    - API endpoints: `/api/reports/saved`, `/api/reports/execute`
+  - **WhatsApp Messaging Dashboard** (Foundation Complete):
+    - Conversation list showing all customer WhatsApp conversations
+    - Real-time message thread with sent/received messages
+    - Message status indicators (sent, delivered, read, failed)
+    - Send messages to customers directly from dashboard
+    - Customer details panel with contact information
+    - Database infrastructure for storing messages and conversations
+    - Route: `/whatsapp/messaging`
+    - API endpoints: `/api/whatsapp/conversations`, `/api/whatsapp/messages/:customerId`, `/api/whatsapp/send`
+    - Note: Twilio integration, webhook receiver, and real-time Socket.IO updates pending for full two-way messaging
+  - **WhatsApp Settings & Templates** (Existing):
+    - WhatsApp settings page for Twilio API configuration
+    - Message templates with variable replacement system
+    - Routes: `/settings/whatsapp`, `/settings/whatsapp/templates`
+  - **Database Tables**: saved_reports (full implementation), whatsapp_messages (foundation)
+
 - **Four Major New Features Added** (Oct 19, 2025): Significant expansion of system capabilities across delivery, analytics, reporting, and communication
   - **Vehicle Delivery/Pickup Service**:
     - Delivery service option in reservation form with address input (street, city, postal code)
@@ -23,21 +52,6 @@ This is a comprehensive car rental management system built with React (frontend)
     - Monthly trend analysis showing 12-month cost patterns
     - API endpoint: `/api/reports/maintenance-costs`
     - Route: `/reports/maintenance-costs`
-  - **WhatsApp Business Integration**:
-    - WhatsApp settings page for configuring Twilio API connection
-    - Phone number and credentials management (Twilio Account SID, Auth Token)
-    - Automatic notification toggles for reservation events (created, pickup reminder, return reminder, payment due)
-    - Test connection functionality
-    - Message templates management with default library (booking confirmation, pickup/return reminders, payment/invoice notifications)
-    - Template variables using `{{variableName}}` syntax for dynamic content
-    - CRUD operations for custom templates with category organization
-    - API endpoints: `/api/settings/whatsapp`, `/api/whatsapp/templates`, `/api/whatsapp/test-connection`
-    - Routes: `/settings/whatsapp`, `/settings/whatsapp/templates`
-  - **Custom Report Builder Foundation**:
-    - Database schema: saved_reports table with JSON configuration storage
-    - Prepared for future drag-drop report builder interface
-    - Support for custom queries, filters, grouping, and scheduled report generation
-  - **Database Tables**: whatsapp_messages, whatsapp_templates, delivery_tasks, saved_reports
 
 - **Customer Portal & Extension Requests Removed** (Oct 18, 2025): Completely removed customer portal and extension request functionality
   - Removed customer portal login/dashboard pages and all related UI components
