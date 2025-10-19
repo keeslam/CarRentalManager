@@ -5454,6 +5454,102 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
     }
   });
+
+  // Restore app data from uploaded SQL file
+  app.post("/api/backups/restore-data", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No backup file uploaded' });
+      }
+
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        throw new Error('DATABASE_URL not configured');
+      }
+
+      // Restore database using psql
+      await execAsync(`psql "${databaseUrl}" < "${req.file.path}"`);
+
+      // Clean up uploaded file
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+
+      res.json({
+        success: true,
+        message: 'Database restored successfully. Please refresh your browser and log in again.',
+      });
+    } catch (error) {
+      // Clean up file on error
+      if (req.file) {
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.error('Error cleaning up uploaded file:', cleanupError);
+        }
+      }
+      
+      console.error("Error restoring app data:", error);
+      res.status(500).json({ 
+        error: "Failed to restore app data",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Restore app code from uploaded tar.gz file
+  app.post("/api/backups/restore-code", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No backup file uploaded' });
+      }
+
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      // Extract tar.gz to current directory (will overwrite existing files)
+      await execAsync(`tar -xzf "${req.file.path}" -C "${process.cwd()}"`);
+
+      // Clean up uploaded file
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+
+      res.json({
+        success: true,
+        message: 'Code restored successfully. The application will restart automatically.',
+      });
+
+      // Restart the application after a short delay
+      setTimeout(() => {
+        process.exit(0); // PM2 or the process manager will restart the app
+      }, 2000);
+    } catch (error) {
+      // Clean up file on error
+      if (req.file) {
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.error('Error cleaning up uploaded file:', cleanupError);
+        }
+      }
+      
+      console.error("Error restoring app code:", error);
+      res.status(500).json({ 
+        error: "Failed to restore app code",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // Get backup status
   app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {

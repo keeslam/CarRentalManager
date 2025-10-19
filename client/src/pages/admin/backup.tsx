@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
 import { Redirect } from "wouter";
-import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle } from "lucide-react";
+import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle, Upload, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -35,6 +47,12 @@ export default function BackupPage() {
   const queryClient = useQueryClient();
   const [downloadingData, setDownloadingData] = useState(false);
   const [downloadingCode, setDownloadingCode] = useState(false);
+  const [restoringData, setRestoringData] = useState(false);
+  const [restoringCode, setRestoringCode] = useState(false);
+  const [selectedDataFile, setSelectedDataFile] = useState<File | null>(null);
+  const [selectedCodeFile, setSelectedCodeFile] = useState<File | null>(null);
+  const dataFileInputRef = useRef<HTMLInputElement>(null);
+  const codeFileInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch backup settings
   const { data: settings } = useQuery<BackupSettings>({
@@ -165,6 +183,85 @@ export default function BackupPage() {
       });
     } finally {
       setDownloadingCode(false);
+    }
+  };
+
+  const handleRestoreData = async () => {
+    if (!selectedDataFile) return;
+    
+    setRestoringData(true);
+    try {
+      const formData = new FormData();
+      formData.append('backup', selectedDataFile);
+
+      const response = await fetch('/api/backups/restore-data', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to restore data');
+      }
+
+      toast({
+        title: 'Data Restored',
+        description: '⚠️ Your database has been restored. Please refresh your browser and log in again.',
+        duration: 10000,
+      });
+      
+      setSelectedDataFile(null);
+      
+      // Wait a moment then reload the page
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    } catch (error) {
+      toast({
+        title: 'Restore Failed',
+        description: error instanceof Error ? error.message : 'Failed to restore data',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoringData(false);
+    }
+  };
+
+  const handleRestoreCode = async () => {
+    if (!selectedCodeFile) return;
+    
+    setRestoringCode(true);
+    try {
+      const formData = new FormData();
+      formData.append('backup', selectedCodeFile);
+
+      const response = await fetch('/api/backups/restore-code', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to restore code');
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: 'Code Restored',
+        description: result.message || 'Code files have been restored. The application will restart.',
+        duration: 10000,
+      });
+      
+      setSelectedCodeFile(null);
+    } catch (error) {
+      toast({
+        title: 'Restore Failed',
+        description: error instanceof Error ? error.message : 'Failed to restore code',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoringCode(false);
     }
   };
 
@@ -317,8 +414,68 @@ export default function BackupPage() {
                   {downloadingData ? 'Downloading...' : 'Download App Data'}
                 </Button>
 
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restore Data
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept=".sql"
+                      onChange={(e) => setSelectedDataFile(e.target.files?.[0] || null)}
+                      ref={dataFileInputRef}
+                      className="text-sm"
+                      data-testid="data-file-input"
+                    />
+                    {selectedDataFile && (
+                      <p className="text-xs text-gray-600">Selected: {selectedDataFile.name}</p>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline"
+                          className="w-full" 
+                          disabled={!selectedDataFile || restoringData}
+                          data-testid="restore-data-button"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {restoringData ? 'Restoring...' : 'Restore Data'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-destructive">⚠️ Warning: Data Restore</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will replace ALL your current data with the backup file. This action cannot be undone.
+                            <br /><br />
+                            <strong>What will be replaced:</strong>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              <li>All vehicles, customers & reservations</li>
+                              <li>All expenses & documents</li>
+                              <li>All user accounts & settings</li>
+                              <li>All templates & notifications</li>
+                            </ul>
+                            <br />
+                            Your session will be reset and you'll need to refresh and log in again.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleRestoreData}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Yes, Restore Data
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
                 <p className="text-xs text-gray-500 text-center">
-                  Database export (SQL format)
+                  Upload .sql file to restore
                 </p>
               </CardContent>
             </Card>
@@ -367,8 +524,67 @@ export default function BackupPage() {
                   {downloadingCode ? 'Downloading...' : 'Download App Code'}
                 </Button>
 
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restore Code
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept=".tar.gz,.tgz"
+                      onChange={(e) => setSelectedCodeFile(e.target.files?.[0] || null)}
+                      ref={codeFileInputRef}
+                      className="text-sm"
+                      data-testid="code-file-input"
+                    />
+                    {selectedCodeFile && (
+                      <p className="text-xs text-gray-600">Selected: {selectedCodeFile.name}</p>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline"
+                          className="w-full" 
+                          disabled={!selectedCodeFile || restoringCode}
+                          data-testid="restore-code-button"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {restoringCode ? 'Restoring...' : 'Restore Code'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-destructive">⚠️ Warning: Code Restore</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will replace ALL your application source code with the backup archive. The application will restart automatically.
+                            <br /><br />
+                            <strong>What will be replaced:</strong>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              <li>All source code files</li>
+                              <li>Configuration files</li>
+                              <li>Package dependencies</li>
+                            </ul>
+                            <br />
+                            <strong>Note:</strong> Your database and uploaded files will NOT be affected. Only code files will be restored.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleRestoreCode}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Yes, Restore Code
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
                 <p className="text-xs text-gray-500 text-center">
-                  Compressed archive (.tar.gz)
+                  Upload .tar.gz file to restore
                 </p>
               </CardContent>
             </Card>
