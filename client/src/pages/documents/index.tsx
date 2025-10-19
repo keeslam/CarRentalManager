@@ -1099,12 +1099,14 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
     }
 
     const formData = new FormData();
-    formData.append('file', uploadFile);
+    // IMPORTANT: vehicleId and documentType must come BEFORE the file
+    // so multer can access them in req.body during upload processing
     formData.append('vehicleId', selectedVehicleId);
     formData.append('documentType', 'damage_check');
     if (selectedReservationId && selectedReservationId !== 'none') {
       formData.append('reservationId', selectedReservationId);
     }
+    formData.append('file', uploadFile);
 
     uploadMutation.mutate(formData);
   };
