@@ -6,6 +6,28 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Simplified One-Button Backup System** (Oct 19, 2025): Easy backup and recovery with just two buttons
+  - **Download App Data**: One-click download of complete database export (SQL format)
+    - Includes all vehicles, customers, reservations, expenses, documents, users, settings, templates
+    - Downloadable as `car-rental-data-YYYY-MM-DD.sql`
+    - API endpoint: `/api/backups/download-data`
+  - **Download App Code**: One-click download of complete source code archive
+    - Includes all application source code, configuration files, package.json
+    - Excludes node_modules, uploads, temp files, and build artifacts
+    - Downloadable as `car-rental-code-YYYY-MM-DD.tar.gz`
+    - API endpoint: `/api/backups/download-code`
+  - **Recovery Instructions**: Built-in guidance panel explaining how to restore from backups
+  - Simplified from complex backup management system to just two essential buttons
+  - Admin-only access via `/admin/backup` route
+
+- **Auto-Logout Security Feature** (Oct 19, 2025): Automatic session timeout for security
+  - **Inactivity Detection**: Monitors mouse movement, keyboard input, clicks, scrolling, and touch events
+  - **2-Minute Timeout**: Automatically logs users out after 2 minutes of no activity
+  - **Activity Reset**: Any user interaction resets the timeout timer
+  - **Session Notification**: Shows "Session expired" toast when auto-logout occurs
+  - Reusable hook implementation in `client/src/hooks/use-inactivity-timeout.tsx`
+  - Integrated into main App component for system-wide protection
+
 - **Advanced Reporting & Communication Features Added** (Oct 19, 2025): Three major features for custom reporting and WhatsApp integration
   - **Custom Report Builder** (Full Implementation):
     - Complete drag-drop interface for building custom reports from any data source

@@ -5359,6 +5359,102 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== BACKUP ROUTES ====================
   
+  // Simple download app data (database only)
+  app.get("/api/backups/download-data", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `car-rental-data-${timestamp}.sql`;
+      const filepath = path.join(process.cwd(), 'temp', filename);
+      
+      // Create temp directory if it doesn't exist
+      await fs.promises.mkdir(path.join(process.cwd(), 'temp'), { recursive: true });
+      
+      // Export database using pg_dump
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        throw new Error('DATABASE_URL not configured');
+      }
+      
+      // Use pg_dump to export the database
+      await execAsync(`pg_dump "${databaseUrl}" > "${filepath}"`);
+      
+      // Send file
+      res.download(filepath, filename, async (err) => {
+        // Clean up temp file after download
+        try {
+          await fs.promises.unlink(filepath);
+        } catch (cleanupError) {
+          console.error('Error cleaning up temp file:', cleanupError);
+        }
+        
+        if (err) {
+          console.error('Error sending file:', err);
+        }
+      });
+    } catch (error) {
+      console.error("Error downloading app data:", error);
+      res.status(500).json({ 
+        error: "Failed to download app data",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Simple download app code (source files)
+  app.get("/api/backups/download-code", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `car-rental-code-${timestamp}.tar.gz`;
+      const filepath = path.join(process.cwd(), 'temp', filename);
+      
+      // Create temp directory if it doesn't exist
+      await fs.promises.mkdir(path.join(process.cwd(), 'temp'), { recursive: true });
+      
+      // Create tar.gz of source code excluding node_modules, .git, temp, backups, uploads
+      const excludes = [
+        '--exclude=node_modules',
+        '--exclude=.git',
+        '--exclude=temp',
+        '--exclude=backups',
+        '--exclude=uploads',
+        '--exclude=*.log',
+        '--exclude=.env.local',
+        '--exclude=dist',
+        '--exclude=build'
+      ].join(' ');
+      
+      await execAsync(`tar -czf "${filepath}" ${excludes} -C "${process.cwd()}" .`);
+      
+      // Send file
+      res.download(filepath, filename, async (err) => {
+        // Clean up temp file after download
+        try {
+          await fs.promises.unlink(filepath);
+        } catch (cleanupError) {
+          console.error('Error cleaning up temp file:', cleanupError);
+        }
+        
+        if (err) {
+          console.error('Error sending file:', err);
+        }
+      });
+    } catch (error) {
+      console.error("Error downloading app code:", error);
+      res.status(500).json({ 
+        error: "Failed to download app code",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Get backup status
   app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {
     try {
