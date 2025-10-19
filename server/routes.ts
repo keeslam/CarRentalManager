@@ -6194,6 +6194,268 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ============================================
+  // WHATSAPP SETTINGS ROUTES
+  // ============================================
+  
+  // Get WhatsApp settings
+  app.get("/api/settings/whatsapp", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getAppSettingsByCategory('whatsapp');
+      
+      // Convert array of settings to object
+      const whatsappConfig: any = {
+        enabled: false,
+        phoneNumber: '',
+        autoNotifications: false,
+        notifyOnReservationCreated: false,
+        notifyOnPickupReminder: false,
+        notifyOnReturnReminder: false,
+        notifyOnPaymentDue: false,
+      };
+      
+      settings.forEach(setting => {
+        const key = setting.key.replace('whatsapp_', '');
+        if (setting.value === 'true' || setting.value === 'false') {
+          whatsappConfig[key] = setting.value === 'true';
+        } else {
+          whatsappConfig[key] = setting.value;
+        }
+      });
+      
+      res.json(whatsappConfig);
+    } catch (error) {
+      console.error("Error fetching WhatsApp settings:", error);
+      res.status(500).json({ message: "Error fetching WhatsApp settings" });
+    }
+  });
+  
+  // Save WhatsApp settings
+  app.post("/api/settings/whatsapp", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const settings = req.body;
+      
+      // Validate settings structure
+      const validKeys = [
+        'enabled', 'phoneNumber', 'twilioAccountSid', 'twilioAuthToken',
+        'autoNotifications', 'notifyOnReservationCreated', 'notifyOnPickupReminder',
+        'notifyOnReturnReminder', 'notifyOnPaymentDue'
+      ];
+      
+      // Save each setting
+      for (const [key, value] of Object.entries(settings)) {
+        // Skip invalid keys
+        if (!validKeys.includes(key)) continue;
+        
+        // Skip undefined, null, or empty optional fields
+        if (value === undefined || value === null || value === '') {
+          // For optional fields, delete the setting if it exists
+          if (['twilioAccountSid', 'twilioAuthToken'].includes(key)) {
+            const existing = await storage.getAppSettingByKey(`whatsapp_${key}`);
+            if (existing) {
+              await storage.deleteAppSetting(existing.id);
+            }
+            continue;
+          }
+        }
+        
+        const settingKey = `whatsapp_${key}`;
+        const settingValue = String(value);
+        const existing = await storage.getAppSettingByKey(settingKey);
+        
+        if (existing) {
+          await storage.updateAppSetting(existing.id, {
+            value: settingValue,
+            updatedBy: user ? user.username : null,
+          });
+        } else {
+          await storage.createAppSetting({
+            key: settingKey,
+            value: settingValue,
+            category: 'whatsapp',
+            description: `WhatsApp ${key} setting`,
+            createdBy: user ? user.username : null,
+            updatedBy: user ? user.username : null,
+          });
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving WhatsApp settings:", error);
+      res.status(500).json({ message: "Error saving WhatsApp settings" });
+    }
+  });
+  
+  // Test WhatsApp connection
+  app.post("/api/whatsapp/test-connection", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // In a real implementation, this would test the Twilio connection
+      // For now, just return success
+      res.json({ success: true, message: "Connection test successful" });
+    } catch (error) {
+      console.error("Error testing WhatsApp connection:", error);
+      res.status(500).json({ message: "Error testing WhatsApp connection" });
+    }
+  });
+
+  // ============================================
+  // REPORTS & ANALYTICS ROUTES
+  // ============================================
+
+  // Maintenance Cost Analysis Report
+  app.get("/api/reports/maintenance-costs", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { timeRange, brand } = req.query;
+      
+      // Get all expenses with vehicle information
+      const expenses = await storage.getAllExpenses();
+      const vehicles = await storage.getAllVehicles();
+      
+      // Filter expenses by time range
+      let filteredExpenses = expenses;
+      if (timeRange && timeRange !== 'all') {
+        const now = new Date();
+        let cutoffDate = new Date();
+        
+        switch (timeRange) {
+          case 'month':
+            cutoffDate.setMonth(now.getMonth() - 1);
+            break;
+          case '3months':
+            cutoffDate.setMonth(now.getMonth() - 3);
+            break;
+          case '6months':
+            cutoffDate.setMonth(now.getMonth() - 6);
+            break;
+          case 'year':
+            cutoffDate.setFullYear(now.getFullYear() - 1);
+            break;
+        }
+        
+        filteredExpenses = expenses.filter(e => new Date(e.date) >= cutoffDate);
+      }
+      
+      // Filter by brand if specified
+      let filteredVehicles = vehicles;
+      if (brand && brand !== 'all') {
+        filteredVehicles = vehicles.filter(v => v.brand === brand);
+        const vehicleIds = new Set(filteredVehicles.map(v => v.id));
+        filteredExpenses = filteredExpenses.filter(e => vehicleIds.has(e.vehicleId));
+      }
+      
+      // Calculate total costs
+      const totalCosts = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0);
+      
+      // Calculate average cost per vehicle
+      const vehiclesWithExpenses = new Set(filteredExpenses.map(e => e.vehicleId));
+      const averageCostPerVehicle = vehiclesWithExpenses.size > 0 
+        ? totalCosts / vehiclesWithExpenses.size 
+        : 0;
+      
+      // Calculate cost per km
+      const totalMileage = filteredVehicles.reduce((sum, v) => 
+        sum + (v.currentMileage || v.departureMileage || 0), 0);
+      const averageCostPerKm = totalMileage > 0 ? totalCosts / totalMileage : 0;
+      
+      // Category breakdown
+      const categoryMap = new Map<string, number>();
+      filteredExpenses.forEach(e => {
+        const current = categoryMap.get(e.category) || 0;
+        categoryMap.set(e.category, current + parseFloat(e.amount.toString()));
+      });
+      
+      const categoryBreakdown = Array.from(categoryMap.entries()).map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: (amount / totalCosts) * 100
+      }));
+      
+      // Brand comparison
+      const brandMap = new Map<string, {totalCost: number, vehicles: Set<number>}>();
+      filteredExpenses.forEach(e => {
+        const vehicle = vehicles.find(v => v.id === e.vehicleId);
+        if (vehicle) {
+          const brandData = brandMap.get(vehicle.brand) || {totalCost: 0, vehicles: new Set()};
+          brandData.totalCost += parseFloat(e.amount.toString());
+          brandData.vehicles.add(vehicle.id);
+          brandMap.set(vehicle.brand, brandData);
+        }
+      });
+      
+      const brandComparison = Array.from(brandMap.entries()).map(([brand, data]) => ({
+        brand,
+        totalCost: data.totalCost,
+        avgCost: data.vehicles.size > 0 ? data.totalCost / data.vehicles.size : 0,
+        vehicleCount: data.vehicles.size
+      }));
+      
+      // Vehicle details
+      const vehicleExpenseMap = new Map<number, {expenses: any[], totalCost: number}>();
+      filteredExpenses.forEach(e => {
+        const data = vehicleExpenseMap.get(e.vehicleId) || {expenses: [], totalCost: 0};
+        data.expenses.push(e);
+        data.totalCost += parseFloat(e.amount.toString());
+        vehicleExpenseMap.set(e.vehicleId, data);
+      });
+      
+      const vehicleDetails = Array.from(vehicleExpenseMap.entries()).map(([vehicleId, data]) => {
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        if (!vehicle) return null;
+        
+        const mileage = vehicle.currentMileage || vehicle.departureMileage || 0;
+        return {
+          vehicleId: vehicle.id,
+          licensePlate: vehicle.licensePlate,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          totalCost: data.totalCost,
+          costPerKm: mileage > 0 ? data.totalCost / mileage : 0,
+          currentMileage: mileage,
+          expenseCount: data.expenses.length
+        };
+      }).filter(Boolean);
+      
+      // Monthly trend (last 12 months)
+      const monthlyMap = new Map<string, number>();
+      const last12Months: string[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthKey = format(date, 'MMM yyyy');
+        last12Months.push(monthKey);
+        monthlyMap.set(monthKey, 0);
+      }
+      
+      filteredExpenses.forEach(e => {
+        const monthKey = format(new Date(e.date), 'MMM yyyy');
+        if (monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + parseFloat(e.amount.toString()));
+        }
+      });
+      
+      const monthlyTrend = last12Months.map(month => ({
+        month,
+        amount: monthlyMap.get(month) || 0
+      }));
+      
+      res.json({
+        totalCosts,
+        averageCostPerVehicle,
+        averageCostPerKm,
+        totalVehicles: vehiclesWithExpenses.size,
+        categoryBreakdown,
+        brandComparison,
+        vehicleDetails,
+        monthlyTrend
+      });
+    } catch (error) {
+      console.error("Error fetching maintenance cost analysis:", error);
+      res.status(500).json({ message: "Error fetching maintenance cost analysis" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);

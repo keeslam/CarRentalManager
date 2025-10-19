@@ -22,6 +22,8 @@ import DocumentsIndex from "@/pages/documents/index";
 import ContractViewer from "@/pages/documents/contract/[id]";
 import TemplateEditor from "@/pages/documents/template-editor";
 import ReportsPage from "@/pages/reports/index";
+import MaintenanceCostsPage from "@/pages/reports/maintenance-costs";
+import DeliveryDashboard from "@/pages/delivery/dashboard";
 import NotificationsPage from "@/pages/notifications/index";
 import CustomNotificationsPage from "@/pages/notifications/custom-notifications";
 import CustomerCommunications from "@/pages/CustomerCommunications";
@@ -36,6 +38,7 @@ import ChangePasswordPage from "@/pages/profile/change-password";
 import BackupPage from "@/pages/admin/backup";
 import MaintenanceCalendar from "@/pages/maintenance/calendar";
 import SettingsPage from "@/pages/settings/index";
+import WhatsAppSettingsPage from "@/pages/settings/whatsapp";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
@@ -79,7 +82,9 @@ function AppRoutes() {
               <ProtectedRoute path="/documents" component={DocumentsIndex} />
               <ProtectedRoute path="/documents/contract/:id" component={ContractViewer} />
               <ProtectedRoute path="/documents/template-editor" component={TemplateEditor} />
+              <ProtectedRoute path="/reports/maintenance-costs" component={MaintenanceCostsPage} />
               <ProtectedRoute path="/reports" component={ReportsPage} />
+              <ProtectedRoute path="/delivery" component={DeliveryDashboard} />
               <ProtectedRoute path="/notifications" component={NotificationsPage} />
               <ProtectedRoute path="/notifications/custom" component={CustomNotificationsPage} />
               <ProtectedRoute path="/communications" component={CustomerCommunications} />
@@ -97,6 +102,7 @@ function AppRoutes() {
               <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
               <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
               <ProtectedRoute path="/admin/backup" component={BackupPage} />
+              <ProtectedRoute path="/settings/whatsapp" component={WhatsAppSettingsPage} />
               <ProtectedRoute path="/settings" component={SettingsPage} />
               <Route path="/auth" component={AuthPage} />
               <Route component={NotFound} />

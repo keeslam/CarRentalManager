@@ -70,6 +70,15 @@ const formSchema = insertReservationSchemaBase.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   isOpenEnded: z.boolean().optional(),
+  deliveryRequired: z.boolean().optional(),
+  deliveryAddress: z.string().optional(),
+  deliveryCity: z.string().optional(),
+  deliveryPostalCode: z.string().optional(),
+  deliveryFee: z.union([
+    z.number().optional(),
+    z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
+  ]).optional(),
+  deliveryNotes: z.string().optional(),
   totalPrice: z.union([
     z.number().optional(),
     z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
@@ -173,6 +182,9 @@ export function ReservationForm({
   );
   const [isOpenEnded, setIsOpenEnded] = useState<boolean>(
     initialData?.endDate === null || initialData?.endDate === undefined || false
+  );
+  const [deliveryRequired, setDeliveryRequired] = useState<boolean>(
+    initialData?.deliveryRequired || false
   );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -2022,6 +2034,119 @@ export function ReservationForm({
                     </FormItem>
                   )}
                 />
+                
+                {/* Delivery Service */}
+                <FormField
+                  control={form.control}
+                  name="deliveryRequired"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value || false}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            setDeliveryRequired(!!checked);
+                          }}
+                          data-testid="checkbox-delivery-required"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Delivery Service Required</FormLabel>
+                        <FormDescription>
+                          Vehicle will be delivered to customer's address
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                {deliveryRequired && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="deliveryAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Street address" {...field} data-testid="input-delivery-address" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="deliveryCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="City" {...field} data-testid="input-delivery-city" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="deliveryPostalCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="1234 AB" {...field} data-testid="input-delivery-postal-code" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="deliveryFee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Fee (€)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value === "" ? undefined : parseFloat(e.target.value) || 0;
+                                field.onChange(value);
+                              }}
+                              value={field.value === undefined || field.value === null ? "" : field.value}
+                              data-testid="input-delivery-fee"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="deliveryNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Notes <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Special delivery instructions..."
+                              {...field}
+                              data-testid="textarea-delivery-notes"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
               </div>
               
               {/* Document Management - Always visible */}
