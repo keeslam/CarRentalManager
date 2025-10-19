@@ -60,7 +60,7 @@ export default function WhatsAppMessaging() {
   });
 
   const { data: selectedCustomer } = useQuery<Customer>({
-    queryKey: ['/api/customers', selectedCustomerId],
+    queryKey: [`/api/customers/${selectedCustomerId}`],
     enabled: !!selectedCustomerId,
   });
 
