@@ -51,9 +51,26 @@ import { SocketProvider } from "@/hooks/use-socket";
 import { ProtectedRoute } from "@/components/protected-route";
 import { GlobalDialogProvider } from "@/contexts/GlobalDialogContext";
 import { GlobalDialogs } from "@/components/global-dialogs";
+import { useInactivityTimeout } from "@/hooks/use-inactivity-timeout";
+import { useToast } from "@/hooks/use-toast";
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
+
+  useInactivityTimeout({
+    timeoutMinutes: 2,
+    onTimeout: async () => {
+      if (user) {
+        await logout();
+        toast({
+          title: "Session expired",
+          description: "You have been logged out due to inactivity",
+          variant: "destructive",
+        });
+      }
+    },
+  });
   
   return (
     <Switch>
