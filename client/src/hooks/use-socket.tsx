@@ -96,11 +96,32 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       break;
 
     case 'vehicles':
+      // Force immediate refetch of ALL vehicle queries including specific vehicle pages
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.startsWith('/api/vehicles');
+        },
+        type: 'active' // Only refetch currently active queries
+      });
+      
+      // Also invalidate (not just refetch) so inactive queries refresh when they become active
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/vehicles-with-reservations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/filtered-vehicles'] });
+      
+      // Refresh reservation data since vehicle availability may have changed
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/reservations'],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/vehicles/available'],
+        type: 'active'
+      });
+      
       if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.id] });
+        queryClient.refetchQueries({ queryKey: [`/api/vehicles/${data.id}`], type: 'active' });
       }
       break;
 
