@@ -144,8 +144,6 @@ export function StatusChangeDialog({
     fuelNotes: initialFuelData?.fuelNotes ?? undefined,
   };
   
-  console.log('💾 Creating form with defaultValues:', defaultValues);
-  
   // Form setup with vehicle return mileage as default for start mileage if available
   const form = useForm<StatusChangeFormType>({
     resolver: zodResolver(statusChangeSchema),
@@ -154,14 +152,6 @@ export function StatusChangeDialog({
   
   // Reset form when a new reservation is selected (when reservationId changes)
   useEffect(() => {
-    console.log('🔄 Resetting status change dialog form with fuel data:', {
-      fuelLevelPickup: initialFuelData?.fuelLevelPickup,
-      fuelLevelReturn: initialFuelData?.fuelLevelReturn,
-      fuelCost: initialFuelData?.fuelCost,
-      fuelCardNumber: initialFuelData?.fuelCardNumber,
-      fuelNotes: initialFuelData?.fuelNotes,
-    });
-    
     // Reset the form with new default values
     form.reset({
       status: initialStatus,
@@ -555,10 +545,8 @@ export function StatusChangeDialog({
               <FormField
                 control={form.control}
                 name="fuelLevelPickup"
-                render={({ field }) => {
-                  console.log('🔧 Fuel Pickup field render:', field.value);
-                  return (
-                    <FormItem>
+                render={({ field }) => (
+                  <FormItem>
                       <FormLabel>Fuel Level at Pickup</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -583,8 +571,7 @@ export function StatusChangeDialog({
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
+                )}
               />
             )}
             
@@ -620,10 +607,8 @@ export function StatusChangeDialog({
                 <FormField
                   control={form.control}
                   name="fuelLevelReturn"
-                  render={({ field }) => {
-                    console.log('🔧 Fuel Return field render:', field.value);
-                    return (
-                      <FormItem>
+                  render={({ field }) => (
+                    <FormItem>
                         <FormLabel>Fuel Level at Return</FormLabel>
                         <Select
                           onValueChange={field.onChange}
@@ -648,8 +633,7 @@ export function StatusChangeDialog({
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
-                    );
-                  }}
+                    )}
                 />
                 
                 {/* Fuel Cost */}

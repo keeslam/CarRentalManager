@@ -69,6 +69,13 @@ export function QuickStatusChangeButton({ vehicleId }: QuickStatusChangeButtonPr
           initialStatus={selectedReservation.status || "pending"}
           vehicle={selectedReservation.vehicle}
           customer={selectedReservation.customer}
+          initialFuelData={{
+            fuelLevelPickup: selectedReservation.fuelLevelPickup,
+            fuelLevelReturn: selectedReservation.fuelLevelReturn,
+            fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
+            fuelCardNumber: selectedReservation.fuelCardNumber,
+            fuelNotes: selectedReservation.fuelNotes,
+          }}
           onStatusChanged={() => {
             // This will be called after the status is changed successfully
             setSelectedReservation(null);

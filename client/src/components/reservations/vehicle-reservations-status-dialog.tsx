@@ -128,6 +128,13 @@ export function VehicleReservationsStatusDialog({
           initialStatus={selectedReservation.status || ""}
           vehicle={selectedVehicle}
           customer={customer}
+          initialFuelData={{
+            fuelLevelPickup: selectedReservation.fuelLevelPickup,
+            fuelLevelReturn: selectedReservation.fuelLevelReturn,
+            fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
+            fuelCardNumber: selectedReservation.fuelCardNumber,
+            fuelNotes: selectedReservation.fuelNotes,
+          }}
           onStatusChanged={handleReservationStatusChanged}
         />
       )}

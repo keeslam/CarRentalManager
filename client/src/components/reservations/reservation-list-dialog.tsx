@@ -438,6 +438,13 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         onOpenChange={setStatusDialogOpen}
         reservationId={selectedReservation?.id || 0}
         initialStatus={selectedReservation?.status || "pending"}
+        initialFuelData={selectedReservation ? {
+          fuelLevelPickup: selectedReservation.fuelLevelPickup,
+          fuelLevelReturn: selectedReservation.fuelLevelReturn,
+          fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
+          fuelCardNumber: selectedReservation.fuelCardNumber,
+          fuelNotes: selectedReservation.fuelNotes,
+        } : undefined}
         onStatusChanged={() => {
           // Refresh the data after status change
           queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });

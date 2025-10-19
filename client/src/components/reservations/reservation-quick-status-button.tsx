@@ -45,6 +45,13 @@ export function ReservationQuickStatusButton({
         initialStatus={status || "pending"}
         vehicle={vehicle}
         customer={customer}
+        initialFuelData={{
+          fuelLevelPickup: reservation.fuelLevelPickup,
+          fuelLevelReturn: reservation.fuelLevelReturn,
+          fuelCost: reservation.fuelCost ? Number(reservation.fuelCost) : null,
+          fuelCardNumber: reservation.fuelCardNumber,
+          fuelNotes: reservation.fuelNotes,
+        }}
         onStatusChanged={onStatusChanged}
       />
     </>
