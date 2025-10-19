@@ -169,7 +169,14 @@ export default function ReservationCalendarPage() {
   };
   
   const handleStatusChange = (reservation: Reservation) => {
-    console.log('handleStatusChange called with:', reservation);
+    console.log('handleStatusChange called with reservation:', reservation);
+    console.log('🔍 Fuel data in reservation:', {
+      fuelLevelPickup: reservation.fuelLevelPickup,
+      fuelLevelReturn: reservation.fuelLevelReturn,
+      fuelCost: reservation.fuelCost,
+      fuelCardNumber: reservation.fuelCardNumber,
+      fuelNotes: reservation.fuelNotes,
+    });
     setSelectedReservation(reservation);
     setStatusDialogOpen(true);
     console.log('Status dialog should be open now');
@@ -1742,6 +1749,7 @@ export default function ReservationCalendarPage() {
           initialStatus={selectedReservation.status || "pending"}
           vehicle={selectedReservation.vehicle ? {
             ...selectedReservation.vehicle,
+            currentMileage: selectedReservation.vehicle.currentMileage ?? undefined,
             departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
             returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
           } : undefined}

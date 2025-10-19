@@ -139,26 +139,34 @@ export function StatusChangeDialog({
       status: initialStatus,
       startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
       departureMileage: undefined,
-      fuelLevelPickup: initialFuelData?.fuelLevelPickup || undefined,
-      fuelLevelReturn: initialFuelData?.fuelLevelReturn || undefined,
-      fuelCost: initialFuelData?.fuelCost || undefined,
-      fuelCardNumber: initialFuelData?.fuelCardNumber || undefined,
-      fuelNotes: initialFuelData?.fuelNotes || undefined,
+      fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
+      fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
+      fuelCost: initialFuelData?.fuelCost ?? undefined,
+      fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
+      fuelNotes: initialFuelData?.fuelNotes ?? undefined,
     },
   });
   
   // Reset form when a new reservation is selected (when reservationId changes)
   useEffect(() => {
+    console.log('🔄 Resetting status change dialog form with fuel data:', {
+      fuelLevelPickup: initialFuelData?.fuelLevelPickup,
+      fuelLevelReturn: initialFuelData?.fuelLevelReturn,
+      fuelCost: initialFuelData?.fuelCost,
+      fuelCardNumber: initialFuelData?.fuelCardNumber,
+      fuelNotes: initialFuelData?.fuelNotes,
+    });
+    
     // Reset the form with new default values
     form.reset({
       status: initialStatus,
       startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
       departureMileage: undefined,
-      fuelLevelPickup: initialFuelData?.fuelLevelPickup || undefined,
-      fuelLevelReturn: initialFuelData?.fuelLevelReturn || undefined,
-      fuelCost: initialFuelData?.fuelCost || undefined,
-      fuelCardNumber: initialFuelData?.fuelCardNumber || undefined,
-      fuelNotes: initialFuelData?.fuelNotes || undefined,
+      fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
+      fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
+      fuelCost: initialFuelData?.fuelCost ?? undefined,
+      fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
+      fuelNotes: initialFuelData?.fuelNotes ?? undefined,
     });
     
     // Reset the current status
@@ -546,7 +554,8 @@ export function StatusChangeDialog({
                     <FormLabel>Fuel Level at Pickup</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value || "not_recorded"}
+                      value={field.value ?? "not_recorded"}
+                      defaultValue="not_recorded"
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -608,7 +617,8 @@ export function StatusChangeDialog({
                       <FormLabel>Fuel Level at Return</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || "not_recorded"}
+                        value={field.value ?? "not_recorded"}
+                        defaultValue="not_recorded"
                       >
                         <FormControl>
                           <SelectTrigger>
