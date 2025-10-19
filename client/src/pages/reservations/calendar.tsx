@@ -1413,6 +1413,44 @@ export default function ReservationCalendarPage() {
                 </div>
               )}
 
+              {/* Delivery Information */}
+              {selectedReservation.deliveryRequired && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-2.5">
+                  <label className="text-[10px] font-medium text-green-700 uppercase mb-2 block flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    Delivery/Pickup Service
+                  </label>
+                  <div className="space-y-2">
+                    {(selectedReservation.deliveryAddress || selectedReservation.deliveryCity || selectedReservation.deliveryPostalCode) && (
+                      <div>
+                        <p className="text-[10px] text-green-600 font-medium">Delivery Address</p>
+                        <p className="text-xs font-semibold text-green-900 mt-0.5">
+                          {selectedReservation.deliveryAddress}
+                          {selectedReservation.deliveryAddress && (selectedReservation.deliveryCity || selectedReservation.deliveryPostalCode) && ', '}
+                          {selectedReservation.deliveryPostalCode} {selectedReservation.deliveryCity}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedReservation.deliveryFee !== null && selectedReservation.deliveryFee !== undefined && (
+                        <div>
+                          <p className="text-[10px] text-green-600 font-medium">Delivery Fee</p>
+                          <p className="text-xs font-semibold text-green-900 mt-0.5">{formatCurrency(Number(selectedReservation.deliveryFee))}</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedReservation.deliveryNotes && (
+                      <div className="pt-2 border-t border-green-200">
+                        <p className="text-[10px] text-green-600 font-medium">Special Instructions</p>
+                        <p className="text-xs text-green-900 mt-0.5 whitespace-pre-wrap">{selectedReservation.deliveryNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Fuel Tracking Information */}
               {(selectedReservation.fuelLevelPickup || selectedReservation.fuelLevelReturn || selectedReservation.fuelCost || selectedReservation.fuelCardNumber || selectedReservation.fuelNotes) && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-2.5">
