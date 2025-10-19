@@ -2250,21 +2250,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         req.body.recurringFrequency = null;
       }
       
-      // Handle fuel-related numeric fields
-      if (req.body.fuelLevelPickup === "null" || req.body.fuelLevelPickup === "" || req.body.fuelLevelPickup === null) {
+      // Handle fuel-related fields
+      // fuelLevelPickup and fuelLevelReturn are text strings (e.g., "full", "1/2", "empty")
+      if (req.body.fuelLevelPickup === "null" || req.body.fuelLevelPickup === "" || req.body.fuelLevelPickup === null || req.body.fuelLevelPickup === "not_recorded") {
         req.body.fuelLevelPickup = null;
-      } else if (req.body.fuelLevelPickup) {
-        const parsed = parseFloat(req.body.fuelLevelPickup);
-        req.body.fuelLevelPickup = isNaN(parsed) ? null : parsed;
       }
       
-      if (req.body.fuelLevelReturn === "null" || req.body.fuelLevelReturn === "" || req.body.fuelLevelReturn === null) {
+      if (req.body.fuelLevelReturn === "null" || req.body.fuelLevelReturn === "" || req.body.fuelLevelReturn === null || req.body.fuelLevelReturn === "not_recorded") {
         req.body.fuelLevelReturn = null;
-      } else if (req.body.fuelLevelReturn) {
-        const parsed = parseFloat(req.body.fuelLevelReturn);
-        req.body.fuelLevelReturn = isNaN(parsed) ? null : parsed;
       }
       
+      // fuelCost is numeric
       if (req.body.fuelCost === "null" || req.body.fuelCost === "" || req.body.fuelCost === null) {
         req.body.fuelCost = null;
       } else if (req.body.fuelCost) {

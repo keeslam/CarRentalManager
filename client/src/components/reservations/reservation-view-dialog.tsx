@@ -783,6 +783,47 @@ export function ReservationViewDialog({
                 )}
               </div>
 
+              {/* Fuel Tracking Information */}
+              {(reservation.fuelLevelPickup || reservation.fuelLevelReturn || reservation.fuelCost || reservation.fuelCardNumber || reservation.fuelNotes) && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Fuel Tracking</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {reservation.fuelLevelPickup && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel at Pickup</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{reservation.fuelLevelPickup}</p>
+                        </div>
+                      )}
+                      {reservation.fuelLevelReturn && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel at Return</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{reservation.fuelLevelReturn}</p>
+                        </div>
+                      )}
+                      {reservation.fuelCost && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel Cost</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{formatCurrency(Number(reservation.fuelCost))}</p>
+                        </div>
+                      )}
+                      {reservation.fuelCardNumber && (
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Fuel Card Number</p>
+                          <p className="text-sm font-semibold text-blue-900 mt-1">{reservation.fuelCardNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                    {reservation.fuelNotes && (
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-xs text-blue-600 font-medium">Fuel Notes</p>
+                        <p className="text-sm text-blue-800 mt-1">{reservation.fuelNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Spare Vehicle Management */}
               {reservation.type === 'standard' && (
                 <div>
