@@ -20,7 +20,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
 import { Redirect } from "wouter";
-import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle, Upload, RotateCcw } from "lucide-react";
+import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle, Upload, RotateCcw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -47,12 +47,16 @@ export default function BackupPage() {
   const queryClient = useQueryClient();
   const [downloadingData, setDownloadingData] = useState(false);
   const [downloadingCode, setDownloadingCode] = useState(false);
+  const [downloadingFiles, setDownloadingFiles] = useState(false);
   const [restoringData, setRestoringData] = useState(false);
   const [restoringCode, setRestoringCode] = useState(false);
+  const [restoringFiles, setRestoringFiles] = useState(false);
   const [selectedDataFile, setSelectedDataFile] = useState<File | null>(null);
   const [selectedCodeFile, setSelectedCodeFile] = useState<File | null>(null);
+  const [selectedFilesArchive, setSelectedFilesArchive] = useState<File | null>(null);
   const dataFileInputRef = useRef<HTMLInputElement>(null);
   const codeFileInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch backup settings
   const { data: settings } = useQuery<BackupSettings>({
@@ -265,6 +269,79 @@ export default function BackupPage() {
     }
   };
 
+  const handleDownloadFiles = async () => {
+    setDownloadingFiles(true);
+    try {
+      const response = await fetch('/api/backups/download-files', {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download files backup');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `car-rental-files-${new Date().toISOString().split('T')[0]}.tar.gz`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Files Downloaded',
+        description: 'Your uploaded files have been downloaded successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'Failed to download files',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingFiles(false);
+    }
+  };
+
+  const handleRestoreFiles = async () => {
+    if (!selectedFilesArchive) return;
+    
+    setRestoringFiles(true);
+    try {
+      const formData = new FormData();
+      formData.append('backup', selectedFilesArchive);
+
+      const response = await fetch('/api/backups/restore-files', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to restore files');
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: 'Files Restored',
+        description: result.message || 'All uploaded files have been restored successfully.',
+      });
+      
+      setSelectedFilesArchive(null);
+    } catch (error) {
+      toast({
+        title: 'Restore Failed',
+        description: error instanceof Error ? error.message : 'Failed to restore files',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoringFiles(false);
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
@@ -368,8 +445,8 @@ export default function BackupPage() {
 
         {/* Manual Download Buttons */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Manual Download</h2>
-          <div className="grid gap-6 md:grid-cols-2">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Manual Backup & Restore</h2>
+          <div className="grid gap-6 md:grid-cols-3">
             {/* App Data Backup */}
             <Card className="border-2 hover:border-blue-300 transition-colors">
               <CardHeader className="text-center pb-4">
@@ -476,6 +553,116 @@ export default function BackupPage() {
 
                 <p className="text-xs text-gray-500 text-center">
                   Upload .sql file to restore
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Uploaded Files Backup */}
+            <Card className="border-2 hover:border-orange-300 transition-colors">
+              <CardHeader className="text-center pb-4">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-orange-100 rounded-full">
+                    <FileText className="h-8 w-8 text-orange-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-xl">Uploaded Files</CardTitle>
+                <CardDescription>
+                  Download all documents & contracts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 text-green-600 flex-shrink-0" />
+                    <span>All uploaded documents</span>
+                  </div>
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 text-green-600 flex-shrink-0" />
+                    <span>Driver licenses & contracts</span>
+                  </div>
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 text-green-600 flex-shrink-0" />
+                    <span>Expense receipts & photos</span>
+                  </div>
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 text-green-600 flex-shrink-0" />
+                    <span>PDF template backgrounds</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={handleDownloadFiles}
+                  disabled={downloadingFiles}
+                  data-testid="download-files-button"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {downloadingFiles ? 'Downloading...' : 'Download Uploaded Files'}
+                </Button>
+
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restore Files
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept=".tar.gz,.tgz"
+                      onChange={(e) => setSelectedFilesArchive(e.target.files?.[0] || null)}
+                      ref={filesInputRef}
+                      className="text-sm"
+                      data-testid="files-file-input"
+                    />
+                    {selectedFilesArchive && (
+                      <p className="text-xs text-gray-600">Selected: {selectedFilesArchive.name}</p>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline"
+                          className="w-full" 
+                          disabled={!selectedFilesArchive || restoringFiles}
+                          data-testid="restore-files-button"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {restoringFiles ? 'Restoring...' : 'Restore Files'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-destructive">⚠️ Warning: Files Restore</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will replace ALL your uploaded files with the backup archive.
+                            <br /><br />
+                            <strong>What will be replaced:</strong>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              <li>All uploaded documents</li>
+                              <li>Driver licenses & contracts</li>
+                              <li>Expense receipts & photos</li>
+                              <li>PDF template backgrounds</li>
+                            </ul>
+                            <br />
+                            <strong>Note:</strong> Your database and code will NOT be affected. Only uploaded files will be restored.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleRestoreFiles}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Yes, Restore Files
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-500 text-center">
+                  Upload .tar.gz file to restore
                 </p>
               </CardContent>
             </Card>

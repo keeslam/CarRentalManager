@@ -5550,6 +5550,108 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
     }
   });
+
+  // Download uploaded files (uploads directory)
+  app.get("/api/backups/download-files", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `car-rental-files-${timestamp}.tar.gz`;
+      const filepath = path.join(process.cwd(), 'temp', filename);
+      
+      // Create temp directory if it doesn't exist
+      await fs.promises.mkdir(path.join(process.cwd(), 'temp'), { recursive: true });
+      
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      
+      // Check if uploads directory exists
+      try {
+        await fs.promises.access(uploadsDir);
+      } catch {
+        // If uploads directory doesn't exist, create an empty archive
+        await execAsync(`tar -czf "${filepath}" -T /dev/null`);
+        return res.download(filepath, filename, async (err) => {
+          try {
+            await fs.promises.unlink(filepath);
+          } catch (cleanupError) {
+            console.error('Error cleaning up temp file:', cleanupError);
+          }
+          if (err) {
+            console.error('Error sending file:', err);
+          }
+        });
+      }
+      
+      // Create tar.gz of uploads directory
+      await execAsync(`tar -czf "${filepath}" -C "${process.cwd()}" uploads`);
+      
+      // Send file
+      res.download(filepath, filename, async (err) => {
+        // Clean up temp file after download
+        try {
+          await fs.promises.unlink(filepath);
+        } catch (cleanupError) {
+          console.error('Error cleaning up temp file:', cleanupError);
+        }
+        
+        if (err) {
+          console.error('Error sending file:', err);
+        }
+      });
+    } catch (error) {
+      console.error("Error downloading uploaded files:", error);
+      res.status(500).json({ 
+        error: "Failed to download uploaded files",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Restore uploaded files from tar.gz archive
+  app.post("/api/backups/restore-files", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No backup file uploaded' });
+      }
+
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      // Extract tar.gz to current directory (will restore uploads folder)
+      await execAsync(`tar -xzf "${req.file.path}" -C "${process.cwd()}"`);
+
+      // Clean up uploaded file
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+
+      res.json({
+        success: true,
+        message: 'All uploaded files have been restored successfully.',
+      });
+    } catch (error) {
+      // Clean up file on error
+      if (req.file) {
+        try {
+          await fs.promises.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.error('Error cleaning up uploaded file:', cleanupError);
+        }
+      }
+      
+      console.error("Error restoring uploaded files:", error);
+      res.status(500).json({ 
+        error: "Failed to restore uploaded files",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // Get backup status
   app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {
