@@ -6299,6 +6299,133 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.status(500).json({ message: "Error testing WhatsApp connection" });
     }
   });
+  
+  // Get all WhatsApp templates
+  app.get("/api/whatsapp/templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getAppSettingsByCategory('whatsapp_template');
+      const templates = settings.map(s => {
+        try {
+          return JSON.parse(s.value);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching WhatsApp templates:", error);
+      res.status(500).json({ message: "Error fetching WhatsApp templates" });
+    }
+  });
+  
+  // Create WhatsApp template
+  app.post("/api/whatsapp/templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      
+      // Validate template payload
+      const templateSchema = z.object({
+        name: z.string().min(1, "Template name is required"),
+        category: z.string().min(1, "Category is required"),
+        content: z.string().min(1, "Content is required"),
+        variables: z.array(z.string())
+      });
+      
+      const validationResult = templateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid template data", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const template = validationResult.data;
+      
+      // Generate ID
+      const templates = await storage.getAppSettingsByCategory('whatsapp_template');
+      const newId = templates.length > 0 
+        ? Math.max(...templates.map(t => {
+            try { return JSON.parse(t.value).id || 0; } catch { return 0; }
+          })) + 1
+        : 1;
+      
+      const templateWithId = { ...template, id: newId };
+      
+      await storage.createAppSetting({
+        key: `whatsapp_template_${newId}`,
+        value: JSON.stringify(templateWithId),
+        category: 'whatsapp_template',
+        description: `WhatsApp template: ${template.name}`,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null,
+      });
+      
+      res.json(templateWithId);
+    } catch (error) {
+      console.error("Error creating WhatsApp template:", error);
+      res.status(500).json({ message: "Error creating WhatsApp template" });
+    }
+  });
+  
+  // Update WhatsApp template
+  app.put("/api/whatsapp/templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const id = parseInt(req.params.id);
+      
+      // Validate template payload
+      const templateSchema = z.object({
+        name: z.string().min(1, "Template name is required"),
+        category: z.string().min(1, "Category is required"),
+        content: z.string().min(1, "Content is required"),
+        variables: z.array(z.string())
+      });
+      
+      const validationResult = templateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid template data", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const template = validationResult.data;
+      
+      const existing = await storage.getAppSettingByKey(`whatsapp_template_${id}`);
+      if (!existing) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      const updated = await storage.updateAppSetting(existing.id, {
+        value: JSON.stringify({ ...template, id }),
+        updatedBy: user ? user.username : null,
+      });
+      
+      res.json(JSON.parse(updated.value));
+    } catch (error) {
+      console.error("Error updating WhatsApp template:", error);
+      res.status(500).json({ message: "Error updating WhatsApp template" });
+    }
+  });
+  
+  // Delete WhatsApp template
+  app.delete("/api/whatsapp/templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existing = await storage.getAppSettingByKey(`whatsapp_template_${id}`);
+      
+      if (!existing) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      await storage.deleteAppSetting(existing.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting WhatsApp template:", error);
+      res.status(500).json({ message: "Error deleting WhatsApp template" });
+    }
+  });
 
   // ============================================
   // REPORTS & ANALYTICS ROUTES

@@ -6,6 +6,39 @@ This is a comprehensive car rental management system built with React (frontend)
 
 ## Recent Changes (October 2025)
 
+- **Four Major New Features Added** (Oct 19, 2025): Significant expansion of system capabilities across delivery, analytics, reporting, and communication
+  - **Vehicle Delivery/Pickup Service**:
+    - Delivery service option in reservation form with address input (street, city, postal code)
+    - Delivery fee calculation and special instructions notes
+    - Delivery tracking dashboard showing pending, scheduled, en-route, and completed deliveries
+    - Status management with real-time updates
+    - Database schema: delivery fields in reservations table + delivery_tasks table for advanced tracking
+    - Route: `/delivery` for delivery dashboard
+  - **Maintenance Cost Analysis**:
+    - Comprehensive cost breakdown dashboard with time range and brand filters
+    - Key metrics: total costs, average cost per vehicle, cost per kilometer
+    - Category breakdown charts (maintenance, repairs, tires, fuel, insurance, etc.)
+    - Brand comparison showing total/average costs across vehicle makes
+    - Vehicle-level details with cost per km calculations
+    - Monthly trend analysis showing 12-month cost patterns
+    - API endpoint: `/api/reports/maintenance-costs`
+    - Route: `/reports/maintenance-costs`
+  - **WhatsApp Business Integration**:
+    - WhatsApp settings page for configuring Twilio API connection
+    - Phone number and credentials management (Twilio Account SID, Auth Token)
+    - Automatic notification toggles for reservation events (created, pickup reminder, return reminder, payment due)
+    - Test connection functionality
+    - Message templates management with default library (booking confirmation, pickup/return reminders, payment/invoice notifications)
+    - Template variables using `{{variableName}}` syntax for dynamic content
+    - CRUD operations for custom templates with category organization
+    - API endpoints: `/api/settings/whatsapp`, `/api/whatsapp/templates`, `/api/whatsapp/test-connection`
+    - Routes: `/settings/whatsapp`, `/settings/whatsapp/templates`
+  - **Custom Report Builder Foundation**:
+    - Database schema: saved_reports table with JSON configuration storage
+    - Prepared for future drag-drop report builder interface
+    - Support for custom queries, filters, grouping, and scheduled report generation
+  - **Database Tables**: whatsapp_messages, whatsapp_templates, delivery_tasks, saved_reports
+
 - **Customer Portal & Extension Requests Removed** (Oct 18, 2025): Completely removed customer portal and extension request functionality
   - Removed customer portal login/dashboard pages and all related UI components
   - Removed customer authentication system and API endpoints
