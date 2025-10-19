@@ -41,6 +41,20 @@ interface BackupStatus {
   nextScheduled?: string;
 }
 
+interface BackupManifest {
+  timestamp: string;
+  type: 'database' | 'files';
+  filename: string;
+  size: number;
+  checksum: string;
+  metadata?: {
+    dbVersion?: string;
+    fileCount?: number;
+    compressedSize?: number;
+    uploaded?: boolean;
+  };
+}
+
 export default function BackupPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -67,6 +81,15 @@ export default function BackupPage() {
   const { data: status } = useQuery<BackupStatus>({
     queryKey: ['/api/backups/status'],
     refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch recent backups (last 3 of each type)
+  const { data: recentDatabaseBackups = [] } = useQuery<BackupManifest[]>({
+    queryKey: ['/api/backups/list', { type: 'database', limit: 3 }],
+  });
+
+  const { data: recentFilesBackups = [] } = useQuery<BackupManifest[]>({
+    queryKey: ['/api/backups/list', { type: 'files', limit: 3 }],
   });
 
   // Toggle auto backup mutation
@@ -342,6 +365,47 @@ export default function BackupPage() {
     }
   };
 
+  const handleDownloadAutomatedBackup = async (filename: string) => {
+    try {
+      const response = await fetch(`/api/backups/download/${filename}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download backup');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Backup Downloaded',
+        description: `${filename} has been downloaded successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'Failed to download backup',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
@@ -442,6 +506,86 @@ export default function BackupPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Recent Automated Backups */}
+        {(recentDatabaseBackups.length > 0 || recentFilesBackups.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Automated Backups</CardTitle>
+              <CardDescription>Download backups created by the automatic backup system (saved to: ./backups/)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Database Backups */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <Database className="h-4 w-4 mr-2 text-blue-600" />
+                    Database Backups (Last 3)
+                  </h3>
+                  {recentDatabaseBackups.length === 0 ? (
+                    <p className="text-sm text-gray-500">No automated database backups yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentDatabaseBackups.map((backup, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{backup.filename}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(backup.timestamp)} • {formatFileSize(backup.size)}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadAutomatedBackup(backup.filename)}
+                            data-testid={`download-auto-db-${index}`}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Files Backups */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-orange-600" />
+                    Files Backups (Last 3)
+                  </h3>
+                  {recentFilesBackups.length === 0 ? (
+                    <p className="text-sm text-gray-500">No automated files backups yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentFilesBackups.map((backup, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{backup.filename}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(backup.timestamp)} • {formatFileSize(backup.size)}
+                              {backup.metadata?.fileCount && ` • ${backup.metadata.fileCount} files`}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadAutomatedBackup(backup.filename)}
+                            data-testid={`download-auto-files-${index}`}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Manual Download Buttons */}
         <div>

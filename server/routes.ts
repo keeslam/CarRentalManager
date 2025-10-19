@@ -5653,6 +5653,77 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // List available backups
+  app.get("/api/backups/list", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const type = req.query.type as 'database' | 'files' | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      const backups = await backupService.listBackups(type);
+      
+      // Limit results if specified
+      const limitedBackups = limit ? backups.slice(0, limit) : backups;
+      
+      res.json(limitedBackups);
+    } catch (error) {
+      console.error("Error listing backups:", error);
+      res.status(500).json({ 
+        error: "Failed to list backups",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Download a specific backup file
+  app.get("/api/backups/download/:filename", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Security: prevent directory traversal
+      if (filename.includes('..') || filename.includes('/')) {
+        return res.status(400).json({ error: 'Invalid filename' });
+      }
+      
+      const backupSettings = await db.select().from(backupSettingsTable).limit(1);
+      const settings = backupSettings[0];
+      const backupPath = settings?.localPath || path.join(process.cwd(), 'backups');
+      
+      // Search for the file in the backup directory structure
+      const findFile = (dir: string): string | null => {
+        if (!fs.existsSync(dir)) return null;
+        
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+          const itemPath = path.join(dir, item);
+          const stat = fs.statSync(itemPath);
+          
+          if (stat.isDirectory()) {
+            const found = findFile(itemPath);
+            if (found) return found;
+          } else if (item === filename) {
+            return itemPath;
+          }
+        }
+        return null;
+      };
+      
+      const filePath = findFile(backupPath);
+      
+      if (!filePath || !fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Backup file not found' });
+      }
+      
+      // Send the file
+      res.download(filePath, filename);
+    } catch (error) {
+      console.error("Error downloading backup:", error);
+      res.status(500).json({ 
+        error: "Failed to download backup",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Get backup status
   app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {
     try {
