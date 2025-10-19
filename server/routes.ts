@@ -2143,9 +2143,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         updatedBy: user ? user.username : null
       };
       
+      console.log('🔍 Received request body:', req.body);
+      
       // Add fuel tracking fields if present in request body
       if (req.body.fuelLevelPickup !== undefined) {
         dataWithTracking.fuelLevelPickup = req.body.fuelLevelPickup;
+        console.log('✅ Added fuelLevelPickup to dataWithTracking:', req.body.fuelLevelPickup);
       }
       if (req.body.fuelLevelReturn !== undefined) {
         dataWithTracking.fuelLevelReturn = req.body.fuelLevelReturn;
@@ -2160,7 +2163,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         dataWithTracking.fuelNotes = req.body.fuelNotes;
       }
       
+      console.log('📦 Sending to database:', dataWithTracking);
+      
       const reservation = await storage.updateReservation(id, dataWithTracking);
+      
+      console.log('✅ Database returned:', reservation);
       
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
