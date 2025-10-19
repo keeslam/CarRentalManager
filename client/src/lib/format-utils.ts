@@ -74,7 +74,7 @@ export function formatReservationStatus(status: string): string {
     case 'pending':
       return 'Booked';
     case 'confirmed':
-      return 'Out';
+      return 'Picked up';
     case 'completed':
       return 'Returned';
     case 'cancelled':
