@@ -1753,6 +1753,13 @@ export default function ReservationCalendarPage() {
             phone: selectedReservation.customer.phone ?? undefined,
             email: selectedReservation.customer.email ?? undefined
           } : undefined}
+          initialFuelData={{
+            fuelLevelPickup: selectedReservation.fuelLevelPickup,
+            fuelLevelReturn: selectedReservation.fuelLevelReturn,
+            fuelCost: selectedReservation.fuelCost ? Number(selectedReservation.fuelCost) : null,
+            fuelCardNumber: selectedReservation.fuelCardNumber,
+            fuelNotes: selectedReservation.fuelNotes,
+          }}
           onStatusChanged={async () => {
             // Close the dialog and refresh calendar data
             setStatusDialogOpen(false);

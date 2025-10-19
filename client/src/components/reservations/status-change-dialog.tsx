@@ -101,6 +101,13 @@ interface StatusChangeDialogProps {
     phone?: string;
     email?: string;
   };
+  initialFuelData?: {
+    fuelLevelPickup?: string | null;
+    fuelLevelReturn?: string | null;
+    fuelCost?: number | null;
+    fuelCardNumber?: string | null;
+    fuelNotes?: string | null;
+  };
   onStatusChanged?: () => void;
 }
 
@@ -119,6 +126,7 @@ export function StatusChangeDialog({
   vehicle,
   onStatusChanged,
   customer, // We'll add this to the props
+  initialFuelData,
 }: StatusChangeDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -131,6 +139,11 @@ export function StatusChangeDialog({
       status: initialStatus,
       startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
       departureMileage: undefined,
+      fuelLevelPickup: initialFuelData?.fuelLevelPickup || undefined,
+      fuelLevelReturn: initialFuelData?.fuelLevelReturn || undefined,
+      fuelCost: initialFuelData?.fuelCost || undefined,
+      fuelCardNumber: initialFuelData?.fuelCardNumber || undefined,
+      fuelNotes: initialFuelData?.fuelNotes || undefined,
     },
   });
   
@@ -141,11 +154,16 @@ export function StatusChangeDialog({
       status: initialStatus,
       startMileage: vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined,
       departureMileage: undefined,
+      fuelLevelPickup: initialFuelData?.fuelLevelPickup || undefined,
+      fuelLevelReturn: initialFuelData?.fuelLevelReturn || undefined,
+      fuelCost: initialFuelData?.fuelCost || undefined,
+      fuelCardNumber: initialFuelData?.fuelCardNumber || undefined,
+      fuelNotes: initialFuelData?.fuelNotes || undefined,
     });
     
     // Reset the current status
     setCurrentStatus(initialStatus);
-  }, [reservationId, initialStatus, vehicle, form]);
+  }, [reservationId, initialStatus, vehicle, initialFuelData, form]);
   
   // Update form when status changes
   useEffect(() => {
@@ -161,16 +179,38 @@ export function StatusChangeDialog({
   // Status change mutation
   const statusChangeMutation = useMutation({
     mutationFn: async (data: StatusChangeFormType) => {
+      // Prepare reservation update data with status and fuel tracking
+      const reservationUpdateData: any = { 
+        status: data.status,
+      };
+      
+      // Add fuel tracking fields if present
+      if (data.fuelLevelPickup !== undefined && data.fuelLevelPickup !== null) {
+        reservationUpdateData.fuelLevelPickup = data.fuelLevelPickup === "not_recorded" ? null : data.fuelLevelPickup;
+      }
+      if (data.fuelLevelReturn !== undefined && data.fuelLevelReturn !== null) {
+        reservationUpdateData.fuelLevelReturn = data.fuelLevelReturn === "not_recorded" ? null : data.fuelLevelReturn;
+      }
+      if (data.fuelCost !== undefined && data.fuelCost !== null) {
+        reservationUpdateData.fuelCost = data.fuelCost;
+      }
+      if (data.fuelCardNumber !== undefined && data.fuelCardNumber !== null && data.fuelCardNumber !== "") {
+        reservationUpdateData.fuelCardNumber = data.fuelCardNumber;
+      }
+      if (data.fuelNotes !== undefined && data.fuelNotes !== null && data.fuelNotes !== "") {
+        reservationUpdateData.fuelNotes = data.fuelNotes;
+      }
+      
       // We only need to update the vehicle if we have mileage data
       if (
         (data.status === "confirmed" && data.startMileage && vehicle?.id) ||
         (data.status === "completed" && data.departureMileage && vehicle?.id)
       ) {
-        // First update the reservation status
+        // First update the reservation status and fuel tracking
         const reservationResponse = await apiRequest(
           "PATCH", 
           `/api/reservations/${reservationId}/status`,
-          { status: data.status }
+          reservationUpdateData
         );
         
         if (!reservationResponse.ok) {
@@ -232,11 +272,11 @@ export function StatusChangeDialog({
         // Just return an empty object to indicate success
         return {};
       } else {
-        // Simple status update without mileage
+        // Simple status update without mileage (but with fuel tracking)
         const response = await apiRequest(
           "PATCH", 
           `/api/reservations/${reservationId}/status`,
-          { status: data.status }
+          reservationUpdateData
         );
         
         if (!response.ok) {
