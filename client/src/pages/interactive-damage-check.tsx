@@ -96,6 +96,14 @@ export default function InteractiveDamageCheck() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const renterSignatureRef = useRef<HTMLCanvasElement>(null);
+  const customerSignatureRef = useRef<HTMLCanvasElement>(null);
+  
+  // Signature states
+  const [isSigningRenter, setIsSigningRenter] = useState(false);
+  const [isSigningCustomer, setIsSigningCustomer] = useState(false);
+  const [renterSignature, setRenterSignature] = useState<string | null>(null);
+  const [customerSignature, setCustomerSignature] = useState<string | null>(null);
 
   // Parse URL params
   useEffect(() => {
@@ -310,6 +318,95 @@ export default function InteractiveDamageCheck() {
     setDrawingPaths([]);
   };
 
+  // Signature handling
+  const setupSignatureCanvas = (canvasRef: React.RefObject<HTMLCanvasElement>, setIsSigning: (val: boolean) => void) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas size
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2; // Higher resolution
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    
+    const startDrawing = (e: MouseEvent | TouchEvent) => {
+      isDrawing = true;
+      const rect = canvas.getBoundingClientRect();
+      const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as MouseEvent).clientX - rect.left;
+      const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as MouseEvent).clientY - rect.top;
+      lastX = x;
+      lastY = y;
+    };
+    
+    const draw = (e: MouseEvent | TouchEvent) => {
+      if (!isDrawing) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as MouseEvent).clientX - rect.left;
+      const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as MouseEvent).clientY - rect.top;
+      
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      lastX = x;
+      lastY = y;
+    };
+    
+    const stopDrawing = () => {
+      isDrawing = false;
+    };
+    
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+    
+    return () => {
+      canvas.removeEventListener('mousedown', startDrawing);
+      canvas.removeEventListener('mousemove', draw);
+      canvas.removeEventListener('mouseup', stopDrawing);
+      canvas.removeEventListener('mouseleave', stopDrawing);
+      canvas.removeEventListener('touchstart', startDrawing);
+      canvas.removeEventListener('touchmove', draw);
+      canvas.removeEventListener('touchend', stopDrawing);
+    };
+  };
+  
+  const clearSignature = (canvasRef: React.RefObject<HTMLCanvasElement>, setSignature: (val: string | null) => void) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignature(null);
+  };
+  
+  const saveSignature = (canvasRef: React.RefObject<HTMLCanvasElement>, setSignature: (val: string | null) => void, setIsSigning: (val: boolean) => void) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    setSignature(dataUrl);
+    setIsSigning(false);
+  };
+
   const handleSave = async () => {
     if (!selectedVehicleId || !diagramTemplate) {
       toast({
@@ -359,6 +456,8 @@ export default function InteractiveDamageCheck() {
         mileage: mileage ? parseInt(mileage) : null,
         notes: notes || null,
         checklistData: JSON.stringify(checklistItems),
+        renterSignature: renterSignature || null,
+        customerSignature: customerSignature || null,
       };
 
       await apiRequest('POST', '/api/interactive-damage-checks', checkData);
@@ -864,6 +963,101 @@ export default function InteractiveDamageCheck() {
               </Card>
             )}
           </div>
+
+        {/* Signatures Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Renter Signature */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Renter Signature</h3>
+            {renterSignature ? (
+              <div>
+                <img src={renterSignature} alt="Renter signature" className="border rounded h-32 w-full object-contain bg-white" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => clearSignature(renterSignatureRef, setRenterSignature)}
+                  className="mt-2"
+                  data-testid="button-clear-renter-signature"
+                >
+                  Clear Signature
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <canvas
+                  ref={renterSignatureRef}
+                  className="border rounded h-32 w-full bg-white cursor-crosshair"
+                  onMouseEnter={() => !isSigningRenter && setupSignatureCanvas(renterSignatureRef, setIsSigningRenter)}
+                  onTouchStart={() => !isSigningRenter && setupSignatureCanvas(renterSignatureRef, setIsSigningRenter)}
+                  data-testid="canvas-renter-signature"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => clearSignature(renterSignatureRef, setRenterSignature)}
+                    data-testid="button-clear-renter-canvas"
+                  >
+                    Clear
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => saveSignature(renterSignatureRef, setRenterSignature, setIsSigningRenter)}
+                    data-testid="button-save-renter-signature"
+                  >
+                    Save Signature
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Customer Signature */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Customer Signature</h3>
+            {customerSignature ? (
+              <div>
+                <img src={customerSignature} alt="Customer signature" className="border rounded h-32 w-full object-contain bg-white" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => clearSignature(customerSignatureRef, setCustomerSignature)}
+                  className="mt-2"
+                  data-testid="button-clear-customer-signature"
+                >
+                  Clear Signature
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <canvas
+                  ref={customerSignatureRef}
+                  className="border rounded h-32 w-full bg-white cursor-crosshair"
+                  onMouseEnter={() => !isSigningCustomer && setupSignatureCanvas(customerSignatureRef, setIsSigningCustomer)}
+                  onTouchStart={() => !isSigningCustomer && setupSignatureCanvas(customerSignatureRef, setIsSigningCustomer)}
+                  data-testid="canvas-customer-signature"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => clearSignature(customerSignatureRef, setCustomerSignature)}
+                    data-testid="button-clear-customer-canvas"
+                  >
+                    Clear
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => saveSignature(customerSignatureRef, setCustomerSignature, setIsSigningCustomer)}
+                    data-testid="button-save-customer-signature"
+                  >
+                    Save Signature
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

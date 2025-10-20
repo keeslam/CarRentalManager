@@ -1049,6 +1049,10 @@ export const interactiveDamageChecks = pgTable("interactive_damage_checks", {
   mileage: integer("mileage"),
   fuelLevel: text("fuel_level"), // e.g., "Full", "3/4", "1/2", "1/4", "Empty"
   
+  // Signatures - base64 encoded images
+  renterSignature: text("renter_signature"), // Renter/staff signature
+  customerSignature: text("customer_signature"), // Customer signature
+  
   // Staff who completed the check
   completedBy: text("completed_by"),
   
