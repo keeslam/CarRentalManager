@@ -341,7 +341,7 @@ export default function InteractiveDamageCheck() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1800px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -354,124 +354,216 @@ export default function InteractiveDamageCheck() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Selection and Details */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-4">Vehicle Selection</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label>Vehicle *</Label>
-                  <Select 
-                    value={selectedVehicleId?.toString() || ""} 
-                    onValueChange={(val) => setSelectedVehicleId(parseInt(val))}
-                  >
-                    <SelectTrigger data-testid="select-vehicle">
-                      <SelectValue placeholder="Select a vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicles.map(vehicle => (
-                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                          {displayLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Vehicle Selection - Full Width */}
+        <Card className="p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label>Vehicle *</Label>
+              <Select 
+                value={selectedVehicleId?.toString() || ""} 
+                onValueChange={(val) => setSelectedVehicleId(parseInt(val))}
+              >
+                <SelectTrigger data-testid="select-vehicle">
+                  <SelectValue placeholder="Select a vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicles.map(vehicle => (
+                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                      {displayLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div>
-                  <Label>Reservation (Optional)</Label>
-                  <Select 
-                    value={selectedReservationId?.toString() || "none"} 
-                    onValueChange={(val) => setSelectedReservationId(val === "none" ? null : parseInt(val))}
-                  >
-                    <SelectTrigger data-testid="select-reservation">
-                      <SelectValue placeholder="Link to reservation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Reservation</SelectItem>
-                      {reservations.map(reservation => (
-                        <SelectItem key={reservation.id} value={reservation.id.toString()}>
-                          #{reservation.id} - Reservation
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label>Reservation (Optional)</Label>
+              <Select 
+                value={selectedReservationId?.toString() || "none"} 
+                onValueChange={(val) => setSelectedReservationId(val === "none" ? null : parseInt(val))}
+              >
+                <SelectTrigger data-testid="select-reservation">
+                  <SelectValue placeholder="Link to reservation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Reservation</SelectItem>
+                  {reservations.map(reservation => (
+                    <SelectItem key={reservation.id} value={reservation.id.toString()}>
+                      #{reservation.id} - Reservation
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div>
-                  <Label>Check Type</Label>
-                  <Select value={checkType} onValueChange={(val: any) => setCheckType(val)}>
-                    <SelectTrigger data-testid="select-check-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pickup">Pickup Inspection</SelectItem>
-                      <SelectItem value="return">Return Inspection</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label>Check Type</Label>
+              <Select value={checkType} onValueChange={(val: any) => setCheckType(val)}>
+                <SelectTrigger data-testid="select-check-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pickup">Pickup Inspection</SelectItem>
+                  <SelectItem value="return">Return Inspection</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div>
-                  <Label>Fuel Level</Label>
-                  <Input 
-                    placeholder="e.g., 3/4, 50%" 
-                    value={fuelLevel}
-                    onChange={(e) => setFuelLevel(e.target.value)}
-                    data-testid="input-fuel-level"
-                  />
-                </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={handleSave}
+                disabled={isSaving || !selectedVehicleId || !diagramTemplate}
+                className="w-full"
+                data-testid="button-save-check"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save Check'}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
-                <div>
-                  <Label>Mileage</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="Current mileage" 
-                    value={mileage}
-                    onChange={(e) => setMileage(e.target.value)}
-                    data-testid="input-mileage"
-                  />
-                </div>
+        {/* Diagram Canvas - Full Width */}
+        <Card className="p-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold text-lg">
+              {selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : 'Vehicle Diagram'}
+            </h3>
+            <div className="flex gap-2">
+              <Button 
+                variant={isDrawing ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsDrawing(!isDrawing)}
+                data-testid="button-toggle-drawing"
+              >
+                {isDrawing ? <Eraser className="h-4 w-4 mr-2" /> : <Pencil className="h-4 w-4 mr-2" />}
+                {isDrawing ? 'Stop Drawing' : 'Draw'}
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={clearDrawings}
+                disabled={drawingPaths.length === 0}
+                data-testid="button-clear-drawings"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Drawings
+              </Button>
+            </div>
+          </div>
 
-                <div>
-                  <Label>General Notes</Label>
-                  <Textarea 
-                    placeholder="Add general observations..." 
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={4}
-                    data-testid="textarea-notes"
-                  />
-                </div>
+          {diagramTemplate ? (
+            <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+              <div className="relative w-full">
+                <img 
+                  ref={imageRef}
+                  src={`/${diagramTemplate.diagramPath}`}
+                  alt="Vehicle diagram"
+                  className="w-full h-auto"
+                  crossOrigin="anonymous"
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="absolute top-0 left-0 cursor-crosshair w-full"
+                  onClick={handleCanvasClick}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  data-testid="damage-canvas"
+                />
               </div>
-            </Card>
+            </div>
+          ) : (
+            <div className="text-center py-20 text-gray-500">
+              <p className="text-lg">Select a vehicle to load the diagram</p>
+              <p className="text-sm mt-2">Vehicle diagrams can be added in Documents → Damage Check → Diagram Templates</p>
+            </div>
+          )}
 
-            {selectedMarker && (
-              <Card className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold">
-                    Damage Point #{markers.indexOf(selectedMarker) + 1}
-                  </h3>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => deleteMarker(selectedMarker.id)}
-                    data-testid="button-delete-marker"
+          {markers.length > 0 && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">Damage Points ({markers.length})</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
+                {markers.map((marker, index) => (
+                  <div 
+                    key={marker.id}
+                    className={`p-2 rounded cursor-pointer ${selectedMarker?.id === marker.id ? 'bg-blue-100' : 'bg-white'}`}
+                    onClick={() => setSelectedMarker(marker)}
+                    data-testid={`marker-summary-${index}`}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                    <span className="font-medium">#{index + 1}</span> - {marker.type}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
 
-                <div className="space-y-3">
-                  <div>
-                    <Label>Damage Type</Label>
-                    <Select 
-                      value={selectedMarker.type} 
-                      onValueChange={(val: any) => updateMarker({ type: val })}
-                    >
-                      <SelectTrigger data-testid="select-damage-type">
-                        <SelectValue />
+        {/* Additional Information - Full Width */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Vehicle Details</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>Fuel Level</Label>
+                <Input 
+                  placeholder="e.g., 3/4, 50%" 
+                  value={fuelLevel}
+                  onChange={(e) => setFuelLevel(e.target.value)}
+                  data-testid="input-fuel-level"
+                />
+              </div>
+
+              <div>
+                <Label>Mileage</Label>
+                <Input 
+                  type="number" 
+                  placeholder="Current mileage" 
+                  value={mileage}
+                  onChange={(e) => setMileage(e.target.value)}
+                  data-testid="input-mileage"
+                />
+              </div>
+
+              <div>
+                <Label>General Notes</Label>
+                <Textarea 
+                  placeholder="Add general observations..." 
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                  data-testid="textarea-notes"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {selectedMarker && (
+            <Card className="p-4 md:col-span-2">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">
+                  Damage Point #{markers.indexOf(selectedMarker) + 1}
+                </h3>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => deleteMarker(selectedMarker.id)}
+                  data-testid="button-delete-marker"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Damage Type</Label>
+                  <Select 
+                    value={selectedMarker.type} 
+                    onValueChange={(val: any) => updateMarker({ type: val })}
+                  >
+                    <SelectTrigger data-testid="select-damage-type">
+                      <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="scratch">Scratch</SelectItem>
@@ -514,95 +606,6 @@ export default function InteractiveDamageCheck() {
               </Card>
             )}
           </div>
-
-          {/* Center/Right Panel - Diagram Canvas */}
-          <div className="lg:col-span-2">
-            <Card className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">
-                  {selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : 'Vehicle Diagram'}
-                </h3>
-                <div className="flex gap-2">
-                  <Button 
-                    variant={isDrawing ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setIsDrawing(!isDrawing)}
-                    data-testid="button-toggle-drawing"
-                  >
-                    {isDrawing ? <Eraser className="h-4 w-4 mr-2" /> : <Pencil className="h-4 w-4 mr-2" />}
-                    {isDrawing ? 'Stop Drawing' : 'Draw'}
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={clearDrawings}
-                    disabled={drawingPaths.length === 0}
-                    data-testid="button-clear-drawings"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear Drawings
-                  </Button>
-                  <Button 
-                    onClick={handleSave}
-                    disabled={isSaving || !selectedVehicleId || !diagramTemplate}
-                    data-testid="button-save-check"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isSaving ? 'Saving...' : 'Save Check'}
-                  </Button>
-                </div>
-              </div>
-
-              {diagramTemplate ? (
-                <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto max-h-[85vh]">
-                  <div className="relative inline-block w-full">
-                    <img 
-                      ref={imageRef}
-                      src={`/${diagramTemplate.diagramPath}`}
-                      alt="Vehicle diagram"
-                      className="w-full h-auto"
-                      crossOrigin="anonymous"
-                    />
-                    <canvas
-                      ref={canvasRef}
-                      className="absolute top-0 left-0 cursor-crosshair"
-                      onClick={handleCanvasClick}
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      data-testid="damage-canvas"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-20 text-gray-500">
-                  <p className="text-lg">Select a vehicle to load the diagram</p>
-                  <p className="text-sm mt-2">Vehicle diagrams can be added in Documents → Damage Check → Diagram Templates</p>
-                </div>
-              )}
-
-              {markers.length > 0 && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-sm mb-2">Damage Points ({markers.length})</h4>
-                  <div className="space-y-1 text-sm">
-                    {markers.map((marker, index) => (
-                      <div 
-                        key={marker.id}
-                        className={`p-2 rounded cursor-pointer ${selectedMarker?.id === marker.id ? 'bg-blue-100' : 'bg-white'}`}
-                        onClick={() => setSelectedMarker(marker)}
-                        data-testid={`marker-summary-${index}`}
-                      >
-                        <span className="font-medium">#{index + 1}</span> - {marker.type} ({marker.severity})
-                        {marker.notes && <span className="text-gray-600 ml-2">- {marker.notes.substring(0, 30)}...</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          </div>
-        </div>
       </div>
     </div>
   );
