@@ -2042,8 +2042,17 @@ export class DatabaseStorage implements IStorage {
     const normalizedMake = make.trim().toLowerCase();
     const normalizedModel = model.trim().toLowerCase();
     
+    console.log(`Searching for template - Input: make="${make}", model="${model}", year=${year}`);
+    console.log(`Normalized: make="${normalizedMake}", model="${normalizedModel}"`);
+    
     // Get all templates and filter in JavaScript for case-insensitive matching
     const allTemplates = await db.select().from(vehicleDiagramTemplates);
+    console.log(`Found ${allTemplates.length} total templates in database`);
+    
+    allTemplates.forEach(t => {
+      console.log(`Template ${t.id}: make="${t.make}", model="${t.model}", yearFrom=${t.yearFrom}, yearTo=${t.yearTo}`);
+      console.log(`  Normalized: make="${t.make.trim().toLowerCase()}", model="${t.model.trim().toLowerCase()}"`);
+    });
     
     // Try to find exact match with year range
     if (year) {
@@ -2057,15 +2066,26 @@ export class DatabaseStorage implements IStorage {
         return templateMake === normalizedMake && templateModel === normalizedModel && yearMatches;
       });
       
-      if (exactMatch) return exactMatch;
+      if (exactMatch) {
+        console.log(`Found exact match with year: template ${exactMatch.id}`);
+        return exactMatch;
+      }
     }
     
     // Fallback: find make+model without year constraints
     const fallback = allTemplates.find(template => {
       const templateMake = template.make.trim().toLowerCase();
       const templateModel = template.model.trim().toLowerCase();
-      return templateMake === normalizedMake && templateModel === normalizedModel;
+      const matches = templateMake === normalizedMake && templateModel === normalizedModel;
+      console.log(`Checking fallback template ${template.id}: make match=${templateMake === normalizedMake}, model match=${templateModel === normalizedModel}`);
+      return matches;
     });
+    
+    if (fallback) {
+      console.log(`Found fallback match: template ${fallback.id}`);
+    } else {
+      console.log(`No matching template found`);
+    }
     
     return fallback || undefined;
   }

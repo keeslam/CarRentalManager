@@ -7538,6 +7538,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
+      console.log(`Looking for diagram template for vehicle ${vehicleId}:`, {
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: year
+      });
+      
       const template = await storage.getVehicleDiagramTemplateByVehicle(
         vehicle.brand,
         vehicle.model,
@@ -7545,9 +7551,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       );
       
       if (!template) {
+        console.log(`No matching diagram template found for vehicle ${vehicleId}`);
         return res.status(404).json({ message: "No matching diagram template found" });
       }
       
+      console.log(`Found matching diagram template ${template.id} for vehicle ${vehicleId}`);
       res.json(template);
     } catch (error) {
       console.error("Error finding matching diagram template:", error);
