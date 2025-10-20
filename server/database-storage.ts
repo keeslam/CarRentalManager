@@ -2038,37 +2038,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVehicleDiagramTemplateByVehicle(make: string, model: string, year?: number): Promise<VehicleDiagramTemplate | undefined> {
+    // Normalize inputs for case-insensitive comparison
+    const normalizedMake = make.trim().toLowerCase();
+    const normalizedModel = model.trim().toLowerCase();
+    
+    // Get all templates and filter in JavaScript for case-insensitive matching
+    const allTemplates = await db.select().from(vehicleDiagramTemplates);
+    
     // Try to find exact match with year range
     if (year) {
-      const [exactMatch] = await db.select().from(vehicleDiagramTemplates)
-        .where(
-          and(
-            eq(vehicleDiagramTemplates.make, make),
-            eq(vehicleDiagramTemplates.model, model),
-            or(
-              isNull(vehicleDiagramTemplates.yearFrom),
-              lte(vehicleDiagramTemplates.yearFrom, year)
-            ),
-            or(
-              isNull(vehicleDiagramTemplates.yearTo),
-              gte(vehicleDiagramTemplates.yearTo, year)
-            )
-          )
-        )
-        .limit(1);
+      const exactMatch = allTemplates.find(template => {
+        const templateMake = template.make.trim().toLowerCase();
+        const templateModel = template.model.trim().toLowerCase();
+        const yearMatches = (
+          (template.yearFrom === null || template.yearFrom <= year) &&
+          (template.yearTo === null || template.yearTo >= year)
+        );
+        return templateMake === normalizedMake && templateModel === normalizedModel && yearMatches;
+      });
       
       if (exactMatch) return exactMatch;
     }
     
     // Fallback: find make+model without year constraints
-    const [fallback] = await db.select().from(vehicleDiagramTemplates)
-      .where(
-        and(
-          eq(vehicleDiagramTemplates.make, make),
-          eq(vehicleDiagramTemplates.model, model)
-        )
-      )
-      .limit(1);
+    const fallback = allTemplates.find(template => {
+      const templateMake = template.make.trim().toLowerCase();
+      const templateModel = template.model.trim().toLowerCase();
+      return templateMake === normalizedMake && templateModel === normalizedModel;
+    });
     
     return fallback || undefined;
   }
