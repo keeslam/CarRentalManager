@@ -554,13 +554,13 @@ export default function InteractiveDamageCheck() {
               </div>
 
               {diagramTemplate ? (
-                <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto max-h-[70vh]">
-                  <div className="relative inline-block">
+                <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto max-h-[85vh]">
+                  <div className="relative inline-block w-full">
                     <img 
                       ref={imageRef}
                       src={`/${diagramTemplate.diagramPath}`}
                       alt="Vehicle diagram"
-                      className="max-w-full h-auto"
+                      className="w-full h-auto"
                       crossOrigin="anonymous"
                     />
                     <canvas
