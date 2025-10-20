@@ -7713,6 +7713,35 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Generate PDF for interactive damage check
+  app.get("/api/interactive-damage-checks/:id/pdf", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const check = await storage.getInteractiveDamageCheck(id);
+      
+      if (!check) {
+        return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      // Import PDF generator
+      const { generateInteractiveDamageCheckPDF } = await import('./utils/pdf-generator');
+      
+      // Generate PDF
+      const pdfBuffer = await generateInteractiveDamageCheckPDF(check);
+      
+      // Set response headers for PDF download
+      const filename = `damage_check_${check.vehicleId}_${check.checkType}_${new Date(check.checkDate).toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating damage check PDF:", error);
+      res.status(500).json({ message: "Error generating damage check PDF" });
+    }
+  });
+
   // Delete interactive damage check
   app.delete("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
     try {

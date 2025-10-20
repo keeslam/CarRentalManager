@@ -37,6 +37,7 @@ export default function InteractiveDamageCheck() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [editingCheckId, setEditingCheckId] = useState<number | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   const [diagramTemplate, setDiagramTemplate] = useState<DiagramTemplate | null>(null);
@@ -110,6 +111,7 @@ export default function InteractiveDamageCheck() {
     const params = new URLSearchParams(window.location.search);
     const vehicleId = params.get('vehicleId');
     const reservationId = params.get('reservationId');
+    const checkId = params.get('checkId');
     
     if (vehicleId) {
       setSelectedVehicleId(parseInt(vehicleId));
@@ -117,7 +119,96 @@ export default function InteractiveDamageCheck() {
     if (reservationId) {
       setSelectedReservationId(parseInt(reservationId));
     }
+    if (checkId) {
+      setEditingCheckId(parseInt(checkId));
+    }
   }, []);
+
+  // Load saved check when editing
+  useEffect(() => {
+    const loadSavedCheck = async () => {
+      if (!editingCheckId) return;
+
+      try {
+        const response = await fetch(`/api/interactive-damage-checks/${editingCheckId}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load damage check');
+        }
+
+        const savedCheck = await response.json();
+        
+        // Populate form fields
+        setSelectedVehicleId(savedCheck.vehicleId);
+        setSelectedReservationId(savedCheck.reservationId);
+        setCheckType(savedCheck.checkType);
+        setFuelLevel(savedCheck.fuelLevel || '');
+        setMileage(savedCheck.mileage || '');
+        setNotes(savedCheck.notes || '');
+
+        // Load damage markers
+        if (savedCheck.damageMarkers) {
+          const loadedMarkers = typeof savedCheck.damageMarkers === 'string'
+            ? JSON.parse(savedCheck.damageMarkers)
+            : savedCheck.damageMarkers;
+          setMarkers(loadedMarkers || []);
+        }
+
+        // Load drawing paths
+        if (savedCheck.drawingPaths) {
+          const loadedPaths = typeof savedCheck.drawingPaths === 'string'
+            ? JSON.parse(savedCheck.drawingPaths)
+            : savedCheck.drawingPaths;
+          setDrawingPaths(loadedPaths || []);
+        }
+
+        // Load checklist data
+        if (savedCheck.checklistData) {
+          const loadedChecklist = typeof savedCheck.checklistData === 'string'
+            ? JSON.parse(savedCheck.checklistData)
+            : savedCheck.checklistData;
+          setChecklistItems({
+            interior: loadedChecklist.interiorChecklist || checklistItems.interior,
+            exterior: loadedChecklist.exteriorChecklist || checklistItems.exterior,
+            delivery: loadedChecklist.deliveryChecklist || checklistItems.delivery,
+          });
+        }
+
+        // Load signatures
+        if (savedCheck.renterSignature) {
+          setRenterSignature(savedCheck.renterSignature);
+        }
+        if (savedCheck.customerSignature) {
+          setCustomerSignature(savedCheck.customerSignature);
+        }
+
+        // Load diagram template
+        if (savedCheck.diagramTemplateId) {
+          const templateResponse = await fetch(`/api/vehicle-diagram-templates/${savedCheck.diagramTemplateId}`);
+          if (templateResponse.ok) {
+            const template = await templateResponse.json();
+            setDiagramTemplate(template);
+          }
+        }
+
+        toast({
+          title: "Check Loaded",
+          description: "Damage check loaded successfully for editing",
+        });
+      } catch (error) {
+        console.error('Error loading damage check:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load damage check",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadSavedCheck();
+  }, [editingCheckId, toast]);
 
   // Fetch vehicles
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
@@ -460,12 +551,20 @@ export default function InteractiveDamageCheck() {
         customerSignature: customerSignature || null,
       };
 
-      await apiRequest('POST', '/api/interactive-damage-checks', checkData);
-
-      toast({
-        title: "Success",
-        description: "Damage check saved successfully",
-      });
+      // Use PUT for update, POST for create
+      if (editingCheckId) {
+        await apiRequest('PUT', `/api/interactive-damage-checks/${editingCheckId}`, checkData);
+        toast({
+          title: "Success",
+          description: "Damage check updated successfully",
+        });
+      } else {
+        await apiRequest('POST', '/api/interactive-damage-checks', checkData);
+        toast({
+          title: "Success",
+          description: "Damage check saved successfully",
+        });
+      }
 
       navigate('/documents');
     } catch (error: any) {

@@ -775,3 +775,418 @@ function formatCurrency(amount: any): string {
     maximumFractionDigits: 2
   }).format(numericAmount);
 }
+
+/**
+ * Generate a PDF for an interactive damage check
+ * Includes vehicle info, damage markers, checklists, annotated diagram, and signatures
+ */
+export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promise<Buffer> {
+  try {
+    console.log('Generating interactive damage check PDF for check:', damageCheck.id);
+    
+    // Create a new PDF document
+    const pdfDoc = await PDFDocument.create();
+    
+    // Embed fonts
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Add first page
+    let page = pdfDoc.addPage([595, 842]); // A4 size
+    const { width, height } = page.getSize();
+    
+    let yPosition = height - 50;
+    
+    // Title
+    page.drawText('INTERACTIVE DAMAGE CHECK REPORT', {
+      x: 50,
+      y: yPosition,
+      size: 18,
+      font: helveticaBold,
+      color: rgb(0, 0.2, 0.5),
+    });
+    yPosition -= 40;
+    
+    // Check details
+    page.drawText(`Check Type: ${damageCheck.checkType === 'pickup' ? 'Pick-up' : 'Return'}`, {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    });
+    yPosition -= 20;
+    
+    page.drawText(`Date: ${format(new Date(damageCheck.checkDate), 'MMMM d, yyyy')}`, {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    });
+    yPosition -= 20;
+    
+    if (damageCheck.completedBy) {
+      page.drawText(`Completed by: ${damageCheck.completedBy}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      });
+      yPosition -= 20;
+    }
+    
+    if (damageCheck.mileage) {
+      page.drawText(`Mileage: ${damageCheck.mileage} km`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      });
+      yPosition -= 20;
+    }
+    
+    if (damageCheck.fuelLevel) {
+      page.drawText(`Fuel Level: ${damageCheck.fuelLevel}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      });
+      yPosition -= 20;
+    }
+    
+    if (damageCheck.notes) {
+      yPosition -= 10;
+      page.drawText('Notes:', {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaBold,
+      });
+      yPosition -= 20;
+      
+      // Wrap notes text
+      const maxWidth = width - 100;
+      const words = damageCheck.notes.split(' ');
+      let line = '';
+      
+      for (const word of words) {
+        const testLine = line + word + ' ';
+        const testWidth = helveticaFont.widthOfTextAtSize(testLine, 11);
+        
+        if (testWidth > maxWidth && line !== '') {
+          page.drawText(line, {
+            x: 50,
+            y: yPosition,
+            size: 11,
+            font: helveticaFont,
+          });
+          line = word + ' ';
+          yPosition -= 18;
+          
+          if (yPosition < 100) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+          }
+        } else {
+          line = testLine;
+        }
+      }
+      
+      if (line !== '') {
+        page.drawText(line, {
+          x: 50,
+          y: yPosition,
+          size: 11,
+          font: helveticaFont,
+        });
+        yPosition -= 30;
+      }
+    }
+    
+    // Add checklist data if available
+    if (damageCheck.checklistData) {
+      const checklistData = typeof damageCheck.checklistData === 'string' 
+        ? JSON.parse(damageCheck.checklistData) 
+        : damageCheck.checklistData;
+      
+      // Helper function to render a checklist section
+      const renderChecklistSection = (title: string, items: any, yPos: number) => {
+        let currentY = yPos;
+        
+        if (currentY < 150) {
+          page = pdfDoc.addPage([595, 842]);
+          currentY = height - 50;
+        }
+        
+        page.drawText(title, {
+          x: 50,
+          y: currentY,
+          size: 14,
+          font: helveticaBold,
+          color: rgb(0, 0.2, 0.5),
+        });
+        currentY -= 25;
+        
+        if (items && typeof items === 'object') {
+          for (const [key, value] of Object.entries(items)) {
+            if (currentY < 100) {
+              page = pdfDoc.addPage([595, 842]);
+              currentY = height - 50;
+            }
+            
+            const label = key.replace(/([A-Z])/g, ' $1').trim();
+            const checkbox = value ? '☑' : '☐';
+            
+            page.drawText(`${checkbox} ${label}`, {
+              x: 60,
+              y: currentY,
+              size: 11,
+              font: helveticaFont,
+            });
+            currentY -= 18;
+          }
+        }
+        
+        return currentY - 20;
+      };
+      
+      // Render Interior Checklist
+      if (checklistData.interiorChecklist) {
+        yPosition = renderChecklistSection('Interior Checklist', checklistData.interiorChecklist, yPosition);
+      }
+      
+      // Render Exterior Checklist
+      if (checklistData.exteriorChecklist) {
+        yPosition = renderChecklistSection('Exterior Checklist', checklistData.exteriorChecklist, yPosition);
+      }
+      
+      // Render Delivery Checklist
+      if (checklistData.deliveryChecklist) {
+        yPosition = renderChecklistSection('Delivery Checklist', checklistData.deliveryChecklist, yPosition);
+      }
+    }
+    
+    // Add damage markers summary
+    if (damageCheck.damageMarkers) {
+      const damageMarkers = typeof damageCheck.damageMarkers === 'string' 
+        ? JSON.parse(damageCheck.damageMarkers) 
+        : damageCheck.damageMarkers;
+      
+      if (damageMarkers && damageMarkers.length > 0) {
+        if (yPosition < 150) {
+          page = pdfDoc.addPage([595, 842]);
+          yPosition = height - 50;
+        }
+        
+        yPosition -= 10;
+        page.drawText('Damage Markers:', {
+          x: 50,
+          y: yPosition,
+          size: 14,
+          font: helveticaBold,
+          color: rgb(0, 0.2, 0.5),
+        });
+        yPosition -= 25;
+        
+        damageMarkers.forEach((marker: any, index: number) => {
+          if (yPosition < 100) {
+            page = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+          }
+          
+          page.drawText(`${index + 1}. ${marker.label || 'Damage'} - ${marker.severity || 'Unknown'}`, {
+            x: 60,
+            y: yPosition,
+            size: 11,
+            font: helveticaFont,
+          });
+          yPosition -= 18;
+        });
+        
+        yPosition -= 20;
+      }
+    }
+    
+    // Add annotated diagram if available
+    if (damageCheck.diagramWithAnnotations) {
+      // Create a new page for the diagram
+      if (yPosition < 400) {
+        page = pdfDoc.addPage([595, 842]);
+        yPosition = height - 50;
+      }
+      
+      page.drawText('Annotated Vehicle Diagram:', {
+        x: 50,
+        y: yPosition,
+        size: 14,
+        font: helveticaBold,
+        color: rgb(0, 0.2, 0.5),
+      });
+      yPosition -= 30;
+      
+      try {
+        // Remove data URL prefix
+        const base64Data = damageCheck.diagramWithAnnotations.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+        const imageBytes = Buffer.from(base64Data, 'base64');
+        
+        // Determine image type from original data URL
+        let image;
+        if (damageCheck.diagramWithAnnotations.startsWith('data:image/png')) {
+          image = await pdfDoc.embedPng(imageBytes);
+        } else {
+          image = await pdfDoc.embedJpg(imageBytes);
+        }
+        
+        // Calculate dimensions to fit on page
+        const maxWidth = width - 100;
+        const maxHeight = 350;
+        const imgDims = image.scale(1);
+        
+        let imgWidth = imgDims.width;
+        let imgHeight = imgDims.height;
+        
+        // Scale down if needed
+        if (imgWidth > maxWidth || imgHeight > maxHeight) {
+          const widthRatio = maxWidth / imgWidth;
+          const heightRatio = maxHeight / imgHeight;
+          const ratio = Math.min(widthRatio, heightRatio);
+          imgWidth = imgWidth * ratio;
+          imgHeight = imgHeight * ratio;
+        }
+        
+        page.drawImage(image, {
+          x: (width - imgWidth) / 2,
+          y: yPosition - imgHeight,
+          width: imgWidth,
+          height: imgHeight,
+        });
+        
+        yPosition = yPosition - imgHeight - 30;
+      } catch (err) {
+        console.error('Error embedding diagram image:', err);
+        page.drawText('Error: Could not embed diagram image', {
+          x: 50,
+          y: yPosition,
+          size: 11,
+          font: helveticaFont,
+          color: rgb(0.8, 0, 0),
+        });
+        yPosition -= 30;
+      }
+    }
+    
+    // Add signatures on a new page
+    page = pdfDoc.addPage([595, 842]);
+    yPosition = height - 50;
+    
+    page.drawText('Signatures', {
+      x: 50,
+      y: yPosition,
+      size: 16,
+      font: helveticaBold,
+      color: rgb(0, 0.2, 0.5),
+    });
+    yPosition -= 50;
+    
+    // Renter signature
+    page.drawText('Renter Signature:', {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaBold,
+    });
+    yPosition -= 20;
+    
+    if (damageCheck.renterSignature) {
+      try {
+        const base64Data = damageCheck.renterSignature.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+        const signatureBytes = Buffer.from(base64Data, 'base64');
+        const signatureImage = await pdfDoc.embedPng(signatureBytes);
+        
+        page.drawImage(signatureImage, {
+          x: 50,
+          y: yPosition - 80,
+          width: 200,
+          height: 80,
+        });
+        yPosition -= 100;
+      } catch (err) {
+        console.error('Error embedding renter signature:', err);
+        page.drawText('_______________________________', {
+          x: 50,
+          y: yPosition,
+          size: 12,
+          font: helveticaFont,
+        });
+        yPosition -= 40;
+      }
+    } else {
+      page.drawText('_______________________________', {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      });
+      yPosition -= 40;
+    }
+    
+    yPosition -= 30;
+    
+    // Customer signature
+    page.drawText('Customer Signature:', {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaBold,
+    });
+    yPosition -= 20;
+    
+    if (damageCheck.customerSignature) {
+      try {
+        const base64Data = damageCheck.customerSignature.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+        const signatureBytes = Buffer.from(base64Data, 'base64');
+        const signatureImage = await pdfDoc.embedPng(signatureBytes);
+        
+        page.drawImage(signatureImage, {
+          x: 50,
+          y: yPosition - 80,
+          width: 200,
+          height: 80,
+        });
+        yPosition -= 100;
+      } catch (err) {
+        console.error('Error embedding customer signature:', err);
+        page.drawText('_______________________________', {
+          x: 50,
+          y: yPosition,
+          size: 12,
+          font: helveticaFont,
+        });
+      }
+    } else {
+      page.drawText('_______________________________', {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      });
+    }
+    
+    // Footer
+    yPosition = 50;
+    page.drawText(`Generated on ${format(new Date(), 'MMMM d, yyyy HH:mm')}`, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      font: helveticaFont,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    
+    // Save and return the PDF
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    console.error('Error generating interactive damage check PDF:', error);
+    throw error;
+  }
+}

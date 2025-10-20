@@ -1917,9 +1917,41 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => {
-                                // TODO: Generate PDF
-                                toast({ title: "PDF Generation", description: "PDF generation coming soon" });
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(`/api/interactive-damage-checks/${check.id}/pdf`, {
+                                    credentials: 'include',
+                                  });
+                                  
+                                  if (!response.ok) {
+                                    throw new Error('Failed to generate PDF');
+                                  }
+                                  
+                                  // Get the PDF blob
+                                  const blob = await response.blob();
+                                  
+                                  // Create a download link
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `damage_check_${check.vehicleId}_${check.checkType}_${new Date(check.checkDate).toISOString().split('T')[0]}.pdf`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  window.URL.revokeObjectURL(url);
+                                  
+                                  toast({ 
+                                    title: "PDF Generated", 
+                                    description: "Damage check PDF downloaded successfully" 
+                                  });
+                                } catch (error) {
+                                  console.error('Error generating PDF:', error);
+                                  toast({ 
+                                    title: "Error", 
+                                    description: "Failed to generate PDF", 
+                                    variant: "destructive" 
+                                  });
+                                }
                               }}
                               data-testid={`button-pdf-${check.id}`}
                             >
