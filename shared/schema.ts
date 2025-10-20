@@ -1025,33 +1025,26 @@ export const interactiveDamageChecks = pgTable("interactive_damage_checks", {
   vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id),
   reservationId: integer("reservation_id").references(() => reservations.id),
   
-  // Vehicle and customer data (cached for reference)
-  vehicleMake: text("vehicle_make").notNull(),
-  vehicleModel: text("vehicle_model").notNull(),
-  vehicleLicensePlate: text("vehicle_license_plate").notNull(),
-  customerName: text("customer_name"),
-  
   // Damage check data
   checkType: text("check_type").notNull(), // "pickup" | "return"
   checkDate: timestamp("check_date").notNull(),
   
-  // Checkbox matrix data - structured as JSON
-  damageItems: jsonb("damage_items").$type<Array<{
-    category: string; // "interieur" | "exterieur" | "afweez_check"
-    item: string; // e.g., "Voorruit", "Bumper voor"
-    damages: string[]; // e.g., ["Kras", "Deuk"] - checked damage types
-  }>>().default([]).notNull(),
+  // Diagram template reference
+  diagramTemplateId: integer("diagram_template_id").references(() => vehicleDiagramTemplates.id),
   
-  // Drawing data - base64 encoded images or paths
-  diagramDrawings: jsonb("diagram_drawings").$type<Array<{
-    diagramType: string; // "top" | "front" | "rear" | "side"
-    imageData: string; // base64 encoded drawing or path to saved image
-  }>>().default([]).notNull(),
+  // Interactive damage markers - JSON array of damage points
+  damageMarkers: text("damage_markers"), // JSON string of marker objects
   
-  // Original diagram template used
-  templateId: integer("template_id").references(() => vehicleDiagramTemplates.id),
+  // Drawing paths - JSON array of drawing data
+  drawingPaths: text("drawing_paths"), // JSON string of path objects
   
-  // Notes and remarks
+  // Final diagram with annotations - base64 or path
+  diagramWithAnnotations: text("diagram_with_annotations"), // Base64 encoded final image
+  
+  // Inspection checklist data - JSON object with interior/exterior/delivery checklists
+  checklistData: text("checklist_data"), // JSON string of checklist selections
+  
+  // Vehicle details
   notes: text("notes"),
   mileage: integer("mileage"),
   fuelLevel: text("fuel_level"), // e.g., "Full", "3/4", "1/2", "1/4", "Empty"
