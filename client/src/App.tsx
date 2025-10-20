@@ -44,6 +44,7 @@ import WhatsAppTemplatesPage from "@/pages/settings/whatsapp-templates";
 import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
 import WhatsAppMessagingPage from "@/pages/whatsapp/messaging";
 import CommunicationsPage from "@/pages/communications";
+import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/layouts/MainLayout";
@@ -104,6 +105,7 @@ function AppRoutes() {
               <ProtectedRoute path="/documents" component={DocumentsIndex} />
               <ProtectedRoute path="/documents/contract/:id" component={ContractViewer} />
               <ProtectedRoute path="/documents/template-editor" component={TemplateEditor} />
+              <ProtectedRoute path="/damage-check/interactive" component={InteractiveDamageCheck} />
               <ProtectedRoute path="/reports/builder" component={ReportBuilderPage} />
               <ProtectedRoute path="/reports/maintenance-costs" component={MaintenanceCostsPage} />
               <ProtectedRoute path="/reports" component={ReportsPage} />
