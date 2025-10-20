@@ -557,6 +557,11 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     queryKey: [`/api/documents/vehicle/${vehicleId}`],
   });
   
+  // Fetch interactive damage checks for this vehicle
+  const { data: interactiveDamageChecks = [], isLoading: isLoadingDamageChecks } = useQuery({
+    queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`],
+  });
+  
   // Normalize document type to standard category
   const normalizeDocumentType = (documentType: string): string => {
     const type = documentType.toLowerCase().trim();
@@ -1870,6 +1875,74 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               </div>
             </CardHeader>
             <CardContent>
+              {/* Interactive Damage Checks Section */}
+              {interactiveDamageChecks && interactiveDamageChecks.length > 0 && (
+                <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-blue-900">Interactive Damage Checks</h3>
+                    <Button 
+                      size="sm"
+                      onClick={() => navigate(`/interactive-damage-check?vehicleId=${vehicleId}`)}
+                      data-testid="button-new-damage-check"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Check
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {interactiveDamageChecks.map((check: any) => (
+                      <div key={check.id} className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Badge variant={check.checkType === 'pickup' ? 'default' : 'secondary'}>
+                                {check.checkType === 'pickup' ? 'Pick-up' : 'Return'}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {new Date(check.checkDate).toLocaleDateString()}
+                              </span>
+                              {check.completedBy && (
+                                <span className="text-sm text-gray-500">by {check.completedBy}</span>
+                              )}
+                            </div>
+                            {check.notes && (
+                              <p className="text-sm text-gray-600 mt-1">{check.notes}</p>
+                            )}
+                            <div className="flex gap-2 text-xs text-gray-500 mt-2">
+                              {check.mileage && <span>Mileage: {check.mileage} km</span>}
+                              {check.fuelLevel && <span>Fuel: {check.fuelLevel}</span>}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                // TODO: Generate PDF
+                                toast({ title: "PDF Generation", description: "PDF generation coming soon" });
+                              }}
+                              data-testid={`button-pdf-${check.id}`}
+                            >
+                              <Printer className="h-4 w-4 mr-1" />
+                              PDF
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/interactive-damage-check?checkId=${check.id}`)}
+                              data-testid={`button-edit-${check.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* Document Categories */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">Quick Upload Categories</h3>
