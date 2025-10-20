@@ -292,6 +292,12 @@ const quickActions: QuickAction[] = [
     primary: false,
   },
   {
+    label: "Start Damage Check",
+    href: "/damage-check/interactive",
+    icon: "hammer",
+    primary: false,
+  },
+  {
     label: "Upload APK Report",
     icon: "upload",
     dialog: "apk-report",
