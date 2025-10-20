@@ -12,7 +12,9 @@ import {
   drivers, type Driver, type InsertDriver,
   savedReports, type SavedReport, type InsertSavedReport,
   whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage,
-  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate
+  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate,
+  vehicleDiagramTemplates, type VehicleDiagramTemplate, type InsertVehicleDiagramTemplate,
+  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -2022,6 +2024,124 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDamageCheckTemplate(id: number): Promise<boolean> {
     const result = await db.delete(damageCheckTemplates).where(eq(damageCheckTemplates.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Vehicle Diagram Template methods
+  async getAllVehicleDiagramTemplates(): Promise<VehicleDiagramTemplate[]> {
+    return await db.select().from(vehicleDiagramTemplates).orderBy(vehicleDiagramTemplates.make, vehicleDiagramTemplates.model);
+  }
+
+  async getVehicleDiagramTemplate(id: number): Promise<VehicleDiagramTemplate | undefined> {
+    const [template] = await db.select().from(vehicleDiagramTemplates).where(eq(vehicleDiagramTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getVehicleDiagramTemplateByVehicle(make: string, model: string, year?: number): Promise<VehicleDiagramTemplate | undefined> {
+    // Try to find exact match with year range
+    if (year) {
+      const [exactMatch] = await db.select().from(vehicleDiagramTemplates)
+        .where(
+          and(
+            eq(vehicleDiagramTemplates.make, make),
+            eq(vehicleDiagramTemplates.model, model),
+            or(
+              isNull(vehicleDiagramTemplates.yearFrom),
+              lte(vehicleDiagramTemplates.yearFrom, year)
+            ),
+            or(
+              isNull(vehicleDiagramTemplates.yearTo),
+              gte(vehicleDiagramTemplates.yearTo, year)
+            )
+          )
+        )
+        .limit(1);
+      
+      if (exactMatch) return exactMatch;
+    }
+    
+    // Fallback: find make+model without year constraints
+    const [fallback] = await db.select().from(vehicleDiagramTemplates)
+      .where(
+        and(
+          eq(vehicleDiagramTemplates.make, make),
+          eq(vehicleDiagramTemplates.model, model)
+        )
+      )
+      .limit(1);
+    
+    return fallback || undefined;
+  }
+
+  async createVehicleDiagramTemplate(template: InsertVehicleDiagramTemplate): Promise<VehicleDiagramTemplate> {
+    const [newTemplate] = await db.insert(vehicleDiagramTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateVehicleDiagramTemplate(id: number, templateData: Partial<InsertVehicleDiagramTemplate>): Promise<VehicleDiagramTemplate | undefined> {
+    const updateData = {
+      ...templateData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedTemplate] = await db
+      .update(vehicleDiagramTemplates)
+      .set(updateData)
+      .where(eq(vehicleDiagramTemplates.id, id))
+      .returning();
+      
+    return updatedTemplate || undefined;
+  }
+
+  async deleteVehicleDiagramTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(vehicleDiagramTemplates).where(eq(vehicleDiagramTemplates.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Interactive Damage Check methods
+  async getAllInteractiveDamageChecks(): Promise<InteractiveDamageCheck[]> {
+    return await db.select().from(interactiveDamageChecks).orderBy(desc(interactiveDamageChecks.checkDate));
+  }
+
+  async getInteractiveDamageCheck(id: number): Promise<InteractiveDamageCheck | undefined> {
+    const [check] = await db.select().from(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
+    return check || undefined;
+  }
+
+  async getInteractiveDamageChecksByVehicle(vehicleId: number): Promise<InteractiveDamageCheck[]> {
+    return await db.select().from(interactiveDamageChecks)
+      .where(eq(interactiveDamageChecks.vehicleId, vehicleId))
+      .orderBy(desc(interactiveDamageChecks.checkDate));
+  }
+
+  async getInteractiveDamageChecksByReservation(reservationId: number): Promise<InteractiveDamageCheck[]> {
+    return await db.select().from(interactiveDamageChecks)
+      .where(eq(interactiveDamageChecks.reservationId, reservationId))
+      .orderBy(desc(interactiveDamageChecks.checkDate));
+  }
+
+  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck> {
+    const [newCheck] = await db.insert(interactiveDamageChecks).values(check).returning();
+    return newCheck;
+  }
+
+  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined> {
+    const updateData = {
+      ...checkData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedCheck] = await db
+      .update(interactiveDamageChecks)
+      .set(updateData)
+      .where(eq(interactiveDamageChecks.id, id))
+      .returning();
+      
+    return updatedCheck || undefined;
+  }
+
+  async deleteInteractiveDamageCheck(id: number): Promise<boolean> {
+    const result = await db.delete(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

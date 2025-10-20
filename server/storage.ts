@@ -10,7 +10,9 @@ import {
   appSettings, type AppSettings, type InsertAppSettings,
   drivers, type Driver, type InsertDriver,
   savedReports, type SavedReport, type InsertSavedReport,
-  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate
+  damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate,
+  vehicleDiagramTemplates, type VehicleDiagramTemplate, type InsertVehicleDiagramTemplate,
+  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -148,6 +150,23 @@ export interface IStorage {
   createDamageCheckTemplate(template: any): Promise<any>;
   updateDamageCheckTemplate(id: number, templateData: any): Promise<any | undefined>;
   deleteDamageCheckTemplate(id: number): Promise<boolean>;
+  
+  // Vehicle Diagram Template methods
+  getAllVehicleDiagramTemplates(): Promise<VehicleDiagramTemplate[]>;
+  getVehicleDiagramTemplate(id: number): Promise<VehicleDiagramTemplate | undefined>;
+  getVehicleDiagramTemplateByVehicle(make: string, model: string, year?: number): Promise<VehicleDiagramTemplate | undefined>;
+  createVehicleDiagramTemplate(template: InsertVehicleDiagramTemplate): Promise<VehicleDiagramTemplate>;
+  updateVehicleDiagramTemplate(id: number, templateData: Partial<InsertVehicleDiagramTemplate>): Promise<VehicleDiagramTemplate | undefined>;
+  deleteVehicleDiagramTemplate(id: number): Promise<boolean>;
+  
+  // Interactive Damage Check methods
+  getAllInteractiveDamageChecks(): Promise<InteractiveDamageCheck[]>;
+  getInteractiveDamageCheck(id: number): Promise<InteractiveDamageCheck | undefined>;
+  getInteractiveDamageChecksByVehicle(vehicleId: number): Promise<InteractiveDamageCheck[]>;
+  getInteractiveDamageChecksByReservation(reservationId: number): Promise<InteractiveDamageCheck[]>;
+  createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck>;
+  updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined>;
+  deleteInteractiveDamageCheck(id: number): Promise<boolean>;
   
 }
 
