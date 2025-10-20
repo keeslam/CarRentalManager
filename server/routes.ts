@@ -7683,6 +7683,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const user = req.user;
       const checkData = {
         ...req.body,
+        checkDate: req.body.checkDate ? new Date(req.body.checkDate) : new Date(),
         completedBy: user ? user.username : null,
       };
       
