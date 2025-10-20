@@ -32,7 +32,11 @@ interface DiagramTemplate {
   description: string | null;
 }
 
-export default function InteractiveDamageCheck() {
+interface InteractiveDamageCheckProps {
+  onClose?: () => void;
+}
+
+export default function InteractiveDamageCheck({ onClose }: InteractiveDamageCheckProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -566,7 +570,11 @@ export default function InteractiveDamageCheck() {
         });
       }
 
-      navigate('/documents');
+      if (onClose) {
+        onClose();
+      } else {
+        navigate('/documents');
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -589,7 +597,7 @@ export default function InteractiveDamageCheck() {
             <h1 className="text-3xl font-bold">Interactive Damage Check</h1>
             <p className="text-gray-600 mt-1">iPad-optimized damage inspection interface</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/documents')} data-testid="button-close">
+          <Button variant="outline" onClick={() => onClose ? onClose() : navigate('/documents')} data-testid="button-close">
             <X className="h-4 w-4 mr-2" />
             Close
           </Button>

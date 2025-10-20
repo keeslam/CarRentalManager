@@ -2071,7 +2071,7 @@ export function QuickActions() {
         <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 overflow-hidden">
           <DialogTitle className="sr-only">Interactive Damage Check</DialogTitle>
           <div className="h-full overflow-auto">
-            <InteractiveDamageCheck />
+            <InteractiveDamageCheck onClose={() => setInteractiveDamageCheckDialogOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>
