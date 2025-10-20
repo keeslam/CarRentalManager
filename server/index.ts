@@ -249,6 +249,11 @@ async function testDatabaseConnection() {
   }
 }
 
+// Serve uploads directory for static files (diagrams, documents, etc.)
+const uploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+console.log('📁 Serving uploads from:', uploadsPath);
+
 // API root
 app.get('/api', (_req, res) => {
   res.json({
