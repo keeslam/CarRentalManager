@@ -40,6 +40,7 @@ import { ReservationForm } from "@/components/reservations/reservation-form";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { ExpenseForm } from "@/components/expenses/expense-form";
+import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 
 interface ActionIconProps {
   name: string;
@@ -293,7 +294,7 @@ const quickActions: QuickAction[] = [
   },
   {
     label: "Start Damage Check",
-    href: "/damage-check/interactive",
+    dialog: "interactive-damage-check",
     icon: "hammer",
     primary: false,
   },
@@ -352,6 +353,9 @@ export function QuickActions() {
   const [apkNotificationsDialogOpen, setApkNotificationsDialogOpen] = useState(false);
   const [selectedApkVehicles, setSelectedApkVehicles] = useState<Vehicle[]>([]);
   const [isLoadingApkNotifications, setIsLoadingApkNotifications] = useState(false);
+  
+  // State for interactive damage check dialog
+  const [interactiveDamageCheckDialogOpen, setInteractiveDamageCheckDialogOpen] = useState(false);
   const [apkSearchQuery, setApkSearchQuery] = useState<string>("");
   
   
@@ -2006,6 +2010,30 @@ export function QuickActions() {
                         Apply Changes
                       </Button>
                     </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For interactive damage check dialog
+            if (action.dialog === "interactive-damage-check") {
+              return (
+                <Dialog key={action.label} open={interactiveDamageCheckDialogOpen} onOpenChange={setInteractiveDamageCheckDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 overflow-hidden">
+                    <DialogTitle className="sr-only">Interactive Damage Check</DialogTitle>
+                    <div className="h-full overflow-auto">
+                      <InteractiveDamageCheck />
+                    </div>
                   </DialogContent>
                 </Dialog>
               );
