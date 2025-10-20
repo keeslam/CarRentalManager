@@ -7576,9 +7576,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const created = await storage.createVehicleDiagramTemplate(templateData);
       
-      // Broadcast update via Socket.IO
-      io.emit('vehicle-diagram-templates', { action: 'created', data: created });
-      
       res.status(201).json(created);
     } catch (error) {
       console.error("Error creating vehicle diagram template:", error);
@@ -7610,9 +7607,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!deleted) {
         return res.status(404).json({ message: "Template not found" });
       }
-      
-      // Broadcast update via Socket.IO
-      io.emit('vehicle-diagram-templates', { action: 'deleted', data: { id } });
       
       res.json({ success: true });
     } catch (error) {
@@ -7686,9 +7680,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const created = await storage.createInteractiveDamageCheck(checkData);
       
-      // Broadcast update via Socket.IO
-      io.emit('interactive-damage-checks', { action: 'created', data: created });
-      
       res.status(201).json(created);
     } catch (error) {
       console.error("Error creating interactive damage check:", error);
@@ -7706,9 +7697,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Damage check not found" });
       }
       
-      // Broadcast update via Socket.IO
-      io.emit('interactive-damage-checks', { action: 'updated', data: updated });
-      
       res.json(updated);
     } catch (error) {
       console.error("Error updating interactive damage check:", error);
@@ -7725,9 +7713,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!deleted) {
         return res.status(404).json({ message: "Damage check not found" });
       }
-      
-      // Broadcast update via Socket.IO
-      io.emit('interactive-damage-checks', { action: 'deleted', data: { id } });
       
       res.json({ success: true });
     } catch (error) {
