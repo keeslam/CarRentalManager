@@ -25,7 +25,7 @@ import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -864,7 +864,10 @@ export default function DocumentsIndex() {
         </TabsContent>
         
         <TabsContent value="damage-check">
-          <DamageCheckManager vehicles={vehicles || []} />
+          <div className="space-y-6">
+            <DamageCheckManager vehicles={vehicles || []} />
+            <DiagramTemplateManager />
+          </div>
         </TabsContent>
       </Tabs>
       
@@ -1295,6 +1298,309 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
           </div>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+function DiagramTemplateManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [yearFrom, setYearFrom] = useState("");
+  const [yearTo, setYearTo] = useState("");
+  const [description, setDescription] = useState("");
+  const [diagramFile, setDiagramFile] = useState<File | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<any | null>(null);
+
+  // Fetch all diagram templates
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ['/api/vehicle-diagram-templates'],
+  });
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/vehicle-diagram-templates', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      toast({
+        title: "Success",
+        description: "Vehicle diagram template uploaded successfully",
+      });
+      setUploadDialogOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload diagram template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/vehicle-diagram-templates/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      toast({
+        title: "Success",
+        description: "Diagram template deleted successfully",
+      });
+      setDeleteDialogOpen(false);
+      setTemplateToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete diagram template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetForm = () => {
+    setMake("");
+    setModel("");
+    setYearFrom("");
+    setYearTo("");
+    setDescription("");
+    setDiagramFile(null);
+  };
+
+  const handleUpload = () => {
+    if (!make || !model || !diagramFile) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide make, model, and diagram image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('make', make);
+    formData.append('model', model);
+    if (yearFrom) formData.append('yearFrom', yearFrom);
+    if (yearTo) formData.append('yearTo', yearTo);
+    if (description) formData.append('description', description);
+    formData.append('diagram', diagramFile);
+
+    uploadMutation.mutate(formData);
+  };
+
+  const handleDelete = (template: any) => {
+    setTemplateToDelete(template);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (templateToDelete) {
+      deleteMutation.mutate(templateToDelete.id);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Vehicle Diagram Templates</CardTitle>
+            <CardDescription>
+              Manage vehicle diagram images for interactive damage checks
+            </CardDescription>
+          </div>
+          <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-diagram-template">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Diagram Template
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {templates.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Image className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+            <p className="text-lg font-medium mb-2">No diagram templates found</p>
+            <p className="text-sm">Upload your first vehicle diagram to enable interactive damage checks</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates.map((template) => (
+              <Card key={template.id} className="overflow-hidden">
+                <div className="aspect-video bg-gray-100 relative">
+                  <img
+                    src={`/${template.diagramPath}`}
+                    alt={`${template.make} ${template.model} diagram`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="p-4">
+                  <h4 className="font-medium text-lg">{template.make} {template.model}</h4>
+                  {(template.yearFrom || template.yearTo) && (
+                    <p className="text-sm text-gray-600">
+                      Years: {template.yearFrom || '...'} - {template.yearTo || '...'}
+                    </p>
+                  )}
+                  {template.description && (
+                    <p className="text-sm text-gray-600 mt-2">{template.description}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Added {formatDate(template.createdAt)}
+                  </p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="mt-3 w-full"
+                    onClick={() => handleDelete(template)}
+                    data-testid={`button-delete-diagram-template-${template.id}`}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Vehicle Diagram Template</DialogTitle>
+            <DialogDescription>
+              Upload a vehicle diagram image with make/model information for interactive damage checks
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="make">Make *</Label>
+                <Input
+                  id="make"
+                  placeholder="e.g., Toyota"
+                  value={make}
+                  onChange={(e) => setMake(e.target.value)}
+                  data-testid="input-make"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="model">Model *</Label>
+                <Input
+                  id="model"
+                  placeholder="e.g., Camry"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  data-testid="input-model"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="yearFrom">Year From (Optional)</Label>
+                <Input
+                  id="yearFrom"
+                  type="number"
+                  placeholder="e.g., 2015"
+                  value={yearFrom}
+                  onChange={(e) => setYearFrom(e.target.value)}
+                  data-testid="input-year-from"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="yearTo">Year To (Optional)</Label>
+                <Input
+                  id="yearTo"
+                  type="number"
+                  placeholder="e.g., 2020"
+                  value={yearTo}
+                  onChange={(e) => setYearTo(e.target.value)}
+                  data-testid="input-year-to"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Input
+                id="description"
+                placeholder="e.g., Sedan body style"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                data-testid="input-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="diagram">Diagram Image *</Label>
+              <Input
+                id="diagram"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setDiagramFile(e.target.files?.[0] || null)}
+                data-testid="input-diagram-file"
+              />
+              {diagramFile && (
+                <p className="text-sm text-gray-600">Selected: {diagramFile.name}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpload} 
+              disabled={uploadMutation.isPending || !diagramFile || !make || !model}
+              data-testid="button-submit-upload-diagram"
+            >
+              {uploadMutation.isPending ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Diagram Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the diagram template for {templateToDelete?.make} {templateToDelete?.model}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
