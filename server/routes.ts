@@ -7568,7 +7568,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         model: req.body.model,
         yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
         yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
-        diagramPath: req.file.path.replace(/\\/g, '/'),
+        diagramPath: getRelativePath(req.file.path),
         description: req.body.description || null,
         createdBy: user ? user.username : null,
         updatedBy: user ? user.username : null,
