@@ -7489,6 +7489,253 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // VEHICLE DIAGRAM TEMPLATE ROUTES
+  
+  // Get all vehicle diagram templates
+  app.get("/api/vehicle-diagram-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getAllVehicleDiagramTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching vehicle diagram templates:", error);
+      res.status(500).json({ message: "Error fetching vehicle diagram templates" });
+    }
+  });
+
+  // Get vehicle diagram template by ID
+  app.get("/api/vehicle-diagram-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getVehicleDiagramTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching vehicle diagram template:", error);
+      res.status(500).json({ message: "Error fetching vehicle diagram template" });
+    }
+  });
+
+  // Find matching vehicle diagram for a vehicle
+  app.get("/api/vehicle-diagram-templates/match/:vehicleId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const vehicle = await storage.getVehicle(vehicleId);
+      
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      // Extract year from production date if available
+      let year: number | undefined;
+      if (vehicle.productionDate) {
+        const match = vehicle.productionDate.match(/(\d{4})/);
+        if (match) {
+          year = parseInt(match[1]);
+        }
+      }
+      
+      const template = await storage.getVehicleDiagramTemplateByVehicle(
+        vehicle.brand,
+        vehicle.model,
+        year
+      );
+      
+      if (!template) {
+        return res.status(404).json({ message: "No matching diagram template found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error finding matching diagram template:", error);
+      res.status(500).json({ message: "Error finding matching diagram template" });
+    }
+  });
+
+  // Create vehicle diagram template (with file upload)
+  app.post("/api/vehicle-diagram-templates", requireAuth, diagramUpload.single('diagram'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Diagram image is required" });
+      }
+      
+      const user = req.user;
+      const templateData = {
+        make: req.body.make,
+        model: req.body.model,
+        yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
+        yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
+        diagramPath: req.file.path.replace(/\\/g, '/'),
+        description: req.body.description || null,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null,
+      };
+      
+      const created = await storage.createVehicleDiagramTemplate(templateData);
+      
+      // Broadcast update via Socket.IO
+      io.emit('vehicle-diagram-templates', { action: 'created', data: created });
+      
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating vehicle diagram template:", error);
+      res.status(500).json({ message: "Error creating vehicle diagram template" });
+    }
+  });
+
+  // Delete vehicle diagram template
+  app.delete("/api/vehicle-diagram-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getVehicleDiagramTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Delete the diagram file
+      if (template.diagramPath) {
+        try {
+          await fs.promises.unlink(template.diagramPath);
+        } catch (err) {
+          console.error("Error deleting diagram file:", err);
+        }
+      }
+      
+      const deleted = await storage.deleteVehicleDiagramTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Broadcast update via Socket.IO
+      io.emit('vehicle-diagram-templates', { action: 'deleted', data: { id } });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vehicle diagram template:", error);
+      res.status(500).json({ message: "Error deleting vehicle diagram template" });
+    }
+  });
+
+  // INTERACTIVE DAMAGE CHECK ROUTES
+  
+  // Get all interactive damage checks
+  app.get("/api/interactive-damage-checks", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const checks = await storage.getAllInteractiveDamageChecks();
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching interactive damage checks:", error);
+      res.status(500).json({ message: "Error fetching interactive damage checks" });
+    }
+  });
+
+  // Get interactive damage check by ID
+  app.get("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const check = await storage.getInteractiveDamageCheck(id);
+      
+      if (!check) {
+        return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      res.json(check);
+    } catch (error) {
+      console.error("Error fetching interactive damage check:", error);
+      res.status(500).json({ message: "Error fetching interactive damage check" });
+    }
+  });
+
+  // Get interactive damage checks by vehicle
+  app.get("/api/interactive-damage-checks/vehicle/:vehicleId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const checks = await storage.getInteractiveDamageChecksByVehicle(vehicleId);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching damage checks by vehicle:", error);
+      res.status(500).json({ message: "Error fetching damage checks by vehicle" });
+    }
+  });
+
+  // Get interactive damage checks by reservation
+  app.get("/api/interactive-damage-checks/reservation/:reservationId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      const checks = await storage.getInteractiveDamageChecksByReservation(reservationId);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching damage checks by reservation:", error);
+      res.status(500).json({ message: "Error fetching damage checks by reservation" });
+    }
+  });
+
+  // Create interactive damage check
+  app.post("/api/interactive-damage-checks", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      const checkData = {
+        ...req.body,
+        completedBy: user ? user.username : null,
+      };
+      
+      const created = await storage.createInteractiveDamageCheck(checkData);
+      
+      // Broadcast update via Socket.IO
+      io.emit('interactive-damage-checks', { action: 'created', data: created });
+      
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating interactive damage check:", error);
+      res.status(500).json({ message: "Error creating interactive damage check" });
+    }
+  });
+
+  // Update interactive damage check
+  app.put("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateInteractiveDamageCheck(id, req.body);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      // Broadcast update via Socket.IO
+      io.emit('interactive-damage-checks', { action: 'updated', data: updated });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating interactive damage check:", error);
+      res.status(500).json({ message: "Error updating interactive damage check" });
+    }
+  });
+
+  // Delete interactive damage check
+  app.delete("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteInteractiveDamageCheck(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      // Broadcast update via Socket.IO
+      io.emit('interactive-damage-checks', { action: 'deleted', data: { id } });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting interactive damage check:", error);
+      res.status(500).json({ message: "Error deleting interactive damage check" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
