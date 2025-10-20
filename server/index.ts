@@ -131,9 +131,9 @@ const appRoot = path.resolve(__dirname, '..'); // /app in Docker
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Middleware - Increase limits for damage check diagrams with base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Setup authentication
 const { requireAuth } = setupAuth(app);
