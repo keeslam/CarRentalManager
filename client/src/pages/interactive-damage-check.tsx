@@ -383,14 +383,14 @@ export default function InteractiveDamageCheck() {
                 <div>
                   <Label>Reservation (Optional)</Label>
                   <Select 
-                    value={selectedReservationId?.toString() || ""} 
-                    onValueChange={(val) => setSelectedReservationId(val ? parseInt(val) : null)}
+                    value={selectedReservationId?.toString() || "none"} 
+                    onValueChange={(val) => setSelectedReservationId(val === "none" ? null : parseInt(val))}
                   >
                     <SelectTrigger data-testid="select-reservation">
                       <SelectValue placeholder="Link to reservation" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Reservation</SelectItem>
+                      <SelectItem value="none">No Reservation</SelectItem>
                       {reservations.map(reservation => (
                         <SelectItem key={reservation.id} value={reservation.id.toString()}>
                           #{reservation.id} - Reservation
