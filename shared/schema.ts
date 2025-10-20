@@ -986,3 +986,89 @@ export const insertDamageCheckTemplateSchema = createInsertSchema(damageCheckTem
 
 export type DamageCheckTemplate = typeof damageCheckTemplates.$inferSelect;
 export type InsertDamageCheckTemplate = z.infer<typeof insertDamageCheckTemplateSchema>;
+
+// Vehicle Diagram Templates - for uploading vehicle diagrams by make/model/year
+export const vehicleDiagramTemplates = pgTable("vehicle_diagram_templates", {
+  id: serial("id").primaryKey(),
+  make: text("make").notNull(), // e.g., "RENAULT"
+  model: text("model").notNull(), // e.g., "TWINGO"
+  yearFrom: integer("year_from"), // e.g., 2015 - start of year range
+  yearTo: integer("year_to"), // e.g., 2020 - end of year range
+  
+  // Vehicle diagram image path
+  diagramPath: text("diagram_path").notNull(), // Path to uploaded diagram image
+  
+  // Metadata
+  description: text("description"), // Optional description
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+});
+
+export const insertVehicleDiagramTemplateSchema = createInsertSchema(vehicleDiagramTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type VehicleDiagramTemplate = typeof vehicleDiagramTemplates.$inferSelect;
+export type InsertVehicleDiagramTemplate = z.infer<typeof insertVehicleDiagramTemplateSchema>;
+
+// Interactive Damage Checks - for storing completed damage inspections
+export const interactiveDamageChecks = pgTable("interactive_damage_checks", {
+  id: serial("id").primaryKey(),
+  
+  // Links to vehicle and reservation
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id),
+  reservationId: integer("reservation_id").references(() => reservations.id),
+  
+  // Vehicle and customer data (cached for reference)
+  vehicleMake: text("vehicle_make").notNull(),
+  vehicleModel: text("vehicle_model").notNull(),
+  vehicleLicensePlate: text("vehicle_license_plate").notNull(),
+  customerName: text("customer_name"),
+  
+  // Damage check data
+  checkType: text("check_type").notNull(), // "pickup" | "return"
+  checkDate: timestamp("check_date").notNull(),
+  
+  // Checkbox matrix data - structured as JSON
+  damageItems: jsonb("damage_items").$type<Array<{
+    category: string; // "interieur" | "exterieur" | "afweez_check"
+    item: string; // e.g., "Voorruit", "Bumper voor"
+    damages: string[]; // e.g., ["Kras", "Deuk"] - checked damage types
+  }>>().default([]).notNull(),
+  
+  // Drawing data - base64 encoded images or paths
+  diagramDrawings: jsonb("diagram_drawings").$type<Array<{
+    diagramType: string; // "top" | "front" | "rear" | "side"
+    imageData: string; // base64 encoded drawing or path to saved image
+  }>>().default([]).notNull(),
+  
+  // Original diagram template used
+  templateId: integer("template_id").references(() => vehicleDiagramTemplates.id),
+  
+  // Notes and remarks
+  notes: text("notes"),
+  mileage: integer("mileage"),
+  fuelLevel: text("fuel_level"), // e.g., "Full", "3/4", "1/2", "1/4", "Empty"
+  
+  // Staff who completed the check
+  completedBy: text("completed_by"),
+  
+  // Tracking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertInteractiveDamageCheckSchema = createInsertSchema(interactiveDamageChecks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InteractiveDamageCheck = typeof interactiveDamageChecks.$inferSelect;
+export type InsertInteractiveDamageCheck = z.infer<typeof insertInteractiveDamageCheckSchema>;
