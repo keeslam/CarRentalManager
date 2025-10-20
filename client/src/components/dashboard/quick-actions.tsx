@@ -2015,27 +2015,19 @@ export function QuickActions() {
               );
             }
             
-            // For interactive damage check dialog
+            // For interactive damage check dialog - just render the trigger button
             if (action.dialog === "interactive-damage-check") {
               return (
-                <Dialog key={action.label} open={interactiveDamageCheckDialogOpen} onOpenChange={setInteractiveDamageCheckDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
-                      size="sm"
-                    >
-                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
-                      {action.label}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 overflow-hidden">
-                    <DialogTitle className="sr-only">Interactive Damage Check</DialogTitle>
-                    <div className="h-full overflow-auto">
-                      <InteractiveDamageCheck />
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                  size="sm"
+                  onClick={() => setInteractiveDamageCheckDialogOpen(true)}
+                >
+                  <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                  {action.label}
+                </Button>
               );
             }
             
@@ -2073,6 +2065,16 @@ export function QuickActions() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Interactive Damage Check Dialog - Kept mounted to preserve state */}
+      <Dialog open={interactiveDamageCheckDialogOpen} onOpenChange={setInteractiveDamageCheckDialogOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Interactive Damage Check</DialogTitle>
+          <div className="h-full overflow-auto">
+            <InteractiveDamageCheck />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
