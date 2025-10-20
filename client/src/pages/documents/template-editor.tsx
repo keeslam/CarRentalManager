@@ -190,17 +190,26 @@ const PDFTemplateEditor = () => {
         body: formData,
         credentials: 'include',
       });
-      if (!res.ok) throw new Error(await res.text());
-      return await res.json();
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Upload failed');
+      }
+      const data = await res.json();
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (updatedTemplate) => {
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      // Update current template to show the new background immediately
+      if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
+        setCurrentTemplate(updatedTemplate);
+      }
       toast({
         title: "Success",
         description: "Background uploaded successfully",
       });
     },
     onError: (error: Error) => {
+      console.error('Background upload error:', error);
       toast({
         title: "Error",
         description: `Failed to upload background: ${error.message}`,
