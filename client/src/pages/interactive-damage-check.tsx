@@ -282,12 +282,25 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     const canvas = canvasRef.current;
     const image = imageRef.current;
 
-    image.onload = () => {
-      canvas.width = image.width;
-      canvas.height = image.height;
+    const setupCanvas = () => {
+      // Use naturalWidth/naturalHeight for the actual image dimensions
+      canvas.width = image.naturalWidth || image.width;
+      canvas.height = image.naturalHeight || image.height;
       redrawCanvas();
     };
-  }, [diagramTemplate]);
+
+    // If image is already loaded, setup immediately
+    if (image.complete && image.naturalWidth) {
+      setupCanvas();
+    }
+    
+    // Also setup when image loads (for first load)
+    image.onload = setupCanvas;
+    
+    return () => {
+      image.onload = null;
+    };
+  }, [diagramTemplate, markers, drawingPaths]);
 
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
