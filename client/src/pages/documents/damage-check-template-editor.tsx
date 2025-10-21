@@ -160,8 +160,11 @@ export default function DamageCheckTemplateEditor() {
   const [isMoving, setIsMoving] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<TemplateSection | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
@@ -284,6 +287,49 @@ export default function DamageCheckTemplateEditor() {
     saveTemplateMutation.mutate(updated);
   };
 
+  const openSectionSettings = (section: TemplateSection) => {
+    setEditingSection(section);
+    setIsSettingsDialogOpen(true);
+  };
+
+  const updateSectionSettings = (settings: any) => {
+    if (!currentTemplate || !editingSection) return;
+    
+    const updatedSections = currentTemplate.sections.map(s =>
+      s.id === editingSection.id ? { ...s, settings: { ...s.settings, ...settings } } : s
+    );
+    
+    const updated = { ...currentTemplate, sections: updatedSections };
+    setCurrentTemplate(updated);
+    saveTemplateMutation.mutate(updated);
+    setIsSettingsDialogOpen(false);
+    setEditingSection(null);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingSection) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', 'logo');
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      updateSectionSettings({ logoPath: data.filePath });
+      toast({ title: "Success", description: "Logo uploaded" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
+    }
+  };
+
   const getSectionColor = (type: string) => {
     const colors: Record<string, string> = {
       header: '#334d99',
@@ -389,6 +435,15 @@ export default function DamageCheckTemplateEditor() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{SECTION_LABELS[section.type]}</span>
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => openSectionSettings(section)}
+                            title="Settings"
+                          >
+                            <Settings2 className="w-3 h-3" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -588,6 +643,155 @@ export default function DamageCheckTemplateEditor() {
                 Cancel
               </Button>
               <Button onClick={handleCreateTemplate}>Create Template</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Section Settings Dialog */}
+        <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingSection ? `${SECTION_LABELS[editingSection.type]} Settings` : 'Section Settings'}
+              </DialogTitle>
+              <DialogDescription>
+                Customize the appearance and content of this section
+              </DialogDescription>
+            </DialogHeader>
+            {editingSection && (
+              <div className="space-y-4 py-4">
+                {/* Header Section Settings */}
+                {editingSection.type === 'header' && (
+                  <>
+                    <div>
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        value={editingSection.settings.companyName || ''}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, companyName: e.target.value }
+                        })}
+                        placeholder="LAM GROUP"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="headerFontSize">Font Size</Label>
+                      <Input
+                        id="headerFontSize"
+                        type="number"
+                        value={editingSection.settings.headerFontSize || 14}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, headerFontSize: parseInt(e.target.value) }
+                        })}
+                        min="8"
+                        max="24"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="headerColor">Header Color</Label>
+                      <Input
+                        id="headerColor"
+                        type="color"
+                        value={editingSection.settings.headerColor || '#334d99'}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, headerColor: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Logo</Label>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <div className="flex gap-2 items-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => logoInputRef.current?.click()}
+                          type="button"
+                        >
+                          Upload Logo
+                        </Button>
+                        {editingSection.settings.logoPath && (
+                          <span className="text-sm text-gray-600">Logo uploaded</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Text Sections (contractInfo, vehicleData, remarks) */}
+                {(editingSection.type === 'contractInfo' || 
+                  editingSection.type === 'vehicleData' || 
+                  editingSection.type === 'remarks' ||
+                  editingSection.type === 'signatures') && (
+                  <div>
+                    <Label htmlFor="fontSize">Font Size</Label>
+                    <Input
+                      id="fontSize"
+                      type="number"
+                      value={editingSection.settings.fontSize || 9}
+                      onChange={(e) => setEditingSection({
+                        ...editingSection,
+                        settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
+                      })}
+                      min="6"
+                      max="18"
+                    />
+                  </div>
+                )}
+
+                {/* Checklist Section */}
+                {editingSection.type === 'checklist' && (
+                  <>
+                    <div>
+                      <Label htmlFor="checklistFontSize">Font Size</Label>
+                      <Input
+                        id="checklistFontSize"
+                        type="number"
+                        value={editingSection.settings.fontSize || 9}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
+                        })}
+                        min="6"
+                        max="18"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="checkboxSize">Checkbox Size</Label>
+                      <Input
+                        id="checkboxSize"
+                        type="number"
+                        value={editingSection.settings.checkboxSize || 10}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, checkboxSize: parseInt(e.target.value) }
+                        })}
+                        min="6"
+                        max="16"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsSettingsDialogOpen(false);
+                setEditingSection(null);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={() => editingSection && updateSectionSettings(editingSection.settings)}>
+                Save Settings
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
