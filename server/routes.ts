@@ -7732,14 +7732,62 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Get vehicle data
       const vehicle = await storage.getVehicle(check.vehicleId);
       
-      // Import PDF generator
-      const { generateInteractiveDamageCheckPDF } = await import('./utils/pdf-generator');
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
       
-      // Generate PDF with vehicle data
-      const pdfBuffer = await generateInteractiveDamageCheckPDF(check, vehicle);
+      // Find the appropriate damage check template for this vehicle
+      const damageTemplate = await storage.findDamageCheckTemplate(
+        vehicle.brand,
+        vehicle.model,
+        vehicle.vehicleType || undefined,
+        vehicle.productionDate ? parseInt(vehicle.productionDate) : undefined
+      );
+      
+      if (!damageTemplate) {
+        return res.status(404).json({ 
+          message: "No damage check template found. Please create a default template first." 
+        });
+      }
+      
+      // Get reservation data if check is linked to a reservation
+      let reservationData;
+      if (check.reservationId) {
+        try {
+          const reservation = await storage.getReservation(check.reservationId);
+          if (reservation && reservation.customer) {
+            reservationData = {
+              contractNumber: `RES-${reservation.id}`,
+              customerName: reservation.customer.name,
+              startDate: format(new Date(reservation.startDate), 'dd-MM-yyyy'),
+              endDate: format(new Date(reservation.endDate), 'dd-MM-yyyy'),
+              rentalDays: Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+            };
+          }
+        } catch (err) {
+          console.warn("Could not fetch reservation data:", err);
+        }
+      }
+      
+      // Import template-based PDF generator
+      const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
+      
+      // Generate PDF using custom template with vehicle data
+      const pdfBuffer = await generateDamageCheckPDFWithTemplate(
+        {
+          brand: vehicle.brand,
+          model: vehicle.model,
+          licensePlate: vehicle.licensePlate,
+          buildYear: vehicle.productionDate,
+          fuel: check.fuelLevel || vehicle.fuel || undefined,
+          mileage: check.mileage || vehicle.mileage || undefined,
+        },
+        damageTemplate,
+        reservationData
+      );
       
       // Set response headers for PDF download
-      const filename = `damage_check_${check.vehicleId}_${check.checkType}_${new Date(check.checkDate).toISOString().split('T')[0]}.pdf`;
+      const filename = `damage_check_${check.vehicleId}_${check.checkType}_${format(new Date(check.checkDate), 'yyyy-MM-dd')}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Length', pdfBuffer.length);
