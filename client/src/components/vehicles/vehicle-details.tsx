@@ -1976,6 +1976,43 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                               <Edit className="h-4 w-4 mr-1" />
                               Edit
                             </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to delete this ${check.checkType} damage check from ${new Date(check.checkDate).toLocaleDateString()}?`)) {
+                                  try {
+                                    const response = await fetch(`/api/interactive-damage-checks/${check.id}`, {
+                                      method: 'DELETE',
+                                      credentials: 'include',
+                                    });
+                                    
+                                    if (!response.ok) {
+                                      throw new Error('Failed to delete damage check');
+                                    }
+                                    
+                                    queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
+                                    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                                    
+                                    toast({ 
+                                      title: "Damage Check Deleted", 
+                                      description: "The damage check has been deleted successfully" 
+                                    });
+                                  } catch (error) {
+                                    console.error('Error deleting damage check:', error);
+                                    toast({ 
+                                      title: "Error", 
+                                      description: "Failed to delete damage check", 
+                                      variant: "destructive" 
+                                    });
+                                  }
+                                }
+                              }}
+                              data-testid={`button-delete-${check.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
                           </div>
                         </div>
                       </div>
