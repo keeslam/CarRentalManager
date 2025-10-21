@@ -168,6 +168,14 @@ export interface IStorage {
   updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined>;
   deleteInteractiveDamageCheck(id: number): Promise<boolean>;
   
+  // Damage Check PDF Template methods (for PDF layout customization)
+  getAllDamageCheckPdfTemplates(): Promise<any[]>;
+  getDamageCheckPdfTemplate(id: number): Promise<any | undefined>;
+  getDefaultDamageCheckPdfTemplate(): Promise<any | undefined>;
+  createDamageCheckPdfTemplate(template: any): Promise<any>;
+  updateDamageCheckPdfTemplate(id: number, templateData: any): Promise<any | undefined>;
+  deleteDamageCheckPdfTemplate(id: number): Promise<boolean>;
+  
 }
 
 export class MemStorage implements IStorage {

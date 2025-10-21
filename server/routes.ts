@@ -7768,6 +7768,124 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // DAMAGE CHECK PDF TEMPLATE ROUTES
+  
+  // Get all PDF templates
+  app.get("/api/damage-check-pdf-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getAllDamageCheckPdfTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching PDF templates:", error);
+      res.status(500).json({ message: "Error fetching PDF templates" });
+    }
+  });
+
+  // Get default PDF template
+  app.get("/api/damage-check-pdf-templates/default", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const template = await storage.getDefaultDamageCheckPdfTemplate();
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching default PDF template:", error);
+      res.status(500).json({ message: "Error fetching default PDF template" });
+    }
+  });
+
+  // Get PDF template by ID
+  app.get("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getDamageCheckPdfTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching PDF template:", error);
+      res.status(500).json({ message: "Error fetching PDF template" });
+    }
+  });
+
+  // Create PDF template
+  app.post("/api/damage-check-pdf-templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
+      const validated = insertDamageCheckPdfTemplateSchema.parse(req.body);
+      
+      // If this is being set as default, unset other defaults
+      if (validated.isDefault) {
+        const existingTemplates = await storage.getAllDamageCheckPdfTemplates();
+        for (const t of existingTemplates) {
+          if (t.isDefault) {
+            await storage.updateDamageCheckPdfTemplate(t.id, { isDefault: false });
+          }
+        }
+      }
+      
+      const template = await storage.createDamageCheckPdfTemplate(validated);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating PDF template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating PDF template" });
+    }
+  });
+
+  // Update PDF template
+  app.put("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
+      const id = parseInt(req.params.id);
+      const validated = insertDamageCheckPdfTemplateSchema.partial().parse(req.body);
+      
+      // If this is being set as default, unset other defaults
+      if (validated.isDefault) {
+        const existingTemplates = await storage.getAllDamageCheckPdfTemplates();
+        for (const t of existingTemplates) {
+          if (t.isDefault && t.id !== id) {
+            await storage.updateDamageCheckPdfTemplate(t.id, { isDefault: false });
+          }
+        }
+      }
+      
+      const updated = await storage.updateDamageCheckPdfTemplate(id, validated);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating PDF template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error updating PDF template" });
+    }
+  });
+
+  // Delete PDF template
+  app.delete("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteDamageCheckPdfTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting PDF template:", error);
+      res.status(500).json({ message: "Error deleting PDF template" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);

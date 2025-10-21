@@ -14,7 +14,8 @@ import {
   whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage,
   damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate,
   vehicleDiagramTemplates, type VehicleDiagramTemplate, type InsertVehicleDiagramTemplate,
-  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck
+  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck,
+  damageCheckPdfTemplates, type DamageCheckPdfTemplate, type InsertDamageCheckPdfTemplate
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -2159,6 +2160,48 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInteractiveDamageCheck(id: number): Promise<boolean> {
     const result = await db.delete(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Damage Check PDF Template methods
+  async getAllDamageCheckPdfTemplates(): Promise<DamageCheckPdfTemplate[]> {
+    return await db.select().from(damageCheckPdfTemplates).orderBy(damageCheckPdfTemplates.name);
+  }
+
+  async getDamageCheckPdfTemplate(id: number): Promise<DamageCheckPdfTemplate | undefined> {
+    const [template] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getDefaultDamageCheckPdfTemplate(): Promise<DamageCheckPdfTemplate | undefined> {
+    const [template] = await db.select().from(damageCheckPdfTemplates)
+      .where(eq(damageCheckPdfTemplates.isDefault, true))
+      .limit(1);
+    return template || undefined;
+  }
+
+  async createDamageCheckPdfTemplate(template: InsertDamageCheckPdfTemplate): Promise<DamageCheckPdfTemplate> {
+    const [newTemplate] = await db.insert(damageCheckPdfTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateDamageCheckPdfTemplate(id: number, templateData: Partial<InsertDamageCheckPdfTemplate>): Promise<DamageCheckPdfTemplate | undefined> {
+    const updateData = {
+      ...templateData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedTemplate] = await db
+      .update(damageCheckPdfTemplates)
+      .set(updateData)
+      .where(eq(damageCheckPdfTemplates.id, id))
+      .returning();
+      
+    return updatedTemplate || undefined;
+  }
+
+  async deleteDamageCheckPdfTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }
