@@ -52,6 +52,8 @@ interface PdfTemplateSection {
     headerFontSize?: number;
     showLogo?: boolean;
     logoPath?: string;
+    customLabel?: string;
+    textAlign?: 'left' | 'center' | 'right';
     [key: string]: any;
   };
 }
@@ -579,9 +581,10 @@ export async function generateDamageCheckPDFWithTemplate(
       case 'contractInfo': {
         const fontSize = section.settings.fontSize || 9;
         const lineHeight = fontSize + 4;
+        const sectionLabel = section.settings.customLabel || 'CONTRACTGEGEVENS';
         let yPos = pdfY + section.height - 15;
         
-        page.drawText('CONTRACTGEGEVENS', {
+        page.drawText(sectionLabel, {
           x: section.x + 5,
           y: yPos,
           size: fontSize + 1,
@@ -614,9 +617,10 @@ export async function generateDamageCheckPDFWithTemplate(
       case 'vehicleData': {
         const fontSize = section.settings.fontSize || 9;
         const lineHeight = fontSize + 4;
+        const sectionLabel = section.settings.customLabel || 'VOERTUIGGEGEVENS';
         let yPos = pdfY + section.height - 15;
         
-        page.drawText('VOERTUIGGEGEVENS', {
+        page.drawText(sectionLabel, {
           x: section.x + 5,
           y: yPos,
           size: fontSize + 1,
@@ -650,9 +654,10 @@ export async function generateDamageCheckPDFWithTemplate(
         const fontSize = section.settings.fontSize || 8;
         const checkboxSize = section.settings.checkboxSize || 8;
         const lineHeight = fontSize + 3;
+        const sectionLabel = section.settings.customLabel || 'SCHADECONTROLE';
         let yPos = pdfY + section.height - 15;
         
-        page.drawText('SCHADECONTROLE', {
+        page.drawText(sectionLabel, {
           x: section.x + 5,
           y: yPos,
           size: fontSize + 2,
@@ -764,8 +769,9 @@ export async function generateDamageCheckPDFWithTemplate(
       
       case 'remarks': {
         const fontSize = section.settings.fontSize || 9;
+        const sectionLabel = section.settings.customLabel || 'OPMERKINGEN';
         
-        page.drawText('OPMERKINGEN', {
+        page.drawText(sectionLabel, {
           x: section.x + 5,
           y: pdfY + section.height - 15,
           size: fontSize + 1,

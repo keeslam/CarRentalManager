@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
   ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2,
-  Lock, Unlock, Eye, EyeOff, Settings2
+  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DamageCheckTemplate } from "@shared/schema";
@@ -37,6 +37,8 @@ interface TemplateSection {
     headerColor?: string;
     headerFontSize?: number;
     showLogo?: boolean;
+    customLabel?: string;
+    textAlign?: 'left' | 'center' | 'right';
     [key: string]: any;
   };
 }
@@ -621,20 +623,20 @@ export default function DamageCheckTemplateEditor() {
                         className="absolute top-0 left-0 right-0 text-white px-2 py-1 text-xs font-semibold flex items-center justify-between"
                         style={{ backgroundColor: getSectionColor(section.type) }}
                       >
-                        <span>{SECTION_LABELS[section.type]}</span>
+                        <span>{section.settings.customLabel || SECTION_LABELS[section.type]}</span>
                         {isMoving && !section.locked && <Move className="w-3 h-3" />}
                       </div>
                       
                       {/* Section Content Preview */}
-                      <div className="p-2 pt-8 text-[8px] text-gray-700 leading-tight">
+                      <div className="p-2 pt-8 text-[8px] text-gray-700 leading-tight" style={{ textAlign: section.settings.textAlign || 'left' }}>
                         {section.type === 'header' && (
-                          <div className="font-bold text-center" style={{ fontSize: `${section.settings.headerFontSize || 14}px`, color: section.settings.headerColor || '#334d99' }}>
+                          <div className="font-bold" style={{ fontSize: `${section.settings.headerFontSize || 14}px`, color: section.settings.headerColor || '#334d99', textAlign: section.settings.textAlign || 'center' }}>
                             {section.settings.companyName || 'LAM GROUP'}
                             {section.settings.logoPath && <div className="text-[6px] text-gray-400 mt-1">[Logo]</div>}
                           </div>
                         )}
                         {section.type === 'contractInfo' && (
-                          <div className="grid grid-cols-2 gap-1 text-[7px]">
+                          <div className="grid grid-cols-2 gap-1 text-[7px]" style={{ textAlign: section.settings.textAlign || 'left' }}>
                             <div><strong>Contract Nr:</strong> 2025-001</div>
                             <div><strong>Datum:</strong> 21-10-2025</div>
                             <div><strong>Klant:</strong> Jan de Vries</div>
@@ -642,7 +644,7 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'vehicleData' && (
-                          <div className="grid grid-cols-2 gap-1 text-[7px]">
+                          <div className="grid grid-cols-2 gap-1 text-[7px]" style={{ textAlign: section.settings.textAlign || 'left' }}>
                             <div><strong>Kenteken:</strong> AB-123-CD</div>
                             <div><strong>Merk:</strong> Mercedes</div>
                             <div><strong>Model:</strong> E-Klasse</div>
@@ -820,6 +822,60 @@ export default function DamageCheckTemplateEditor() {
             </DialogHeader>
             {editingSection && (
               <div className="space-y-4 py-4">
+                {/* Custom Label - Available for all sections */}
+                <div>
+                  <Label htmlFor="customLabel">Section Header</Label>
+                  <Input
+                    id="customLabel"
+                    value={editingSection.settings.customLabel || ''}
+                    onChange={(e) => setEditingSection({
+                      ...editingSection,
+                      settings: { ...editingSection.settings, customLabel: e.target.value }
+                    })}
+                    placeholder={SECTION_LABELS[editingSection.type]}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave empty to use default: "{SECTION_LABELS[editingSection.type]}"</p>
+                </div>
+
+                {/* Text Alignment - Available for most sections */}
+                {editingSection.type !== 'diagram' && (
+                  <div>
+                    <Label>Text Alignment</Label>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant={editingSection.settings.textAlign === 'left' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, textAlign: 'left' }
+                        })}
+                      >
+                        <AlignLeft className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={editingSection.settings.textAlign === 'center' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, textAlign: 'center' }
+                        })}
+                      >
+                        <AlignCenter className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={editingSection.settings.textAlign === 'right' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, textAlign: 'right' }
+                        })}
+                      >
+                        <AlignRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Header Section Settings */}
                 {editingSection.type === 'header' && (
                   <>
