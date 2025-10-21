@@ -327,13 +327,16 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     markers.forEach(marker => {
       const markerColor = marker.severity === 'severe' ? '#DC2626' : marker.severity === 'moderate' ? '#F59E0B' : '#10B981';
       
+      // Use smaller radius since we're now using natural image dimensions
+      const markerRadius = 8;
+      
       ctx.fillStyle = markerColor;
       ctx.beginPath();
-      ctx.arc(marker.x, marker.y, 15, 0, Math.PI * 2);
+      ctx.arc(marker.x, marker.y, markerRadius, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText((markers.indexOf(marker) + 1).toString(), marker.x, marker.y);
