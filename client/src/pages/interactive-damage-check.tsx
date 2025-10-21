@@ -34,14 +34,16 @@ interface DiagramTemplate {
 
 interface InteractiveDamageCheckProps {
   onClose?: () => void;
+  editingCheckId?: number | null;
+  initialVehicleId?: number | null;
 }
 
-export default function InteractiveDamageCheck({ onClose }: InteractiveDamageCheckProps = {}) {
+export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId }: InteractiveDamageCheckProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [editingCheckId, setEditingCheckId] = useState<number | null>(null);
+  const [editingCheckId, setEditingCheckId] = useState<number | null>(propEditingCheckId || null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   const [diagramTemplate, setDiagramTemplate] = useState<DiagramTemplate | null>(null);
@@ -110,7 +112,21 @@ export default function InteractiveDamageCheck({ onClose }: InteractiveDamageChe
   const [renterSignature, setRenterSignature] = useState<string | null>(null);
   const [customerSignature, setCustomerSignature] = useState<string | null>(null);
 
-  // Parse URL params
+  // Handle initial vehicle ID from props
+  useEffect(() => {
+    if (initialVehicleId) {
+      setSelectedVehicleId(initialVehicleId);
+    }
+  }, [initialVehicleId]);
+
+  // Sync editingCheckId when prop changes
+  useEffect(() => {
+    if (propEditingCheckId !== undefined) {
+      setEditingCheckId(propEditingCheckId);
+    }
+  }, [propEditingCheckId]);
+
+  // Parse URL params (for when used as standalone page)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const vehicleId = params.get('vehicleId');

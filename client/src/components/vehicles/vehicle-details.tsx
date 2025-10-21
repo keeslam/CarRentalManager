@@ -52,6 +52,7 @@ import { z } from "zod";
 import { insertReservationSchema, insertReservationSchemaBase } from "@shared/schema";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { ApkInspectionDialog } from "@/components/vehicles/apk-inspection-dialog";
+import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 import { 
   Form, 
   FormControl, 
@@ -98,6 +99,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [showAllScheduledMaintenance, setShowAllScheduledMaintenance] = useState(false);
   const [showAllRepairs, setShowAllRepairs] = useState(false);
+  const [interactiveDamageCheckDialogOpen, setInteractiveDamageCheckDialogOpen] = useState(false);
+  const [editingCheckId, setEditingCheckId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -1882,7 +1885,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <h3 className="text-lg font-semibold text-blue-900">Interactive Damage Checks</h3>
                     <Button 
                       size="sm"
-                      onClick={() => navigate(`/interactive-damage-check?vehicleId=${vehicleId}`)}
+                      onClick={() => {
+                        setEditingCheckId(null);
+                        setInteractiveDamageCheckDialogOpen(true);
+                      }}
                       data-testid="button-new-damage-check"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -1961,7 +1967,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => navigate(`/interactive-damage-check?checkId=${check.id}`)}
+                              onClick={() => {
+                                setEditingCheckId(check.id);
+                                setInteractiveDamageCheckDialogOpen(true);
+                              }}
                               data-testid={`button-edit-${check.id}`}
                             >
                               <Edit className="h-4 w-4 mr-1" />
@@ -3246,6 +3255,24 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
           }}
         />
       )}
+      
+      {/* Interactive Damage Check Dialog */}
+      <Dialog open={interactiveDamageCheckDialogOpen} onOpenChange={setInteractiveDamageCheckDialogOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Interactive Damage Check</DialogTitle>
+          <div className="h-full overflow-auto">
+            <InteractiveDamageCheck 
+              onClose={() => {
+                setInteractiveDamageCheckDialogOpen(false);
+                // Refresh damage checks when dialog closes
+                queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
+              }} 
+              editingCheckId={editingCheckId}
+              initialVehicleId={vehicleId}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
