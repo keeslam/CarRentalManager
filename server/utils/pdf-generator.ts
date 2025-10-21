@@ -820,8 +820,8 @@ function drawCheckbox(page: any, x: number, y: number, label: string, value: any
   page.drawRectangle({
     x,
     y,
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderColor: rgb(0, 0, 0),
     borderWidth: 0.5,
   });
@@ -829,18 +829,18 @@ function drawCheckbox(page: any, x: number, y: number, label: string, value: any
   // If checked, draw X
   if (value) {
     page.drawText('X', {
-      x: x + 1,
-      y: y + 1,
-      size: 7,
+      x: x + 2,
+      y: y + 2,
+      size: 8,
       font,
     });
   }
   
   // Label
   page.drawText(label, {
-    x: x + 12,
-    y: y,
-    size: 8,
+    x: x + 14,
+    y: y + 1,
+    size: 9,
     font,
   });
 }
@@ -849,7 +849,7 @@ function drawCheckbox(page: any, x: number, y: number, label: string, value: any
  * Generate a PDF for an interactive damage check - Dutch format
  * Matches professional rental damage check form layout
  */
-export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promise<Buffer> {
+export async function generateInteractiveDamageCheckPDF(damageCheck: any, vehicle?: any): Promise<Buffer> {
   try {
     console.log('Generating interactive damage check PDF for check:', damageCheck.id);
     
@@ -864,11 +864,10 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     const page = pdfDoc.addPage([595, 842]);
     const { width, height} = page.getSize();
     
-    // Layout constants
-    const margin = 20;
-    const headerHeight = 60;
-    const columnWidth = (width - margin * 2 - 165) / 3; // 3 columns + right sidebar
-    const sidebarWidth = 155;
+    // Layout constants - more compact
+    const margin = 15;
+    const columnWidth = (width - margin * 2 - 140) / 3; // 3 columns + right sidebar (wider columns)
+    const sidebarWidth = 130;
     const sidebarX = width - margin - sidebarWidth;
     
     let y = height - margin;
@@ -916,11 +915,11 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
       font: helveticaFont,
     });
     
-    y -= 40;
+    y -= 35;
     
     // ===== CHECKLIST COLUMNS =====
     const checklistY = y;
-    const checklistHeight = 380;
+    const checklistHeight = 280; // More compact height
     
     // Parse checklist data with error handling
     let checklistData = { interior: {}, exterior: {}, delivery: {} };
@@ -952,21 +951,21 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     interiorItems.forEach(([key, label]) => {
       const value = checklistData.interior?.[key];
       page.drawText(label, {
-        x: margin + 14,
-        y: colY,
-        size: 8,
+        x: margin + 16,
+        y: colY + 1,
+        size: 9,
         font: helveticaFont,
       });
       drawCheckbox(page, margin + 2, colY, '', value, helveticaFont);
       if (value && typeof value === 'string') {
         page.drawText(value, {
           x: margin + columnWidth - 50,
-          y: colY,
-          size: 7,
+          y: colY + 1,
+          size: 8,
           font: helveticaFont,
         });
       }
-      colY -= 12;
+      colY -= 11;
     });
     drawBox(page, margin, checklistY - checklistHeight, columnWidth, checklistHeight);
     
@@ -992,21 +991,21 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     exteriorItems.forEach(([key, label]) => {
       const value = checklistData.exterior?.[key];
       page.drawText(label, {
-        x: col2X + 14,
-        y: colY,
-        size: 8,
+        x: col2X + 16,
+        y: colY + 1,
+        size: 9,
         font: helveticaFont,
       });
       drawCheckbox(page, col2X + 2, colY, '', value, helveticaFont);
       if (value && typeof value === 'string') {
         page.drawText(value, {
           x: col2X + columnWidth - 50,
-          y: colY,
-          size: 7,
+          y: colY + 1,
+          size: 8,
           font: helveticaFont,
         });
       }
-      colY -= 12;
+      colY -= 11;
     });
     drawBox(page, col2X, checklistY - checklistHeight, columnWidth, checklistHeight);
     
@@ -1031,7 +1030,7 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     deliveryItems.forEach(([key, label]) => {
       const value = checklistData.delivery?.[key];
       drawCheckbox(page, col3X + 2, colY, label, value, helveticaFont);
-      colY -= 12;
+      colY -= 11;
     });
     drawBox(page, col3X, checklistY - checklistHeight, columnWidth, checklistHeight);
     
@@ -1039,57 +1038,58 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     colY = checklistY;
     
     // Gegevens voertuig (Vehicle Data)
-    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Gegevens voertuig', helveticaBold, 10);
-    colY -= 23;
-    const vehicleDataHeight = 90;
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 16, 'Gegevens voertuig', helveticaBold, 9);
+    colY -= 19;
+    const vehicleDataHeight = 75;
     drawBox(page, sidebarX, colY - vehicleDataHeight, sidebarWidth, vehicleDataHeight);
-    page.drawText(`Merk:`, { x: sidebarX + 5, y: colY - 12, size: 8, font: helveticaFont });
-    page.drawText(`Type:`, { x: sidebarX + 5, y: colY - 24, size: 8, font: helveticaFont });
-    page.drawText(`Kenteken:`, { x: sidebarX + 5, y: colY - 36, size: 8, font: helveticaFont });
-    page.drawText(`Brandstof:`, { x: sidebarX + 5, y: colY - 48, size: 8, font: helveticaFont });
-    page.drawText(`Tank: ${damageCheck.fuelLevel || '-'}`, { x: sidebarX + 5, y: colY - 60, size: 8, font: helveticaFont });
-    colY -= (vehicleDataHeight + 5);
+    page.drawText(`Merk: ${vehicle?.brand || '-'}`, { x: sidebarX + 3, y: colY - 10, size: 8, font: helveticaFont });
+    page.drawText(`Model: ${vehicle?.model || '-'}`, { x: sidebarX + 3, y: colY - 21, size: 8, font: helveticaFont });
+    page.drawText(`Kenteken: ${vehicle?.licensePlate || '-'}`, { x: sidebarX + 3, y: colY - 32, size: 8, font: helveticaFont });
+    page.drawText(`Brandstof: ${vehicle?.fuel || '-'}`, { x: sidebarX + 3, y: colY - 43, size: 8, font: helveticaFont });
+    page.drawText(`Km: ${damageCheck.mileage || '-'}`, { x: sidebarX + 3, y: colY - 54, size: 8, font: helveticaFont });
+    page.drawText(`Tank: ${damageCheck.fuelLevel || '-'}`, { x: sidebarX + 3, y: colY - 65, size: 8, font: helveticaFont });
+    colY -= (vehicleDataHeight + 4);
     
     // Opmerkingen (Remarks)
-    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Opmerkingen', helveticaBold, 10);
-    colY -= 23;
-    const remarksHeight = 80;
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 16, 'Opmerkingen', helveticaBold, 9);
+    colY -= 19;
+    const remarksHeight = 60;
     drawBox(page, sidebarX, colY - remarksHeight, sidebarWidth, remarksHeight);
     if (damageCheck.notes) {
       page.drawText(damageCheck.notes.substring(0, 100), {
-        x: sidebarX + 5,
-        y: colY - 12,
+        x: sidebarX + 3,
+        y: colY - 10,
         size: 7,
         font: helveticaFont,
-        maxWidth: sidebarWidth - 10,
+        maxWidth: sidebarWidth - 6,
       });
     }
-    colY -= (remarksHeight + 5);
+    colY -= (remarksHeight + 4);
     
     // Controle door (Checked by)
-    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Controle door', helveticaBold, 10);
-    colY -= 23;
-    const controlHeight = 50;
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 16, 'Controle door', helveticaBold, 9);
+    colY -= 19;
+    const controlHeight = 40;
     drawBox(page, sidebarX, colY - controlHeight, sidebarWidth, controlHeight);
     const controlDate = damageCheck.checkDate ? format(new Date(damageCheck.checkDate), 'dd-MM-yyyy') : '--';
     page.drawText(`Datum: ${controlDate}`, {
-      x: sidebarX + 5,
-      y: colY - 12,
+      x: sidebarX + 3,
+      y: colY - 10,
       size: 8,
       font: helveticaFont,
     });
     page.drawText(`NAAM: ${damageCheck.completedBy || ''}`, {
-      x: sidebarX + 5,
-      y: colY - 30,
+      x: sidebarX + 3,
+      y: colY - 25,
       size: 8,
       font: helveticaFont,
     });
-    colY -= (controlHeight + 5);
+    colY -= (controlHeight + 4);
     
     // Handtekening (Signatures)
-    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Handtekening', helveticaBold, 10);
-    colY -= 23;
-    const sigHeight = 100;
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 16, 'Handtekening', helveticaBold, 9);
+    colY -= 19;
+    const sigHeight = 80;
     drawBox(page, sidebarX, colY - sigHeight, sidebarWidth, sigHeight);
     
     // Draw signatures if available

@@ -7729,11 +7729,14 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Damage check not found" });
       }
       
+      // Get vehicle data
+      const vehicle = await storage.getVehicle(check.vehicleId);
+      
       // Import PDF generator
       const { generateInteractiveDamageCheckPDF } = await import('./utils/pdf-generator');
       
-      // Generate PDF
-      const pdfBuffer = await generateInteractiveDamageCheckPDF(check);
+      // Generate PDF with vehicle data
+      const pdfBuffer = await generateInteractiveDamageCheckPDF(check, vehicle);
       
       // Set response headers for PDF download
       const filename = `damage_check_${check.vehicleId}_${check.checkType}_${new Date(check.checkDate).toISOString().split('T')[0]}.pdf`;
