@@ -11,6 +11,7 @@ import {
   Lock, Unlock, Eye, EyeOff, Settings2
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DamageCheckTemplate } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -164,6 +165,11 @@ export default function DamageCheckTemplateEditor() {
 
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
+  });
+
+  // Fetch damage check templates (for checklist content)
+  const { data: damageCheckTemplates = [] } = useQuery<DamageCheckTemplate[]>({
+    queryKey: ['/api/damage-check-templates'],
   });
 
   const saveTemplateMutation = useMutation({
@@ -494,10 +500,40 @@ export default function DamageCheckTemplateEditor() {
                           <div>Kenteken: AB-123-CD | Merk: Mercedes | Model: E-Klasse</div>
                         )}
                         {section.type === 'checklist' && (
-                          <div>
-                            <div>☐ Interieur: Binnenzijde auto schoon</div>
-                            <div>☐ Exterieur: Buitenzijde auto schoon</div>
-                            <div>☐ Aflever Check: Olie - water</div>
+                          <div className="space-y-1 max-h-full overflow-hidden">
+                            {damageCheckTemplates.length > 0 && damageCheckTemplates[0].inspectionPoints ? (
+                              <>
+                                {/* Group by category */}
+                                {['interieur', 'exterieur', 'afweez_check'].map(category => {
+                                  const categoryItems = (damageCheckTemplates[0].inspectionPoints as any[])
+                                    .filter((item: any) => item.category === category);
+                                  
+                                  if (categoryItems.length === 0) return null;
+                                  
+                                  const categoryTitle = category === 'interieur' ? 'Interieur' : 
+                                                       category === 'exterieur' ? 'Exterieur' : 
+                                                       'Aflever Check';
+                                  
+                                  return (
+                                    <div key={category} className="mb-2">
+                                      <div className="font-bold text-xs">{categoryTitle}</div>
+                                      {categoryItems.slice(0, 3).map((item: any, idx: number) => (
+                                        <div key={idx} className="text-xs ml-2">☐ {item.name}</div>
+                                      ))}
+                                      {categoryItems.length > 3 && (
+                                        <div className="text-xs ml-2 text-gray-400">...and {categoryItems.length - 3} more</div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            ) : (
+                              <>
+                                <div>☐ Interieur: Binnenzijde auto schoon</div>
+                                <div>☐ Exterieur: Buitenzijde auto schoon</div>
+                                <div>☐ Aflever Check: Olie - water</div>
+                              </>
+                            )}
                           </div>
                         )}
                         {section.type === 'diagram' && (
