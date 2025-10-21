@@ -162,6 +162,8 @@ export default function DamageCheckTemplateEditor() {
   const [newTemplateName, setNewTemplateName] = useState('');
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<TemplateSection | null>(null);
+  const [resizingSection, setResizingSection] = useState<{section: TemplateSection, handle: string} | null>(null);
+  const [resizeStart, setResizeStart] = useState<{x: number, y: number, width: number, height: number} | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -259,8 +261,72 @@ export default function DamageCheckTemplateEditor() {
     if (draggedSection && currentTemplate) {
       saveTemplateMutation.mutate(currentTemplate);
     }
+    if (resizingSection && currentTemplate) {
+      saveTemplateMutation.mutate(currentTemplate);
+    }
     setDraggedSection(null);
     setDragOffset(null);
+    setResizingSection(null);
+    setResizeStart(null);
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent, section: TemplateSection, handle: string) => {
+    if (section.locked || !canvasRef.current) return;
+    e.stopPropagation();
+    e.preventDefault();
+    
+    setSelectedSection(section.id);
+    setResizingSection({ section, handle });
+    setResizeStart({
+      x: section.x,
+      y: section.y,
+      width: section.width,
+      height: section.height
+    });
+  };
+
+  const handleResizeMouseMove = (e: React.MouseEvent) => {
+    if (!resizingSection || !resizeStart || !currentTemplate || !canvasRef.current) return;
+    
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - canvasRect.left) / zoomLevel;
+    const mouseY = (e.clientY - canvasRect.top) / zoomLevel;
+    
+    const { section, handle } = resizingSection;
+    let newX = resizeStart.x;
+    let newY = resizeStart.y;
+    let newWidth = resizeStart.width;
+    let newHeight = resizeStart.height;
+    
+    // Calculate new dimensions based on handle
+    if (handle.includes('e')) {
+      newWidth = Math.max(50, mouseX - section.x);
+    }
+    if (handle.includes('s')) {
+      newHeight = Math.max(30, mouseY - section.y);
+    }
+    if (handle.includes('w')) {
+      const delta = mouseX - section.x;
+      newWidth = Math.max(50, resizeStart.width - delta);
+      newX = resizeStart.x + (resizeStart.width - newWidth);
+    }
+    if (handle.includes('n')) {
+      const delta = mouseY - section.y;
+      newHeight = Math.max(30, resizeStart.height - delta);
+      newY = resizeStart.y + (resizeStart.height - newHeight);
+    }
+    
+    // Constrain to canvas bounds
+    newX = Math.max(0, Math.min(newX, 595 - newWidth));
+    newY = Math.max(0, Math.min(newY, 842 - newHeight));
+    newWidth = Math.min(newWidth, 595 - newX);
+    newHeight = Math.min(newHeight, 842 - newY);
+    
+    const updatedSections = currentTemplate.sections.map(s =>
+      s.id === section.id ? { ...s, x: newX, y: newY, width: newWidth, height: newHeight } : s
+    );
+    
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
   };
 
   const toggleSectionVisibility = (sectionId: string) => {
@@ -502,7 +568,10 @@ export default function DamageCheckTemplateEditor() {
                     height: 842 * zoomLevel,
                     cursor: isMoving ? 'move' : 'default',
                   }}
-                  onMouseMove={handleMouseMove}
+                  onMouseMove={(e) => {
+                    handleMouseMove(e);
+                    handleResizeMouseMove(e);
+                  }}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                 >
@@ -635,6 +704,55 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                       </div>
+
+                      {/* Resize Handles - only show when section is selected */}
+                      {selectedSection === section.id && !section.locked && (
+                        <>
+                          {/* Corner handles */}
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+                            style={{ top: -2, left: -2 }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'nw')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+                            style={{ top: -2, right: -2 }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'ne')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+                            style={{ bottom: -2, left: -2 }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'sw')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+                            style={{ bottom: -2, right: -2 }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'se')}
+                          />
+                          
+                          {/* Edge handles */}
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
+                            style={{ top: -2, left: '50%', transform: 'translateX(-50%)' }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'n')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
+                            style={{ bottom: -2, left: '50%', transform: 'translateX(-50%)' }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 's')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
+                            style={{ top: '50%', left: -2, transform: 'translateY(-50%)' }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'w')}
+                          />
+                          <div
+                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
+                            style={{ top: '50%', right: -2, transform: 'translateY(-50%)' }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'e')}
+                          />
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
