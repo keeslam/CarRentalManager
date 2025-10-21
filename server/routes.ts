@@ -7427,8 +7427,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
 
-      // Import PDF generator
-      const { generateDamageCheckPDF } = await import('./pdf-damage-check-generator');
+      // Import PDF generator - use template-based generator
+      const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
       
       // Get current or upcoming reservation for this vehicle (optional)
       let reservationData;
@@ -7462,7 +7462,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         console.warn("Could not fetch reservation data:", err);
       }
       
-      const pdfBuffer = await generateDamageCheckPDF(
+      const pdfBuffer = await generateDamageCheckPDFWithTemplate(
         {
           brand: vehicle.brand,
           model: vehicle.model,

@@ -1,6 +1,9 @@
 import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs/promises';
 import path from 'path';
+import { db } from './db';
+import { damageCheckPdfTemplates, damageCheckTemplates } from '../shared/schema';
+import { eq } from 'drizzle-orm';
 
 interface VehicleData {
   brand: string;
@@ -31,6 +34,34 @@ interface DamageCheckTemplate {
   diagramRearView?: string | null;
   diagramSideView?: string | null;
   isDefault?: boolean;
+}
+
+interface PdfTemplateSection {
+  id: string;
+  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  visible: boolean;
+  settings: {
+    fontSize?: number;
+    checkboxSize?: number;
+    companyName?: string;
+    headerColor?: string;
+    headerFontSize?: number;
+    showLogo?: boolean;
+    logoPath?: string;
+    [key: string]: any;
+  };
+}
+
+interface PdfTemplate {
+  id: number;
+  name: string;
+  isDefault: boolean;
+  sections: PdfTemplateSection[];
+  pageMargins?: number;
 }
 
 interface ReservationData {
@@ -446,6 +477,355 @@ export async function generateDamageCheckPDF(
     font,
     color: rgb(0.5, 0.5, 0.5),
   });
+  
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+/**
+ * Generate damage check PDF using the template system with custom section layout
+ */
+export async function generateDamageCheckPDFWithTemplate(
+  vehicle: VehicleData,
+  damageTemplate: DamageCheckTemplate,
+  reservationData?: ReservationData
+): Promise<Buffer> {
+  // Fetch the default PDF template
+  const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
+  
+  // If no template found, fall back to standard generation
+  if (!pdfTemplate || !pdfTemplate.sections) {
+    return generateDamageCheckPDF(vehicle, damageTemplate, reservationData);
+  }
+
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4 size
+  const { height } = page.getSize();
+  
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  // Helper to convert hex color to RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16) / 255,
+      g: parseInt(result[2], 16) / 255,
+      b: parseInt(result[3], 16) / 255
+    } : { r: 0.2, g: 0.3, b: 0.6 };
+  };
+  
+  // Render each visible section based on template
+  for (const section of (pdfTemplate.sections as PdfTemplateSection[])) {
+    if (!section.visible) continue;
+    
+    // PDF coordinates are from bottom-left, so convert from top-left
+    const pdfY = height - section.y - section.height;
+    
+    switch (section.type) {
+      case 'header': {
+        const headerColor = hexToRgb(section.settings.headerColor || '#334d99');
+        const headerFontSize = section.settings.headerFontSize || 14;
+        const companyName = section.settings.companyName || 'LAM GROUP';
+        
+        // Draw header background
+        page.drawRectangle({
+          x: section.x,
+          y: pdfY,
+          width: section.width,
+          height: section.height,
+          color: rgb(headerColor.r, headerColor.g, headerColor.b),
+        });
+        
+        // Draw company name
+        page.drawText(companyName, {
+          x: section.x + section.width / 2 - (companyName.length * headerFontSize * 0.3),
+          y: pdfY + section.height / 2 - headerFontSize / 2,
+          size: headerFontSize,
+          font: boldFont,
+          color: rgb(1, 1, 1),
+        });
+        
+        // Load logo if available
+        if (section.settings.logoPath) {
+          try {
+            const logoPath = path.join(process.cwd(), section.settings.logoPath);
+            const logoBytes = await fs.readFile(logoPath);
+            let logoImage;
+            
+            if (section.settings.logoPath.toLowerCase().endsWith('.png')) {
+              logoImage = await pdfDoc.embedPng(logoBytes);
+            } else if (section.settings.logoPath.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+              logoImage = await pdfDoc.embedJpg(logoBytes);
+            }
+            
+            if (logoImage) {
+              const logoHeight = section.height * 0.8;
+              const logoWidth = (logoImage.width / logoImage.height) * logoHeight;
+              page.drawImage(logoImage, {
+                x: section.x + 10,
+                y: pdfY + (section.height - logoHeight) / 2,
+                width: logoWidth,
+                height: logoHeight,
+              });
+            }
+          } catch (error) {
+            console.warn('Could not load logo:', error);
+          }
+        }
+        break;
+      }
+      
+      case 'contractInfo': {
+        const fontSize = section.settings.fontSize || 9;
+        const lineHeight = fontSize + 4;
+        let yPos = pdfY + section.height - 15;
+        
+        page.drawText('CONTRACTGEGEVENS', {
+          x: section.x + 5,
+          y: yPos,
+          size: fontSize + 1,
+          font: boldFont,
+        });
+        
+        yPos -= lineHeight;
+        
+        if (reservationData) {
+          const items = [
+            { label: 'Contract Nr:', value: reservationData.contractNumber || 'N/A' },
+            { label: 'Datum:', value: new Date().toLocaleDateString('nl-NL') },
+            { label: 'Klant:', value: reservationData.customerName || 'N/A' },
+            { label: 'Periode:', value: `${reservationData.startDate || ''} - ${reservationData.endDate || ''}` },
+          ];
+          
+          items.forEach(item => {
+            page.drawText(`${item.label} ${item.value}`, {
+              x: section.x + 5,
+              y: yPos,
+              size: fontSize,
+              font,
+            });
+            yPos -= lineHeight;
+          });
+        }
+        break;
+      }
+      
+      case 'vehicleData': {
+        const fontSize = section.settings.fontSize || 9;
+        const lineHeight = fontSize + 4;
+        let yPos = pdfY + section.height - 15;
+        
+        page.drawText('VOERTUIGGEGEVENS', {
+          x: section.x + 5,
+          y: yPos,
+          size: fontSize + 1,
+          font: boldFont,
+        });
+        
+        yPos -= lineHeight;
+        
+        const items = [
+          { label: 'Kenteken:', value: vehicle.licensePlate },
+          { label: 'Merk:', value: vehicle.brand },
+          { label: 'Model:', value: vehicle.model },
+          { label: 'Bouwjaar:', value: vehicle.buildYear || 'N/A' },
+          { label: 'Km-stand:', value: vehicle.mileage ? `${vehicle.mileage} km` : 'N/A' },
+          { label: 'Brandstof:', value: vehicle.fuel || 'N/A' },
+        ];
+        
+        items.forEach(item => {
+          page.drawText(`${item.label} ${item.value}`, {
+            x: section.x + 5,
+            y: yPos,
+            size: fontSize,
+            font,
+          });
+          yPos -= lineHeight;
+        });
+        break;
+      }
+      
+      case 'checklist': {
+        const fontSize = section.settings.fontSize || 8;
+        const checkboxSize = section.settings.checkboxSize || 8;
+        const lineHeight = fontSize + 3;
+        let yPos = pdfY + section.height - 15;
+        
+        page.drawText('SCHADECONTROLE', {
+          x: section.x + 5,
+          y: yPos,
+          size: fontSize + 2,
+          font: boldFont,
+        });
+        
+        yPos -= lineHeight * 2;
+        
+        // Group inspection points by category
+        const categories = ['interieur', 'exterieur', 'afweez_check'];
+        const categoryLabels: Record<string, string> = {
+          interieur: 'Interieur',
+          exterieur: 'Exterieur',
+          afweez_check: 'Aflever Check'
+        };
+        
+        for (const category of categories) {
+          const points = damageTemplate.inspectionPoints.filter(p => p.category === category);
+          if (points.length === 0) continue;
+          
+          // Category header
+          page.drawText(categoryLabels[category] || category, {
+            x: section.x + 5,
+            y: yPos,
+            size: fontSize + 1,
+            font: boldFont,
+          });
+          
+          yPos -= lineHeight;
+          
+          // Inspection points
+          for (const point of points) {
+            if (yPos < pdfY + 10) break; // Stop if we run out of space
+            
+            // Checkbox
+            page.drawRectangle({
+              x: section.x + 10,
+              y: yPos - checkboxSize,
+              width: checkboxSize,
+              height: checkboxSize,
+              borderColor: rgb(0, 0, 0),
+              borderWidth: 0.5,
+            });
+            
+            // Point name
+            page.drawText(point.name, {
+              x: section.x + 10 + checkboxSize + 5,
+              y: yPos - checkboxSize + 1,
+              size: fontSize,
+              font,
+            });
+            
+            yPos -= lineHeight;
+          }
+          
+          yPos -= lineHeight / 2; // Extra space between categories
+        }
+        break;
+      }
+      
+      case 'diagram': {
+        // Draw diagram placeholder box
+        page.drawRectangle({
+          x: section.x,
+          y: pdfY,
+          width: section.width,
+          height: section.height,
+          borderColor: rgb(0.7, 0.7, 0.7),
+          borderWidth: 1,
+        });
+        
+        page.drawText('VOERTUIGSCHEMA (Markeer schade)', {
+          x: section.x + section.width / 2 - 60,
+          y: pdfY + section.height / 2,
+          size: 9,
+          font: boldFont,
+          color: rgb(0.5, 0.5, 0.5),
+        });
+        
+        // Try to load diagram if available
+        if (damageTemplate.diagramTopView) {
+          try {
+            const diagramPath = path.join(process.cwd(), damageTemplate.diagramTopView);
+            const diagramBytes = await fs.readFile(diagramPath);
+            let diagramImage;
+            
+            if (damageTemplate.diagramTopView.toLowerCase().endsWith('.png')) {
+              diagramImage = await pdfDoc.embedPng(diagramBytes);
+            } else if (damageTemplate.diagramTopView.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+              diagramImage = await pdfDoc.embedJpg(diagramBytes);
+            }
+            
+            if (diagramImage) {
+              const imgHeight = section.height - 10;
+              const imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
+              page.drawImage(diagramImage, {
+                x: section.x + (section.width - imgWidth) / 2,
+                y: pdfY + 5,
+                width: imgWidth,
+                height: imgHeight,
+              });
+            }
+          } catch (error) {
+            console.warn('Could not load diagram:', error);
+          }
+        }
+        break;
+      }
+      
+      case 'remarks': {
+        const fontSize = section.settings.fontSize || 9;
+        
+        page.drawText('OPMERKINGEN', {
+          x: section.x + 5,
+          y: pdfY + section.height - 15,
+          size: fontSize + 1,
+          font: boldFont,
+        });
+        
+        // Draw remarks box
+        page.drawRectangle({
+          x: section.x + 5,
+          y: pdfY + 5,
+          width: section.width - 10,
+          height: section.height - 25,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+        break;
+      }
+      
+      case 'signatures': {
+        const fontSize = section.settings.fontSize || 9;
+        const boxWidth = (section.width - 15) / 2;
+        const signatureHeight = section.height - 20;
+        
+        // Customer signature
+        page.drawRectangle({
+          x: section.x + 5,
+          y: pdfY + 5,
+          width: boxWidth,
+          height: signatureHeight,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+        
+        page.drawText('Handtekening Klant', {
+          x: section.x + 5 + boxWidth / 2 - 40,
+          y: pdfY + 10,
+          size: fontSize,
+          font: boldFont,
+        });
+        
+        // Staff signature
+        page.drawRectangle({
+          x: section.x + 10 + boxWidth,
+          y: pdfY + 5,
+          width: boxWidth,
+          height: signatureHeight,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+        
+        page.drawText('Handtekening Medewerker', {
+          x: section.x + 10 + boxWidth + boxWidth / 2 - 55,
+          y: pdfY + 10,
+          size: fontSize,
+          font: boldFont,
+        });
+        break;
+      }
+    }
+  }
   
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);

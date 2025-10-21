@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,19 @@ export default function DamageCheckTemplateEditor() {
   const { data: damageCheckTemplates = [] } = useQuery<DamageCheckTemplate[]>({
     queryKey: ['/api/damage-check-templates'],
   });
+
+  // Update current template when templates refetch (to get latest saved data)
+  useEffect(() => {
+    if (currentTemplate && templates.length > 0) {
+      const updatedTemplate = templates.find(t => t.id === currentTemplate.id);
+      if (updatedTemplate) {
+        setCurrentTemplate(updatedTemplate);
+      }
+    } else if (!currentTemplate && templates.length > 0) {
+      // Auto-select first template if none selected
+      setCurrentTemplate(templates[0]);
+    }
+  }, [templates]);
 
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Partial<PdfTemplate>) => {
