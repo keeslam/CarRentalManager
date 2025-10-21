@@ -309,37 +309,45 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw existing paths
+    // Draw existing paths - convert from percentages to pixels
     ctx.strokeStyle = '#EF4444';
     ctx.lineWidth = 3;
     drawingPaths.forEach(path => {
       const points = path.split(' ');
       ctx.beginPath();
       points.forEach((point, i) => {
-        const [x, y] = point.split(',').map(Number);
+        const [xPercent, yPercent] = point.split(',').map(Number);
+        // Convert percentage (0-1) to pixel coordinates
+        const x = xPercent * canvas.width;
+        const y = yPercent * canvas.height;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
     });
 
-    // Draw markers
+    // Draw markers - convert from percentages to pixels
     markers.forEach(marker => {
       const markerColor = marker.severity === 'severe' ? '#DC2626' : marker.severity === 'moderate' ? '#F59E0B' : '#10B981';
       
-      // Use smaller radius since we're now using natural image dimensions
-      const markerRadius = 8;
+      // Convert percentage coordinates to pixels
+      const x = marker.x * canvas.width;
+      const y = marker.y * canvas.height;
+      
+      // Make marker size proportional to canvas size (0.5% of width)
+      const markerRadius = Math.max(6, canvas.width * 0.005);
       
       ctx.fillStyle = markerColor;
       ctx.beginPath();
-      ctx.arc(marker.x, marker.y, markerRadius, 0, Math.PI * 2);
+      ctx.arc(x, y, markerRadius, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 10px sans-serif';
+      const fontSize = Math.max(10, markerRadius * 1.2);
+      ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText((markers.indexOf(marker) + 1).toString(), marker.x, marker.y);
+      ctx.fillText((markers.indexOf(marker) + 1).toString(), x, y);
     });
   };
 
@@ -354,25 +362,26 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    // Scale from display coordinates to canvas coordinates
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    // Convert click coordinates to percentage (0-1)
+    const xPercent = (e.clientX - rect.left) / rect.width;
+    const yPercent = (e.clientY - rect.top) / rect.height;
 
-    // Check if clicked on existing marker
-    const clickedMarker = markers.find(m => 
-      Math.sqrt(Math.pow(m.x - x, 2) + Math.pow(m.y - y, 2)) < 15
-    );
+    // Check if clicked on existing marker (convert marker percentages to pixels for distance check)
+    const clickRadius = 15 / rect.width; // Click radius as percentage
+    const clickedMarker = markers.find(m => {
+      const dx = m.x - xPercent;
+      const dy = m.y - yPercent;
+      return Math.sqrt(dx * dx + dy * dy) < clickRadius;
+    });
 
     if (clickedMarker) {
       setSelectedMarker(clickedMarker);
     } else {
-      // Add new marker
+      // Add new marker with percentage coordinates
       const newMarker: DamageMarker = {
         id: Date.now().toString(),
-        x,
-        y,
+        x: xPercent,
+        y: yPercent,
         type: 'scratch',
         severity: 'minor',
         notes: '',
@@ -389,12 +398,10 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    // Scale from display coordinates to canvas coordinates
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    setCurrentPath(`${x},${y}`);
+    // Convert to percentage coordinates (0-1)
+    const xPercent = (e.clientX - rect.left) / rect.width;
+    const yPercent = (e.clientY - rect.top) / rect.height;
+    setCurrentPath(`${xPercent},${yPercent}`);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -404,23 +411,23 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    // Scale from display coordinates to canvas coordinates
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    setCurrentPath(prev => `${prev} ${x},${y}`);
+    // Convert to percentage coordinates (0-1)
+    const xPercent = (e.clientX - rect.left) / rect.width;
+    const yPercent = (e.clientY - rect.top) / rect.height;
+    setCurrentPath(prev => `${prev} ${xPercent},${yPercent}`);
 
-    // Draw preview
+    // Draw preview - convert percentages to pixels for display
     const ctx = canvas.getContext('2d');
     if (ctx) {
       redrawCanvas();
       ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 3;
-      const points = (currentPath + ` ${x},${y}`).split(' ');
+      const points = (currentPath + ` ${xPercent},${yPercent}`).split(' ');
       ctx.beginPath();
       points.forEach((point, i) => {
-        const [px, py] = point.split(',').map(Number);
+        const [pxPercent, pyPercent] = point.split(',').map(Number);
+        const px = pxPercent * canvas.width;
+        const py = pyPercent * canvas.height;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       });
