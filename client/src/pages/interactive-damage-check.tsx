@@ -590,7 +590,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         vehicleId: selectedVehicleId,
         reservationId: selectedReservationId,
         checkType,
-        checkDate: new Date().toISOString(),
+        checkDate: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
         diagramTemplateId: diagramTemplate.id,
         damageMarkers: JSON.stringify(markers),
         drawingPaths: JSON.stringify(drawingPaths),
