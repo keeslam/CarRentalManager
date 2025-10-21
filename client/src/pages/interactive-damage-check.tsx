@@ -338,8 +338,11 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Scale from display coordinates to canvas coordinates
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     // Check if clicked on existing marker
     const clickedMarker = markers.find(m => 
@@ -370,8 +373,11 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Scale from display coordinates to canvas coordinates
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     setCurrentPath(`${x},${y}`);
   };
 
@@ -382,8 +388,11 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Scale from display coordinates to canvas coordinates
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     setCurrentPath(prev => `${prev} ${x},${y}`);
 
     // Draw preview
