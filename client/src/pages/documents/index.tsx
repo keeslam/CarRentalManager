@@ -1609,6 +1609,309 @@ function DiagramTemplateManager() {
   );
 }
 
+// PDF Layout Preview Component
+function PDFLayoutPreview({ formValues }: { formValues: any }) {
+  const [zoom, setZoom] = useState(0.5);
+  const scale = zoom; // User-controlled zoom
+  const pageWidth = 595 * scale; // A4 width in pts
+  const pageHeight = 842 * scale; // A4 height in pts
+  
+  const headerColor = `rgb(${formValues.headerColorR || 51}, ${formValues.headerColorG || 77}, ${formValues.headerColorB || 153})`;
+  const fontSize = (formValues.fontSize || 9) * scale;
+  const headerFontSize = (formValues.headerFontSize || 14) * scale;
+  const checkboxSize = (formValues.checkboxSize || 10) * scale;
+  const sidebarWidth = (formValues.sidebarWidth || 130) * scale;
+  const columnSpacing = (formValues.columnSpacing || 5) * scale;
+  const checklistHeight = (formValues.checklistHeight || 280) * scale;
+  
+  // Calculate column widths
+  const contentWidth = pageWidth - 30 * scale; // Accounting for margins
+  const mainContentWidth = contentWidth - sidebarWidth;
+  const damageTypes = ['Kapot', 'Gat', 'Kras', 'Deuk', 'Ster', 'Beschadigd', 'Ontbreekt', 'Vuil'];
+  const numColumns = damageTypes.length;
+  const columnWidth = (mainContentWidth - (columnSpacing * (numColumns - 1))) / numColumns;
+  const categories = ['Interieur', 'Exterieur', 'Afweez Check'];
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 1.5));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.3));
+  const handleZoomReset = () => setZoom(0.5);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Zoom Controls */}
+      <div className="flex items-center justify-between mb-3 pb-3 border-b">
+        <div className="text-sm text-gray-600">
+          Zoom: {Math.round(zoom * 100)}%
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.3}
+            data-testid="button-zoom-out"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+              <line x1="8" x2="14" y1="11" y2="11"/>
+            </svg>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleZoomReset}
+            data-testid="button-zoom-reset"
+          >
+            {Math.round(zoom * 100)}%
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            disabled={zoom >= 1.5}
+            data-testid="button-zoom-in"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+              <line x1="11" x2="11" y1="8" y2="14"/>
+              <line x1="8" x2="14" y1="11" y2="11"/>
+            </svg>
+          </Button>
+        </div>
+      </div>
+
+      {/* Preview Content */}
+      <div className="flex-1 bg-gray-100 p-4 rounded-lg overflow-auto">
+        <div 
+          className="bg-white shadow-lg mx-auto"
+          style={{ width: pageWidth, minHeight: pageHeight }}
+        >
+        {/* Header */}
+        {formValues.showLogo && (
+          <div 
+            className="text-white font-bold flex items-center justify-center"
+            style={{ 
+              backgroundColor: headerColor,
+              fontSize: headerFontSize,
+              padding: 8 * scale,
+            }}
+          >
+            {formValues.companyName || 'COMPANY NAME'}
+          </div>
+        )}
+        
+        {/* Contract & Customer Info Section */}
+        <div style={{ padding: 8 * scale, fontSize: fontSize }}>
+          <div className="grid grid-cols-3 gap-1">
+            <div className="text-gray-600">Contract Nr: <span className="text-black font-semibold">2025-001234</span></div>
+            <div className="text-gray-600">Datum: <span className="text-black">21-10-2025 14:30</span></div>
+            <div className="text-gray-600">Locatie: <span className="text-black">Amsterdam CS</span></div>
+            <div className="text-gray-600">Klant: <span className="text-black">Jan de Vries</span></div>
+            <div className="text-gray-600">Telefoon: <span className="text-black">06-12345678</span></div>
+            <div className="text-gray-600">Email: <span className="text-black">jan@email.nl</span></div>
+          </div>
+        </div>
+
+        {/* Vehicle Data Section */}
+        {formValues.showVehicleData && (
+          <div style={{ padding: 8 * scale, borderTop: '1px solid #e5e7eb' }}>
+            <div className="font-semibold" style={{ fontSize: fontSize * 1.1, marginBottom: 4 * scale }}>
+              Voertuig Gegevens
+            </div>
+            <div className="grid grid-cols-3 gap-1" style={{ fontSize }}>
+              <div className="text-gray-600">Kenteken: <span className="text-black font-semibold">AB-123-CD</span></div>
+              <div className="text-gray-600">Merk: <span className="text-black">Mercedes-Benz</span></div>
+              <div className="text-gray-600">Model: <span className="text-black">E-Klasse</span></div>
+              <div className="text-gray-600">Brandstof: <span className="text-black">Diesel</span></div>
+              <div className="text-gray-600">Kilometerstand: <span className="text-black">45.230 km</span></div>
+              <div className="text-gray-600">Brandstof Niveau: <span className="text-black">3/4 Vol</span></div>
+            </div>
+          </div>
+        )}
+
+        {/* Damage Check Detailed Items */}
+        <div style={{ padding: 8 * scale, borderTop: '1px solid #e5e7eb' }}>
+          <div className="font-semibold mb-2" style={{ fontSize: fontSize * 1.1, marginBottom: 4 * scale }}>
+            Schade Inspectie Checklist
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3" style={{ gap: 6 * scale, fontSize }}>
+            {/* Interieur Section */}
+            <div>
+              <div className="font-semibold mb-1" style={{ fontSize: fontSize * 1.05, marginBottom: 2 * scale, color: headerColor }}>
+                Interieur
+              </div>
+              <div className="space-y-1" style={{ marginTop: 2 * scale }}>
+                {[
+                  'Binnenzijde auto schoon',
+                  'Vloermatten ja',
+                  'Bekleding heel',
+                  'Asbak schoon',
+                  'Reservewiel goed',
+                  'Krik aanwezig',
+                  'Wielsleutel ja',
+                  'Matten ja',
+                  'Hoofdsteunen goed'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1" style={{ gap: 2 * scale, marginTop: 1 * scale }}>
+                    <div className="border-2 border-gray-400" style={{ width: checkboxSize, height: checkboxSize, minWidth: checkboxSize }} />
+                    <span style={{ fontSize: fontSize * 0.9 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Exterieur Section */}
+            <div>
+              <div className="font-semibold mb-1" style={{ fontSize: fontSize * 1.05, marginBottom: 2 * scale, color: headerColor }}>
+                Exterieur
+              </div>
+              <div className="space-y-1" style={{ marginTop: 2 * scale }}>
+                {[
+                  'Buitenzijde auto schoon',
+                  'Wieldoppen LA',
+                  'Kentekemplaten voor',
+                  'Spiegelkap links',
+                  'Spiegelkap rechts',
+                  'Spiegelglas L+R goed',
+                  'Antenne goed',
+                  'Ruitenwisser goed',
+                  'Deurvanger goed',
+                  'Werkende sloten ja',
+                  'Mistlampen voor goed'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1" style={{ gap: 2 * scale, marginTop: 1 * scale }}>
+                    <div className="border-2 border-gray-400" style={{ width: checkboxSize, height: checkboxSize, minWidth: checkboxSize }} />
+                    <span style={{ fontSize: fontSize * 0.9 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Aflever Check Section */}
+            <div>
+              <div className="font-semibold mb-1" style={{ fontSize: fontSize * 1.05, marginBottom: 2 * scale, color: headerColor }}>
+                Aflever Check
+              </div>
+              <div className="space-y-1" style={{ marginTop: 2 * scale }}>
+                {[
+                  'Olie - water',
+                  'Ruitenproeiervloeistof',
+                  'Verlichting',
+                  'Bandenspanning incl. reservewiel',
+                  'Kachelfan',
+                  'Hoedenplank',
+                  'IJskrabber',
+                  'Gaan alle deuren open'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1" style={{ gap: 2 * scale, marginTop: 1 * scale }}>
+                    <div className="border-2 border-gray-400" style={{ width: checkboxSize, height: checkboxSize, minWidth: checkboxSize }} />
+                    <span style={{ fontSize: fontSize * 0.9 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Documenten Section */}
+            <div>
+              <div className="font-semibold mb-1" style={{ fontSize: fontSize * 1.05, marginBottom: 2 * scale, color: headerColor }}>
+                Documenten
+              </div>
+              <div className="space-y-1" style={{ marginTop: 2 * scale }}>
+                {[
+                  'Kentekenpapieren',
+                  'Geldige groene kaart',
+                  'Europees schadeformulier',
+                  'Tankpas aanwezig',
+                  'Sleutels compleet'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1" style={{ gap: 2 * scale, marginTop: 1 * scale }}>
+                    <div className="border-2 border-gray-400" style={{ width: checkboxSize, height: checkboxSize, minWidth: checkboxSize }} />
+                    <span style={{ fontSize: fontSize * 0.9 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Diagram Section */}
+        {formValues.showDiagram && (
+          <div style={{ padding: 8 * scale, borderTop: '1px solid #e5e7eb' }}>
+            <div className="font-semibold" style={{ fontSize: fontSize * 1.1, marginBottom: 4 * scale }}>
+              Voertuig Diagram - Schade Locaties
+            </div>
+            <div className="bg-white border border-gray-300 p-2 flex items-center justify-center" style={{ minHeight: 120 * scale }}>
+              {/* Simple Car SVG Diagram */}
+              <svg width={250 * scale} height={100 * scale} viewBox="0 0 250 100" xmlns="http://www.w3.org/2000/svg">
+                {/* Car Body */}
+                <rect x="40" y="40" width="170" height="40" fill="#e5e7eb" stroke="#374151" strokeWidth="2"/>
+                {/* Car Roof */}
+                <path d="M 70 40 L 90 20 L 160 20 L 180 40 Z" fill="#d1d5db" stroke="#374151" strokeWidth="2"/>
+                {/* Windows */}
+                <rect x="95" y="25" width="25" height="12" fill="#93c5fd" stroke="#374151" strokeWidth="1"/>
+                <rect x="130" y="25" width="25" height="12" fill="#93c5fd" stroke="#374151" strokeWidth="1"/>
+                {/* Wheels */}
+                <circle cx="70" cy="80" r="12" fill="#1f2937" stroke="#374151" strokeWidth="2"/>
+                <circle cx="70" cy="80" r="6" fill="#6b7280"/>
+                <circle cx="180" cy="80" r="12" fill="#1f2937" stroke="#374151" strokeWidth="2"/>
+                <circle cx="180" cy="80" r="6" fill="#6b7280"/>
+                {/* Headlights */}
+                <circle cx="208" cy="50" r="4" fill="#fef08a" stroke="#374151" strokeWidth="1"/>
+                <circle cx="208" cy="65" r="4" fill="#fef08a" stroke="#374151" strokeWidth="1"/>
+                {/* Sample damage markers */}
+                <circle cx="100" cy="45" r="3" fill="#ef4444" stroke="#991b1b" strokeWidth="1"/>
+                <text x="100" y="48" fontSize="8" fill="white" textAnchor="middle" fontWeight="bold">1</text>
+                <circle cx="150" cy="55" r="3" fill="#ef4444" stroke="#991b1b" strokeWidth="1"/>
+                <text x="150" y="58" fontSize="8" fill="white" textAnchor="middle" fontWeight="bold">2</text>
+                <circle cx="190" cy="42" r="3" fill="#ef4444" stroke="#991b1b" strokeWidth="1"/>
+                <text x="190" y="45" fontSize="8" fill="white" textAnchor="middle" fontWeight="bold">3</text>
+              </svg>
+            </div>
+            <div className="text-xs text-gray-500 mt-1" style={{ fontSize: fontSize * 0.8 }}>
+              Rode markers tonen schade locaties zoals ingevoerd tijdens inspectie
+            </div>
+          </div>
+        )}
+
+        {/* Remarks Section */}
+        {formValues.showRemarks && (
+          <div style={{ padding: 8 * scale, borderTop: '1px solid #e5e7eb' }}>
+            <div className="font-semibold" style={{ fontSize: fontSize * 1.1, marginBottom: 4 * scale }}>
+              Remarks
+            </div>
+            <div className="border border-gray-300" style={{ height: 20 * scale, padding: 4 * scale }}>
+              <span className="text-gray-400" style={{ fontSize }}>Notes and remarks...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Signatures Section */}
+        {formValues.showSignatures && (
+          <div style={{ padding: 8 * scale, borderTop: '1px solid #e5e7eb' }}>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="font-semibold" style={{ fontSize }}>Customer Signature</div>
+                <div className="border-b-2 border-gray-400 mt-2" style={{ height: 20 * scale }} />
+              </div>
+              <div>
+                <div className="font-semibold" style={{ fontSize }}>Staff Signature</div>
+                <div className="border-b-2 border-gray-400 mt-2" style={{ height: 20 * scale }} />
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DamageCheckPdfTemplateManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1782,14 +2085,17 @@ function DamageCheckPdfTemplateManager() {
       </CardContent>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? 'Edit' : 'Create'} PDF Template</DialogTitle>
             <DialogDescription>
-              Customize the layout, fonts, colors, and content of the damage check PDF
+              Customize the layout, fonts, colors, and content of the damage check PDF - preview updates live
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+          <div className="flex-1 overflow-hidden flex gap-6">
+            {/* Form Section */}
+            <div className="w-1/2 overflow-y-auto pr-4">
+              <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4" id="template-form">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label htmlFor="name">Template Name</Label>
@@ -1948,11 +2254,21 @@ function DamageCheckPdfTemplateManager() {
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
+              <Button type="submit" form="template-form" disabled={saveMutation.isPending}>
                 {saveMutation.isPending ? 'Saving...' : 'Save Template'}
               </Button>
             </div>
           </form>
+        </div>
+
+          {/* Live Preview Section */}
+          <div className="w-1/2 border-l pl-6 flex flex-col">
+            <h3 className="font-semibold mb-3">Live Preview</h3>
+            <div className="flex-1 overflow-y-auto">
+              <PDFLayoutPreview formValues={form.watch()} />
+            </div>
+          </div>
+        </div>
         </DialogContent>
       </Dialog>
     </Card>

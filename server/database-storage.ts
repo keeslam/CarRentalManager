@@ -2204,4 +2204,30 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
+
+  async ensureDefaultPdfTemplate(): Promise<void> {
+    const templates = await this.getAllDamageCheckPdfTemplates();
+    if (templates.length === 0) {
+      await this.createDamageCheckPdfTemplate({
+        name: 'Default Layout',
+        fontSize: 9,
+        checkboxSize: 10,
+        columnSpacing: 5,
+        sidebarWidth: 130,
+        checklistHeight: 280,
+        companyName: 'LAM GROUP',
+        showLogo: true,
+        headerFontSize: 14,
+        headerColorR: 51,
+        headerColorG: 77,
+        headerColorB: 153,
+        showVehicleData: true,
+        showRemarks: true,
+        showSignatures: true,
+        showDiagram: true,
+        isDefault: true,
+      });
+      console.log('✅ Created default PDF template');
+    }
+  }
 }
