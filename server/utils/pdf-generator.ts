@@ -951,18 +951,18 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
       };
       
       // Render Interior Checklist
-      if (checklistData.interiorChecklist) {
-        yPosition = renderChecklistSection('Interior Checklist', checklistData.interiorChecklist, yPosition);
+      if (checklistData.interior) {
+        yPosition = renderChecklistSection('Interior Checklist', checklistData.interior, yPosition);
       }
       
       // Render Exterior Checklist
-      if (checklistData.exteriorChecklist) {
-        yPosition = renderChecklistSection('Exterior Checklist', checklistData.exteriorChecklist, yPosition);
+      if (checklistData.exterior) {
+        yPosition = renderChecklistSection('Exterior Checklist', checklistData.exterior, yPosition);
       }
       
       // Render Delivery Checklist
-      if (checklistData.deliveryChecklist) {
-        yPosition = renderChecklistSection('Delivery Checklist', checklistData.deliveryChecklist, yPosition);
+      if (checklistData.delivery) {
+        yPosition = renderChecklistSection('Delivery Checklist', checklistData.delivery, yPosition);
       }
     }
     

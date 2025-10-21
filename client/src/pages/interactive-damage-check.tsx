@@ -190,9 +190,9 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             ? JSON.parse(savedCheck.checklistData)
             : savedCheck.checklistData;
           setChecklistItems({
-            interior: loadedChecklist.interiorChecklist || checklistItems.interior,
-            exterior: loadedChecklist.exteriorChecklist || checklistItems.exterior,
-            delivery: loadedChecklist.deliveryChecklist || checklistItems.delivery,
+            interior: loadedChecklist.interior || checklistItems.interior,
+            exterior: loadedChecklist.exterior || checklistItems.exterior,
+            delivery: loadedChecklist.delivery || checklistItems.delivery,
           });
         }
 
