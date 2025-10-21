@@ -7700,7 +7700,11 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.put("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updated = await storage.updateInteractiveDamageCheck(id, req.body);
+      const checkData = {
+        ...req.body,
+        checkDate: req.body.checkDate ? new Date(req.body.checkDate) : undefined,
+      };
+      const updated = await storage.updateInteractiveDamageCheck(id, checkData);
       
       if (!updated) {
         return res.status(404).json({ message: "Damage check not found" });
