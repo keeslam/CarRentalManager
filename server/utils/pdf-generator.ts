@@ -935,9 +935,10 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
             }
             
             const label = key.replace(/([A-Z])/g, ' $1').trim();
-            const checkbox = value ? '☑' : '☐';
+            // Use ASCII checkbox to avoid WinAnsi encoding issues
+            const checkbox = value ? '[X]' : '[ ]';
             
-            page.drawText(`${checkbox} ${label}`, {
+            page.drawText(`${checkbox} ${label}: ${value || 'N/A'}`, {
               x: 60,
               y: currentY,
               size: 11,
