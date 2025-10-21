@@ -777,8 +777,77 @@ function formatCurrency(amount: any): string {
 }
 
 /**
- * Generate a PDF for an interactive damage check
- * Includes vehicle info, damage markers, checklists, annotated diagram, and signatures
+ * Helper: Draw a rectangle border
+ */
+function drawBox(page: any, x: number, y: number, width: number, height: number, lineWidth = 1) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: lineWidth,
+  });
+}
+
+/**
+ * Helper: Draw a filled rectangle header
+ */
+function drawFilledHeader(page: any, x: number, y: number, width: number, height: number, text: string, font: any, fontSize = 10) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: rgb(0.2, 0.3, 0.6),
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1,
+  });
+  page.drawText(text, {
+    x: x + 5,
+    y: y + (height / 2) - (fontSize / 2),
+    size: fontSize,
+    font,
+    color: rgb(1, 1, 1),
+  });
+}
+
+/**
+ * Helper: Draw checkbox with label
+ */
+function drawCheckbox(page: any, x: number, y: number, label: string, value: any, font: any) {
+  // Checkbox
+  page.drawRectangle({
+    x,
+    y,
+    width: 8,
+    height: 8,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  
+  // If checked, draw X
+  if (value) {
+    page.drawText('X', {
+      x: x + 1,
+      y: y + 1,
+      size: 7,
+      font,
+    });
+  }
+  
+  // Label
+  page.drawText(label, {
+    x: x + 12,
+    y: y,
+    size: 8,
+    font,
+  });
+}
+
+/**
+ * Generate a PDF for an interactive damage check - Dutch format
+ * Matches professional rental damage check form layout
  */
 export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promise<Buffer> {
   try {
@@ -791,397 +860,277 @@ export async function generateInteractiveDamageCheckPDF(damageCheck: any): Promi
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    // Add first page
-    let page = pdfDoc.addPage([595, 842]); // A4 size
-    const { width, height } = page.getSize();
+    // Add first page - A4 size
+    const page = pdfDoc.addPage([595, 842]);
+    const { width, height} = page.getSize();
     
-    let yPosition = height - 50;
+    // Layout constants
+    const margin = 20;
+    const headerHeight = 60;
+    const columnWidth = (width - margin * 2 - 165) / 3; // 3 columns + right sidebar
+    const sidebarWidth = 155;
+    const sidebarX = width - margin - sidebarWidth;
     
-    // Title
-    page.drawText('INTERACTIVE DAMAGE CHECK REPORT', {
-      x: 50,
-      y: yPosition,
-      size: 18,
+    let y = height - margin;
+    
+    // ===== HEADER SECTION =====
+    // Logo placeholder (left)
+    page.drawText('LAM GROUP', {
+      x: margin,
+      y: y - 15,
+      size: 14,
       font: helveticaBold,
-      color: rgb(0, 0.2, 0.5),
+      color: rgb(0, 0.2, 0.6),
     });
-    yPosition -= 40;
     
-    // Check details
-    page.drawText(`Check Type: ${damageCheck.checkType === 'pickup' ? 'Pick-up' : 'Return'}`, {
-      x: 50,
-      y: yPosition,
-      size: 12,
+    // Date field (top right)
+    page.drawText('Datum:', {
+      x: sidebarX - 80,
+      y: y - 10,
+      size: 9,
       font: helveticaFont,
     });
-    yPosition -= 20;
-    
-    page.drawText(`Date: ${format(new Date(damageCheck.checkDate), 'MMMM d, yyyy')}`, {
-      x: 50,
-      y: yPosition,
-      size: 12,
+    drawBox(page, sidebarX, y - 20, sidebarWidth, 15);
+    const checkDate = damageCheck.checkDate ? format(new Date(damageCheck.checkDate), 'dd-MM-yyyy') : '--';
+    page.drawText(checkDate, {
+      x: sidebarX + 5,
+      y: y - 17,
+      size: 9,
       font: helveticaFont,
     });
-    yPosition -= 20;
     
-    if (damageCheck.completedBy) {
-      page.drawText(`Completed by: ${damageCheck.completedBy}`, {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaFont,
-      });
-      yPosition -= 20;
-    }
+    // Contract number field
+    y -= 25;
+    page.drawText('Verhuurcontractnummer:', {
+      x: sidebarX - 80,
+      y: y - 10,
+      size: 8,
+      font: helveticaFont,
+    });
+    drawBox(page, sidebarX, y - 20, sidebarWidth, 15);
+    const contractRef = `DC-${damageCheck.id || 'TEMP'}`;
+    page.drawText(contractRef, {
+      x: sidebarX + 5,
+      y: y - 17,
+      size: 9,
+      font: helveticaFont,
+    });
     
-    if (damageCheck.mileage) {
-      page.drawText(`Mileage: ${damageCheck.mileage} km`, {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaFont,
-      });
-      yPosition -= 20;
-    }
+    y -= 40;
     
-    if (damageCheck.fuelLevel) {
-      page.drawText(`Fuel Level: ${damageCheck.fuelLevel}`, {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaFont,
-      });
-      yPosition -= 20;
-    }
+    // ===== CHECKLIST COLUMNS =====
+    const checklistY = y;
+    const checklistHeight = 380;
     
-    if (damageCheck.notes) {
-      yPosition -= 10;
-      page.drawText('Notes:', {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaBold,
-      });
-      yPosition -= 20;
-      
-      // Wrap notes text
-      const maxWidth = width - 100;
-      const words = damageCheck.notes.split(' ');
-      let line = '';
-      
-      for (const word of words) {
-        const testLine = line + word + ' ';
-        const testWidth = helveticaFont.widthOfTextAtSize(testLine, 11);
-        
-        if (testWidth > maxWidth && line !== '') {
-          page.drawText(line, {
-            x: 50,
-            y: yPosition,
-            size: 11,
-            font: helveticaFont,
-          });
-          line = word + ' ';
-          yPosition -= 18;
-          
-          if (yPosition < 100) {
-            page = pdfDoc.addPage([595, 842]);
-            yPosition = height - 50;
-          }
-        } else {
-          line = testLine;
-        }
-      }
-      
-      if (line !== '') {
-        page.drawText(line, {
-          x: 50,
-          y: yPosition,
-          size: 11,
-          font: helveticaFont,
-        });
-        yPosition -= 30;
-      }
-    }
-    
-    // Add checklist data if available
+    // Parse checklist data with error handling
+    let checklistData = { interior: {}, exterior: {}, delivery: {} };
     if (damageCheck.checklistData) {
-      const checklistData = typeof damageCheck.checklistData === 'string' 
-        ? JSON.parse(damageCheck.checklistData) 
-        : damageCheck.checklistData;
-      
-      // Helper function to render a checklist section
-      const renderChecklistSection = (title: string, items: any, yPos: number) => {
-        let currentY = yPos;
-        
-        if (currentY < 150) {
-          page = pdfDoc.addPage([595, 842]);
-          currentY = height - 50;
-        }
-        
-        page.drawText(title, {
-          x: 50,
-          y: currentY,
-          size: 14,
-          font: helveticaBold,
-          color: rgb(0, 0.2, 0.5),
-        });
-        currentY -= 25;
-        
-        if (items && typeof items === 'object') {
-          for (const [key, value] of Object.entries(items)) {
-            if (currentY < 100) {
-              page = pdfDoc.addPage([595, 842]);
-              currentY = height - 50;
-            }
-            
-            const label = key.replace(/([A-Z])/g, ' $1').trim();
-            // Use ASCII checkbox to avoid WinAnsi encoding issues
-            const checkbox = value ? '[X]' : '[ ]';
-            
-            page.drawText(`${checkbox} ${label}: ${value || 'N/A'}`, {
-              x: 60,
-              y: currentY,
-              size: 11,
-              font: helveticaFont,
-            });
-            currentY -= 18;
-          }
-        }
-        
-        return currentY - 20;
-      };
-      
-      // Render Interior Checklist
-      if (checklistData.interior) {
-        yPosition = renderChecklistSection('Interior Checklist', checklistData.interior, yPosition);
-      }
-      
-      // Render Exterior Checklist
-      if (checklistData.exterior) {
-        yPosition = renderChecklistSection('Exterior Checklist', checklistData.exterior, yPosition);
-      }
-      
-      // Render Delivery Checklist
-      if (checklistData.delivery) {
-        yPosition = renderChecklistSection('Delivery Checklist', checklistData.delivery, yPosition);
-      }
-    }
-    
-    // Add damage markers summary
-    if (damageCheck.damageMarkers) {
-      const damageMarkers = typeof damageCheck.damageMarkers === 'string' 
-        ? JSON.parse(damageCheck.damageMarkers) 
-        : damageCheck.damageMarkers;
-      
-      if (damageMarkers && damageMarkers.length > 0) {
-        if (yPosition < 150) {
-          page = pdfDoc.addPage([595, 842]);
-          yPosition = height - 50;
-        }
-        
-        yPosition -= 10;
-        page.drawText('Damage Markers:', {
-          x: 50,
-          y: yPosition,
-          size: 14,
-          font: helveticaBold,
-          color: rgb(0, 0.2, 0.5),
-        });
-        yPosition -= 25;
-        
-        damageMarkers.forEach((marker: any, index: number) => {
-          if (yPosition < 100) {
-            page = pdfDoc.addPage([595, 842]);
-            yPosition = height - 50;
-          }
-          
-          page.drawText(`${index + 1}. ${marker.label || 'Damage'} - ${marker.severity || 'Unknown'}`, {
-            x: 60,
-            y: yPosition,
-            size: 11,
-            font: helveticaFont,
-          });
-          yPosition -= 18;
-        });
-        
-        yPosition -= 20;
-      }
-    }
-    
-    // Add annotated diagram if available
-    if (damageCheck.diagramWithAnnotations) {
-      // Create a new page for the diagram
-      if (yPosition < 400) {
-        page = pdfDoc.addPage([595, 842]);
-        yPosition = height - 50;
-      }
-      
-      page.drawText('Annotated Vehicle Diagram:', {
-        x: 50,
-        y: yPosition,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0, 0.2, 0.5),
-      });
-      yPosition -= 30;
-      
       try {
-        // Remove data URL prefix
-        const base64Data = damageCheck.diagramWithAnnotations.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-        const imageBytes = Buffer.from(base64Data, 'base64');
-        
-        // Determine image type from original data URL
-        let image;
-        if (damageCheck.diagramWithAnnotations.startsWith('data:image/png')) {
-          image = await pdfDoc.embedPng(imageBytes);
-        } else {
-          image = await pdfDoc.embedJpg(imageBytes);
-        }
-        
-        // Calculate dimensions to fit on page
-        const maxWidth = width - 100;
-        const maxHeight = 350;
-        const imgDims = image.scale(1);
-        
-        let imgWidth = imgDims.width;
-        let imgHeight = imgDims.height;
-        
-        // Scale down if needed
-        if (imgWidth > maxWidth || imgHeight > maxHeight) {
-          const widthRatio = maxWidth / imgWidth;
-          const heightRatio = maxHeight / imgHeight;
-          const ratio = Math.min(widthRatio, heightRatio);
-          imgWidth = imgWidth * ratio;
-          imgHeight = imgHeight * ratio;
-        }
-        
-        page.drawImage(image, {
-          x: (width - imgWidth) / 2,
-          y: yPosition - imgHeight,
-          width: imgWidth,
-          height: imgHeight,
-        });
-        
-        yPosition = yPosition - imgHeight - 30;
+        checklistData = typeof damageCheck.checklistData === 'string' 
+          ? JSON.parse(damageCheck.checklistData) 
+          : damageCheck.checklistData;
       } catch (err) {
-        console.error('Error embedding diagram image:', err);
-        page.drawText('Error: Could not embed diagram image', {
-          x: 50,
-          y: yPosition,
-          size: 11,
-          font: helveticaFont,
-          color: rgb(0.8, 0, 0),
-        });
-        yPosition -= 30;
+        console.error('Error parsing checklist data:', err);
       }
     }
     
-    // Add signatures on a new page
-    page = pdfDoc.addPage([595, 842]);
-    yPosition = height - 50;
-    
-    page.drawText('Signatures', {
-      x: 50,
-      y: yPosition,
-      size: 16,
-      font: helveticaBold,
-      color: rgb(0, 0.2, 0.5),
+    // INTERIEUR COLUMN
+    let colY = checklistY;
+    drawFilledHeader(page, margin, colY, columnWidth, 20, 'Interieur', helveticaBold, 11);
+    colY -= 25;
+    const interiorItems = [
+      ['carInterior', 'Binnenzijde auto'],
+      ['floorMats', 'Vloermatten'],
+      ['upholstery', 'Bekleding'],
+      ['ashtray', 'Asbak'],
+      ['spareWheel', 'Reservewiel'],
+      ['jack', 'Krik'],
+      ['wheelBrace', 'Wielsleutel'],
+      ['matKit', 'Matten'],
+      ['mainKeys', 'Hoofdsteunen'],
+    ];
+    interiorItems.forEach(([key, label]) => {
+      const value = checklistData.interior?.[key];
+      page.drawText(label, {
+        x: margin + 14,
+        y: colY,
+        size: 8,
+        font: helveticaFont,
+      });
+      drawCheckbox(page, margin + 2, colY, '', value, helveticaFont);
+      if (value && typeof value === 'string') {
+        page.drawText(value, {
+          x: margin + columnWidth - 50,
+          y: colY,
+          size: 7,
+          font: helveticaFont,
+        });
+      }
+      colY -= 12;
     });
-    yPosition -= 50;
+    drawBox(page, margin, checklistY - checklistHeight, columnWidth, checklistHeight);
     
-    // Renter signature
-    page.drawText('Renter Signature:', {
-      x: 50,
-      y: yPosition,
-      size: 12,
-      font: helveticaBold,
+    // EXTERIEUR COLUMN
+    colY = checklistY;
+    const col2X = margin + columnWidth + 5;
+    drawFilledHeader(page, col2X, colY, columnWidth, 20, 'Exterieur', helveticaBold, 11);
+    colY -= 25;
+    const exteriorItems = [
+      ['carExterior', 'Buitenzijde auto'],
+      ['hubcaps', 'Wieldoppen'],
+      ['licensePlates', 'Kentekemplaten'],
+      ['mirrorCapsLeft', 'Spiegelkap links'],
+      ['mirrorCapsRight', 'Spiegelkap rechts'],
+      ['mirrorGlassLeftRight', 'Spiegelglas L+R'],
+      ['antenna', 'Antenne'],
+      ['wiperBlade', 'Ruitenwisser'],
+      ['mudguards', 'Deurvanger'],
+      ['slidingDoorBus', 'Schuifdeur (bus)'],
+      ['indicatorSlots', 'Werkende sloten'],
+      ['fogLights', 'Mistlampen voor'],
+    ];
+    exteriorItems.forEach(([key, label]) => {
+      const value = checklistData.exterior?.[key];
+      page.drawText(label, {
+        x: col2X + 14,
+        y: colY,
+        size: 8,
+        font: helveticaFont,
+      });
+      drawCheckbox(page, col2X + 2, colY, '', value, helveticaFont);
+      if (value && typeof value === 'string') {
+        page.drawText(value, {
+          x: col2X + columnWidth - 50,
+          y: colY,
+          size: 7,
+          font: helveticaFont,
+        });
+      }
+      colY -= 12;
     });
-    yPosition -= 20;
+    drawBox(page, col2X, checklistY - checklistHeight, columnWidth, checklistHeight);
     
+    // AFLEVER CHECK COLUMN
+    colY = checklistY;
+    const col3X = margin + (columnWidth + 5) * 2;
+    drawFilledHeader(page, col3X, colY, columnWidth, 20, 'Aflever Check', helveticaBold, 11);
+    colY -= 25;
+    const deliveryItems = [
+      ['oilWater', 'Olie - water'],
+      ['washerFluid', 'Ruitenproeiervloeistof'],
+      ['lighting', 'Verlichting'],
+      ['tireInflation', 'Bandenspanning incl. reservewiel'],
+      ['fanBelt', 'Kachelfan'],
+      ['engineBoard', 'Hoedenplank'],
+      ['jackKnife', 'IJskrabber'],
+      ['allDoorsOpen', 'Gaan alle deuren open'],
+      ['licensePlatePapers', 'Kentekenpapieren'],
+      ['validGreenCard', 'Geldige groene kaart'],
+      ['europeanDamageForm', 'Europees schadeformulier'],
+    ];
+    deliveryItems.forEach(([key, label]) => {
+      const value = checklistData.delivery?.[key];
+      drawCheckbox(page, col3X + 2, colY, label, value, helveticaFont);
+      colY -= 12;
+    });
+    drawBox(page, col3X, checklistY - checklistHeight, columnWidth, checklistHeight);
+    
+    // ===== RIGHT SIDEBAR =====
+    colY = checklistY;
+    
+    // Gegevens voertuig (Vehicle Data)
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Gegevens voertuig', helveticaBold, 10);
+    colY -= 23;
+    const vehicleDataHeight = 90;
+    drawBox(page, sidebarX, colY - vehicleDataHeight, sidebarWidth, vehicleDataHeight);
+    page.drawText(`Merk:`, { x: sidebarX + 5, y: colY - 12, size: 8, font: helveticaFont });
+    page.drawText(`Type:`, { x: sidebarX + 5, y: colY - 24, size: 8, font: helveticaFont });
+    page.drawText(`Kenteken:`, { x: sidebarX + 5, y: colY - 36, size: 8, font: helveticaFont });
+    page.drawText(`Brandstof:`, { x: sidebarX + 5, y: colY - 48, size: 8, font: helveticaFont });
+    page.drawText(`Tank: ${damageCheck.fuelLevel || '-'}`, { x: sidebarX + 5, y: colY - 60, size: 8, font: helveticaFont });
+    colY -= (vehicleDataHeight + 5);
+    
+    // Opmerkingen (Remarks)
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Opmerkingen', helveticaBold, 10);
+    colY -= 23;
+    const remarksHeight = 80;
+    drawBox(page, sidebarX, colY - remarksHeight, sidebarWidth, remarksHeight);
+    if (damageCheck.notes) {
+      page.drawText(damageCheck.notes.substring(0, 100), {
+        x: sidebarX + 5,
+        y: colY - 12,
+        size: 7,
+        font: helveticaFont,
+        maxWidth: sidebarWidth - 10,
+      });
+    }
+    colY -= (remarksHeight + 5);
+    
+    // Controle door (Checked by)
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Controle door', helveticaBold, 10);
+    colY -= 23;
+    const controlHeight = 50;
+    drawBox(page, sidebarX, colY - controlHeight, sidebarWidth, controlHeight);
+    const controlDate = damageCheck.checkDate ? format(new Date(damageCheck.checkDate), 'dd-MM-yyyy') : '--';
+    page.drawText(`Datum: ${controlDate}`, {
+      x: sidebarX + 5,
+      y: colY - 12,
+      size: 8,
+      font: helveticaFont,
+    });
+    page.drawText(`NAAM: ${damageCheck.completedBy || ''}`, {
+      x: sidebarX + 5,
+      y: colY - 30,
+      size: 8,
+      font: helveticaFont,
+    });
+    colY -= (controlHeight + 5);
+    
+    // Handtekening (Signatures)
+    drawFilledHeader(page, sidebarX, colY, sidebarWidth, 18, 'Handtekening', helveticaBold, 10);
+    colY -= 23;
+    const sigHeight = 100;
+    drawBox(page, sidebarX, colY - sigHeight, sidebarWidth, sigHeight);
+    
+    // Draw signatures if available
     if (damageCheck.renterSignature) {
       try {
         const base64Data = damageCheck.renterSignature.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
         const signatureBytes = Buffer.from(base64Data, 'base64');
         const signatureImage = await pdfDoc.embedPng(signatureBytes);
-        
         page.drawImage(signatureImage, {
-          x: 50,
-          y: yPosition - 80,
-          width: 200,
-          height: 80,
+          x: sidebarX + 5,
+          y: colY - 45,
+          width: sidebarWidth - 10,
+          height: 35,
         });
-        yPosition -= 100;
       } catch (err) {
-        console.error('Error embedding renter signature:', err);
-        page.drawText('_______________________________', {
-          x: 50,
-          y: yPosition,
-          size: 12,
-          font: helveticaFont,
-        });
-        yPosition -= 40;
+        console.error('Error embedding signature:', err);
       }
-    } else {
-      page.drawText('_______________________________', {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaFont,
-      });
-      yPosition -= 40;
     }
     
-    yPosition -= 30;
-    
-    // Customer signature
-    page.drawText('Customer Signature:', {
-      x: 50,
-      y: yPosition,
-      size: 12,
-      font: helveticaBold,
-    });
-    yPosition -= 20;
-    
-    if (damageCheck.customerSignature) {
+    // ===== VEHICLE DIAGRAMS =====
+    if (damageCheck.diagramWithAnnotations) {
       try {
-        const base64Data = damageCheck.customerSignature.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-        const signatureBytes = Buffer.from(base64Data, 'base64');
-        const signatureImage = await pdfDoc.embedPng(signatureBytes);
+        const base64Data = damageCheck.diagramWithAnnotations.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+        const imageBytes = Buffer.from(base64Data, 'base64');
+        const image = damageCheck.diagramWithAnnotations.startsWith('data:image/png') ?
+          await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
         
-        page.drawImage(signatureImage, {
-          x: 50,
-          y: yPosition - 80,
-          width: 200,
-          height: 80,
+        const diagramY = checklistY - checklistHeight - 20;
+        const diagramWidth = width - margin * 2 - sidebarWidth - 10;
+        const diagramHeight = 180;
+        
+        page.drawImage(image, {
+          x: margin,
+          y: diagramY - diagramHeight,
+          width: diagramWidth,
+          height: diagramHeight,
         });
-        yPosition -= 100;
       } catch (err) {
-        console.error('Error embedding customer signature:', err);
-        page.drawText('_______________________________', {
-          x: 50,
-          y: yPosition,
-          size: 12,
-          font: helveticaFont,
-        });
+        console.error('Error embedding diagram:', err);
       }
-    } else {
-      page.drawText('_______________________________', {
-        x: 50,
-        y: yPosition,
-        size: 12,
-        font: helveticaFont,
-      });
     }
-    
-    // Footer
-    yPosition = 50;
-    page.drawText(`Generated on ${format(new Date(), 'MMMM d, yyyy HH:mm')}`, {
-      x: 50,
-      y: yPosition,
-      size: 9,
-      font: helveticaFont,
-      color: rgb(0.5, 0.5, 0.5),
-    });
     
     // Save and return the PDF
     const pdfBytes = await pdfDoc.save();
