@@ -490,7 +490,8 @@ export async function generateDamageCheckPDF(
 export async function generateDamageCheckPDFWithTemplate(
   vehicle: VehicleData,
   damageTemplate: DamageCheckTemplate,
-  reservationData?: ReservationData
+  reservationData?: ReservationData,
+  interactiveDamageCheck?: any
 ): Promise<Buffer> {
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
@@ -729,28 +730,17 @@ export async function generateDamageCheckPDFWithTemplate(
           borderWidth: 1,
         });
         
-        page.drawText('VOERTUIGSCHEMA (Markeer schade)', {
-          x: section.x + section.width / 2 - 60,
-          y: pdfY + section.height / 2,
-          size: 9,
-          font: boldFont,
-          color: rgb(0.5, 0.5, 0.5),
-        });
+        let diagramLoaded = false;
         
-        // Try to load diagram if available
-        if (damageTemplate.diagramTopView) {
+        // First, try to use the interactive damage check diagram with annotations
+        if (interactiveDamageCheck?.diagramWithAnnotations) {
           try {
-            const diagramPath = path.join(process.cwd(), damageTemplate.diagramTopView);
-            const diagramBytes = await fs.readFile(diagramPath);
-            let diagramImage;
-            
-            if (damageTemplate.diagramTopView.toLowerCase().endsWith('.png')) {
-              diagramImage = await pdfDoc.embedPng(diagramBytes);
-            } else if (damageTemplate.diagramTopView.toLowerCase().match(/\.(jpg|jpeg)$/)) {
-              diagramImage = await pdfDoc.embedJpg(diagramBytes);
-            }
-            
-            if (diagramImage) {
+            // Extract base64 data from data URL (format: data:image/png;base64,...)
+            const base64Data = interactiveDamageCheck.diagramWithAnnotations.split(',')[1];
+            if (base64Data) {
+              const diagramBytes = Buffer.from(base64Data, 'base64');
+              const diagramImage = await pdfDoc.embedPng(diagramBytes);
+              
               const imgHeight = section.height - 10;
               const imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
               page.drawImage(diagramImage, {
@@ -759,9 +749,49 @@ export async function generateDamageCheckPDFWithTemplate(
                 width: imgWidth,
                 height: imgHeight,
               });
+              diagramLoaded = true;
             }
           } catch (error) {
-            console.warn('Could not load diagram:', error);
+            console.warn('Could not load interactive damage check diagram:', error);
+          }
+        }
+        
+        // If no interactive diagram, show placeholder text
+        if (!diagramLoaded) {
+          page.drawText('VOERTUIGSCHEMA (Markeer schade)', {
+            x: section.x + section.width / 2 - 60,
+            y: pdfY + section.height / 2,
+            size: 9,
+            font: boldFont,
+            color: rgb(0.5, 0.5, 0.5),
+          });
+          
+          // Try to load template diagram if available
+          if (damageTemplate.diagramTopView) {
+            try {
+              const diagramPath = path.join(process.cwd(), damageTemplate.diagramTopView);
+              const diagramBytes = await fs.readFile(diagramPath);
+              let diagramImage;
+              
+              if (damageTemplate.diagramTopView.toLowerCase().endsWith('.png')) {
+                diagramImage = await pdfDoc.embedPng(diagramBytes);
+              } else if (damageTemplate.diagramTopView.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+                diagramImage = await pdfDoc.embedJpg(diagramBytes);
+              }
+              
+              if (diagramImage) {
+                const imgHeight = section.height - 10;
+                const imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
+                page.drawImage(diagramImage, {
+                  x: section.x + (section.width - imgWidth) / 2,
+                  y: pdfY + 5,
+                  width: imgWidth,
+                  height: imgHeight,
+                });
+              }
+            } catch (error) {
+              console.warn('Could not load template diagram:', error);
+            }
           }
         }
         break;
