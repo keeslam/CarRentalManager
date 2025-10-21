@@ -7700,8 +7700,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.put("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      // Exclude timestamp fields from the request body to avoid date conversion issues
+      const { createdAt, updatedAt, ...bodyData } = req.body;
       const checkData = {
-        ...req.body,
+        ...bodyData,
         checkDate: req.body.checkDate ? new Date(req.body.checkDate) : undefined,
       };
       const updated = await storage.updateInteractiveDamageCheck(id, checkData);
