@@ -1070,34 +1070,36 @@ export const insertInteractiveDamageCheckSchema = createInsertSchema(interactive
 export type InteractiveDamageCheck = typeof interactiveDamageChecks.$inferSelect;
 export type InsertInteractiveDamageCheck = z.infer<typeof insertInteractiveDamageCheckSchema>;
 
-// Damage Check PDF Layout Templates - for customizing damage check PDF appearance
+// Damage Check PDF Layout Templates - for customizing damage check PDF appearance with drag-and-drop sections
 export const damageCheckPdfTemplates = pgTable("damage_check_pdf_templates", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   isDefault: boolean("is_default").default(false).notNull(),
   
-  // Layout settings
-  fontSize: integer("font_size").default(9).notNull(), // Base font size
-  checkboxSize: integer("checkbox_size").default(10).notNull(), // Checkbox size in points
-  columnSpacing: integer("column_spacing").default(5).notNull(), // Space between columns
-  sidebarWidth: integer("sidebar_width").default(130).notNull(), // Right sidebar width
-  checklistHeight: integer("checklist_height").default(280).notNull(), // Checklist section height
+  // Sections layout - JSON array of draggable sections
+  // Each section has: { id, type, x, y, width, height, visible, settings }
+  sections: jsonb("sections").notNull().$type<Array<{
+    id: string;
+    type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+    locked?: boolean;
+    settings: {
+      fontSize?: number;
+      checkboxSize?: number;
+      companyName?: string;
+      headerColor?: string; // hex color
+      headerFontSize?: number;
+      showLogo?: boolean;
+      [key: string]: any;
+    };
+  }>>(),
   
-  // Header settings
-  companyName: text("company_name").default("LAM GROUP").notNull(),
-  showLogo: boolean("show_logo").default(true).notNull(),
-  headerFontSize: integer("header_font_size").default(14).notNull(),
-  
-  // Color settings (RGB 0-255)
-  headerColorR: integer("header_color_r").default(51).notNull(), // 0.2 * 255
-  headerColorG: integer("header_color_g").default(77).notNull(), // 0.3 * 255
-  headerColorB: integer("header_color_b").default(153).notNull(), // 0.6 * 255
-  
-  // Content settings
-  showVehicleData: boolean("show_vehicle_data").default(true).notNull(),
-  showRemarks: boolean("show_remarks").default(true).notNull(),
-  showSignatures: boolean("show_signatures").default(true).notNull(),
-  showDiagram: boolean("show_diagram").default(true).notNull(),
+  // Global settings
+  pageMargins: integer("page_margins").default(15).notNull(),
   
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
