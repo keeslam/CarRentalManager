@@ -7737,12 +7737,21 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       // Find the appropriate damage check template for this vehicle
-      const damageTemplate = await storage.findDamageCheckTemplate(
+      let damageTemplate;
+      
+      // Try to find a template matching the vehicle
+      const matchingTemplates = await storage.getDamageCheckTemplatesByVehicle(
         vehicle.brand,
         vehicle.model,
-        vehicle.vehicleType || undefined,
-        vehicle.productionDate ? parseInt(vehicle.productionDate) : undefined
+        vehicle.vehicleType || undefined
       );
+      
+      if (matchingTemplates && matchingTemplates.length > 0) {
+        damageTemplate = matchingTemplates[0];
+      } else {
+        // Fall back to default template
+        damageTemplate = await storage.getDefaultDamageCheckTemplate();
+      }
       
       if (!damageTemplate) {
         return res.status(404).json({ 
