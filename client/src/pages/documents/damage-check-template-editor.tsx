@@ -544,18 +544,33 @@ export default function DamageCheckTemplateEditor() {
                       </div>
                       
                       {/* Section Content Preview */}
-                      <div className="p-2 pt-8 text-xs text-gray-600">
+                      <div className="p-2 pt-8 text-[8px] text-gray-700 leading-tight">
                         {section.type === 'header' && (
-                          <div className="font-bold">{section.settings.companyName || 'Company Name'}</div>
+                          <div className="font-bold text-center" style={{ fontSize: `${section.settings.headerFontSize || 14}px`, color: section.settings.headerColor || '#334d99' }}>
+                            {section.settings.companyName || 'LAM GROUP'}
+                            {section.settings.logoPath && <div className="text-[6px] text-gray-400 mt-1">[Logo]</div>}
+                          </div>
                         )}
                         {section.type === 'contractInfo' && (
-                          <div>Contract #12345 | Date: 21-10-2025 | Customer: Jan de Vries</div>
+                          <div className="grid grid-cols-2 gap-1 text-[7px]">
+                            <div><strong>Contract Nr:</strong> 2025-001</div>
+                            <div><strong>Datum:</strong> 21-10-2025</div>
+                            <div><strong>Klant:</strong> Jan de Vries</div>
+                            <div><strong>Type:</strong> Ophalen</div>
+                          </div>
                         )}
                         {section.type === 'vehicleData' && (
-                          <div>Kenteken: AB-123-CD | Merk: Mercedes | Model: E-Klasse</div>
+                          <div className="grid grid-cols-2 gap-1 text-[7px]">
+                            <div><strong>Kenteken:</strong> AB-123-CD</div>
+                            <div><strong>Merk:</strong> Mercedes</div>
+                            <div><strong>Model:</strong> E-Klasse</div>
+                            <div><strong>Bouwjaar:</strong> 2020</div>
+                            <div><strong>Km Stand:</strong> 45.320 km</div>
+                            <div><strong>Brandstof:</strong> 3/4 tank</div>
+                          </div>
                         )}
                         {section.type === 'checklist' && (
-                          <div className="space-y-1 max-h-full overflow-hidden">
+                          <div className="w-full h-full overflow-auto text-[8px] leading-tight p-1">
                             {damageCheckTemplates.length > 0 && damageCheckTemplates[0].inspectionPoints ? (
                               <>
                                 {/* Group by category */}
@@ -570,14 +585,14 @@ export default function DamageCheckTemplateEditor() {
                                                        'Aflever Check';
                                   
                                   return (
-                                    <div key={category} className="mb-2">
-                                      <div className="font-bold text-xs">{categoryTitle}</div>
-                                      {categoryItems.slice(0, 3).map((item: any, idx: number) => (
-                                        <div key={idx} className="text-xs ml-2">☐ {item.name}</div>
+                                    <div key={category} className="mb-1">
+                                      <div className="font-bold">{categoryTitle}</div>
+                                      {categoryItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="ml-1 flex items-start gap-1">
+                                          <span>☐</span>
+                                          <span>{item.name}</span>
+                                        </div>
                                       ))}
-                                      {categoryItems.length > 3 && (
-                                        <div className="text-xs ml-2 text-gray-400">...and {categoryItems.length - 3} more</div>
-                                      )}
                                     </div>
                                   );
                                 })}
@@ -592,17 +607,31 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'diagram' && (
-                          <div className="flex items-center justify-center h-full text-gray-400">
-                            [Vehicle Diagram]
+                          <div className="flex items-center justify-center h-full text-gray-400 border border-dashed border-gray-300 m-2">
+                            <div className="text-center text-[7px]">
+                              <div>Voertuig Diagram</div>
+                              <div className="text-[6px]">(Schade markering)</div>
+                            </div>
                           </div>
                         )}
                         {section.type === 'remarks' && (
-                          <div className="italic">Remarks and notes...</div>
+                          <div className="text-[7px]">
+                            <div className="font-bold mb-1">Opmerkingen:</div>
+                            <div className="border border-gray-300 p-1 h-12 bg-gray-50">
+                              [Ruimte voor aanvullende opmerkingen en notities]
+                            </div>
+                          </div>
                         )}
                         {section.type === 'signatures' && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>Customer Signature: _______</div>
-                            <div>Staff Signature: _______</div>
+                          <div className="grid grid-cols-2 gap-2 text-[7px]">
+                            <div className="text-center">
+                              <div className="border-b border-gray-400 mb-1 h-8"></div>
+                              <div className="font-bold">Handtekening Klant</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="border-b border-gray-400 mb-1 h-8"></div>
+                              <div className="font-bold">Handtekening Medewerker</div>
+                            </div>
                           </div>
                         )}
                       </div>
