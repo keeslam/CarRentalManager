@@ -7850,6 +7850,20 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get recent damage checks by vehicle and customer
+  app.get("/api/interactive-damage-checks/vehicle/:vehicleId/customer/:customerId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const customerId = parseInt(req.params.customerId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 3;
+      const checks = await storage.getRecentDamageChecksByVehicleAndCustomer(vehicleId, customerId, limit);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching damage checks by vehicle and customer:", error);
+      res.status(500).json({ message: "Error fetching damage checks by vehicle and customer" });
+    }
+  });
+
   // Create interactive damage check
   app.post("/api/interactive-damage-checks", requireAuth, async (req: Request, res: Response) => {
     try {

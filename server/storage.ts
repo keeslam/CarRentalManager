@@ -164,6 +164,7 @@ export interface IStorage {
   getInteractiveDamageCheck(id: number): Promise<InteractiveDamageCheck | undefined>;
   getInteractiveDamageChecksByVehicle(vehicleId: number): Promise<InteractiveDamageCheck[]>;
   getInteractiveDamageChecksByReservation(reservationId: number): Promise<InteractiveDamageCheck[]>;
+  getRecentDamageChecksByVehicleAndCustomer(vehicleId: number, customerId: number, limit?: number): Promise<InteractiveDamageCheck[]>;
   createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck>;
   updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined>;
   deleteInteractiveDamageCheck(id: number): Promise<boolean>;
@@ -1724,6 +1725,86 @@ export class MemStorage implements IStorage {
   }
 
   async deleteDamageCheckTemplate(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getAllVehicleDiagramTemplates(): Promise<VehicleDiagramTemplate[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getVehicleDiagramTemplate(id: number): Promise<VehicleDiagramTemplate | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getVehicleDiagramTemplateByVehicle(make: string, model: string, year?: number): Promise<VehicleDiagramTemplate | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async createVehicleDiagramTemplate(template: InsertVehicleDiagramTemplate): Promise<VehicleDiagramTemplate> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async updateVehicleDiagramTemplate(id: number, templateData: Partial<InsertVehicleDiagramTemplate>): Promise<VehicleDiagramTemplate | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async deleteVehicleDiagramTemplate(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getAllInteractiveDamageChecks(): Promise<InteractiveDamageCheck[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getInteractiveDamageCheck(id: number): Promise<InteractiveDamageCheck | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getInteractiveDamageChecksByVehicle(vehicleId: number): Promise<InteractiveDamageCheck[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getInteractiveDamageChecksByReservation(reservationId: number): Promise<InteractiveDamageCheck[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getRecentDamageChecksByVehicleAndCustomer(vehicleId: number, customerId: number, limit?: number): Promise<InteractiveDamageCheck[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async deleteInteractiveDamageCheck(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getAllDamageCheckPdfTemplates(): Promise<any[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getDamageCheckPdfTemplate(id: number): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getDefaultDamageCheckPdfTemplate(): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async createDamageCheckPdfTemplate(template: any): Promise<any> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async updateDamageCheckPdfTemplate(id: number, templateData: any): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async deleteDamageCheckPdfTemplate(id: number): Promise<boolean> {
     throw new Error('Not implemented in MemStorage');
   }
 }

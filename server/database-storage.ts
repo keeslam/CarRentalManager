@@ -2138,6 +2138,42 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(interactiveDamageChecks.checkDate));
   }
 
+  async getRecentDamageChecksByVehicleAndCustomer(vehicleId: number, customerId: number, limit: number = 3): Promise<InteractiveDamageCheck[]> {
+    // Get damage checks for this vehicle where the reservation belongs to the customer
+    const checks = await db
+      .select({
+        id: interactiveDamageChecks.id,
+        vehicleId: interactiveDamageChecks.vehicleId,
+        reservationId: interactiveDamageChecks.reservationId,
+        checkType: interactiveDamageChecks.checkType,
+        checkDate: interactiveDamageChecks.checkDate,
+        diagramTemplateId: interactiveDamageChecks.diagramTemplateId,
+        damageMarkers: interactiveDamageChecks.damageMarkers,
+        drawingPaths: interactiveDamageChecks.drawingPaths,
+        diagramWithAnnotations: interactiveDamageChecks.diagramWithAnnotations,
+        checklistData: interactiveDamageChecks.checklistData,
+        notes: interactiveDamageChecks.notes,
+        mileage: interactiveDamageChecks.mileage,
+        fuelLevel: interactiveDamageChecks.fuelLevel,
+        renterSignature: interactiveDamageChecks.renterSignature,
+        customerSignature: interactiveDamageChecks.customerSignature,
+        createdAt: interactiveDamageChecks.createdAt,
+        updatedAt: interactiveDamageChecks.updatedAt,
+      })
+      .from(interactiveDamageChecks)
+      .leftJoin(reservations, eq(interactiveDamageChecks.reservationId, reservations.id))
+      .where(
+        and(
+          eq(interactiveDamageChecks.vehicleId, vehicleId),
+          eq(reservations.customerId, customerId)
+        )
+      )
+      .orderBy(desc(interactiveDamageChecks.checkDate))
+      .limit(limit);
+    
+    return checks;
+  }
+
   async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck> {
     const [newCheck] = await db.insert(interactiveDamageChecks).values(check).returning();
     return newCheck;
