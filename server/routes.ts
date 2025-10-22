@@ -4579,6 +4579,133 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== DAMAGE CHECK GENERATION ====================
+  // Generate damage check PDF for a reservation
+  app.get("/api/damage-checks/generate/:reservationId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.reservationId);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+      
+      // Load related data
+      if (reservation.vehicleId) {
+        reservation.vehicle = await storage.getVehicle(reservation.vehicleId);
+      }
+      
+      if (reservation.customerId) {
+        reservation.customer = await storage.getCustomer(reservation.customerId);
+      }
+
+      // Load driver if assigned
+      let driver = null;
+      if (reservation.driverId) {
+        driver = await storage.getDriver(reservation.driverId);
+      }
+
+      if (!reservation.vehicle) {
+        return res.status(400).json({ message: "Vehicle not found for reservation" });
+      }
+
+      // Generate damage check PDF
+      const { generateDamageCheckPdfForVehicle } = await import('./pdf-damage-check-generator');
+      const pdfBuffer = await generateDamageCheckPdfForVehicle(
+        reservation.vehicle.id,
+        reservationId,
+        reservation.customerId || undefined
+      );
+
+      // Save the damage check to documents (linked to both reservation and vehicle)
+      if (reservation.vehicleId && reservation.vehicle) {
+        try {
+          const timestamp = Date.now();
+          const dateString = format(new Date(), 'yyyy-MM-dd');
+          const licensePlate = reservation.vehicle.licensePlate || 'UNKNOWN';
+          const sanitizedPlate = licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+          
+          // Create directory structure for damage checks
+          const vehicleDir = path.join(uploadsDir, sanitizedPlate, 'damage-checks');
+          if (!fs.existsSync(vehicleDir)) {
+            fs.mkdirSync(vehicleDir, { recursive: true });
+          }
+          
+          // Check for existing damage checks for this reservation to determine version number
+          const existingDocs = await storage.getDocumentsByReservation(reservationId);
+          const existingDamageChecks = existingDocs.filter(doc => 
+            doc.documentType?.startsWith('Damage Check (Unsigned)')
+          );
+          
+          // Determine version number
+          let versionNumber = 1;
+          if (existingDamageChecks.length > 0) {
+            const versions = existingDamageChecks.map(doc => {
+              const match = doc.documentType?.match(/Damage Check \(Unsigned\)(?: (\d+))?/);
+              return match && match[1] ? parseInt(match[1]) : 1;
+            });
+            versionNumber = Math.max(...versions) + 1;
+          }
+          
+          // Generate filename with version
+          const versionSuffix = versionNumber > 1 ? `_v${versionNumber}` : '';
+          const fileName = `${sanitizedPlate}_DamageCheck_Unsigned_${dateString}${versionSuffix}_${timestamp}.pdf`;
+          const filePath = path.join(vehicleDir, fileName);
+          const relativeFilePath = `uploads/${sanitizedPlate}/damage-checks/${fileName}`;
+          
+          // Write PDF to file system
+          fs.writeFileSync(filePath, pdfBuffer);
+          console.log(`✅ Saved unsigned damage check to: ${relativeFilePath}`);
+          
+          // Create document record linked to both reservation and vehicle
+          const documentType = versionNumber > 1 
+            ? `Damage Check (Unsigned) ${versionNumber}`
+            : 'Damage Check (Unsigned)';
+          
+          const documentData = {
+            vehicleId: reservation.vehicleId,
+            reservationId: reservationId,
+            documentType: documentType,
+            fileName: fileName,
+            filePath: relativeFilePath,
+            fileSize: pdfBuffer.length,
+            contentType: 'application/pdf',
+            uploadDate: new Date().toISOString(),
+            notes: versionNumber > 1 
+              ? `Auto-generated unsigned damage check (version ${versionNumber})`
+              : 'Auto-generated unsigned damage check',
+            createdBy: req.user?.username || 'system'
+          };
+          
+          const savedDocument = await storage.createDocument(documentData);
+          console.log(`✅ Created document record for unsigned damage check (version ${versionNumber})`);
+          
+          // Broadcast real-time update to all connected clients
+          realtimeEvents.documents.created(savedDocument);
+        } catch (saveError) {
+          console.error('⚠️ Error saving damage check to documents (PDF will still download):', saveError);
+        }
+      }
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=damage_check_${reservationId}_unsigned.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating damage check:", error);
+      res.status(500).json({ 
+        message: "Failed to generate damage check", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // ==================== PDF TEMPLATES ====================
   // Get all PDF templates
   app.get("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {

@@ -1007,6 +1007,68 @@ export function ReservationForm({
     }
   };
 
+  // Generate damage check mutation
+  const generateDamageCheckMutation = useMutation({
+    mutationFn: async (reservationId: number) => {
+      const response = await fetch(`/api/damage-checks/generate/${reservationId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate damage check');
+      }
+      
+      return { blob: await response.blob(), filename: `damage_check_${reservationId}.pdf` };
+    },
+    onSuccess: ({ blob, filename }) => {
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      // Refetch documents to show the new version
+      const reservationId = createdReservationId || initialData?.id;
+      if (reservationId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/documents/reservation/${reservationId}`] 
+        });
+      }
+      
+      toast({
+        title: "Damage Check Generated",
+        description: "The damage check has been generated and downloaded successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate damage check: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle damage check generation
+  const handleGenerateDamageCheck = () => {
+    const reservationId = editMode ? initialData?.id : createdReservationId;
+    if (reservationId) {
+      generateDamageCheckMutation.mutate(reservationId);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please save the reservation first before generating a damage check.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // State for preview mode
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewData, setPreviewData] = useState<z.infer<typeof formSchema> | null>(null);
@@ -2550,6 +2612,33 @@ export function ReservationForm({
                       <>
                         <FileText className="mr-2 h-4 w-4" />
                         Generate & Save Contract
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Generate damage check button - only in edit mode or after creating reservation */}
+                {((editMode && initialData && selectedVehicle) || (createdReservationId && selectedVehicle)) && !isPreviewMode && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateDamageCheck}
+                    disabled={generateDamageCheckMutation.isPending}
+                    data-testid="button-generate-damage-check"
+                    className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                  >
+                    {generateDamageCheckMutation.isPending ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate & Save Damage Check
                       </>
                     )}
                   </Button>
