@@ -750,11 +750,59 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'diagram' && (
-                          <div className="flex items-center justify-center h-full text-gray-400 border border-dashed border-gray-300 m-2">
-                            <div className="text-center text-[7px]">
-                              <div>Voertuig Diagram</div>
-                              <div className="text-[6px]">(Schade markering)</div>
-                            </div>
+                          <div className="flex items-center justify-center h-full p-2">
+                            {damageCheckTemplates.length > 0 && (
+                              damageCheckTemplates[0].diagramTopView || 
+                              damageCheckTemplates[0].diagramFrontView || 
+                              damageCheckTemplates[0].diagramSideView || 
+                              damageCheckTemplates[0].diagramRearView
+                            ) ? (
+                              <div className="grid grid-cols-2 gap-1 w-full h-full">
+                                {damageCheckTemplates[0].diagramTopView && (
+                                  <div className="flex items-center justify-center border border-gray-200">
+                                    <img 
+                                      src={damageCheckTemplates[0].diagramTopView} 
+                                      alt="Top View" 
+                                      className="max-w-full max-h-full object-contain"
+                                    />
+                                  </div>
+                                )}
+                                {damageCheckTemplates[0].diagramFrontView && (
+                                  <div className="flex items-center justify-center border border-gray-200">
+                                    <img 
+                                      src={damageCheckTemplates[0].diagramFrontView} 
+                                      alt="Front View" 
+                                      className="max-w-full max-h-full object-contain"
+                                    />
+                                  </div>
+                                )}
+                                {damageCheckTemplates[0].diagramSideView && (
+                                  <div className="flex items-center justify-center border border-gray-200">
+                                    <img 
+                                      src={damageCheckTemplates[0].diagramSideView} 
+                                      alt="Side View" 
+                                      className="max-w-full max-h-full object-contain"
+                                    />
+                                  </div>
+                                )}
+                                {damageCheckTemplates[0].diagramRearView && (
+                                  <div className="flex items-center justify-center border border-gray-200">
+                                    <img 
+                                      src={damageCheckTemplates[0].diagramRearView} 
+                                      alt="Rear View" 
+                                      className="max-w-full max-h-full object-contain"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center text-[7px] text-gray-400 border border-dashed border-gray-300 p-2 w-full h-full flex items-center justify-center">
+                                <div>
+                                  <div>Voertuig Diagram</div>
+                                  <div className="text-[6px]">(Schade markering)</div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                         {section.type === 'remarks' && (
