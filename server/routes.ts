@@ -4614,7 +4614,13 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // Get damage check template for the vehicle
       const vehicle = reservation.vehicle;
-      let damageTemplate = await storage.getDamageCheckTemplateByVehicleId(vehicle.id);
+      const templates = await storage.getDamageCheckTemplatesByVehicle(
+        vehicle.brand,
+        vehicle.model,
+        vehicle.vehicleType
+      );
+      
+      let damageTemplate = templates.length > 0 ? templates[0] : null;
       
       if (!damageTemplate) {
         damageTemplate = await storage.getDefaultDamageCheckTemplate();
