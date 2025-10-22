@@ -36,16 +36,17 @@ interface InteractiveDamageCheckProps {
   onClose?: () => void;
   editingCheckId?: number | null;
   initialVehicleId?: number | null;
+  initialReservationId?: number | null;
 }
 
-export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId }: InteractiveDamageCheckProps = {}) {
+export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId, initialReservationId }: InteractiveDamageCheckProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [editingCheckId, setEditingCheckId] = useState<number | null>(propEditingCheckId || null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
-  const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
+  const [selectedReservationId, setSelectedReservationId] = useState<number | null>(initialReservationId || null);
   const [diagramTemplate, setDiagramTemplate] = useState<DiagramTemplate | null>(null);
   const [markers, setMarkers] = useState<DamageMarker[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<DamageMarker | null>(null);

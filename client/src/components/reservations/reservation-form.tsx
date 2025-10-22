@@ -47,11 +47,12 @@ import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { format, addDays, parseISO, differenceInDays } from "date-fns";
-import { Customer, Vehicle, Reservation, Document, Driver } from "@shared/schema";
-import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye } from "lucide-react";
+import { Customer, Vehicle, Reservation, Document, Driver, type InteractiveDamageCheck } from "@shared/schema";
+import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye, ClipboardCheck } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 import { DriverDialog } from "@/components/customers/driver-dialog";
+import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -223,6 +224,10 @@ export function ReservationForm({
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   
+  // Interactive damage check dialog states
+  const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+  const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
+  
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
     try {
@@ -281,13 +286,20 @@ export function ReservationForm({
     enabled: !!activeReservationId
   });
   
-  // Refetch documents when activeReservationId changes
+  // Fetch damage checks for this reservation
+  const { data: reservationDamageChecks = [], refetch: refetchReservationDamageChecks } = useQuery<InteractiveDamageCheck[]>({
+    queryKey: [`/api/interactive-damage-checks/reservation/${activeReservationId}`],
+    enabled: !!activeReservationId
+  });
+  
+  // Refetch documents and damage checks when activeReservationId changes
   useEffect(() => {
     if (activeReservationId) {
-      console.log('🔄 Refetching documents for reservation:', activeReservationId);
+      console.log('🔄 Refetching documents and damage checks for reservation:', activeReservationId);
       refetchDocuments();
+      refetchReservationDamageChecks();
     }
-  }, [activeReservationId, refetchDocuments]);
+  }, [activeReservationId, refetchDocuments, refetchReservationDamageChecks]);
 
   // Set default template when templates are loaded
   useEffect(() => {
@@ -354,6 +366,12 @@ export function ReservationForm({
   const { data: drivers, isLoading: isLoadingDrivers, refetch: refetchDrivers } = useQuery<Driver[]>({
     queryKey: [`/api/customers/${customerIdWatch}/drivers`],
     enabled: !!customerIdWatch,
+  });
+  
+  // Fetch recent damage checks for vehicle + customer (last 3)
+  const { data: recentDamageChecks = [] } = useQuery<InteractiveDamageCheck[]>({
+    queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleIdWatch}/customer/${customerIdWatch}`],
+    enabled: !!vehicleIdWatch && !!customerIdWatch
   });
   
   // Reset driverId when customer changes to prevent invalid driver-customer assignment
@@ -1055,18 +1073,29 @@ export function ReservationForm({
     }
   });
 
-  // Handle damage check generation
-  const handleGenerateDamageCheck = () => {
+  // Handle opening damage check dialog
+  const handleOpenDamageCheckDialog = (checkId?: number) => {
     const reservationId = editMode ? initialData?.id : createdReservationId;
-    if (reservationId) {
-      generateDamageCheckMutation.mutate(reservationId);
-    } else {
+    if (!reservationId) {
       toast({
         title: "Error",
-        description: "Please save the reservation first before generating a damage check.",
+        description: "Please save the reservation first before creating a damage check.",
         variant: "destructive",
       });
+      return;
     }
+    
+    // Set editing check ID if provided, otherwise null for new check
+    setEditingDamageCheckId(checkId || null);
+    setDamageCheckDialogOpen(true);
+  };
+  
+  // Handle closing damage check dialog
+  const handleCloseDamageCheckDialog = () => {
+    setDamageCheckDialogOpen(false);
+    setEditingDamageCheckId(null);
+    // Refetch damage checks when dialog closes
+    refetchReservationDamageChecks();
   };
 
   // State for preview mode
@@ -2405,6 +2434,90 @@ export function ReservationForm({
                 </div>
               )}
               
+              {/* Damage Checks Section */}
+              {(activeReservationId || (selectedVehicle && selectedCustomer)) && (
+                <div className="space-y-3 border rounded-lg p-4 bg-orange-50">
+                  <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    🔍 Damage Checks
+                  </label>
+                  
+                  {/* Reservation's Damage Checks */}
+                  {activeReservationId && reservationDamageChecks && reservationDamageChecks.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-gray-700">This Reservation:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {reservationDamageChecks.map((check) => (
+                          <div key={check.id} className="relative group">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenDamageCheckDialog(check.id)}
+                              className="flex items-center gap-2 pr-2"
+                            >
+                              <ClipboardCheck className="h-4 w-4 text-orange-600" />
+                              <div className="text-left">
+                                <div className="text-xs font-semibold">{check.checkType === 'pickup' ? 'Pickup' : 'Return'} Check</div>
+                                <div className="text-[10px] text-gray-500">
+                                  {new Date(check.checkDate).toLocaleDateString()} • {check.mileage ? `${check.mileage} km` : 'No mileage'}
+                                </div>
+                              </div>
+                              <Edit className="h-3 w-3 ml-1 text-gray-400" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Recent Damage Checks for Vehicle + Customer */}
+                  {recentDamageChecks && recentDamageChecks.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-gray-700">Recent History (Vehicle + Customer):</span>
+                      <div className="flex flex-wrap gap-2">
+                        {recentDamageChecks.map((check) => (
+                          <div key={check.id} className="relative">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                // View the PDF if it exists
+                                try {
+                                  const response = await fetch(`/api/interactive-damage-checks/${check.id}/pdf`);
+                                  if (response.ok) {
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    window.open(url, '_blank');
+                                    window.URL.revokeObjectURL(url);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to view damage check:', error);
+                                }
+                              }}
+                              className="flex items-center gap-2 opacity-70 hover:opacity-100"
+                            >
+                              <Eye className="h-4 w-4 text-gray-600" />
+                              <div className="text-left">
+                                <div className="text-xs">{check.checkType === 'pickup' ? 'Pickup' : 'Return'}</div>
+                                <div className="text-[10px] text-gray-500">
+                                  {new Date(check.checkDate).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeReservationId && reservationDamageChecks && reservationDamageChecks.length === 0 && (
+                    <p className="text-xs text-gray-600 italic">No damage checks yet for this reservation. Click "Create Damage Check" below to add one.</p>
+                  )}
+                </div>
+              )}
+              
               {/* Notes */}
               <FormField
                 control={form.control}
@@ -2617,7 +2730,7 @@ export function ReservationForm({
                   </Button>
                 )}
 
-                {/* Generate damage check button - appears in edit mode or after creating/finalizing reservation */}
+                {/* Interactive damage check button - appears in edit mode or after creating/finalizing reservation */}
                 {(
                   (editMode && initialData && selectedVehicle && !isPreviewMode) || 
                   (createdReservationId && selectedVehicle && selectedCustomer)
@@ -2625,25 +2738,12 @@ export function ReservationForm({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleGenerateDamageCheck}
-                    disabled={generateDamageCheckMutation.isPending}
-                    data-testid="button-generate-damage-check"
+                    onClick={() => handleOpenDamageCheckDialog()}
+                    data-testid="button-create-damage-check"
                     className="border-purple-200 text-purple-700 hover:bg-purple-50"
                   >
-                    {generateDamageCheckMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate & Save Damage Check
-                      </>
-                    )}
+                    <ClipboardCheck className="mr-2 h-4 w-4" />
+                    Create Damage Check
                   </Button>
                 )}
               </div>
@@ -2711,6 +2811,22 @@ export function ReservationForm({
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Interactive Damage Check Dialog */}
+    {damageCheckDialogOpen && vehicleIdWatch && (
+      <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
+        if (!open) handleCloseDamageCheckDialog();
+      }}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+          <InteractiveDamageCheckPage
+            onClose={handleCloseDamageCheckDialog}
+            editingCheckId={editingDamageCheckId}
+            initialVehicleId={vehicleIdWatch}
+            initialReservationId={activeReservationId || null}
+          />
+        </DialogContent>
+      </Dialog>
+    )}
     </>
   );
 }
