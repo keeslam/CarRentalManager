@@ -707,7 +707,13 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'checklist' && (
-                          <div className="w-full h-full overflow-auto text-[8px] leading-tight p-1">
+                          <div 
+                            className="w-full h-full overflow-auto text-[8px] leading-tight p-1"
+                            style={{ 
+                              columnCount: section.settings.columnCount || 3,
+                              columnGap: '8px'
+                            }}
+                          >
                             {damageCheckTemplates.length > 0 && damageCheckTemplates[0].inspectionPoints ? (
                               <>
                                 {/* Group by category */}
@@ -722,7 +728,7 @@ export default function DamageCheckTemplateEditor() {
                                                        'Aflever Check';
                                   
                                   return (
-                                    <div key={category} className="mb-1">
+                                    <div key={category} className="mb-1" style={{ breakInside: 'avoid-column' }}>
                                       <div className="font-bold">{categoryTitle}</div>
                                       {categoryItems.map((item: any, idx: number) => (
                                         <div key={idx} className="ml-1 flex items-start gap-1">
@@ -1046,6 +1052,21 @@ export default function DamageCheckTemplateEditor() {
                         min="6"
                         max="16"
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="columnCount">Number of Columns</Label>
+                      <Input
+                        id="columnCount"
+                        type="number"
+                        value={editingSection.settings.columnCount || 3}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, columnCount: parseInt(e.target.value) }
+                        })}
+                        min="1"
+                        max="4"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Arrange checklist items in columns (1-4)</p>
                     </div>
                   </>
                 )}
