@@ -39,6 +39,11 @@ interface TemplateSection {
     showLogo?: boolean;
     customLabel?: string;
     textAlign?: 'left' | 'center' | 'right';
+    customItems?: Array<{
+      id: string;
+      text: string;
+      hasCheckbox: boolean;
+    }>;
     [key: string]: any;
   };
 }
@@ -78,6 +83,12 @@ const createDefaultSections = (): TemplateSection[] => [
     visible: true,
     settings: {
       fontSize: 9,
+      customItems: [
+        { id: 'contract-nr', text: 'Contract Nr: [VALUE]', hasCheckbox: false },
+        { id: 'datum', text: 'Datum: [VALUE]', hasCheckbox: false },
+        { id: 'klant', text: 'Klant: [VALUE]', hasCheckbox: false },
+        { id: 'type', text: 'Type: [VALUE]', hasCheckbox: false },
+      ]
     }
   },
   {
@@ -90,6 +101,14 @@ const createDefaultSections = (): TemplateSection[] => [
     visible: true,
     settings: {
       fontSize: 9,
+      customItems: [
+        { id: 'kenteken', text: 'Kenteken: [VALUE]', hasCheckbox: false },
+        { id: 'merk', text: 'Merk: [VALUE]', hasCheckbox: false },
+        { id: 'model', text: 'Model: [VALUE]', hasCheckbox: false },
+        { id: 'bouwjaar', text: 'Bouwjaar: [VALUE]', hasCheckbox: false },
+        { id: 'km-stand', text: 'Km Stand: [VALUE]', hasCheckbox: false },
+        { id: 'brandstof', text: 'Brandstof: [VALUE]', hasCheckbox: false },
+      ]
     }
   },
   {
@@ -125,6 +144,7 @@ const createDefaultSections = (): TemplateSection[] => [
     visible: true,
     settings: {
       fontSize: 9,
+      customItems: []
     }
   },
   {
@@ -137,6 +157,10 @@ const createDefaultSections = (): TemplateSection[] => [
     visible: true,
     settings: {
       fontSize: 9,
+      customItems: [
+        { id: 'klant-sig', text: 'Handtekening Klant', hasCheckbox: false },
+        { id: 'medewerker-sig', text: 'Handtekening Medewerker', hasCheckbox: false },
+      ]
     }
   },
 ];
@@ -752,21 +776,31 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'contractInfo' && (
-                          <div className="grid grid-cols-2 gap-1 text-[7px]" style={{ textAlign: section.settings.textAlign || 'left' }}>
-                            <div><strong>Contract Nr:</strong> 2025-001</div>
-                            <div><strong>Datum:</strong> 21-10-2025</div>
-                            <div><strong>Klant:</strong> Jan de Vries</div>
-                            <div><strong>Type:</strong> Ophalen</div>
+                          <div className="space-y-1">
+                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
+                              section.settings.customItems.map(item => (
+                                <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                  {item.hasCheckbox && <span>☐</span>}
+                                  <span>{item.text}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
+                            )}
                           </div>
                         )}
                         {section.type === 'vehicleData' && (
-                          <div className="grid grid-cols-2 gap-1 text-[7px]" style={{ textAlign: section.settings.textAlign || 'left' }}>
-                            <div><strong>Kenteken:</strong> AB-123-CD</div>
-                            <div><strong>Merk:</strong> Mercedes</div>
-                            <div><strong>Model:</strong> E-Klasse</div>
-                            <div><strong>Bouwjaar:</strong> 2020</div>
-                            <div><strong>Km Stand:</strong> 45.320 km</div>
-                            <div><strong>Brandstof:</strong> 3/4 tank</div>
+                          <div className="space-y-1">
+                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
+                              section.settings.customItems.map(item => (
+                                <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                  {item.hasCheckbox && <span>☐</span>}
+                                  <span>{item.text}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
+                            )}
                           </div>
                         )}
                         {section.type === 'checklist' && (
@@ -870,22 +904,36 @@ export default function DamageCheckTemplateEditor() {
                         )}
                         {section.type === 'remarks' && (
                           <div className="text-[7px]">
-                            <div className="font-bold mb-1">Opmerkingen:</div>
-                            <div className="border border-gray-300 p-1 h-12 bg-gray-50">
-                              [Ruimte voor aanvullende opmerkingen en notities]
+                            <div className="border border-gray-300 p-1 bg-gray-50 mb-2" style={{ minHeight: '40px' }}>
+                              [Ruimte voor opmerkingen]
                             </div>
+                            {section.settings.customItems && section.settings.customItems.length > 0 && (
+                              <div className="space-y-1">
+                                {section.settings.customItems.map(item => (
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                    {item.hasCheckbox && <span>☐</span>}
+                                    <span>{item.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                         {section.type === 'signatures' && (
-                          <div className="grid grid-cols-2 gap-2 text-[7px]">
-                            <div className="text-center">
-                              <div className="border-b border-gray-400 mb-1 h-8"></div>
-                              <div className="font-bold">Handtekening Klant</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="border-b border-gray-400 mb-1 h-8"></div>
-                              <div className="font-bold">Handtekening Medewerker</div>
-                            </div>
+                          <div className="space-y-1">
+                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
+                              section.settings.customItems.map(item => (
+                                <div key={item.id} className="text-center">
+                                  <div className="border-b border-gray-400 mb-1 h-8"></div>
+                                  <div className="flex items-center justify-center gap-1 text-[7px]">
+                                    {item.hasCheckbox && <span>☐</span>}
+                                    <span className="font-bold">{item.text}</span>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[6px] text-gray-400">No signature fields. Add fields in settings.</div>
+                            )}
                           </div>
                         )}
                         {section.type === 'customField' && (
@@ -1053,6 +1101,96 @@ export default function DamageCheckTemplateEditor() {
                         <AlignRight className="w-4 h-4" />
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* Custom Items - Available for all sections */}
+                {editingSection.type !== 'diagram' && editingSection.type !== 'customField' && (
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-semibold">Custom Items</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const customItems = editingSection.settings.customItems || [];
+                          setEditingSection({
+                            ...editingSection,
+                            settings: {
+                              ...editingSection.settings,
+                              customItems: [
+                                ...customItems,
+                                {
+                                  id: `item-${Date.now()}`,
+                                  text: 'New item',
+                                  hasCheckbox: true
+                                }
+                              ]
+                            }
+                          });
+                        }}
+                        data-testid="button-add-custom-item"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Item
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">Add custom text and checkboxes to this section</p>
+                    
+                    {(editingSection.settings.customItems || []).length === 0 ? (
+                      <div className="text-sm text-gray-400 text-center py-4 border border-dashed rounded">
+                        No custom items. Click "Add Item" to add text or checkboxes.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {(editingSection.settings.customItems || []).map((item, index) => (
+                          <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                            <div className="flex items-center gap-2 flex-1">
+                              <Switch
+                                checked={item.hasCheckbox}
+                                onCheckedChange={(checked) => {
+                                  const customItems = [...(editingSection.settings.customItems || [])];
+                                  customItems[index] = { ...item, hasCheckbox: checked };
+                                  setEditingSection({
+                                    ...editingSection,
+                                    settings: { ...editingSection.settings, customItems }
+                                  });
+                                }}
+                                title="Show checkbox"
+                              />
+                              <Input
+                                value={item.text}
+                                onChange={(e) => {
+                                  const customItems = [...(editingSection.settings.customItems || [])];
+                                  customItems[index] = { ...item, text: e.target.value };
+                                  setEditingSection({
+                                    ...editingSection,
+                                    settings: { ...editingSection.settings, customItems }
+                                  });
+                                }}
+                                placeholder="Item text"
+                                className="flex-1"
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-600"
+                              onClick={() => {
+                                const customItems = (editingSection.settings.customItems || []).filter((_, i) => i !== index);
+                                setEditingSection({
+                                  ...editingSection,
+                                  settings: { ...editingSection.settings, customItems }
+                                });
+                              }}
+                              title="Delete item"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

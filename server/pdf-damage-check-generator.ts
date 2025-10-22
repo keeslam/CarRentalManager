@@ -586,6 +586,7 @@ export async function generateDamageCheckPDFWithTemplate(
       case 'contractInfo': {
         const fontSize = section.settings.fontSize || 9;
         const lineHeight = fontSize + 4;
+        const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'CONTRACTGEGEVENS';
         let yPos = pdfY + section.height - 15;
         
@@ -616,12 +617,44 @@ export async function generateDamageCheckPDFWithTemplate(
             yPos -= lineHeight;
           });
         }
+        
+        // Render custom items
+        if (section.settings.customItems && section.settings.customItems.length > 0) {
+          yPos -= lineHeight / 2; // Add some spacing
+          section.settings.customItems.forEach((item: any) => {
+            if (yPos < pdfY + 10) return; // Stop if we run out of space
+            
+            let xPos = section.x + 5;
+            
+            if (item.hasCheckbox) {
+              page.drawRectangle({
+                x: xPos,
+                y: yPos - checkboxSize,
+                width: checkboxSize,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
+              });
+              xPos += checkboxSize + 5;
+            }
+            
+            page.drawText(item.text, {
+              x: xPos,
+              y: yPos - checkboxSize + 1,
+              size: fontSize,
+              font,
+            });
+            
+            yPos -= lineHeight;
+          });
+        }
         break;
       }
       
       case 'vehicleData': {
         const fontSize = section.settings.fontSize || 9;
         const lineHeight = fontSize + 4;
+        const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'VOERTUIGGEGEVENS';
         let yPos = pdfY + section.height - 15;
         
@@ -634,24 +667,35 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight;
         
-        const items = [
-          { label: 'Kenteken:', value: vehicle.licensePlate },
-          { label: 'Merk:', value: vehicle.brand },
-          { label: 'Model:', value: vehicle.model },
-          { label: 'Bouwjaar:', value: vehicle.buildYear || 'N/A' },
-          { label: 'Km-stand:', value: vehicle.mileage ? `${vehicle.mileage} km` : 'N/A' },
-          { label: 'Brandstof:', value: vehicle.fuel || 'N/A' },
-        ];
-        
-        items.forEach(item => {
-          page.drawText(`${item.label} ${item.value}`, {
-            x: section.x + 5,
-            y: yPos,
-            size: fontSize,
-            font,
+        // Render custom items
+        if (section.settings.customItems && section.settings.customItems.length > 0) {
+          section.settings.customItems.forEach((item: any) => {
+            if (yPos < pdfY + 10) return; // Stop if we run out of space
+            
+            let xPos = section.x + 5;
+            
+            if (item.hasCheckbox) {
+              page.drawRectangle({
+                x: xPos,
+                y: yPos - checkboxSize,
+                width: checkboxSize,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
+              });
+              xPos += checkboxSize + 5;
+            }
+            
+            page.drawText(item.text, {
+              x: xPos,
+              y: yPos - checkboxSize + 1,
+              size: fontSize,
+              font,
+            });
+            
+            yPos -= lineHeight;
           });
-          yPos -= lineHeight;
-        });
+        }
         break;
       }
       
@@ -841,65 +885,99 @@ export async function generateDamageCheckPDFWithTemplate(
       
       case 'remarks': {
         const fontSize = section.settings.fontSize || 9;
+        const lineHeight = fontSize + 4;
+        const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'OPMERKINGEN';
+        let yPos = pdfY + section.height - 15;
         
         page.drawText(sectionLabel, {
           x: section.x + 5,
-          y: pdfY + section.height - 15,
+          y: yPos,
           size: fontSize + 1,
           font: boldFont,
         });
         
+        yPos -= lineHeight;
+        
         // Draw remarks box
+        const remarksBoxHeight = 40;
         page.drawRectangle({
           x: section.x + 5,
-          y: pdfY + 5,
+          y: yPos - remarksBoxHeight,
           width: section.width - 10,
-          height: section.height - 25,
+          height: remarksBoxHeight,
           borderColor: rgb(0, 0, 0),
           borderWidth: 0.5,
         });
+        
+        yPos -= remarksBoxHeight + lineHeight;
+        
+        // Render custom items
+        if (section.settings.customItems && section.settings.customItems.length > 0) {
+          section.settings.customItems.forEach((item: any) => {
+            if (yPos < pdfY + 10) return; // Stop if we run out of space
+            
+            let xPos = section.x + 5;
+            
+            if (item.hasCheckbox) {
+              page.drawRectangle({
+                x: xPos,
+                y: yPos - checkboxSize,
+                width: checkboxSize,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
+              });
+              xPos += checkboxSize + 5;
+            }
+            
+            page.drawText(item.text, {
+              x: xPos,
+              y: yPos - checkboxSize + 1,
+              size: fontSize,
+              font,
+            });
+            
+            yPos -= lineHeight;
+          });
+        }
         break;
       }
       
       case 'signatures': {
         const fontSize = section.settings.fontSize || 9;
-        const boxWidth = (section.width - 15) / 2;
-        const signatureHeight = section.height - 20;
+        const checkboxSize = section.settings.checkboxSize || 8;
+        const lineHeight = fontSize + 4;
+        let yPos = pdfY + section.height - 10;
         
-        // Customer signature
-        page.drawRectangle({
-          x: section.x + 5,
-          y: pdfY + 5,
-          width: boxWidth,
-          height: signatureHeight,
-          borderColor: rgb(0, 0, 0),
-          borderWidth: 0.5,
-        });
-        
-        page.drawText('Handtekening Klant', {
-          x: section.x + 5 + boxWidth / 2 - 40,
-          y: pdfY + 10,
-          size: fontSize,
-          font: boldFont,
-        });
-        
-        // Staff signature
-        page.drawRectangle({
-          x: section.x + 10 + boxWidth,
-          y: pdfY + 5,
-          width: boxWidth,
-          height: signatureHeight,
-          borderColor: rgb(0, 0, 0),
-          borderWidth: 0.5,
-        });
-        
-        page.drawText('Handtekening Medewerker', {
-          x: section.x + 10 + boxWidth + boxWidth / 2 - 55,
-          y: pdfY + 10,
-          size: fontSize,
-          font: boldFont,
-        });
+        // Render custom items (signature fields)
+        if (section.settings.customItems && section.settings.customItems.length > 0) {
+          const itemWidth = (section.width - 10 - ((section.settings.customItems.length - 1) * 5)) / section.settings.customItems.length;
+          
+          section.settings.customItems.forEach((item: any, index: number) => {
+            const xPos = section.x + 5 + (index * (itemWidth + 5));
+            const signatureHeight = section.height - 20;
+            
+            // Draw signature box
+            page.drawRectangle({
+              x: xPos,
+              y: pdfY + 5,
+              width: itemWidth,
+              height: signatureHeight,
+              borderColor: rgb(0, 0, 0),
+              borderWidth: 0.5,
+            });
+            
+            // Draw label
+            const textWidth = font.widthOfTextAtSize(item.text, fontSize);
+            page.drawText(item.text, {
+              x: xPos + (itemWidth - textWidth) / 2,
+              y: pdfY + 10,
+              size: fontSize,
+              font: boldFont,
+            });
+          });
+        }
         break;
       }
       
