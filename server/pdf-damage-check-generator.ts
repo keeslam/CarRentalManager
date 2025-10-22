@@ -656,6 +656,7 @@ export async function generateDamageCheckPDFWithTemplate(
         const checkboxSize = section.settings.checkboxSize || 8;
         const lineHeight = fontSize + 3;
         const sectionLabel = section.settings.customLabel || 'SCHADECONTROLE';
+        const columnCount = section.settings.columnCount || 3;
         let yPos = pdfY + section.height - 15;
         
         page.drawText(sectionLabel, {
@@ -675,46 +676,83 @@ export async function generateDamageCheckPDFWithTemplate(
           afweez_check: 'Aflever Check'
         };
         
+        // Calculate column width
+        const columnWidth = (section.width - 10) / columnCount;
+        const columnGap = 8;
+        let currentColumn = 0;
+        let columnYPos = yPos;
+        
         for (const category of categories) {
           const points = damageTemplate.inspectionPoints.filter(p => p.category === category);
           if (points.length === 0) continue;
           
+          // Check if we need to move to next column
+          const categoryHeight = (points.length + 1) * lineHeight + lineHeight / 2;
+          if (columnYPos - categoryHeight < pdfY + 10 && currentColumn < columnCount - 1) {
+            currentColumn++;
+            columnYPos = yPos;
+          }
+          
+          const columnX = section.x + 5 + (currentColumn * (columnWidth + columnGap));
+          
           // Category header
           page.drawText(categoryLabels[category] || category, {
-            x: section.x + 5,
-            y: yPos,
+            x: columnX,
+            y: columnYPos,
             size: fontSize + 1,
             font: boldFont,
           });
           
-          yPos -= lineHeight;
+          columnYPos -= lineHeight;
           
           // Inspection points
           for (const point of points) {
-            if (yPos < pdfY + 10) break; // Stop if we run out of space
+            if (columnYPos < pdfY + 10) {
+              // Move to next column if we run out of space
+              if (currentColumn < columnCount - 1) {
+                currentColumn++;
+                columnYPos = yPos;
+              } else {
+                break; // No more space
+              }
+            }
+            
+            const itemX = section.x + 5 + (currentColumn * (columnWidth + columnGap));
             
             // Checkbox
             page.drawRectangle({
-              x: section.x + 10,
-              y: yPos - checkboxSize,
+              x: itemX + 5,
+              y: columnYPos - checkboxSize,
               width: checkboxSize,
               height: checkboxSize,
               borderColor: rgb(0, 0, 0),
               borderWidth: 0.5,
             });
             
-            // Point name
-            page.drawText(point.name, {
-              x: section.x + 10 + checkboxSize + 5,
-              y: yPos - checkboxSize + 1,
+            // Point name (with text wrapping if needed)
+            const maxTextWidth = columnWidth - checkboxSize - 15;
+            let displayText = point.name;
+            const textWidth = font.widthOfTextAtSize(displayText, fontSize);
+            
+            if (textWidth > maxTextWidth) {
+              // Truncate with ellipsis if text is too long
+              while (font.widthOfTextAtSize(displayText + '...', fontSize) > maxTextWidth && displayText.length > 0) {
+                displayText = displayText.slice(0, -1);
+              }
+              displayText += '...';
+            }
+            
+            page.drawText(displayText, {
+              x: itemX + 5 + checkboxSize + 5,
+              y: columnYPos - checkboxSize + 1,
               size: fontSize,
               font,
             });
             
-            yPos -= lineHeight;
+            columnYPos -= lineHeight;
           }
           
-          yPos -= lineHeight / 2; // Extra space between categories
+          columnYPos -= lineHeight / 2; // Extra space between categories
         }
         break;
       }
