@@ -4613,8 +4613,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       // Generate damage check PDF
-      const { generateDamageCheckPdfForVehicle } = await import('./pdf-damage-check-generator');
-      const pdfBuffer = await generateDamageCheckPdfForVehicle(
+      const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
+      const pdfBuffer = await generateDamageCheckPDFWithTemplate(
         reservation.vehicle.id,
         reservationId,
         reservation.customerId || undefined
