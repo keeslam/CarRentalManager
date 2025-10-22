@@ -2617,8 +2617,11 @@ export function ReservationForm({
                   </Button>
                 )}
 
-                {/* Generate damage check button - only in edit mode or after creating reservation */}
-                {((editMode && initialData && selectedVehicle) || (createdReservationId && selectedVehicle)) && !isPreviewMode && (
+                {/* Generate damage check button - appears in edit mode or after creating/finalizing reservation */}
+                {(
+                  (editMode && initialData && selectedVehicle && !isPreviewMode) || 
+                  (createdReservationId && selectedVehicle && selectedCustomer)
+                ) && (
                   <Button
                     type="button"
                     variant="outline"
