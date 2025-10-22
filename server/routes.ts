@@ -4612,12 +4612,52 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Vehicle not found for reservation" });
       }
 
+      // Get damage check template for the vehicle
+      const vehicle = reservation.vehicle;
+      let damageTemplate = await storage.getDamageCheckTemplateByVehicleId(vehicle.id);
+      
+      if (!damageTemplate) {
+        damageTemplate = await storage.getDefaultDamageCheckTemplate();
+      }
+      
+      if (!damageTemplate) {
+        return res.status(404).json({ 
+          message: "No damage check template found. Please create a default template first." 
+        });
+      }
+
+      // Prepare vehicle data
+      const vehicleData = {
+        brand: vehicle.brand,
+        model: vehicle.model,
+        licensePlate: vehicle.licensePlate,
+        buildYear: vehicle.productionDate,
+        fuel: vehicle.fuel || undefined,
+        mileage: vehicle.mileage || undefined,
+      };
+
+      // Prepare reservation data
+      let reservationData;
+      if (reservation.customer) {
+        const startDate = new Date(reservation.startDate);
+        const endDate = reservation.endDate ? new Date(reservation.endDate) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const rentalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        reservationData = {
+          contractNumber: `C-${reservationId}-${format(new Date(), 'yyyyMMdd')}`,
+          customerName: `${reservation.customer.firstName} ${reservation.customer.lastName}`,
+          startDate: format(startDate, 'dd-MM-yyyy'),
+          endDate: format(endDate, 'dd-MM-yyyy'),
+          rentalDays
+        };
+      }
+
       // Generate damage check PDF
       const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
       const pdfBuffer = await generateDamageCheckPDFWithTemplate(
-        reservation.vehicle.id,
-        reservationId,
-        reservation.customerId || undefined
+        vehicleData,
+        damageTemplate,
+        reservationData
       );
 
       // Save the damage check to documents (linked to both reservation and vehicle)

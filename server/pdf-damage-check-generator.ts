@@ -755,6 +755,11 @@ export async function generateDamageCheckPDFWithTemplate(
         let columnYPos = yPos;
         
         for (const category of categories) {
+          // Handle missing inspection points gracefully
+          if (!damageTemplate.inspectionPoints || !Array.isArray(damageTemplate.inspectionPoints)) {
+            console.warn('Damage template has no inspection points defined');
+            break;
+          }
           const points = damageTemplate.inspectionPoints.filter(p => p.category === category);
           if (points.length === 0) continue;
           
