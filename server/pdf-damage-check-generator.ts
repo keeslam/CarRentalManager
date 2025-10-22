@@ -599,28 +599,8 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight;
         
-        if (reservationData) {
-          const items = [
-            { label: 'Contract Nr:', value: reservationData.contractNumber || 'N/A' },
-            { label: 'Datum:', value: new Date().toLocaleDateString('nl-NL') },
-            { label: 'Klant:', value: reservationData.customerName || 'N/A' },
-            { label: 'Periode:', value: `${reservationData.startDate || ''} - ${reservationData.endDate || ''}` },
-          ];
-          
-          items.forEach(item => {
-            page.drawText(`${item.label} ${item.value}`, {
-              x: section.x + 5,
-              y: yPos,
-              size: fontSize,
-              font,
-            });
-            yPos -= lineHeight;
-          });
-        }
-        
-        // Render custom items
+        // Render custom items with actual data
         if (section.settings.customItems && section.settings.customItems.length > 0) {
-          yPos -= lineHeight / 2; // Add some spacing
           section.settings.customItems.forEach((item: any) => {
             if (yPos < pdfY + 10) return; // Stop if we run out of space
             
@@ -638,7 +618,20 @@ export async function generateDamageCheckPDFWithTemplate(
               xPos += checkboxSize + 5;
             }
             
-            page.drawText(item.text, {
+            // Get actual value based on fieldKey
+            let displayText = item.text;
+            if (item.fieldKey && reservationData) {
+              const valueMap: Record<string, string> = {
+                contractNumber: reservationData.contractNumber || 'N/A',
+                date: new Date().toLocaleDateString('nl-NL'),
+                customerName: reservationData.customerName || 'N/A',
+                rentalPeriod: `${reservationData.startDate || ''} - ${reservationData.endDate || ''}`,
+              };
+              const value = valueMap[item.fieldKey] || '';
+              displayText = `${item.text} ${value}`;
+            }
+            
+            page.drawText(displayText, {
               x: xPos,
               y: yPos - checkboxSize + 1,
               size: fontSize,
@@ -667,7 +660,7 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight;
         
-        // Render custom items
+        // Render custom items with actual data
         if (section.settings.customItems && section.settings.customItems.length > 0) {
           section.settings.customItems.forEach((item: any) => {
             if (yPos < pdfY + 10) return; // Stop if we run out of space
@@ -686,7 +679,22 @@ export async function generateDamageCheckPDFWithTemplate(
               xPos += checkboxSize + 5;
             }
             
-            page.drawText(item.text, {
+            // Get actual value based on fieldKey
+            let displayText = item.text;
+            if (item.fieldKey) {
+              const valueMap: Record<string, string> = {
+                licensePlate: vehicle.licensePlate || 'N/A',
+                brand: vehicle.brand || 'N/A',
+                model: vehicle.model || 'N/A',
+                buildYear: vehicle.buildYear ? String(vehicle.buildYear) : 'N/A',
+                mileage: vehicle.mileage ? `${vehicle.mileage} km` : 'N/A',
+                fuel: vehicle.fuel || 'N/A',
+              };
+              const value = valueMap[item.fieldKey] || '';
+              displayText = `${item.text} ${value}`;
+            }
+            
+            page.drawText(displayText, {
               x: xPos,
               y: yPos - checkboxSize + 1,
               size: fontSize,

@@ -43,6 +43,7 @@ interface TemplateSection {
       id: string;
       text: string;
       hasCheckbox: boolean;
+      fieldKey?: string;
     }>;
     [key: string]: any;
   };
@@ -84,10 +85,10 @@ const createDefaultSections = (): TemplateSection[] => [
     settings: {
       fontSize: 9,
       customItems: [
-        { id: 'contract-nr', text: 'Contract Nr: [VALUE]', hasCheckbox: false },
-        { id: 'datum', text: 'Datum: [VALUE]', hasCheckbox: false },
-        { id: 'klant', text: 'Klant: [VALUE]', hasCheckbox: false },
-        { id: 'type', text: 'Type: [VALUE]', hasCheckbox: false },
+        { id: 'contract-nr', text: 'Contract Nr:', hasCheckbox: false, fieldKey: 'contractNumber' },
+        { id: 'datum', text: 'Datum:', hasCheckbox: false, fieldKey: 'date' },
+        { id: 'klant', text: 'Klant:', hasCheckbox: false, fieldKey: 'customerName' },
+        { id: 'periode', text: 'Periode:', hasCheckbox: false, fieldKey: 'rentalPeriod' },
       ]
     }
   },
@@ -102,12 +103,12 @@ const createDefaultSections = (): TemplateSection[] => [
     settings: {
       fontSize: 9,
       customItems: [
-        { id: 'kenteken', text: 'Kenteken: [VALUE]', hasCheckbox: false },
-        { id: 'merk', text: 'Merk: [VALUE]', hasCheckbox: false },
-        { id: 'model', text: 'Model: [VALUE]', hasCheckbox: false },
-        { id: 'bouwjaar', text: 'Bouwjaar: [VALUE]', hasCheckbox: false },
-        { id: 'km-stand', text: 'Km Stand: [VALUE]', hasCheckbox: false },
-        { id: 'brandstof', text: 'Brandstof: [VALUE]', hasCheckbox: false },
+        { id: 'kenteken', text: 'Kenteken:', hasCheckbox: false, fieldKey: 'licensePlate' },
+        { id: 'merk', text: 'Merk:', hasCheckbox: false, fieldKey: 'brand' },
+        { id: 'model', text: 'Model:', hasCheckbox: false, fieldKey: 'model' },
+        { id: 'bouwjaar', text: 'Bouwjaar:', hasCheckbox: false, fieldKey: 'buildYear' },
+        { id: 'km-stand', text: 'Km Stand:', hasCheckbox: false, fieldKey: 'mileage' },
+        { id: 'brandstof', text: 'Brandstof:', hasCheckbox: false, fieldKey: 'fuel' },
       ]
     }
   },
@@ -778,12 +779,21 @@ export default function DamageCheckTemplateEditor() {
                         {section.type === 'contractInfo' && (
                           <div className="space-y-1">
                             {section.settings.customItems && section.settings.customItems.length > 0 ? (
-                              section.settings.customItems.map(item => (
-                                <div key={item.id} className="flex items-center gap-1 text-[7px]">
-                                  {item.hasCheckbox && <span>☐</span>}
-                                  <span>{item.text}</span>
-                                </div>
-                              ))
+                              section.settings.customItems.map(item => {
+                                const sampleValues: Record<string, string> = {
+                                  contractNumber: 'REN-2025-001',
+                                  date: new Date().toLocaleDateString('nl-NL'),
+                                  customerName: 'Jan de Vries',
+                                  rentalPeriod: '22-10-2025 - 29-10-2025'
+                                };
+                                const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
+                                return (
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                    {item.hasCheckbox && <span>☐</span>}
+                                    <span>{item.text} {value}</span>
+                                  </div>
+                                );
+                              })
                             ) : (
                               <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
                             )}
@@ -792,12 +802,23 @@ export default function DamageCheckTemplateEditor() {
                         {section.type === 'vehicleData' && (
                           <div className="space-y-1">
                             {section.settings.customItems && section.settings.customItems.length > 0 ? (
-                              section.settings.customItems.map(item => (
-                                <div key={item.id} className="flex items-center gap-1 text-[7px]">
-                                  {item.hasCheckbox && <span>☐</span>}
-                                  <span>{item.text}</span>
-                                </div>
-                              ))
+                              section.settings.customItems.map(item => {
+                                const sampleValues: Record<string, string> = {
+                                  licensePlate: 'AB-123-CD',
+                                  brand: 'Mercedes',
+                                  model: 'E-Klasse',
+                                  buildYear: '2020',
+                                  mileage: '45.320 km',
+                                  fuel: '3/4 tank'
+                                };
+                                const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
+                                return (
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                    {item.hasCheckbox && <span>☐</span>}
+                                    <span>{item.text} {value}</span>
+                                  </div>
+                                );
+                              })
                             ) : (
                               <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
                             )}
