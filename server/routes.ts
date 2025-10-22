@@ -7944,6 +7944,65 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Preview PDF template with sample data
+  app.get("/api/damage-check-pdf-templates/:id/preview", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Get the PDF template
+      const pdfTemplate = await storage.getDamageCheckPdfTemplate(id);
+      if (!pdfTemplate) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+      
+      // Get the default damage check template (for checklist content)
+      const damageTemplate = await storage.getDefaultDamageCheckTemplate();
+      if (!damageTemplate) {
+        return res.status(404).json({ message: "No damage check template found. Please create a default template first." });
+      }
+      
+      // Sample vehicle data
+      const sampleVehicle = {
+        brand: "Mercedes-Benz",
+        model: "E-Klasse",
+        licensePlate: "AB-123-CD",
+        buildYear: "2020",
+        fuel: "3/4 tank",
+        mileage: 45320,
+      };
+      
+      // Sample reservation data
+      const sampleReservation = {
+        contractNumber: "2025-001",
+        customerName: "Jan de Vries",
+        startDate: format(new Date(), 'dd-MM-yyyy'),
+        endDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy'),
+        rentalDays: 7,
+      };
+      
+      // Import PDF generator
+      const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
+      
+      // Generate preview PDF
+      const pdfBuffer = await generateDamageCheckPDFWithTemplate(
+        sampleVehicle,
+        damageTemplate,
+        sampleReservation
+      );
+      
+      // Set response headers for PDF download
+      const filename = `preview_${pdfTemplate.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF preview:", error);
+      res.status(500).json({ message: "Error generating PDF preview" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);

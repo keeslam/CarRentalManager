@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
   ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2,
-  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight
+  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DamageCheckTemplate } from "@shared/schema";
@@ -556,6 +556,59 @@ export default function DamageCheckTemplateEditor() {
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {saveTemplateMutation.isPending ? 'Saving...' : 'Save Template'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={async () => {
+                      if (!currentTemplate.id) {
+                        toast({
+                          title: "Save Required",
+                          description: "Please save the template before previewing",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      try {
+                        const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/preview`, {
+                          credentials: 'include',
+                        });
+                        
+                        if (!response.ok) {
+                          throw new Error('Failed to generate preview PDF');
+                        }
+                        
+                        // Get the PDF blob
+                        const blob = await response.blob();
+                        
+                        // Create a download link
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `preview_${currentTemplate.name.replace(/\s+/g, '_')}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        toast({
+                          title: "Preview Generated",
+                          description: "Template preview PDF downloaded successfully"
+                        });
+                      } catch (error) {
+                        console.error('Error generating preview PDF:', error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to generate preview PDF",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    disabled={!currentTemplate.id}
+                    data-testid="button-preview-pdf"
+                  >
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Preview PDF
                   </Button>
                   <Button
                     variant="outline"
