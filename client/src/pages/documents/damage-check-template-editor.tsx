@@ -777,7 +777,13 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'contractInfo' && (
-                          <div className="space-y-1">
+                          <div 
+                            className="w-full"
+                            style={{
+                              columnCount: section.settings.columnCount || 1,
+                              columnGap: '8px'
+                            }}
+                          >
                             {section.settings.customItems && section.settings.customItems.length > 0 ? (
                               section.settings.customItems.map(item => {
                                 const sampleValues: Record<string, string> = {
@@ -788,7 +794,7 @@ export default function DamageCheckTemplateEditor() {
                                 };
                                 const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
                                 return (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
                                     {item.hasCheckbox && <span>☐</span>}
                                     <span>{item.text} {value}</span>
                                   </div>
@@ -800,7 +806,13 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'vehicleData' && (
-                          <div className="space-y-1">
+                          <div 
+                            className="w-full"
+                            style={{
+                              columnCount: section.settings.columnCount || 1,
+                              columnGap: '8px'
+                            }}
+                          >
                             {section.settings.customItems && section.settings.customItems.length > 0 ? (
                               section.settings.customItems.map(item => {
                                 const sampleValues: Record<string, string> = {
@@ -813,7 +825,7 @@ export default function DamageCheckTemplateEditor() {
                                 };
                                 const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
                                 return (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
                                     {item.hasCheckbox && <span>☐</span>}
                                     <span>{item.text} {value}</span>
                                   </div>
@@ -929,9 +941,15 @@ export default function DamageCheckTemplateEditor() {
                               [Ruimte voor opmerkingen]
                             </div>
                             {section.settings.customItems && section.settings.customItems.length > 0 && (
-                              <div className="space-y-1">
+                              <div 
+                                className="w-full"
+                                style={{
+                                  columnCount: section.settings.columnCount || 1,
+                                  columnGap: '8px'
+                                }}
+                              >
                                 {section.settings.customItems.map(item => (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px]">
+                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
                                     {item.hasCheckbox && <span>☐</span>}
                                     <span>{item.text}</span>
                                   </div>
@@ -941,10 +959,16 @@ export default function DamageCheckTemplateEditor() {
                           </div>
                         )}
                         {section.type === 'signatures' && (
-                          <div className="space-y-1">
+                          <div 
+                            className="w-full"
+                            style={{
+                              columnCount: section.settings.columnCount || 2,
+                              columnGap: '8px'
+                            }}
+                          >
                             {section.settings.customItems && section.settings.customItems.length > 0 ? (
                               section.settings.customItems.map(item => (
-                                <div key={item.id} className="text-center">
+                                <div key={item.id} className="text-center mb-2" style={{ breakInside: 'avoid-column' }}>
                                   <div className="border-b border-gray-400 mb-1 h-8"></div>
                                   <div className="flex items-center justify-center gap-1 text-[7px]">
                                     {item.hasCheckbox && <span>☐</span>}
@@ -1286,20 +1310,37 @@ export default function DamageCheckTemplateEditor() {
                   editingSection.type === 'vehicleData' || 
                   editingSection.type === 'remarks' ||
                   editingSection.type === 'signatures') && (
-                  <div>
-                    <Label htmlFor="fontSize">Font Size</Label>
-                    <Input
-                      id="fontSize"
-                      type="number"
-                      value={editingSection.settings.fontSize || 9}
-                      onChange={(e) => setEditingSection({
-                        ...editingSection,
-                        settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
-                      })}
-                      min="6"
-                      max="18"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <Label htmlFor="fontSize">Font Size</Label>
+                      <Input
+                        id="fontSize"
+                        type="number"
+                        value={editingSection.settings.fontSize || 9}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
+                        })}
+                        min="6"
+                        max="18"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="columnCount">Number of Columns</Label>
+                      <Input
+                        id="columnCount"
+                        type="number"
+                        value={editingSection.settings.columnCount || 1}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, columnCount: parseInt(e.target.value) }
+                        })}
+                        min="1"
+                        max="4"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Arrange items in columns (1-4)</p>
+                    </div>
+                  </>
                 )}
 
                 {/* Checklist Section */}

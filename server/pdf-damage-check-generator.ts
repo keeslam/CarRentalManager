@@ -588,6 +588,7 @@ export async function generateDamageCheckPDFWithTemplate(
         const lineHeight = fontSize + 4;
         const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'CONTRACTGEGEVENS';
+        const columnCount = section.settings.columnCount || 1;
         let yPos = pdfY + section.height - 15;
         
         page.drawText(sectionLabel, {
@@ -599,23 +600,32 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight;
         
-        // Render custom items with actual data
+        // Render custom items with actual data in columns
         if (section.settings.customItems && section.settings.customItems.length > 0) {
-          section.settings.customItems.forEach((item: any) => {
-            if (yPos < pdfY + 10) return; // Stop if we run out of space
+          const columnGap = 10;
+          const columnWidth = (section.width - 10 - (columnGap * (columnCount - 1))) / columnCount;
+          const itemsPerColumn = Math.ceil(section.settings.customItems.length / columnCount);
+          
+          section.settings.customItems.forEach((item: any, index: number) => {
+            const columnIndex = Math.floor(index / itemsPerColumn);
+            const rowInColumn = index % itemsPerColumn;
+            const xPos = section.x + 5 + (columnIndex * (columnWidth + columnGap));
+            const itemY = yPos - (rowInColumn * lineHeight);
             
-            let xPos = section.x + 5;
+            if (itemY < pdfY + 10) return; // Stop if we run out of space
+            
+            let textX = xPos;
             
             if (item.hasCheckbox) {
               page.drawRectangle({
-                x: xPos,
-                y: yPos - checkboxSize,
+                x: textX,
+                y: itemY - checkboxSize,
                 width: checkboxSize,
                 height: checkboxSize,
                 borderColor: rgb(0, 0, 0),
                 borderWidth: 0.5,
               });
-              xPos += checkboxSize + 5;
+              textX += checkboxSize + 5;
             }
             
             // Get actual value based on fieldKey
@@ -632,13 +642,11 @@ export async function generateDamageCheckPDFWithTemplate(
             }
             
             page.drawText(displayText, {
-              x: xPos,
-              y: yPos - checkboxSize + 1,
+              x: textX,
+              y: itemY - checkboxSize + 1,
               size: fontSize,
               font,
             });
-            
-            yPos -= lineHeight;
           });
         }
         break;
@@ -649,6 +657,7 @@ export async function generateDamageCheckPDFWithTemplate(
         const lineHeight = fontSize + 4;
         const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'VOERTUIGGEGEVENS';
+        const columnCount = section.settings.columnCount || 1;
         let yPos = pdfY + section.height - 15;
         
         page.drawText(sectionLabel, {
@@ -660,23 +669,32 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight;
         
-        // Render custom items with actual data
+        // Render custom items with actual data in columns
         if (section.settings.customItems && section.settings.customItems.length > 0) {
-          section.settings.customItems.forEach((item: any) => {
-            if (yPos < pdfY + 10) return; // Stop if we run out of space
+          const columnGap = 10;
+          const columnWidth = (section.width - 10 - (columnGap * (columnCount - 1))) / columnCount;
+          const itemsPerColumn = Math.ceil(section.settings.customItems.length / columnCount);
+          
+          section.settings.customItems.forEach((item: any, index: number) => {
+            const columnIndex = Math.floor(index / itemsPerColumn);
+            const rowInColumn = index % itemsPerColumn;
+            const xPos = section.x + 5 + (columnIndex * (columnWidth + columnGap));
+            const itemY = yPos - (rowInColumn * lineHeight);
             
-            let xPos = section.x + 5;
+            if (itemY < pdfY + 10) return; // Stop if we run out of space
+            
+            let textX = xPos;
             
             if (item.hasCheckbox) {
               page.drawRectangle({
-                x: xPos,
-                y: yPos - checkboxSize,
+                x: textX,
+                y: itemY - checkboxSize,
                 width: checkboxSize,
                 height: checkboxSize,
                 borderColor: rgb(0, 0, 0),
                 borderWidth: 0.5,
               });
-              xPos += checkboxSize + 5;
+              textX += checkboxSize + 5;
             }
             
             // Get actual value based on fieldKey
@@ -695,13 +713,11 @@ export async function generateDamageCheckPDFWithTemplate(
             }
             
             page.drawText(displayText, {
-              x: xPos,
-              y: yPos - checkboxSize + 1,
+              x: textX,
+              y: itemY - checkboxSize + 1,
               size: fontSize,
               font,
             });
-            
-            yPos -= lineHeight;
           });
         }
         break;
@@ -896,6 +912,7 @@ export async function generateDamageCheckPDFWithTemplate(
         const lineHeight = fontSize + 4;
         const checkboxSize = section.settings.checkboxSize || 8;
         const sectionLabel = section.settings.customLabel || 'OPMERKINGEN';
+        const columnCount = section.settings.columnCount || 1;
         let yPos = pdfY + section.height - 15;
         
         page.drawText(sectionLabel, {
@@ -920,33 +937,40 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= remarksBoxHeight + lineHeight;
         
-        // Render custom items
+        // Render custom items in columns
         if (section.settings.customItems && section.settings.customItems.length > 0) {
-          section.settings.customItems.forEach((item: any) => {
-            if (yPos < pdfY + 10) return; // Stop if we run out of space
+          const columnGap = 10;
+          const columnWidth = (section.width - 10 - (columnGap * (columnCount - 1))) / columnCount;
+          const itemsPerColumn = Math.ceil(section.settings.customItems.length / columnCount);
+          
+          section.settings.customItems.forEach((item: any, index: number) => {
+            const columnIndex = Math.floor(index / itemsPerColumn);
+            const rowInColumn = index % itemsPerColumn;
+            const xPos = section.x + 5 + (columnIndex * (columnWidth + columnGap));
+            const itemY = yPos - (rowInColumn * lineHeight);
             
-            let xPos = section.x + 5;
+            if (itemY < pdfY + 10) return; // Stop if we run out of space
+            
+            let textX = xPos;
             
             if (item.hasCheckbox) {
               page.drawRectangle({
-                x: xPos,
-                y: yPos - checkboxSize,
+                x: textX,
+                y: itemY - checkboxSize,
                 width: checkboxSize,
                 height: checkboxSize,
                 borderColor: rgb(0, 0, 0),
                 borderWidth: 0.5,
               });
-              xPos += checkboxSize + 5;
+              textX += checkboxSize + 5;
             }
             
             page.drawText(item.text, {
-              x: xPos,
-              y: yPos - checkboxSize + 1,
+              x: textX,
+              y: itemY - checkboxSize + 1,
               size: fontSize,
               font,
             });
-            
-            yPos -= lineHeight;
           });
         }
         break;
