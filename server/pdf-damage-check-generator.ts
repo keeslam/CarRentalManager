@@ -38,7 +38,7 @@ interface DamageCheckTemplate {
 
 interface PdfTemplateSection {
   id: string;
-  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures';
+  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures' | 'customField';
   x: number;
   y: number;
   width: number;
@@ -54,6 +54,10 @@ interface PdfTemplateSection {
     logoPath?: string;
     customLabel?: string;
     textAlign?: 'left' | 'center' | 'right';
+    columnCount?: number;
+    fieldText?: string;
+    hasCheckbox?: boolean;
+    hasText?: boolean;
     [key: string]: any;
   };
 }
@@ -896,6 +900,41 @@ export async function generateDamageCheckPDFWithTemplate(
           size: fontSize,
           font: boldFont,
         });
+        break;
+      }
+      
+      case 'customField': {
+        const fontSize = section.settings.fontSize || 9;
+        const checkboxSize = section.settings.checkboxSize || 10;
+        const hasCheckbox = section.settings.hasCheckbox !== false;
+        const hasText = section.settings.hasText !== false;
+        const fieldText = section.settings.fieldText || 'Field Label';
+        
+        let xPos = section.x + 5;
+        const yPos = pdfY + section.height / 2;
+        
+        // Draw checkbox if enabled
+        if (hasCheckbox) {
+          page.drawRectangle({
+            x: xPos,
+            y: yPos - checkboxSize / 2,
+            width: checkboxSize,
+            height: checkboxSize,
+            borderColor: rgb(0, 0, 0),
+            borderWidth: 0.5,
+          });
+          xPos += checkboxSize + 5;
+        }
+        
+        // Draw text if enabled
+        if (hasText) {
+          page.drawText(fieldText, {
+            x: xPos,
+            y: yPos - fontSize / 2,
+            size: fontSize,
+            font,
+          });
+        }
         break;
       }
     }

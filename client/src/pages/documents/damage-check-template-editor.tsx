@@ -23,7 +23,7 @@ import {
 // Section type definition
 interface TemplateSection {
   id: string;
-  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures';
+  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures' | 'customField';
   x: number;
   y: number;
   width: number;
@@ -149,6 +149,7 @@ const SECTION_LABELS: Record<string, string> = {
   diagram: 'Vehicle Diagram',
   remarks: 'Remarks',
   signatures: 'Signatures',
+  customField: 'Custom Field',
 };
 
 export default function DamageCheckTemplateEditor() {
@@ -420,8 +421,41 @@ export default function DamageCheckTemplateEditor() {
       diagram: '#8b5cf6',
       remarks: '#ec4899',
       signatures: '#06b6d4',
+      customField: '#14b8a6',
     };
     return colors[type] || '#6b7280';
+  };
+
+  const addCustomField = () => {
+    if (!currentTemplate) return;
+    
+    const newSection: TemplateSection = {
+      id: `custom-${Date.now()}`,
+      type: 'customField',
+      x: 30,
+      y: 400,
+      width: 200,
+      height: 30,
+      visible: true,
+      locked: false,
+      settings: {
+        customLabel: 'New Field',
+        fieldText: 'Field Label',
+        hasCheckbox: true,
+        hasText: true,
+        fontSize: 9,
+      }
+    };
+    
+    setCurrentTemplate({
+      ...currentTemplate,
+      sections: [...currentTemplate.sections, newSection]
+    });
+    setSelectedSection(newSection.id);
+    toast({
+      title: "Field Added",
+      description: "Custom field added to template"
+    });
   };
 
   return (
@@ -506,7 +540,19 @@ export default function DamageCheckTemplateEditor() {
 
                 {/* Sections List */}
                 <div className="space-y-2 pt-4 border-t">
-                  <Label className="text-sm font-semibold">Sections</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Sections</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addCustomField}
+                      className="h-7"
+                      data-testid="button-add-custom-field"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Field
+                    </Button>
+                  </div>
                   {currentTemplate.sections.map(section => (
                     <div
                       key={section.id}
@@ -514,7 +560,7 @@ export default function DamageCheckTemplateEditor() {
                       style={{ borderLeftWidth: 4, borderLeftColor: getSectionColor(section.type) }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{SECTION_LABELS[section.type]}</span>
+                        <span className="text-sm font-medium">{section.settings.customLabel || SECTION_LABELS[section.type]}</span>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -541,6 +587,23 @@ export default function DamageCheckTemplateEditor() {
                           >
                             {section.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                           </Button>
+                          {section.type === 'customField' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-600"
+                              onClick={() => {
+                                setCurrentTemplate({
+                                  ...currentTemplate,
+                                  sections: currentTemplate.sections.filter(s => s.id !== section.id)
+                                });
+                                toast({ title: "Field Deleted", description: "Custom field removed from template" });
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -823,6 +886,16 @@ export default function DamageCheckTemplateEditor() {
                               <div className="border-b border-gray-400 mb-1 h-8"></div>
                               <div className="font-bold">Handtekening Medewerker</div>
                             </div>
+                          </div>
+                        )}
+                        {section.type === 'customField' && (
+                          <div className="flex items-center gap-2 text-[8px]" style={{ fontSize: `${section.settings.fontSize || 9}px` }}>
+                            {section.settings.hasCheckbox && (
+                              <div className="border border-gray-400" style={{ width: `${section.settings.checkboxSize || 10}px`, height: `${section.settings.checkboxSize || 10}px`, flexShrink: 0 }}></div>
+                            )}
+                            {section.settings.hasText && (
+                              <div>{section.settings.fieldText || 'Field Label'}</div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1115,6 +1188,75 @@ export default function DamageCheckTemplateEditor() {
                         max="4"
                       />
                       <p className="text-xs text-gray-500 mt-1">Arrange checklist items in columns (1-4)</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Custom Field Section */}
+                {editingSection.type === 'customField' && (
+                  <>
+                    <div>
+                      <Label htmlFor="fieldText">Field Text</Label>
+                      <Input
+                        id="fieldText"
+                        value={editingSection.settings.fieldText || ''}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, fieldText: e.target.value }
+                        })}
+                        placeholder="Field Label"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Text to display in the field</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="hasCheckbox">Show Checkbox</Label>
+                      <Switch
+                        id="hasCheckbox"
+                        checked={editingSection.settings.hasCheckbox !== false}
+                        onCheckedChange={(checked) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, hasCheckbox: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="hasText">Show Text</Label>
+                      <Switch
+                        id="hasText"
+                        checked={editingSection.settings.hasText !== false}
+                        onCheckedChange={(checked) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, hasText: checked }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customFieldFontSize">Font Size</Label>
+                      <Input
+                        id="customFieldFontSize"
+                        type="number"
+                        value={editingSection.settings.fontSize || 9}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
+                        })}
+                        min="6"
+                        max="18"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customFieldCheckboxSize">Checkbox Size</Label>
+                      <Input
+                        id="customFieldCheckboxSize"
+                        type="number"
+                        value={editingSection.settings.checkboxSize || 10}
+                        onChange={(e) => setEditingSection({
+                          ...editingSection,
+                          settings: { ...editingSection.settings, checkboxSize: parseInt(e.target.value) }
+                        })}
+                        min="6"
+                        max="16"
+                      />
                     </div>
                   </>
                 )}
