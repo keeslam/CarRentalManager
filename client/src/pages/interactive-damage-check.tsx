@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Vehicle, type Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
-import { X, Save, Trash2, Plus, Pencil, Eraser, Download } from "lucide-react";
+import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
 
 interface DamageMarker {
   id: string;
