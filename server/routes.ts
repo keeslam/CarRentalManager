@@ -8147,10 +8147,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         check // Pass the interactive damage check data with diagram annotations
       );
       
-      // Set response headers for PDF download
+      // Set response headers for PDF viewing in browser
       const filename = `damage_check_${check.vehicleId}_${check.checkType}_${format(new Date(check.checkDate), 'yyyy-MM-dd')}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
       res.setHeader('Content-Length', pdfBuffer.length);
       
       res.send(pdfBuffer);
