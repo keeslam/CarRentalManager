@@ -745,6 +745,18 @@ export async function generateDamageCheckPDFWithTemplate(
         
         yPos -= lineHeight * 2;
         
+        // Parse checklist data from interactive damage check
+        let checklistData: any = null;
+        if (interactiveDamageCheck && interactiveDamageCheck.checklistData) {
+          try {
+            checklistData = typeof interactiveDamageCheck.checklistData === 'string' 
+              ? JSON.parse(interactiveDamageCheck.checklistData)
+              : interactiveDamageCheck.checklistData;
+          } catch (error) {
+            console.warn('Could not parse checklist data:', error);
+          }
+        }
+        
         // Group inspection points by category
         const categories = ['interieur', 'exterieur', 'afweez_check'];
         const categoryLabels: Record<string, string> = {
@@ -801,7 +813,24 @@ export async function generateDamageCheckPDFWithTemplate(
             
             const itemX = section.x + 5 + (currentColumn * (columnWidth + columnGap));
             
-            // Checkbox
+            // Get the value from checklistData if available
+            let itemValue = '';
+            if (checklistData) {
+              const categoryKey = category === 'interieur' ? 'interior' : 
+                                 category === 'exterieur' ? 'exterior' : 'delivery';
+              const categoryData = checklistData[categoryKey];
+              
+              if (categoryData && point.fieldKey) {
+                itemValue = categoryData[point.fieldKey];
+                // For delivery category, convert boolean to text
+                if (categoryKey === 'delivery' && typeof itemValue === 'boolean') {
+                  itemValue = itemValue ? 'Ja' : 'Nee';
+                }
+              }
+            }
+            
+            // Checkbox (checked if value exists and is not empty/false)
+            const isChecked = itemValue && itemValue !== '' && itemValue !== 'Nee' && itemValue !== false;
             page.drawRectangle({
               x: itemX + 5,
               y: columnYPos - checkboxSize,
@@ -811,9 +840,23 @@ export async function generateDamageCheckPDFWithTemplate(
               borderWidth: 0.5,
             });
             
-            // Point name (with text wrapping if needed)
+            // Draw checkmark if checked
+            if (isChecked) {
+              page.drawText('✓', {
+                x: itemX + 5.5,
+                y: columnYPos - checkboxSize + 1,
+                size: checkboxSize,
+                font: boldFont,
+              });
+            }
+            
+            // Point name with value if available (with text wrapping if needed)
             const maxTextWidth = columnWidth - checkboxSize - 15;
             let displayText = point.name;
+            if (itemValue && itemValue !== '' && itemValue !== 'true' && itemValue !== 'false') {
+              displayText += ` (${itemValue})`;
+            }
+            
             const textWidth = font.widthOfTextAtSize(displayText, fontSize);
             
             if (textWidth > maxTextWidth) {
