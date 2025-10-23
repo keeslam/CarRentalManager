@@ -752,9 +752,12 @@ export async function generateDamageCheckPDFWithTemplate(
             checklistData = typeof interactiveDamageCheck.checklistData === 'string' 
               ? JSON.parse(interactiveDamageCheck.checklistData)
               : interactiveDamageCheck.checklistData;
+            console.log('📋 Parsed checklist data for PDF:', JSON.stringify(checklistData, null, 2));
           } catch (error) {
             console.warn('Could not parse checklist data:', error);
           }
+        } else {
+          console.log('⚠️ No checklist data found in interactive damage check');
         }
         
         // Group inspection points by category
@@ -820,12 +823,17 @@ export async function generateDamageCheckPDFWithTemplate(
                                  category === 'exterieur' ? 'exterior' : 'delivery';
               const categoryData = checklistData[categoryKey];
               
+              console.log(`🔍 Looking up checklist item: category=${category}, fieldKey=${point.fieldKey}, categoryKey=${categoryKey}, found=${!!categoryData}`);
+              
               if (categoryData && point.fieldKey) {
                 itemValue = categoryData[point.fieldKey];
+                console.log(`✅ Found value for ${point.fieldKey}: ${itemValue}`);
                 // For delivery category, convert boolean to text
                 if (categoryKey === 'delivery' && typeof itemValue === 'boolean') {
                   itemValue = itemValue ? 'Ja' : 'Nee';
                 }
+              } else {
+                console.log(`❌ No value found for ${point.fieldKey} in category ${categoryKey}`);
               }
             }
             
