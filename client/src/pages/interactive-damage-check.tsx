@@ -174,6 +174,27 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         setMileage(savedCheck.mileage || '');
         setNotes(savedCheck.notes || '');
 
+        // If this is a return check, try to find and load the pickup check for comparison
+        if (savedCheck.checkType === 'return' && savedCheck.reservationId) {
+          try {
+            const checksResponse = await fetch(`/api/interactive-damage-checks/reservation/${savedCheck.reservationId}`, {
+              credentials: 'include',
+            });
+            
+            if (checksResponse.ok) {
+              const allChecks = await checksResponse.json();
+              const pickupCheck = allChecks.find((c: any) => c.checkType === 'pickup');
+              
+              if (pickupCheck) {
+                setPickupCheckData(pickupCheck);
+                setShowComparison(true);
+              }
+            }
+          } catch (err) {
+            console.warn('Could not load pickup check for comparison:', err);
+          }
+        }
+
         // Load damage markers
         if (savedCheck.damageMarkers) {
           const loadedMarkers = typeof savedCheck.damageMarkers === 'string'
