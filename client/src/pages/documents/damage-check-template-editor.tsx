@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
   ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2,
-  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown
+  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DamageCheckTemplate } from "@shared/schema";
@@ -697,6 +697,41 @@ export default function DamageCheckTemplateEditor() {
                   >
                     <FileDown className="w-4 h-4 mr-2" />
                     Preview PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={async () => {
+                      if (!currentTemplate.id) {
+                        toast({
+                          title: "Save Required",
+                          description: "Please save the template first",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      try {
+                        const updatedTemplate = { ...currentTemplate, isDefault: true };
+                        await apiRequest('PATCH', `/api/damage-check-pdf-templates/${currentTemplate.id}`, updatedTemplate);
+                        queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+                        toast({
+                          title: "Success",
+                          description: "Template set as default"
+                        });
+                      } catch (error) {
+                        console.error('Error setting default template:', error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to set template as default",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    disabled={!currentTemplate.id || currentTemplate.isDefault}
+                    data-testid="button-set-default"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    {currentTemplate.isDefault ? 'Default Template' : 'Set as Default'}
                   </Button>
                   <Button
                     variant="outline"
