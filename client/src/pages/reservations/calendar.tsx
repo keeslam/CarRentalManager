@@ -157,6 +157,7 @@ export default function ReservationCalendarPage() {
   // Damage check dialog state
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
+  const [compareWithCheckId, setCompareWithCheckId] = useState<number | null>(null);
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
@@ -173,14 +174,16 @@ export default function ReservationCalendarPage() {
     console.log('Edit dialog should be open now');
   };
   
-  const handleOpenDamageCheckDialog = (editCheckId: number | null = null) => {
+  const handleOpenDamageCheckDialog = (editCheckId: number | null = null, compareWithId: number | null = null) => {
     setEditingDamageCheckId(editCheckId);
+    setCompareWithCheckId(compareWithId);
     setDamageCheckDialogOpen(true);
   };
 
   const handleCloseDamageCheckDialog = () => {
     setDamageCheckDialogOpen(false);
     setEditingDamageCheckId(null);
+    setCompareWithCheckId(null);
     // Refetch damage checks when dialog closes
     refetchDamageChecks();
     refetchDocuments();
@@ -1772,15 +1775,34 @@ export default function ReservationCalendarPage() {
                       <ClipboardCheck className="h-3.5 w-3.5" />
                       Damage Checks
                     </label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenDamageCheckDialog(null)}
-                      className="h-7 text-xs"
-                      data-testid="button-create-damage-check"
-                    >
-                      + Create Damage Check
-                    </Button>
+                    <div className="flex gap-2">
+                      {/* Show Create Return Check button if there's a pickup check */}
+                      {reservationDamageChecks && reservationDamageChecks.some(c => c.checkType === 'pickup') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const pickupCheck = reservationDamageChecks.find(c => c.checkType === 'pickup');
+                            if (pickupCheck) {
+                              handleOpenDamageCheckDialog(null, pickupCheck.id);
+                            }
+                          }}
+                          className="h-7 text-xs bg-green-50 hover:bg-green-100 border-green-300 text-green-700"
+                          data-testid="button-create-return-check"
+                        >
+                          + Create Return Check
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenDamageCheckDialog(null, null)}
+                        className="h-7 text-xs"
+                        data-testid="button-create-damage-check"
+                      >
+                        + Create Damage Check
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Reservation's Damage Checks */}
@@ -1933,14 +1955,17 @@ export default function ReservationCalendarPage() {
         }}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-0">
             <DialogHeader className="sr-only">
-              <DialogTitle>Damage Check</DialogTitle>
-              <DialogDescription>Interactive damage check editor</DialogDescription>
+              <DialogTitle>{compareWithCheckId ? 'Create Return Check' : 'Damage Check'}</DialogTitle>
+              <DialogDescription>
+                {compareWithCheckId ? 'Compare with pickup check and mark new damage' : 'Interactive damage check editor'}
+              </DialogDescription>
             </DialogHeader>
             <InteractiveDamageCheckPage
               onClose={handleCloseDamageCheckDialog}
               editingCheckId={editingDamageCheckId}
               initialVehicleId={selectedReservation.vehicleId}
               initialReservationId={selectedReservation.id}
+              compareWithCheckId={compareWithCheckId}
             />
           </DialogContent>
         </Dialog>

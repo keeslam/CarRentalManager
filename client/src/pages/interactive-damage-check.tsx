@@ -37,9 +37,10 @@ interface InteractiveDamageCheckProps {
   editingCheckId?: number | null;
   initialVehicleId?: number | null;
   initialReservationId?: number | null;
+  compareWithCheckId?: number | null;
 }
 
-export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId, initialReservationId }: InteractiveDamageCheckProps = {}) {
+export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId, initialReservationId, compareWithCheckId }: InteractiveDamageCheckProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -58,6 +59,10 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [mileage, setMileage] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Comparison mode state
+  const [pickupCheckData, setPickupCheckData] = useState<any | null>(null);
+  const [showComparison, setShowComparison] = useState(false);
   
   // Inspection checklist items
   const [checklistItems, setChecklistItems] = useState({
@@ -230,6 +235,42 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
     loadSavedCheck();
   }, [editingCheckId, toast]);
+
+  // Load pickup check for comparison when creating return check
+  useEffect(() => {
+    const loadPickupCheck = async () => {
+      if (!compareWithCheckId) return;
+
+      try {
+        const response = await fetch(`/api/interactive-damage-checks/${compareWithCheckId}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load pickup check for comparison');
+        }
+
+        const pickupCheck = await response.json();
+        setPickupCheckData(pickupCheck);
+        setShowComparison(true);
+        setCheckType('return'); // Automatically set to return check when comparing
+
+        toast({
+          title: "Comparison Mode",
+          description: "Showing pickup check for comparison",
+        });
+      } catch (error) {
+        console.error('Error loading pickup check for comparison:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load pickup check for comparison",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadPickupCheck();
+  }, [compareWithCheckId, toast]);
 
   // Fetch vehicles
   const { data: vehicles = [] } = useQuery<Vehicle[]>({
@@ -643,14 +684,74 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Interactive Damage Check</h1>
-            <p className="text-gray-600 mt-1">iPad-optimized damage inspection interface</p>
+            <h1 className="text-3xl font-bold">
+              {showComparison ? 'Create Return Check - Compare with Pickup' : 'Interactive Damage Check'}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {showComparison ? 'Review pickup damage and mark any new damage found on return' : 'iPad-optimized damage inspection interface'}
+            </p>
           </div>
           <Button variant="outline" onClick={() => onClose ? onClose() : navigate('/documents')} data-testid="button-close">
             <X className="h-4 w-4 mr-2" />
             Close
           </Button>
         </div>
+
+        {/* Pickup Check Comparison Panel */}
+        {showComparison && pickupCheckData && (
+          <Card className="p-4 mb-6 bg-blue-50 border-blue-300">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Pickup Check Reference
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <span className="text-blue-700 font-medium">Date:</span>
+                    <span className="ml-2 text-blue-900">
+                      {pickupCheckData.checkDate ? new Date(pickupCheckData.checkDate).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                  {pickupCheckData.mileage && (
+                    <div>
+                      <span className="text-blue-700 font-medium">Mileage:</span>
+                      <span className="ml-2 text-blue-900">{Number(pickupCheckData.mileage).toLocaleString()} km</span>
+                    </div>
+                  )}
+                  {pickupCheckData.fuelLevel && (
+                    <div>
+                      <span className="text-blue-700 font-medium">Fuel:</span>
+                      <span className="ml-2 text-blue-900">{pickupCheckData.fuelLevel}</span>
+                    </div>
+                  )}
+                  {pickupCheckData.damageMarkers && JSON.parse(pickupCheckData.damageMarkers).length > 0 && (
+                    <div>
+                      <span className="text-blue-700 font-medium">Existing Damage:</span>
+                      <span className="ml-2 text-blue-900 font-semibold">
+                        {JSON.parse(pickupCheckData.damageMarkers).length} item(s)
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {pickupCheckData.notes && (
+                  <div className="mt-2 text-sm">
+                    <span className="text-blue-700 font-medium">Notes:</span>
+                    <span className="ml-2 text-blue-900 italic">{pickupCheckData.notes}</span>
+                  </div>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(`/api/interactive-damage-checks/${pickupCheckData.id}/pdf`, '_blank')}
+                className="bg-white hover:bg-blue-100"
+              >
+                View Pickup PDF
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Vehicle Selection - Full Width */}
         <Card className="p-4 mb-6">
