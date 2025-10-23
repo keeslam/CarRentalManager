@@ -2,8 +2,9 @@ import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs/promises';
 import path from 'path';
 import { db } from './db';
-import { damageCheckPdfTemplates, damageCheckTemplates } from '../shared/schema';
+import { damageCheckPdfTemplates, damageCheckTemplates, vehicleDiagramTemplates } from '../shared/schema';
 import { eq } from 'drizzle-orm';
+import { ObjectStorageService } from './objectStorage';
 
 interface VehicleData {
   brand: string;
