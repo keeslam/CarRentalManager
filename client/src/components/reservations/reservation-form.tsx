@@ -2685,7 +2685,17 @@ export function ReservationForm({
                 {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
                   <>
                     <Button 
-                      type="submit" 
+                      type="submit"
+                      onClick={(e) => {
+                        console.log('🖱️ Button clicked!', { 
+                          editMode, 
+                          isPending: createReservationMutation.isPending,
+                          hasOverlap,
+                          formValid: form.formState.isValid,
+                          errors: form.formState.errors 
+                        });
+                        // Let the form handle submission via type="submit"
+                      }}
                       disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
                       title={
                         createReservationMutation.isPending ? "Saving..." :
@@ -2705,11 +2715,16 @@ export function ReservationForm({
                       }
                     </Button>
                     {/* Debug info - remove after fixing */}
-                    {(createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)) && (
-                      <span className="text-xs text-red-600">
-                        Disabled: {createReservationMutation.isPending && "Saving"}{hasOverlap && "Conflict"}{!editMode && !selectedTemplateId && "No template"}
-                      </span>
-                    )}
+                    <div className="text-xs space-y-1">
+                      {(createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)) && (
+                        <div className="text-red-600">
+                          Disabled: {createReservationMutation.isPending && "Saving"}{hasOverlap && "Conflict"}{!editMode && !selectedTemplateId && "No template"}
+                        </div>
+                      )}
+                      <div className="text-gray-500">
+                        editMode: {String(editMode)} | hasOverlap: {String(hasOverlap)} | isValid: {String(form.formState.isValid)}
+                      </div>
+                    </div>
                   </>
                 )}
 
