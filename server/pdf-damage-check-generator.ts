@@ -848,12 +848,12 @@ export async function generateDamageCheckPDFWithTemplate(
               borderWidth: 0.5,
             });
             
-            // Draw checkmark if checked
+            // Draw X if checked
             if (isChecked) {
-              page.drawText('✓', {
-                x: itemX + 5.5,
+              page.drawText('X', {
+                x: itemX + 6,
                 y: columnYPos - checkboxSize + 1,
-                size: checkboxSize,
+                size: checkboxSize - 1,
                 font: boldFont,
               });
             }
