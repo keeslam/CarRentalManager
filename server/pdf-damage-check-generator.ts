@@ -904,7 +904,7 @@ export async function generateDamageCheckPDFWithTemplate(
             }
             
             page.drawText(displayText, {
-              x: itemX + 5 + checkboxSize + 5,
+              x: itemX + valueTextWidth + 10,
               y: columnYPos - checkboxSize + 1,
               size: fontSize,
               font,
