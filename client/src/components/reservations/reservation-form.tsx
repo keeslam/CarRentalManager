@@ -2683,20 +2683,34 @@ export function ReservationForm({
                 
                 {/* Submit button - Preview in create mode, Update in edit mode */}
                 {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
-                  <Button 
-                    type="submit" 
-                    disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
-                  >
-                    {createReservationMutation.isPending 
-                      ? "Saving..." 
-                      : editMode ? "Update Reservation" : (
-                        <>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Preview & Generate Contract
-                        </>
-                      )
-                    }
-                  </Button>
+                  <>
+                    <Button 
+                      type="submit" 
+                      disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
+                      title={
+                        createReservationMutation.isPending ? "Saving..." :
+                        hasOverlap ? "Disabled: Booking conflict detected" :
+                        (!editMode && !selectedTemplateId) ? "Disabled: No template selected" :
+                        "Click to submit"
+                      }
+                    >
+                      {createReservationMutation.isPending 
+                        ? "Saving..." 
+                        : editMode ? "Update Reservation" : (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Preview & Generate Contract
+                          </>
+                        )
+                      }
+                    </Button>
+                    {/* Debug info - remove after fixing */}
+                    {(createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)) && (
+                      <span className="text-xs text-red-600">
+                        Disabled: {createReservationMutation.isPending && "Saving"}{hasOverlap && "Conflict"}{!editMode && !selectedTemplateId && "No template"}
+                      </span>
+                    )}
+                  </>
                 )}
 
                 {/* Generate new contract version button - only in edit mode */}
