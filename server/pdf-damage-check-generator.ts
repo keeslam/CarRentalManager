@@ -937,6 +937,7 @@ export async function generateDamageCheckPDFWithTemplate(
         
         // First, try to use the interactive damage check diagram with annotations
         if (interactiveDamageCheck?.diagramWithAnnotations) {
+          console.log('🖼️ Using interactive damage check diagram with annotations');
           try {
             // Extract base64 data from data URL (format: data:image/png;base64,...)
             const base64Data = interactiveDamageCheck.diagramWithAnnotations.split(',')[1];
@@ -983,6 +984,7 @@ export async function generateDamageCheckPDFWithTemplate(
         
         // If no interactive diagram, show placeholder text
         if (!diagramLoaded) {
+          console.log('🖼️ No interactive diagram, trying template diagram');
           page.drawText('VOERTUIGSCHEMA (Markeer schade)', {
             x: section.x + section.width / 2 - 60,
             y: pdfY + section.height / 2,
