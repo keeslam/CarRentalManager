@@ -845,7 +845,10 @@ export async function generateDamageCheckPDFWithTemplate(
             
             if (category === 'afweez_check') {
               // Checkbox for delivery checks - use raw boolean value
+              console.log(`📦 Delivery check: ${point.fieldKey}, itemValue=${itemValue}, rawBooleanValue=${rawBooleanValue}, typeof=${typeof itemValue}`);
               const isChecked = rawBooleanValue === true;
+              console.log(`🎯 isChecked for ${point.fieldKey}: ${isChecked}`);
+              
               page.drawRectangle({
                 x: itemX + 5,
                 y: columnYPos - checkboxSize,
