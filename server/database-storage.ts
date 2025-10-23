@@ -2133,6 +2133,14 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
+  async unlinkDiagramTemplateFromDamageChecks(templateId: number): Promise<void> {
+    // Set diagram_template_id to NULL for all damage checks using this template
+    await db
+      .update(interactiveDamageChecks)
+      .set({ diagramTemplateId: null })
+      .where(eq(interactiveDamageChecks.diagramTemplateId, templateId));
+  }
+
   // Interactive Damage Check methods
   async getAllInteractiveDamageChecks(): Promise<InteractiveDamageCheck[]> {
     return await db.select().from(interactiveDamageChecks).orderBy(desc(interactiveDamageChecks.checkDate));

@@ -7774,6 +7774,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
       
+      // First, unlink this template from any damage checks that reference it
+      // Set diagram_template_id to NULL for all damage checks using this template
+      await storage.unlinkDiagramTemplateFromDamageChecks(id);
+      
       // Delete the diagram file
       if (template.diagramPath) {
         try {

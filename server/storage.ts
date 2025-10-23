@@ -158,6 +158,7 @@ export interface IStorage {
   createVehicleDiagramTemplate(template: InsertVehicleDiagramTemplate): Promise<VehicleDiagramTemplate>;
   updateVehicleDiagramTemplate(id: number, templateData: Partial<InsertVehicleDiagramTemplate>): Promise<VehicleDiagramTemplate | undefined>;
   deleteVehicleDiagramTemplate(id: number): Promise<boolean>;
+  unlinkDiagramTemplateFromDamageChecks(templateId: number): Promise<void>;
   
   // Interactive Damage Check methods
   getAllInteractiveDamageChecks(): Promise<InteractiveDamageCheck[]>;
@@ -1749,6 +1750,10 @@ export class MemStorage implements IStorage {
   }
 
   async deleteVehicleDiagramTemplate(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async unlinkDiagramTemplateFromDamageChecks(templateId: number): Promise<void> {
     throw new Error('Not implemented in MemStorage');
   }
 
