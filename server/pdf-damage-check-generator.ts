@@ -983,9 +983,9 @@ export async function generateDamageCheckPDFWithTemplate(
               }
               
               if (diagramImage) {
-                const sidePadding = 60; // Add padding on both sides for proper margins
+                const sidePadding = 80; // Increased padding for clear margins
                 const maxWidth = section.width - (sidePadding * 2);
-                const maxHeight = section.height - 10;
+                const maxHeight = section.height - 20;
                 
                 // Calculate dimensions maintaining aspect ratio
                 const aspectRatio = diagramImage.width / diagramImage.height;
@@ -997,6 +997,14 @@ export async function generateDamageCheckPDFWithTemplate(
                   imgHeight = maxHeight;
                   imgWidth = maxHeight * aspectRatio;
                 }
+                
+                // Make sure width doesn't exceed maxWidth after height scaling
+                if (imgWidth > maxWidth) {
+                  imgWidth = maxWidth;
+                  imgHeight = maxWidth / aspectRatio;
+                }
+                
+                console.log(`📐 Diagram sizing: section.width=${section.width}, sidePadding=${sidePadding}, maxWidth=${maxWidth}, calculated imgWidth=${imgWidth}, imgHeight=${imgHeight}`);
                 
                 page.drawImage(diagramImage, {
                   x: section.x + (section.width - imgWidth) / 2,
