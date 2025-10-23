@@ -995,8 +995,9 @@ export const vehicleDiagramTemplates = pgTable("vehicle_diagram_templates", {
   yearFrom: integer("year_from"), // e.g., 2015 - start of year range
   yearTo: integer("year_to"), // e.g., 2020 - end of year range
   
-  // Vehicle diagram image path
-  diagramPath: text("diagram_path").notNull(), // Path to uploaded diagram image
+  // Vehicle diagram image storage
+  diagramPath: text("diagram_path"), // Legacy local path (optional for backward compatibility)
+  objectStorageKey: text("object_storage_key"), // Object storage path (persistent)
   
   // Metadata
   description: text("description"), // Optional description
