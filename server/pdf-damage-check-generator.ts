@@ -854,13 +854,14 @@ export async function generateDamageCheckPDFWithTemplate(
                 borderWidth: 0.5,
               });
               
-              // Draw X if checked
+              // Draw X if checked - bigger and centered
               if (isChecked) {
                 page.drawText('X', {
-                  x: itemX + 6,
-                  y: columnYPos - checkboxSize + 1,
-                  size: checkboxSize - 1,
+                  x: itemX + 6.5,
+                  y: columnYPos - checkboxSize + 2,
+                  size: checkboxSize,
                   font: boldFont,
+                  color: rgb(0, 0, 0),
                 });
               }
             } else {
