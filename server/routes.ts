@@ -7729,24 +7729,37 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const user = req.user;
-      
-      // Generate unique object storage key
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const ext = path.extname(req.file.originalname);
-      const objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
       
-      // Upload to object storage
-      await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
+      let objectStorageKey: string | null = null;
+      let diagramPath: string | null = null;
       
-      console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
+      // Try object storage first (works in development)
+      try {
+        objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
+        await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
+        console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
+      } catch (objStorageError) {
+        // Fall back to filesystem storage (works in published deployments)
+        console.warn("Object storage not available, falling back to filesystem storage:", objStorageError);
+        const diagramDir = path.join(process.cwd(), 'uploads', 'vehicle-diagrams');
+        await fs.promises.mkdir(diagramDir, { recursive: true });
+        const filename = `${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
+        const filePath = path.join(diagramDir, filename);
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        diagramPath = getRelativePath(filePath);
+        objectStorageKey = null;
+        console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
+      }
       
       const templateData = {
         make: req.body.make,
         model: req.body.model,
         yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
         yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
-        diagramPath: null, // Legacy path no longer used
-        objectStorageKey: objectStorageKey, // Persistent storage key
+        diagramPath: diagramPath, // Filesystem path (used in deployments)
+        objectStorageKey: objectStorageKey, // Object storage key (used in development)
         description: req.body.description || null,
         createdBy: user ? user.username : null,
         updatedBy: user ? user.username : null,
@@ -7817,16 +7830,24 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Serve from object storage if available
       if (template.objectStorageKey) {
-        const file = objectStorage.getFile(template.objectStorageKey);
-        const exists = await objectStorage.fileExists(template.objectStorageKey);
-        
-        if (!exists) {
-          return res.status(404).json({ message: "Diagram image not found in storage" });
+        try {
+          const file = objectStorage.getFile(template.objectStorageKey);
+          const exists = await objectStorage.fileExists(template.objectStorageKey);
+          
+          if (!exists) {
+            return res.status(404).json({ message: "Diagram image not found in storage" });
+          }
+          
+          await objectStorage.downloadObject(file, res);
+          return;
+        } catch (objStorageError) {
+          console.warn("Object storage not available, trying fallback:", objStorageError);
+          // Fall through to filesystem fallback
         }
-        
-        await objectStorage.downloadObject(file, res);
-      } else if (template.diagramPath) {
-        // Fallback to legacy local file system
+      }
+      
+      // Fallback to local file system (legacy or deployment)
+      if (template.diagramPath) {
         const filePath = path.join(process.cwd(), template.diagramPath);
         
         if (!fs.existsSync(filePath)) {

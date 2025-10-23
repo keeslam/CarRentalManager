@@ -42,6 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **Document Types**: Contracts, maintenance records, photos, receipts
 - **File Validation**: Size limits and type restrictions
 - **Path Management**: Relative path storage
+- **Vehicle Diagram Storage**: Intelligent fallback system - uses Replit object storage in development (persistent across sessions) and filesystem in published deployments (sidecar endpoint unavailable). Upload/download endpoints automatically detect environment and use appropriate storage method.
 
 ### Data Validation
 - **Schema Validation**: Zod schemas (shared between frontend/backend)
