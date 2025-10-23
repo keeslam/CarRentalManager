@@ -280,7 +280,7 @@ export function ReservationForm({
   });
   
   // Fetch documents for the reservation (in edit mode or after creation)
-  const activeReservationId = createdReservationId || (editMode && initialData?.id);
+  const activeReservationId = createdReservationId ?? initialData?.id ?? null;
   const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
     queryKey: [`/api/documents/reservation/${activeReservationId}`],
     enabled: !!activeReservationId
@@ -2817,7 +2817,7 @@ export function ReservationForm({
       <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
         if (!open) handleCloseDamageCheckDialog();
       }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-0">
           <InteractiveDamageCheckPage
             onClose={handleCloseDamageCheckDialog}
             editingCheckId={editingDamageCheckId}
