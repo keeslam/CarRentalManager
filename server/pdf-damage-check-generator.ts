@@ -392,8 +392,13 @@ export async function generateDamageCheckPDF(
   // Display diagrams (top row: Top & Side, bottom row: Front & Rear)
   const drawDiagramOrPlaceholder = (image: any, x: number, y: number, width: number, height: number, label: string) => {
     if (image) {
+      // Add padding around the diagram (10 points on each side)
+      const padding = 10;
+      const availableWidth = width - (padding * 2);
+      const availableHeight = height - (padding * 2);
+      
       const dims = image.scale(1);
-      const scale = Math.min(width / dims.width, height / dims.height);
+      const scale = Math.min(availableWidth / dims.width, availableHeight / dims.height);
       const imgWidth = dims.width * scale;
       const imgHeight = dims.height * scale;
       const xOffset = (width - imgWidth) / 2;
