@@ -1678,8 +1678,11 @@ export default function ReservationCalendarPage() {
                             {getFileIcon(doc.contentType, doc.fileName)}
                             <div className="text-left">
                               <div className="text-xs font-semibold truncate max-w-[150px]">{doc.documentType}</div>
-                              <div className="text-[10px] text-gray-500">
-                                {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                              <div className="text-[10px] text-gray-500 truncate max-w-[150px]">
+                                {doc.documentType?.startsWith('Damage Check') 
+                                  ? doc.fileName.replace('.pdf', '').replace('.PDF', '')
+                                  : doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'
+                                }
                               </div>
                             </div>
                           </Button>
