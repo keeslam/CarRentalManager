@@ -1673,6 +1673,7 @@ export default function ReservationCalendarPage() {
                               }
                             }}
                             className="flex items-center gap-2 pr-8"
+                            title={doc.documentType || 'Document'}
                           >
                             {getFileIcon(doc.contentType, doc.fileName)}
                             <div className="text-left">

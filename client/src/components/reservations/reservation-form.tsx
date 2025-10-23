@@ -2379,6 +2379,7 @@ export function ReservationForm({
                                   }
                                 }}
                                 className="flex items-center gap-2 pr-8"
+                                title={doc.documentType || 'Document'}
                               >
                                 {isPdf ? (
                                   <FileText className="h-4 w-4 text-red-600" />
