@@ -536,21 +536,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateReservation(id: number, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined> {
-    // Clean up numeric fields - convert empty strings to null
+    // Clean up numeric fields - convert empty strings and "undefined" to null
     const dataToUpdate: any = { ...reservationData };
     
     // Handle totalPrice
     if ('totalPrice' in dataToUpdate) {
-      dataToUpdate.totalPrice = dataToUpdate.totalPrice === '' || dataToUpdate.totalPrice === null 
+      const val = dataToUpdate.totalPrice;
+      dataToUpdate.totalPrice = (val === '' || val === null || val === undefined || val === 'undefined') 
         ? null 
-        : String(dataToUpdate.totalPrice);
+        : String(val);
     }
     
-    // Handle other numeric fields that might be empty strings
+    // Handle other numeric fields that might be empty strings or "undefined"
     const numericFields = ['deliveryFee', 'fuelCost', 'departureMileage', 'startMileage'];
     numericFields.forEach(field => {
-      if (field in dataToUpdate && dataToUpdate[field] === '') {
-        dataToUpdate[field] = null;
+      if (field in dataToUpdate) {
+        const val = dataToUpdate[field];
+        if (val === '' || val === null || val === undefined || val === 'undefined') {
+          dataToUpdate[field] = null;
+        }
       }
     });
     
