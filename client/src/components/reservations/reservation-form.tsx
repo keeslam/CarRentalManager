@@ -2343,6 +2343,9 @@ export function ReservationForm({
                             d.documentType?.startsWith('Contract (Signed)') || 
                             d.documentType === 'Contract'
                           );
+                          const damageCheckDocs = reservationDocuments.filter(d => 
+                            d.documentType?.startsWith('Damage Check')
+                          );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
@@ -2350,11 +2353,12 @@ export function ReservationForm({
                             !d.documentType?.startsWith('Contract (Unsigned)') && 
                             !d.documentType?.startsWith('Contract (Signed)') && 
                             d.documentType !== 'Contract' && 
+                            !d.documentType?.startsWith('Damage Check') &&
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'
                           );
                           
-                          return [...contractDocs, ...damageReportDocs, ...otherDocs];
+                          return [...contractDocs, ...damageCheckDocs, ...damageReportDocs, ...otherDocs];
                         })().map((doc) => {
                           const ext = doc.fileName.split('.').pop()?.toLowerCase();
                           const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';

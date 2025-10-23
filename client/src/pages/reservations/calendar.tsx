@@ -1603,6 +1603,9 @@ export default function ReservationCalendarPage() {
                             d.documentType?.startsWith('Contract (Signed)') || 
                             d.documentType === 'Contract'
                           );
+                          const damageCheckDocs = reservationDocuments.filter(d => 
+                            d.documentType?.startsWith('Damage Check')
+                          );
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
@@ -1610,11 +1613,12 @@ export default function ReservationCalendarPage() {
                             !d.documentType?.startsWith('Contract (Unsigned)') && 
                             !d.documentType?.startsWith('Contract (Signed)') && 
                             d.documentType !== 'Contract' && 
+                            !d.documentType?.startsWith('Damage Check') &&
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF'
                           );
                           
-                          return [...contractDocs, ...damageReportDocs, ...otherDocs];
+                          return [...contractDocs, ...damageCheckDocs, ...damageReportDocs, ...otherDocs];
                         })().map((doc) => {
                       const getFileIcon = (contentType: string | null, fileName: string) => {
                         const ext = fileName.split('.').pop()?.toLowerCase();
