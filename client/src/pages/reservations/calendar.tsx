@@ -185,6 +185,38 @@ export default function ReservationCalendarPage() {
     refetchDamageChecks();
     refetchDocuments();
   };
+
+  const handleDeleteDamageCheck = async (checkId: number) => {
+    if (!window.confirm('Are you sure you want to delete this damage check? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/interactive-damage-checks/${checkId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete damage check');
+      }
+
+      toast({
+        title: "Success",
+        description: "Damage check deleted successfully",
+      });
+
+      // Refetch damage checks and documents
+      refetchDamageChecks();
+      refetchDocuments();
+    } catch (error) {
+      console.error('Error deleting damage check:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete damage check",
+        variant: "destructive",
+      });
+    }
+  };
   
   const handleStatusChange = (reservation: Reservation) => {
     console.log('handleStatusChange called with reservation:', reservation);
@@ -1787,6 +1819,15 @@ export default function ReservationCalendarPage() {
                                 data-testid={`button-view-damage-check-pdf-${check.id}`}
                               >
                                 View PDF
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteDamageCheck(check.id)}
+                                className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-damage-check-${check.id}`}
+                              >
+                                Delete
                               </Button>
                             </div>
                           </div>
