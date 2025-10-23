@@ -862,9 +862,9 @@ export async function generateDamageCheckPDFWithTemplate(
               if (isChecked) {
                 console.log(`✏️ Drawing X for ${point.fieldKey} at position (${itemX + 6.5}, ${columnYPos - checkboxSize + 2})`);
                 page.drawText('X', {
-                  x: itemX + 6.5,
-                  y: columnYPos - checkboxSize + 2,
-                  size: checkboxSize,
+                  x: itemX + 5.5,
+                  y: columnYPos - checkboxSize + 1.5,
+                  size: 10,  // Bigger X for visibility
                   font: boldFont,
                   color: rgb(0, 0, 0),
                 });
@@ -983,8 +983,16 @@ export async function generateDamageCheckPDFWithTemplate(
               }
               
               if (diagramImage) {
+                const sidePadding = 30; // Add padding on both sides
+                const maxWidth = section.width - (sidePadding * 2);
                 const imgHeight = section.height - 10;
-                const imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
+                let imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
+                
+                // Constrain width to leave padding
+                if (imgWidth > maxWidth) {
+                  imgWidth = maxWidth;
+                }
+                
                 page.drawImage(diagramImage, {
                   x: section.x + (section.width - imgWidth) / 2,
                   y: pdfY + 5,
