@@ -7960,6 +7960,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.put("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      const user = req.user;
+      
       // Exclude timestamp fields from the request body to avoid date conversion issues
       const { createdAt, updatedAt, ...bodyData } = req.body;
       const checkData = {
@@ -7970,6 +7972,95 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       if (!updated) {
         return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      // Regenerate PDF and mark old one as outdated
+      try {
+        // Get vehicle data
+        const vehicle = await storage.getVehicle(updated.vehicleId);
+        
+        if (vehicle && updated.reservationId) {
+          // Find existing PDF documents for this damage check
+          const allDocs = await storage.getDocumentsByReservation(updated.reservationId);
+          const existingPDFs = allDocs.filter(doc => 
+            doc.documentType?.startsWith(`Damage Check (${updated.checkType === 'pickup' ? 'Pickup' : 'Return'})`) &&
+            !doc.documentType?.includes('Old') &&
+            doc.fileName.includes(`_v${updated.id}.pdf`)
+          );
+          
+          // Mark old PDFs as outdated
+          for (const oldDoc of existingPDFs) {
+            await storage.updateDocument(oldDoc.id, {
+              documentType: `${oldDoc.documentType} - Old`
+            });
+          }
+          
+          // Find the appropriate damage check template
+          const matchingTemplates = await storage.getDamageCheckTemplatesByVehicle(
+            vehicle.brand,
+            vehicle.model,
+            vehicle.vehicleType || undefined
+          );
+          
+          let damageTemplate = matchingTemplates && matchingTemplates.length > 0 
+            ? matchingTemplates[0] 
+            : await storage.getDefaultDamageCheckTemplate();
+          
+          if (damageTemplate) {
+            // Get reservation data
+            const reservation = await storage.getReservation(updated.reservationId);
+            let reservationData;
+            if (reservation && reservation.customer) {
+              reservationData = {
+                contractNumber: `RES-${reservation.id}`,
+                customerName: reservation.customer.name,
+                startDate: format(new Date(reservation.startDate), 'dd-MM-yyyy'),
+                endDate: reservation.endDate ? format(new Date(reservation.endDate), 'dd-MM-yyyy') : 'Open',
+                rentalDays: reservation.endDate ? Math.ceil((new Date(reservation.endDate).getTime() - new Date(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+              };
+            }
+            
+            // Generate new PDF
+            const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
+            const pdfBuffer = await generateDamageCheckPDFWithTemplate(
+              {
+                brand: vehicle.brand,
+                model: vehicle.model,
+                licensePlate: vehicle.licensePlate,
+                buildYear: vehicle.productionDate,
+                fuel: updated.fuelLevel || vehicle.fuel || undefined,
+                mileage: updated.mileage || vehicle.mileage || undefined,
+              },
+              damageTemplate,
+              reservationData,
+              updated
+            );
+            
+            // Save new PDF with current timestamp in filename
+            const timestamp = format(new Date(), 'yyyy-MM-dd_HHmmss');
+            const filename = `damage_check_${updated.vehicleId}_${updated.checkType}_${timestamp}_v${updated.id}.pdf`;
+            const damageCheckDir = path.join(process.cwd(), 'uploads', vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '-'), 'damage-checks');
+            await fs.promises.mkdir(damageCheckDir, { recursive: true });
+            const filepath = path.join(damageCheckDir, filename);
+            await fs.promises.writeFile(filepath, pdfBuffer);
+            
+            // Create new document entry
+            const relativePath = path.relative(process.cwd(), filepath);
+            await storage.createDocument({
+              vehicleId: updated.vehicleId,
+              reservationId: updated.reservationId,
+              documentType: `Damage Check (${updated.checkType === 'pickup' ? 'Pickup' : 'Return'})`,
+              fileName: filename,
+              filePath: relativePath,
+              contentType: 'application/pdf',
+              fileSize: pdfBuffer.length,
+              uploadedBy: user ? user.username : null,
+            });
+          }
+        }
+      } catch (pdfError) {
+        console.error("Error regenerating damage check PDF document:", pdfError);
+        // Don't fail the whole request if PDF regeneration fails
       }
       
       res.json(updated);
