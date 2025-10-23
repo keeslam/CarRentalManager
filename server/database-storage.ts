@@ -547,8 +547,12 @@ export class DatabaseStorage implements IStorage {
         : String(val);
     }
     
-    // Handle other numeric fields that might be empty strings or "undefined"
-    const numericFields = ['deliveryFee', 'fuelCost', 'departureMileage', 'startMileage'];
+    // Handle all numeric and integer fields that might be empty strings or "undefined"
+    const numericFields = [
+      'deliveryFee', 'fuelCost', 'departureMileage', 'startMileage',
+      'deliveryStaffId', 'driverId', 'replacementForReservationId', 
+      'affectedRentalId', 'recurringParentId', 'maintenanceDuration'
+    ];
     numericFields.forEach(field => {
       if (field in dataToUpdate) {
         const val = dataToUpdate[field];
