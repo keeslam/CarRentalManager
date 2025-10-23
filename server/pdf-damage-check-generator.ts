@@ -818,6 +818,7 @@ export async function generateDamageCheckPDFWithTemplate(
             
             // Get the value from checklistData if available
             let itemValue = '';
+            let rawBooleanValue = false;
             if (checklistData) {
               const categoryKey = category === 'interieur' ? 'interior' : 
                                  category === 'exterieur' ? 'exterior' : 'delivery';
@@ -828,9 +829,9 @@ export async function generateDamageCheckPDFWithTemplate(
               if (categoryData && point.fieldKey) {
                 itemValue = categoryData[point.fieldKey];
                 console.log(`✅ Found value for ${point.fieldKey}: ${itemValue}`);
-                // For delivery category, convert boolean to text
+                // For delivery category, save the raw boolean before converting
                 if (categoryKey === 'delivery' && typeof itemValue === 'boolean') {
-                  itemValue = itemValue ? 'Ja' : 'Nee';
+                  rawBooleanValue = itemValue;
                 }
               } else {
                 console.log(`❌ No value found for ${point.fieldKey} in category ${categoryKey}`);
@@ -843,8 +844,8 @@ export async function generateDamageCheckPDFWithTemplate(
             const fixedValueWidth = 55; // Fixed width for the value column (increased for better alignment)
             
             if (category === 'afweez_check') {
-              // Checkbox for delivery checks
-              const isChecked = itemValue === true || itemValue === 'true';
+              // Checkbox for delivery checks - use raw boolean value
+              const isChecked = rawBooleanValue === true;
               page.drawRectangle({
                 x: itemX + 5,
                 y: columnYPos - checkboxSize,
@@ -856,6 +857,7 @@ export async function generateDamageCheckPDFWithTemplate(
               
               // Draw X if checked - bigger and centered
               if (isChecked) {
+                console.log(`✏️ Drawing X for ${point.fieldKey} at position (${itemX + 6.5}, ${columnYPos - checkboxSize + 2})`);
                 page.drawText('X', {
                   x: itemX + 6.5,
                   y: columnYPos - checkboxSize + 2,
