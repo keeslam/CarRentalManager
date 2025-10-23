@@ -841,7 +841,7 @@ export async function generateDamageCheckPDFWithTemplate(
             // For delivery/afweez_check category: use checkbox with X
             // For other categories: show the selected value in bold text (no box)
             // Fixed width for value column to ensure even spacing
-            const fixedValueWidth = 20; // Fixed width for the value column (checkbox + small gap)
+            const fixedValueWidth = 35; // Fixed width for the value column (checkbox/value + gap)
             
             if (category === 'afweez_check') {
               // Checkbox for delivery checks - use raw boolean value
