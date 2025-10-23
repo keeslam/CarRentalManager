@@ -81,9 +81,9 @@ const formSchema = insertReservationSchemaBase.extend({
   ]).nullish(),
   deliveryNotes: z.string().nullish(),
   totalPrice: z.union([
-    z.number().optional(),
-    z.string().transform(val => val === "" ? undefined : parseFloat(val) || undefined),
-  ]).optional(),
+    z.number().nullish(),
+    z.string().transform(val => val === "" || val === null ? null : parseFloat(val) || null),
+  ]).nullish(),
   damageCheckFile: z.instanceof(File).optional(),
   departureMileage: z.union([
     z.number().min(1, "Please enter a valid mileage"),
@@ -1230,9 +1230,6 @@ export function ReservationForm({
 
   // Handle reservation form submission (in edit mode only)
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log('📝 Form onSubmit called', { editMode, data });
-    console.log('📋 Form errors:', form.formState.errors);
-    
     if (editMode) {
       // In edit mode, directly update the reservation
       const submissionData = {
@@ -1241,7 +1238,6 @@ export function ReservationForm({
       };
       delete submissionData.isOpenEnded;
       
-      console.log('✅ Submitting reservation update:', submissionData);
       createReservationMutation.mutate(submissionData);
     } else {
       // In create mode, go to preview
@@ -2683,49 +2679,20 @@ export function ReservationForm({
                 
                 {/* Submit button - Preview in create mode, Update in edit mode */}
                 {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
-                  <>
-                    <Button 
-                      type="submit"
-                      onClick={(e) => {
-                        console.log('🖱️ Button clicked!', { 
-                          editMode, 
-                          isPending: createReservationMutation.isPending,
-                          hasOverlap,
-                          formValid: form.formState.isValid,
-                          errors: form.formState.errors 
-                        });
-                        // Let the form handle submission via type="submit"
-                      }}
-                      disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
-                      title={
-                        createReservationMutation.isPending ? "Saving..." :
-                        hasOverlap ? "Disabled: Booking conflict detected" :
-                        (!editMode && !selectedTemplateId) ? "Disabled: No template selected" :
-                        "Click to submit"
-                      }
-                    >
-                      {createReservationMutation.isPending 
-                        ? "Saving..." 
-                        : editMode ? "Update Reservation" : (
-                          <>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Preview & Generate Contract
-                          </>
-                        )
-                      }
-                    </Button>
-                    {/* Debug info - remove after fixing */}
-                    <div className="text-xs space-y-1">
-                      {(createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)) && (
-                        <div className="text-red-600">
-                          Disabled: {createReservationMutation.isPending && "Saving"}{hasOverlap && "Conflict"}{!editMode && !selectedTemplateId && "No template"}
-                        </div>
-                      )}
-                      <div className="text-gray-500">
-                        editMode: {String(editMode)} | hasOverlap: {String(hasOverlap)} | isValid: {String(form.formState.isValid)}
-                      </div>
-                    </div>
-                  </>
+                  <Button 
+                    type="submit"
+                    disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
+                  >
+                    {createReservationMutation.isPending 
+                      ? "Saving..." 
+                      : editMode ? "Update Reservation" : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Preview & Generate Contract
+                        </>
+                      )
+                    }
+                  </Button>
                 )}
 
                 {/* Generate new contract version button - only in edit mode */}
