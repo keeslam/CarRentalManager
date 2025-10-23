@@ -1452,7 +1452,7 @@ function DiagramTemplateManager() {
               <Card key={template.id} className="overflow-hidden">
                 <div className="aspect-video bg-gray-100 relative">
                   <img
-                    src={`/${template.diagramPath}`}
+                    src={`/api/vehicle-diagram-templates/${template.id}/image`}
                     alt={`${template.make} ${template.model} diagram`}
                     className="w-full h-full object-contain"
                   />
