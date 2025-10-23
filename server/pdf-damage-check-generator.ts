@@ -994,53 +994,97 @@ export async function generateDamageCheckPDFWithTemplate(
             color: rgb(0.5, 0.5, 0.5),
           });
           
-          // Try to load template diagram if available
-          if (damageTemplate.diagramTopView) {
-            try {
-              const diagramPath = path.join(process.cwd(), damageTemplate.diagramTopView);
-              const diagramBytes = await fs.readFile(diagramPath);
-              let diagramImage;
-              
-              if (damageTemplate.diagramTopView.toLowerCase().endsWith('.png')) {
-                diagramImage = await pdfDoc.embedPng(diagramBytes);
-              } else if (damageTemplate.diagramTopView.toLowerCase().match(/\.(jpg|jpeg)$/)) {
-                diagramImage = await pdfDoc.embedJpg(diagramBytes);
-              }
-              
-              if (diagramImage) {
-                const sidePadding = 0; // Increased padding for clear margins
-                const maxWidth = section.width - (sidePadding * 2);
-                const maxHeight = section.height - 20;
+          // Try to load vehicle diagram template from object storage or filesystem
+          try {
+            // First, try to find a matching vehicle diagram template
+            const [vehicleDiagram] = await db.select()
+              .from(vehicleDiagramTemplates)
+              .where(eq(vehicleDiagramTemplates.make, vehicle.brand))
+              .limit(1);
+            
+            let diagramBytes: Buffer | null = null;
+            let diagramFormat: 'png' | 'jpg' | null = null;
+            
+            // Load from object storage if available
+            if (vehicleDiagram?.objectStorageKey) {
+              try {
+                const objectStorage = new ObjectStorageService();
+                const file = objectStorage.getFile(vehicleDiagram.objectStorageKey);
+                const [exists] = await file.exists();
                 
-                // Calculate dimensions maintaining aspect ratio
-                const aspectRatio = diagramImage.width / diagramImage.height;
-                let imgWidth = maxWidth;
-                let imgHeight = maxWidth / aspectRatio;
-                
-                // If height exceeds max, scale based on height instead
-                if (imgHeight > maxHeight) {
-                  imgHeight = maxHeight;
-                  imgWidth = maxHeight * aspectRatio;
+                if (exists) {
+                  const [buffer] = await file.download();
+                  diagramBytes = Buffer.from(buffer);
+                  diagramFormat = vehicleDiagram.objectStorageKey.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                  console.log(`✅ Loaded vehicle diagram from object storage: ${vehicleDiagram.objectStorageKey}`);
                 }
-                
-                // Make sure width doesn't exceed maxWidth after height scaling
-                if (imgWidth > maxWidth) {
-                  imgWidth = maxWidth;
-                  imgHeight = maxWidth / aspectRatio;
-                }
-                
-                console.log(`📐 Diagram sizing: section.width=${section.width}, sidePadding=${sidePadding}, maxWidth=${maxWidth}, calculated imgWidth=${imgWidth}, imgHeight=${imgHeight}`);
-                
-                page.drawImage(diagramImage, {
-                  x: section.x + (section.width - imgWidth) / 2,
-                  y: pdfY + (section.height - imgHeight) / 2,
-                  width: imgWidth,
-                  height: imgHeight,
-                });
+              } catch (error) {
+                console.warn('Could not load diagram from object storage:', error);
               }
-            } catch (error) {
-              console.warn('Could not load template diagram:', error);
             }
+            
+            // Fallback to legacy filesystem path
+            if (!diagramBytes && vehicleDiagram?.diagramPath) {
+              try {
+                const diagramPath = path.join(process.cwd(), vehicleDiagram.diagramPath);
+                diagramBytes = await fs.readFile(diagramPath);
+                diagramFormat = vehicleDiagram.diagramPath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                console.log(`✅ Loaded vehicle diagram from filesystem: ${vehicleDiagram.diagramPath}`);
+              } catch (error) {
+                console.warn('Could not load diagram from filesystem:', error);
+              }
+            }
+            
+            // Fallback to damage template diagram (old system)
+            if (!diagramBytes && damageTemplate.diagramTopView) {
+              try {
+                const diagramPath = path.join(process.cwd(), damageTemplate.diagramTopView);
+                diagramBytes = await fs.readFile(diagramPath);
+                diagramFormat = damageTemplate.diagramTopView.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                console.log(`✅ Loaded damage template diagram from filesystem: ${damageTemplate.diagramTopView}`);
+              } catch (error) {
+                console.warn('Could not load damage template diagram:', error);
+              }
+            }
+            
+            // Embed and render the diagram if loaded
+            if (diagramBytes && diagramFormat) {
+              const diagramImage = diagramFormat === 'png' 
+                ? await pdfDoc.embedPng(diagramBytes)
+                : await pdfDoc.embedJpg(diagramBytes);
+              
+              const sidePadding = 80; // Apply 80px padding for clear margins
+              const maxWidth = section.width - (sidePadding * 2);
+              const maxHeight = section.height - 20;
+              
+              // Calculate dimensions maintaining aspect ratio
+              const aspectRatio = diagramImage.width / diagramImage.height;
+              let imgWidth = maxWidth;
+              let imgHeight = maxWidth / aspectRatio;
+              
+              // If height exceeds max, scale based on height instead
+              if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = maxHeight * aspectRatio;
+              }
+              
+              // Make sure width doesn't exceed maxWidth after height scaling
+              if (imgWidth > maxWidth) {
+                imgWidth = maxWidth;
+                imgHeight = maxWidth / aspectRatio;
+              }
+              
+              console.log(`📐 Template diagram sizing: section.width=${section.width}, sidePadding=${sidePadding}, maxWidth=${maxWidth}, calculated imgWidth=${imgWidth}, imgHeight=${imgHeight}`);
+              
+              page.drawImage(diagramImage, {
+                x: section.x + (section.width - imgWidth) / 2,
+                y: pdfY + (section.height - imgHeight) / 2,
+                width: imgWidth,
+                height: imgHeight,
+              });
+            }
+          } catch (error) {
+            console.warn('Could not load vehicle diagram:', error);
           }
         }
         break;
