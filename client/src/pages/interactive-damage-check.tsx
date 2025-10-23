@@ -342,7 +342,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     return () => {
       image.onload = null;
     };
-  }, [diagramTemplate, markers, drawingPaths]);
+  }, [diagramTemplate, markers, drawingPaths, pickupCheckData]);
 
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
@@ -351,7 +351,62 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw existing paths - convert from percentages to pixels
+    // Draw pickup check damage in gray (if in comparison mode)
+    if (showComparison && pickupCheckData) {
+      // Draw pickup drawing paths in gray
+      if (pickupCheckData.drawingPaths) {
+        const pickupPaths = typeof pickupCheckData.drawingPaths === 'string' 
+          ? JSON.parse(pickupCheckData.drawingPaths) 
+          : pickupCheckData.drawingPaths;
+        
+        ctx.strokeStyle = 'rgba(107, 114, 128, 0.5)'; // Gray with transparency
+        ctx.lineWidth = 3;
+        pickupPaths.forEach((path: string) => {
+          const points = path.split(' ');
+          ctx.beginPath();
+          points.forEach((point: string, i: number) => {
+            const [xPercent, yPercent] = point.split(',').map(Number);
+            const x = xPercent * canvas.width;
+            const y = yPercent * canvas.height;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        });
+      }
+
+      // Draw pickup markers in gray
+      if (pickupCheckData.damageMarkers) {
+        const pickupMarkers = typeof pickupCheckData.damageMarkers === 'string' 
+          ? JSON.parse(pickupCheckData.damageMarkers) 
+          : pickupCheckData.damageMarkers;
+        
+        pickupMarkers.forEach((marker: any, index: number) => {
+          const x = marker.x * canvas.width;
+          const y = marker.y * canvas.height;
+          const markerRadius = Math.max(6, canvas.width * 0.005);
+          
+          // Draw gray marker with border
+          ctx.fillStyle = 'rgba(156, 163, 175, 0.7)'; // Gray with transparency
+          ctx.strokeStyle = 'rgba(75, 85, 99, 0.9)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, markerRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          
+          // Draw number
+          ctx.fillStyle = 'white';
+          const fontSize = Math.max(10, markerRadius * 1.2);
+          ctx.font = `bold ${fontSize}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText((index + 1).toString(), x, y);
+        });
+      }
+    }
+
+    // Draw current/new paths - convert from percentages to pixels
     ctx.strokeStyle = '#EF4444';
     ctx.lineWidth = 3;
     drawingPaths.forEach(path => {
@@ -368,7 +423,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
       ctx.stroke();
     });
 
-    // Draw markers - convert from percentages to pixels
+    // Draw current/new markers - convert from percentages to pixels
     markers.forEach(marker => {
       const markerColor = marker.severity === 'severe' ? '#DC2626' : marker.severity === 'moderate' ? '#F59E0B' : '#10B981';
       
@@ -850,6 +905,23 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               </Button>
             </div>
           </div>
+
+          {/* Comparison Mode Legend */}
+          {showComparison && pickupCheckData && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-900 mb-2">Comparison View Legend:</p>
+              <div className="flex gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-gray-400 border-2 border-gray-600"></div>
+                  <span className="text-gray-700">Existing damage from pickup check</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span className="text-gray-700">New damage marked on return</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {diagramTemplate ? (
             <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
