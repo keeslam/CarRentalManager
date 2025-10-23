@@ -505,9 +505,19 @@ export function ReservationForm({
       
       const checkConflicts = async () => {
         try {
-          const response = await fetch(
-            `/api/reservations/check-conflicts?vehicleId=${vehicleIdWatch}&startDate=${startDateWatch}&endDate=${endDateWatch}${initialData?.id ? `&excludeReservationId=${initialData.id}` : ""}`
-          );
+          // Build query parameters
+          const params = new URLSearchParams();
+          params.append('vehicleId', vehicleIdWatch.toString());
+          params.append('startDate', startDateWatch);
+          // Only include endDate if it's not null/undefined (skip for open-ended rentals)
+          if (endDateWatch) {
+            params.append('endDate', endDateWatch);
+          }
+          if (initialData?.id) {
+            params.append('excludeReservationId', initialData.id.toString());
+          }
+          
+          const response = await fetch(`/api/reservations/check-conflicts?${params.toString()}`);
           if (response.ok) {
             const conflicts = await response.json();
             setHasOverlap(conflicts.length > 0);
