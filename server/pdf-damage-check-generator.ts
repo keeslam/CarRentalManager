@@ -985,17 +985,22 @@ export async function generateDamageCheckPDFWithTemplate(
               if (diagramImage) {
                 const sidePadding = 60; // Add padding on both sides for proper margins
                 const maxWidth = section.width - (sidePadding * 2);
-                const imgHeight = section.height - 10;
-                let imgWidth = (diagramImage.width / diagramImage.height) * imgHeight;
+                const maxHeight = section.height - 10;
                 
-                // Constrain width to leave padding
-                if (imgWidth > maxWidth) {
-                  imgWidth = maxWidth;
+                // Calculate dimensions maintaining aspect ratio
+                const aspectRatio = diagramImage.width / diagramImage.height;
+                let imgWidth = maxWidth;
+                let imgHeight = maxWidth / aspectRatio;
+                
+                // If height exceeds max, scale based on height instead
+                if (imgHeight > maxHeight) {
+                  imgHeight = maxHeight;
+                  imgWidth = maxHeight * aspectRatio;
                 }
                 
                 page.drawImage(diagramImage, {
                   x: section.x + (section.width - imgWidth) / 2,
-                  y: pdfY + 5,
+                  y: pdfY + (section.height - imgHeight) / 2,
                   width: imgWidth,
                   height: imgHeight,
                 });
