@@ -86,13 +86,13 @@ const formSchema = insertReservationSchemaBase.extend({
   ]).nullish(),
   damageCheckFile: z.instanceof(File).optional(),
   departureMileage: z.union([
-    z.number().min(1, "Please enter a valid mileage"),
-    z.string().transform(val => parseInt(val) || undefined),
-  ]).optional(),
+    z.number().nullish(),
+    z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
+  ]).nullish(),
   startMileage: z.union([
-    z.number().min(1, "Please enter a valid mileage"),
-    z.string().transform(val => parseInt(val) || undefined),
-  ]).optional(),
+    z.number().nullish(),
+    z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
+  ]).nullish(),
   fuelLevelPickup: z.string().nullish(),
   fuelLevelReturn: z.string().nullish(),
   fuelCost: z.union([
