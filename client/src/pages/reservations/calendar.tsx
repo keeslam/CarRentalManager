@@ -37,9 +37,10 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck } from "lucide-react";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 
 // Calendar view options
 type CalendarView = "month";
@@ -153,6 +154,10 @@ export default function ReservationCalendarPage() {
   // Upload state
   const [uploadingDoc, setUploadingDoc] = useState(false);
   
+  // Damage check dialog state
+  const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+  const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
+  
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
     console.log('handleViewReservation called with:', reservation);
@@ -166,6 +171,19 @@ export default function ReservationCalendarPage() {
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
     console.log('Edit dialog should be open now');
+  };
+  
+  const handleOpenDamageCheckDialog = (editCheckId: number | null = null) => {
+    setEditingDamageCheckId(editCheckId);
+    setDamageCheckDialogOpen(true);
+  };
+
+  const handleCloseDamageCheckDialog = () => {
+    setDamageCheckDialogOpen(false);
+    setEditingDamageCheckId(null);
+    // Refetch damage checks when dialog closes
+    refetchDamageChecks();
+    refetchDocuments();
   };
   
   const handleStatusChange = (reservation: Reservation) => {
@@ -361,9 +379,21 @@ export default function ReservationCalendarPage() {
   });
 
   // Fetch documents for selected reservation
-  const { data: reservationDocuments } = useQuery<Document[]>({
+  const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
     queryKey: [`/api/documents/reservation/${selectedReservation?.id}`],
     enabled: !!selectedReservation?.id
+  });
+
+  // Fetch damage checks for this reservation
+  const { data: reservationDamageChecks, refetch: refetchDamageChecks } = useQuery<any[]>({
+    queryKey: [`/api/interactive-damage-checks/reservation/${selectedReservation?.id}`],
+    enabled: !!selectedReservation?.id
+  });
+
+  // Fetch recent damage checks for vehicle+customer combination
+  const { data: recentDamageChecks } = useQuery<any[]>({
+    queryKey: [`/api/interactive-damage-checks/vehicle/${selectedReservation?.vehicleId}/customer/${selectedReservation?.customerId}`],
+    enabled: !!selectedReservation?.vehicleId && !!selectedReservation?.customerId
   });
 
   // Auto-open reservation dialog from sessionStorage (from notifications)
@@ -1694,6 +1724,112 @@ export default function ReservationCalendarPage() {
                 </div>
               )}
 
+              {/* Damage Checks Section */}
+              {selectedReservation?.vehicleId && (
+                <div className="bg-purple-50 border border-purple-200 rounded-md p-2.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-medium text-purple-700 uppercase flex items-center gap-1.5">
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                      Damage Checks
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenDamageCheckDialog(null)}
+                      className="h-7 text-xs"
+                      data-testid="button-create-damage-check"
+                    >
+                      + Create Damage Check
+                    </Button>
+                  </div>
+
+                  {/* Reservation's Damage Checks */}
+                  {reservationDamageChecks && reservationDamageChecks.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-[10px] font-semibold text-purple-700 block mb-1.5">This Reservation:</span>
+                      <div className="space-y-1.5">
+                        {reservationDamageChecks.map((check) => (
+                          <div key={check.id} className="flex items-center justify-between bg-white p-2 rounded border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-100 text-purple-800 border-purple-300">
+                                {check.checkType === 'pickup' ? 'Pickup' : 'Return'}
+                              </Badge>
+                              <span className="text-xs text-purple-900">
+                                {check.createdAt ? format(new Date(check.createdAt), 'PP') : 'No date'}
+                              </span>
+                              {check.mileage && (
+                                <span className="text-xs text-purple-600">• {Number(check.mileage).toLocaleString()} km</span>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenDamageCheckDialog(check.id)}
+                                className="h-6 px-2 text-xs"
+                                data-testid={`button-edit-damage-check-${check.id}`}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(`/api/interactive-damage-checks/${check.id}/pdf`, '_blank')}
+                                className="h-6 px-2 text-xs"
+                                data-testid={`button-view-damage-check-pdf-${check.id}`}
+                              >
+                                View PDF
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent History */}
+                  {recentDamageChecks && recentDamageChecks.length > 0 && (
+                    <div>
+                      <span className="text-[10px] font-semibold text-purple-700 block mb-1.5">Recent History (Vehicle + Customer):</span>
+                      <div className="space-y-1.5">
+                        {recentDamageChecks.slice(0, 3).map((check) => (
+                          <div key={check.id} className="flex items-center justify-between bg-purple-100/50 p-2 rounded border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-200 text-purple-900 border-purple-300">
+                                {check.checkType === 'pickup' ? 'Pickup' : 'Return'}
+                              </Badge>
+                              <span className="text-xs text-purple-900">
+                                {check.createdAt ? format(new Date(check.createdAt), 'PP') : 'No date'}
+                              </span>
+                              {check.mileage && (
+                                <span className="text-xs text-purple-600">• {Number(check.mileage).toLocaleString()} km</span>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(`/api/interactive-damage-checks/${check.id}/pdf`, '_blank')}
+                              className="h-6 px-2 text-xs"
+                              data-testid={`button-view-history-damage-check-pdf-${check.id}`}
+                            >
+                              View PDF
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {(!reservationDamageChecks || reservationDamageChecks.length === 0) && 
+                   (!recentDamageChecks || recentDamageChecks.length === 0) && (
+                    <div className="text-center py-3 text-xs text-purple-600">
+                      No damage checks yet. Click "Create Damage Check" to add one.
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
@@ -1740,6 +1876,26 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Interactive Damage Check Dialog */}
+      {damageCheckDialogOpen && selectedReservation?.vehicleId && (
+        <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
+          if (!open) handleCloseDamageCheckDialog();
+        }}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Damage Check</DialogTitle>
+              <DialogDescription>Interactive damage check editor</DialogDescription>
+            </DialogHeader>
+            <InteractiveDamageCheckPage
+              onClose={handleCloseDamageCheckDialog}
+              editingCheckId={editingDamageCheckId}
+              initialVehicleId={selectedReservation.vehicleId}
+              initialReservationId={selectedReservation.id}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
       
       {/* Edit Reservation Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
