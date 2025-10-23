@@ -839,7 +839,8 @@ export async function generateDamageCheckPDFWithTemplate(
             
             // For delivery/afweez_check category: use checkbox with X
             // For other categories: show the selected value in bold text (no box)
-            let valueTextWidth = 0;
+            // Fixed width for value column to ensure even spacing
+            const fixedValueWidth = 45; // Fixed width for the value column
             
             if (category === 'afweez_check') {
               // Checkbox for delivery checks
@@ -862,7 +863,6 @@ export async function generateDamageCheckPDFWithTemplate(
                   font: boldFont,
                 });
               }
-              valueTextWidth = checkboxSize;
             } else {
               // For interieur/exterieur: show the selected value in bold text (no box)
               const displayValue = itemValue && itemValue !== '' ? itemValue : '';
@@ -875,9 +875,8 @@ export async function generateDamageCheckPDFWithTemplate(
                   font: boldFont,
                   color: rgb(0, 0, 0),
                 });
-                valueTextWidth = boldFont.widthOfTextAtSize(displayValue, fontSize) + 5;
               } else {
-                // If no value, show a dash or empty space
+                // If no value, show a dash
                 page.drawText('-', {
                   x: itemX + 5,
                   y: columnYPos - checkboxSize + 1.5,
@@ -885,12 +884,11 @@ export async function generateDamageCheckPDFWithTemplate(
                   font: boldFont,
                   color: rgb(0.5, 0.5, 0.5),
                 });
-                valueTextWidth = boldFont.widthOfTextAtSize('-', fontSize) + 5;
               }
             }
             
-            // Point name positioned after the value/checkbox
-            const maxTextWidth = columnWidth - valueTextWidth - 15;
+            // Point name positioned after the fixed-width value column
+            const maxTextWidth = columnWidth - fixedValueWidth - 15;
             let displayText = point.name;
             
             const textWidth = font.widthOfTextAtSize(displayText, fontSize);
@@ -904,7 +902,7 @@ export async function generateDamageCheckPDFWithTemplate(
             }
             
             page.drawText(displayText, {
-              x: itemX + valueTextWidth + 10,
+              x: itemX + fixedValueWidth + 10,
               y: columnYPos - checkboxSize + 1,
               size: fontSize,
               font,
