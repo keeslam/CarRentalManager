@@ -838,7 +838,9 @@ export async function generateDamageCheckPDFWithTemplate(
             }
             
             // For delivery/afweez_check category: use checkbox with X
-            // For other categories: show the selected value text instead of checkbox
+            // For other categories: show the selected value in bold text (no box)
+            let valueTextWidth = 0;
+            
             if (category === 'afweez_check') {
               // Checkbox for delivery checks
               const isChecked = itemValue === true || itemValue === 'true';
@@ -860,33 +862,35 @@ export async function generateDamageCheckPDFWithTemplate(
                   font: boldFont,
                 });
               }
+              valueTextWidth = checkboxSize;
             } else {
-              // For interieur/exterieur: show the selected value in a box instead of checkbox
+              // For interieur/exterieur: show the selected value in bold text (no box)
               const displayValue = itemValue && itemValue !== '' ? itemValue : '';
-              const valueBoxWidth = Math.max(30, font.widthOfTextAtSize(displayValue, fontSize - 1) + 4);
               
-              page.drawRectangle({
-                x: itemX + 5,
-                y: columnYPos - checkboxSize,
-                width: valueBoxWidth,
-                height: checkboxSize,
-                borderColor: rgb(0, 0, 0),
-                borderWidth: 0.5,
-              });
-              
-              // Draw the value inside the box
               if (displayValue) {
                 page.drawText(displayValue, {
-                  x: itemX + 7,
+                  x: itemX + 5,
                   y: columnYPos - checkboxSize + 1.5,
-                  size: fontSize - 1,
-                  font,
+                  size: fontSize,
+                  font: boldFont,
+                  color: rgb(0, 0, 0),
                 });
+                valueTextWidth = boldFont.widthOfTextAtSize(displayValue, fontSize) + 5;
+              } else {
+                // If no value, show a dash or empty space
+                page.drawText('-', {
+                  x: itemX + 5,
+                  y: columnYPos - checkboxSize + 1.5,
+                  size: fontSize,
+                  font: boldFont,
+                  color: rgb(0.5, 0.5, 0.5),
+                });
+                valueTextWidth = boldFont.widthOfTextAtSize('-', fontSize) + 5;
               }
             }
             
-            // Point name (without value in parentheses since we're showing it in the box)
-            const maxTextWidth = columnWidth - checkboxSize - 50;
+            // Point name positioned after the value/checkbox
+            const maxTextWidth = columnWidth - valueTextWidth - 15;
             let displayText = point.name;
             
             const textWidth = font.widthOfTextAtSize(displayText, fontSize);
