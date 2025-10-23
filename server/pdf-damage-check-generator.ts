@@ -837,33 +837,57 @@ export async function generateDamageCheckPDFWithTemplate(
               }
             }
             
-            // Checkbox (checked if value exists and is not empty/false)
-            const isChecked = itemValue && itemValue !== '' && itemValue !== 'Nee' && itemValue !== false;
-            page.drawRectangle({
-              x: itemX + 5,
-              y: columnYPos - checkboxSize,
-              width: checkboxSize,
-              height: checkboxSize,
-              borderColor: rgb(0, 0, 0),
-              borderWidth: 0.5,
-            });
-            
-            // Draw X if checked
-            if (isChecked) {
-              page.drawText('X', {
-                x: itemX + 6,
-                y: columnYPos - checkboxSize + 1,
-                size: checkboxSize - 1,
-                font: boldFont,
+            // For delivery/afweez_check category: use checkbox with X
+            // For other categories: show the selected value text instead of checkbox
+            if (category === 'afweez_check') {
+              // Checkbox for delivery checks
+              const isChecked = itemValue === true || itemValue === 'true';
+              page.drawRectangle({
+                x: itemX + 5,
+                y: columnYPos - checkboxSize,
+                width: checkboxSize,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
               });
+              
+              // Draw X if checked
+              if (isChecked) {
+                page.drawText('X', {
+                  x: itemX + 6,
+                  y: columnYPos - checkboxSize + 1,
+                  size: checkboxSize - 1,
+                  font: boldFont,
+                });
+              }
+            } else {
+              // For interieur/exterieur: show the selected value in a box instead of checkbox
+              const displayValue = itemValue && itemValue !== '' ? itemValue : '';
+              const valueBoxWidth = Math.max(30, font.widthOfTextAtSize(displayValue, fontSize - 1) + 4);
+              
+              page.drawRectangle({
+                x: itemX + 5,
+                y: columnYPos - checkboxSize,
+                width: valueBoxWidth,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
+              });
+              
+              // Draw the value inside the box
+              if (displayValue) {
+                page.drawText(displayValue, {
+                  x: itemX + 7,
+                  y: columnYPos - checkboxSize + 1.5,
+                  size: fontSize - 1,
+                  font,
+                });
+              }
             }
             
-            // Point name with value if available (with text wrapping if needed)
-            const maxTextWidth = columnWidth - checkboxSize - 15;
+            // Point name (without value in parentheses since we're showing it in the box)
+            const maxTextWidth = columnWidth - checkboxSize - 50;
             let displayText = point.name;
-            if (itemValue && itemValue !== '' && itemValue !== 'true' && itemValue !== 'false') {
-              displayText += ` (${itemValue})`;
-            }
             
             const textWidth = font.widthOfTextAtSize(displayText, fontSize);
             
