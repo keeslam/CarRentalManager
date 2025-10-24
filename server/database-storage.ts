@@ -2017,6 +2017,39 @@ export class DatabaseStorage implements IStorage {
     const [template] = await db.select().from(damageCheckTemplates)
       .where(eq(damageCheckTemplates.isDefault, true))
       .limit(1);
+    
+    // If no default template exists, auto-create one
+    if (!template) {
+      const defaultTemplate: InsertDamageCheckTemplate = {
+        name: 'Auto-Generated Default',
+        description: 'Automatically created default damage check template',
+        vehicleMake: null,
+        vehicleModel: null,
+        vehicleType: null,
+        buildYearFrom: null,
+        buildYearTo: null,
+        isDefault: true,
+        language: 'nl',
+        inspectionPoints: [
+          { id: '1', name: 'Binnenzijde auto schoon', category: 'interieur', damageTypes: ['Kapot', 'Vuil', 'Beschadigd'], required: false },
+          { id: '2', name: 'Vloermatten', category: 'interieur', damageTypes: ['Ontbreekt', 'Vuil'], required: false },
+          { id: '3', name: 'Buitenzijde auto schoon', category: 'exterieur', damageTypes: ['Vuil', 'Beschadigd'], required: false },
+          { id: '4', name: 'Kentekenplaten', category: 'exterieur', damageTypes: ['Ontbreekt', 'Beschadigd'], required: false },
+          { id: '5', name: 'Olie - water', category: 'afweez_check', damageTypes: [], required: false },
+          { id: '6', name: 'Ruitenwisser vloeistof', category: 'afweez_check', damageTypes: [], required: false },
+        ],
+        diagramTopView: null,
+        diagramFrontView: null,
+        diagramSideView: null,
+        diagramRearView: null,
+        createdBy: 'system',
+        updatedBy: 'system'
+      };
+      
+      const [created] = await db.insert(damageCheckTemplates).values(defaultTemplate).returning();
+      return created;
+    }
+    
     return template || undefined;
   }
 
