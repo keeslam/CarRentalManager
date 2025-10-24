@@ -42,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **Document Types**: Contracts, maintenance records, photos, receipts
 - **File Validation**: Size limits and type restrictions
 - **Path Management**: Relative path storage
-- **Vehicle Diagram Storage**: Intelligent dual-storage system - automatically uses Replit object storage in Replit environment (persistent across restarts) and filesystem storage on own server deployments. Ensures diagrams persist appropriately in both environments. Enhanced matching algorithm with 5 progressive fallback strategies (exact match → partial match → brand-only → generic fallback).
+- **Vehicle Diagram Storage**: Dual-redundant storage system - saves to BOTH filesystem (for own server deployments) AND Replit object storage (for Replit environment persistence). Upload endpoint saves to both locations; serving endpoint uses object storage first with filesystem fallback. Ensures diagrams persist in all deployment scenarios. Enhanced matching algorithm with 5 progressive fallback strategies (exact match → partial match → brand-only → generic fallback).
 
 ### Data Validation
 - **Schema Validation**: Zod schemas (shared between frontend/backend)

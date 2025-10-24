@@ -7827,22 +7827,25 @@ export async function registerRoutes(app: Express): Promise<void> {
       let objectStorageKey: string | null = null;
       let diagramPath: string | null = null;
       
-      // Try object storage first (works in Replit environment)
+      // Save to BOTH filesystem AND object storage for cross-environment compatibility
+      
+      // 1. Always save to filesystem (works everywhere - Replit and own server)
+      const diagramDir = path.join(process.cwd(), 'uploads', 'vehicle-diagrams');
+      await fs.promises.mkdir(diagramDir, { recursive: true });
+      const filename = `${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
+      const filePath = path.join(diagramDir, filename);
+      await fs.promises.writeFile(filePath, req.file.buffer);
+      diagramPath = getRelativePath(filePath);
+      console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
+      
+      // 2. Also try object storage (works in Replit, fails gracefully on own server)
       try {
         objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
         await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
         console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
       } catch (objStorageError) {
-        // Fall back to filesystem storage (works on own server deployments)
-        console.warn("Object storage not available, using filesystem storage:", objStorageError);
-        const diagramDir = path.join(process.cwd(), 'uploads', 'vehicle-diagrams');
-        await fs.promises.mkdir(diagramDir, { recursive: true });
-        const filename = `${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
-        const filePath = path.join(diagramDir, filename);
-        await fs.promises.writeFile(filePath, req.file.buffer);
-        diagramPath = getRelativePath(filePath);
+        console.warn("Object storage not available (expected on own server):", objStorageError);
         objectStorageKey = null;
-        console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
       }
       
       const templateData = {
