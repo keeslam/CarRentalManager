@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -415,6 +415,37 @@ function TemplateEditor({
   const [rearViewFile, setRearViewFile] = useState<File | null>(null);
   const [sideViewFile, setSideViewFile] = useState<File | null>(null);
   const [uploadingDiagrams, setUploadingDiagrams] = useState(false);
+
+  // Sync state with template prop when it changes
+  useEffect(() => {
+    if (template) {
+      setName(template.name);
+      setDescription(template.description || "");
+      setVehicleMake(template.vehicleMake || "");
+      setVehicleModel(template.vehicleModel || "");
+      setVehicleType(template.vehicleType || "");
+      setBuildYearFrom(template.buildYearFrom || "");
+      setBuildYearTo(template.buildYearTo || "");
+      setIsDefault(template.isDefault);
+      setInspectionPoints(template.inspectionPoints || []);
+    } else {
+      // Reset for new template
+      setName("");
+      setDescription("");
+      setVehicleMake("");
+      setVehicleModel("");
+      setVehicleType("");
+      setBuildYearFrom("");
+      setBuildYearTo("");
+      setIsDefault(false);
+      setInspectionPoints([]);
+    }
+    // Reset file uploads when template changes
+    setTopViewFile(null);
+    setFrontViewFile(null);
+    setRearViewFile(null);
+    setSideViewFile(null);
+  }, [template]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
