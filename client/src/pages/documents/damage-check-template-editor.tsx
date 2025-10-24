@@ -1803,17 +1803,39 @@ export default function DamageCheckTemplateEditor() {
                 </Button>
               </div>
 
-              {/* Inspection points list */}
+              {/* Inspection points grid */}
               {currentChecklistTemplate.inspectionPoints && currentChecklistTemplate.inspectionPoints.length > 0 ? (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[500px] overflow-y-auto">
                   {currentChecklistTemplate.inspectionPoints.map((point: any, index: number) => (
                     <div
                       key={point.id || index}
-                      className="border rounded-lg p-3 flex items-start justify-between hover:bg-gray-50"
+                      className="border rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer bg-white relative group"
+                      onClick={() => {
+                        setEditingPoint(point);
+                        setPointEditorOpen(true);
+                      }}
+                      data-testid={`card-inspection-point-${index}`}
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{point.name}</span>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <span className="font-medium text-sm line-clamp-2 pr-2">{point.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentChecklistTemplate({
+                                ...currentChecklistTemplate,
+                                inspectionPoints: currentChecklistTemplate.inspectionPoints.filter((p: any) => p.id !== point.id)
+                              });
+                            }}
+                            data-testid={`button-delete-point-${index}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
                           <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 capitalize">
                             {point.category}
                           </span>
@@ -1823,45 +1845,23 @@ export default function DamageCheckTemplateEditor() {
                             </span>
                           )}
                         </div>
-                        {point.description && (
-                          <p className="text-xs text-gray-600 mt-1">{point.description}</p>
-                        )}
                         {point.damageTypes && point.damageTypes.length > 0 && (
-                          <div className="flex gap-1 mt-2">
-                            {point.damageTypes.map((type: string) => (
+                          <div className="flex flex-wrap gap-1">
+                            {point.damageTypes.slice(0, 4).map((type: string) => (
                               <span key={type} className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
                                 {type}
                               </span>
                             ))}
+                            {point.damageTypes.length > 4 && (
+                              <span className="text-xs px-1.5 py-0.5 text-gray-500">
+                                +{point.damageTypes.length - 4}
+                              </span>
+                            )}
                           </div>
                         )}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingPoint(point);
-                            setPointEditorOpen(true);
-                          }}
-                          data-testid={`button-edit-point-${index}`}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setCurrentChecklistTemplate({
-                              ...currentChecklistTemplate,
-                              inspectionPoints: currentChecklistTemplate.inspectionPoints.filter((p: any) => p.id !== point.id)
-                            });
-                          }}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          data-testid={`button-delete-point-${index}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {point.description && (
+                          <p className="text-xs text-gray-500 line-clamp-2">{point.description}</p>
+                        )}
                       </div>
                     </div>
                   ))}
