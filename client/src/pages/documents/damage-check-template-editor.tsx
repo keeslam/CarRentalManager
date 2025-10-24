@@ -198,6 +198,11 @@ export default function DamageCheckTemplateEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const checklistInputRef = useRef<HTMLInputElement>(null);
 
+  // Checklist template editing state
+  const [currentChecklistTemplate, setCurrentChecklistTemplate] = useState<DamageCheckTemplate | null>(null);
+  const [editingPoint, setEditingPoint] = useState<any | null>(null);
+  const [pointEditorOpen, setPointEditorOpen] = useState(false);
+
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
   });
@@ -219,6 +224,13 @@ export default function DamageCheckTemplateEditor() {
       setCurrentTemplate(templates[0]);
     }
   }, [templates]);
+
+  // Auto-select first checklist template
+  useEffect(() => {
+    if (damageCheckTemplates.length > 0 && !currentChecklistTemplate) {
+      setCurrentChecklistTemplate(damageCheckTemplates[0]);
+    }
+  }, [damageCheckTemplates]);
 
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Partial<PdfTemplate>) => {
@@ -242,6 +254,20 @@ export default function DamageCheckTemplateEditor() {
       queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
       toast({ title: "Success", description: "Template deleted" });
       setCurrentTemplate(null);
+    },
+  });
+
+  const saveChecklistTemplateMutation = useMutation({
+    mutationFn: async (template: Partial<DamageCheckTemplate>) => {
+      if (template.id) {
+        return await apiRequest('PUT', `/api/damage-check-templates/${template.id}`, template);
+      } else {
+        return await apiRequest('POST', '/api/damage-check-templates', template);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      toast({ title: "Success", description: "Checklist template saved" });
     },
   });
 
@@ -1710,41 +1736,332 @@ export default function DamageCheckTemplateEditor() {
           </DialogContent>
         </Dialog>
 
-        {/* Checklist Content Template Import/Export Section */}
+        {/* Checklist Content Template Editor Section */}
         <div className="mt-8 pt-6 border-t">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Damage Check Checklist Content</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Export and import the vehicle inspection checklist content (the questions/items shown in the damage check form).
-              This is separate from the PDF layout above.
-            </p>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">Damage Check Checklist Content</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage the vehicle inspection checklist items (questions shown in the damage check form).
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportChecklistTemplate}
+                disabled={!currentChecklistTemplate}
+                data-testid="button-export-checklist-template"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => checklistInputRef.current?.click()}
+                data-testid="button-import-checklist-template"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (!currentChecklistTemplate) return;
+                  saveChecklistTemplateMutation.mutate(currentChecklistTemplate);
+                }}
+                disabled={!currentChecklistTemplate || saveChecklistTemplateMutation.isPending}
+                data-testid="button-save-checklist"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saveChecklistTemplateMutation.isPending ? "Saving..." : "Save Checklist"}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleExportChecklistTemplate}
-              disabled={damageCheckTemplates.length === 0}
-              data-testid="button-export-checklist-template"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Checklist Data
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => checklistInputRef.current?.click()}
-              data-testid="button-import-checklist-template"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import Checklist Data
-            </Button>
-            {damageCheckTemplates.length > 0 && (
-              <div className="ml-auto text-sm text-gray-600 flex items-center">
-                Current checklist: <span className="font-semibold ml-1">{damageCheckTemplates[0].name}</span> ({damageCheckTemplates[0].inspectionPoints?.length || 0} items)
+
+          {currentChecklistTemplate ? (
+            <div className="space-y-4">
+              {/* Template info */}
+              <div className="bg-gray-50 p-3 rounded-md flex items-center justify-between">
+                <div>
+                  <div className="font-semibold">{currentChecklistTemplate.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {currentChecklistTemplate.inspectionPoints?.length || 0} inspection points
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingPoint(null);
+                    setPointEditorOpen(true);
+                  }}
+                  data-testid="button-add-inspection-point"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Point
+                </Button>
               </div>
-            )}
-          </div>
+
+              {/* Inspection points list */}
+              {currentChecklistTemplate.inspectionPoints && currentChecklistTemplate.inspectionPoints.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {currentChecklistTemplate.inspectionPoints.map((point: any, index: number) => (
+                    <div
+                      key={point.id || index}
+                      className="border rounded-lg p-3 flex items-start justify-between hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{point.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 capitalize">
+                            {point.category}
+                          </span>
+                          {point.required && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-800">
+                              Required
+                            </span>
+                          )}
+                        </div>
+                        {point.description && (
+                          <p className="text-xs text-gray-600 mt-1">{point.description}</p>
+                        )}
+                        {point.damageTypes && point.damageTypes.length > 0 && (
+                          <div className="flex gap-1 mt-2">
+                            {point.damageTypes.map((type: string) => (
+                              <span key={type} className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingPoint(point);
+                            setPointEditorOpen(true);
+                          }}
+                          data-testid={`button-edit-point-${index}`}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCurrentChecklistTemplate({
+                              ...currentChecklistTemplate,
+                              inspectionPoints: currentChecklistTemplate.inspectionPoints.filter((p: any) => p.id !== point.id)
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          data-testid={`button-delete-point-${index}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
+                  <p>No inspection points yet</p>
+                  <p className="text-xs mt-1">Click "Add Point" to create your first check point</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
+              <p>No checklist template available</p>
+              <p className="text-xs mt-1">Import a checklist template to get started</p>
+            </div>
+          )}
         </div>
+
+        {/* Inspection Point Editor Dialog */}
+        <InspectionPointEditor
+          open={pointEditorOpen}
+          onOpenChange={setPointEditorOpen}
+          point={editingPoint}
+          onSave={(point: any) => {
+            if (!currentChecklistTemplate) return;
+            
+            if (editingPoint) {
+              // Update existing point
+              setCurrentChecklistTemplate({
+                ...currentChecklistTemplate,
+                inspectionPoints: currentChecklistTemplate.inspectionPoints.map((p: any) => 
+                  p.id === point.id ? point : p
+                )
+              });
+            } else {
+              // Add new point
+              setCurrentChecklistTemplate({
+                ...currentChecklistTemplate,
+                inspectionPoints: [...(currentChecklistTemplate.inspectionPoints || []), point]
+              });
+            }
+            setPointEditorOpen(false);
+          }}
+        />
       </CardContent>
     </Card>
+  );
+}
+
+// Inspection Point Editor Component
+const INSPECTION_CATEGORIES = [
+  { value: 'interieur', label: 'Interieur' },
+  { value: 'exterieur', label: 'Exterieur' },
+  { value: 'afweez_check', label: 'Afweez Check' },
+  { value: 'documents', label: 'Documents' },
+];
+
+const DAMAGE_TYPES = [
+  { value: 'kapot', label: 'Kapot' },
+  { value: 'gat', label: 'Gat' },
+  { value: 'kras', label: 'Kras' },
+  { value: 'deuk', label: 'Deuk' },
+  { value: 'ster', label: 'Ster' },
+  { value: 'beschadigd', label: 'Beschadigd' },
+  { value: 'vuil', label: 'Vuil' },
+  { value: 'ontbreekt', label: 'Ontbreekt' },
+];
+
+function InspectionPointEditor({
+  open,
+  onOpenChange,
+  point,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  point: any | null;
+  onSave: (point: any) => void;
+}) {
+  const [name, setName] = useState(point?.name || "");
+  const [category, setCategory] = useState(point?.category || "exterieur");
+  const [description, setDescription] = useState(point?.description || "");
+  const [required, setRequired] = useState(point?.required || false);
+  const [selectedDamageTypes, setSelectedDamageTypes] = useState<string[]>(
+    point?.damageTypes || ["kras", "deuk"]
+  );
+
+  useEffect(() => {
+    if (point) {
+      setName(point.name);
+      setCategory(point.category);
+      setDescription(point.description || "");
+      setRequired(point.required);
+      setSelectedDamageTypes(point.damageTypes || ["kras", "deuk"]);
+    } else {
+      setName("");
+      setCategory("exterieur");
+      setDescription("");
+      setRequired(false);
+      setSelectedDamageTypes(["kras", "deuk"]);
+    }
+  }, [point]);
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+
+    const newPoint = {
+      id: point?.id || `point-${Date.now()}`,
+      name: name.trim(),
+      category,
+      description: description.trim(),
+      required,
+      damageTypes: selectedDamageTypes,
+    };
+
+    onSave(newPoint);
+    onOpenChange(false);
+  };
+
+  const toggleDamageType = (type: string) => {
+    setSelectedDamageTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{point ? "Edit Inspection Point" : "Add Inspection Point"}</DialogTitle>
+          <DialogDescription>
+            Define a new item to check during vehicle inspection
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="pointName">Point Name *</Label>
+            <Input
+              id="pointName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Voorruit"
+            />
+          </div>
+          <div>
+            <Label htmlFor="pointCategory">Category *</Label>
+            <select
+              id="pointCategory"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-md border border-gray-300 p-2"
+            >
+              {INSPECTION_CATEGORIES.map(cat => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="pointDescription">Description (Optional)</Label>
+            <Input
+              id="pointDescription"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Additional notes"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={required} onCheckedChange={setRequired} id="pointRequired" />
+            <Label htmlFor="pointRequired">Required field</Label>
+          </div>
+          <div>
+            <Label>Damage Types</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {DAMAGE_TYPES.map(type => (
+                <div key={type.value} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`damage-${type.value}`}
+                    checked={selectedDamageTypes.includes(type.value)}
+                    onChange={() => toggleDamageType(type.value)}
+                    className="rounded"
+                  />
+                  <Label htmlFor={`damage-${type.value}`} className="cursor-pointer">
+                    {type.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!name.trim()}>
+            {point ? "Update" : "Add"} Point
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
