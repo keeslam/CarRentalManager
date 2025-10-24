@@ -560,6 +560,108 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     setCurrentPath("");
   };
 
+  // Touch event handlers for iPad/mobile support
+  const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number} | null>(null);
+  const [hasTouchMoved, setHasTouchMoved] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const xPercent = (touch.clientX - rect.left) / rect.width;
+    const yPercent = (touch.clientY - rect.top) / rect.height;
+    
+    setTouchStartPos({ x: xPercent, y: yPercent });
+    setHasTouchMoved(false);
+
+    if (isDrawing) {
+      setCurrentPath(`${xPercent},${yPercent}`);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling
+    
+    setHasTouchMoved(true);
+    
+    if (!isDrawing || !currentPath) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const xPercent = (touch.clientX - rect.left) / rect.width;
+    const yPercent = (touch.clientY - rect.top) / rect.height;
+    setCurrentPath(prev => `${prev} ${xPercent},${yPercent}`);
+
+    // Draw preview
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      redrawCanvas();
+      ctx.strokeStyle = '#EF4444';
+      ctx.lineWidth = 3;
+      const points = (currentPath + ` ${xPercent},${yPercent}`).split(' ');
+      ctx.beginPath();
+      points.forEach((point, i) => {
+        const [pxPercent, pyPercent] = point.split(',').map(Number);
+        const px = pxPercent * canvas.width;
+        const py = pyPercent * canvas.height;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    
+    if (isDrawing && currentPath) {
+      // Finish drawing path
+      setDrawingPaths([...drawingPaths, currentPath]);
+      setCurrentPath("");
+    } else if (!isDrawing && !hasTouchMoved && touchStartPos) {
+      // This was a tap (not a drag), add/select marker
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const xPercent = touchStartPos.x;
+      const yPercent = touchStartPos.y;
+
+      // Check if tapped on existing marker
+      const tapRadius = 15 / canvas.getBoundingClientRect().width;
+      const tappedMarker = markers.find(m => {
+        const dx = m.x - xPercent;
+        const dy = m.y - yPercent;
+        return Math.sqrt(dx * dx + dy * dy) < tapRadius;
+      });
+
+      if (tappedMarker) {
+        setSelectedMarker(tappedMarker);
+      } else {
+        // Add new marker
+        const newMarker: DamageMarker = {
+          id: Date.now().toString(),
+          x: xPercent,
+          y: yPercent,
+          type: 'scratch',
+          severity: 'minor',
+          notes: '',
+        };
+        setMarkers([...markers, newMarker]);
+        setSelectedMarker(newMarker);
+      }
+    }
+    
+    setTouchStartPos(null);
+    setHasTouchMoved(false);
+  };
+
   const updateMarker = (updates: Partial<DamageMarker>) => {
     if (!selectedMarker) return;
     const updated = markers.map(m => 
@@ -960,7 +1062,12 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
                   data-testid="damage-canvas"
+                  style={{ touchAction: 'none' }}
                 />
               </div>
             </div>
