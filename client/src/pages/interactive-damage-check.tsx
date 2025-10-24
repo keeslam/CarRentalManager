@@ -862,11 +862,17 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No Reservation</SelectItem>
-                  {reservations.map(reservation => (
-                    <SelectItem key={reservation.id} value={reservation.id.toString()}>
-                      #{reservation.id} - Reservation
-                    </SelectItem>
-                  ))}
+                  {reservations.map(reservation => {
+                    const customerName = reservation.customer?.name || 'Unknown Customer';
+                    const vehicleInfo = reservation.vehicle 
+                      ? `${reservation.vehicle.brand} ${reservation.vehicle.model} (${displayLicensePlate(reservation.vehicle.licensePlate)})` 
+                      : 'No Vehicle';
+                    return (
+                      <SelectItem key={reservation.id} value={reservation.id.toString()}>
+                        #{reservation.id} - {customerName} - {vehicleInfo}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
