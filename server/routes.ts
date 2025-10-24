@@ -17,6 +17,7 @@ import {
   insertUserSchema,
   insertPdfTemplateSchema,
   insertDriverSchema,
+  insertDamageCheckTemplateSchema,
   createPlaceholderReservationSchema,
   placeholderQuerySchema,
   placeholderNeedingAssignmentQuerySchema,
