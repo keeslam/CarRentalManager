@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
-  ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2,
+  ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2, Edit,
   Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check, Upload, Download
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
