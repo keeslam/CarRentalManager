@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
   ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2,
-  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check
+  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check, Upload, Download
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DamageCheckTemplate } from "@shared/schema";
@@ -195,6 +195,7 @@ export default function DamageCheckTemplateEditor() {
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
@@ -259,6 +260,85 @@ export default function DamageCheckTemplateEditor() {
     saveTemplateMutation.mutate(newTemplate);
     setNewTemplateName('');
     setIsCreateDialogOpen(false);
+  };
+
+  const handleExportTemplate = async () => {
+    if (!currentTemplate?.id) {
+      toast({
+        title: "Error",
+        description: "Please save the template first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/export`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export template');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `template_${currentTemplate.name.replace(/\s+/g, '_')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Template exported successfully"
+      });
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export template",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const templateData = JSON.parse(text);
+
+      const response = await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
+
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      
+      toast({
+        title: "Success",
+        description: "Template imported successfully"
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error('Error importing template:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import template",
+        variant: "destructive"
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent, section: TemplateSection) => {
@@ -489,6 +569,22 @@ export default function DamageCheckTemplateEditor() {
         <div className="flex justify-between items-center">
           <CardTitle>Damage Check PDF Template Editor</CardTitle>
           <div className="flex gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleImportFile}
+            />
+            <Button 
+              onClick={() => fileInputRef.current?.click()} 
+              size="sm"
+              variant="outline"
+              data-testid="button-import-template"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import Template
+            </Button>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
               <Plus className="w-4 h-4 mr-2" />
               New Template
@@ -732,6 +828,16 @@ export default function DamageCheckTemplateEditor() {
                   >
                     <Check className="w-4 h-4 mr-2" />
                     {currentTemplate.isDefault ? 'Default Template' : 'Set as Default'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleExportTemplate}
+                    disabled={!currentTemplate.id}
+                    data-testid="button-export-template"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Template
                   </Button>
                   <Button
                     variant="outline"

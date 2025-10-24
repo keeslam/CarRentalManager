@@ -8422,6 +8422,68 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Export PDF template as JSON
+  app.get("/api/damage-check-pdf-templates/:id/export", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Get the PDF template
+      const pdfTemplate = await storage.getDamageCheckPdfTemplate(id);
+      if (!pdfTemplate) {
+        return res.status(404).json({ message: "PDF template not found" });
+      }
+      
+      // Remove id and timestamps for export (will be regenerated on import)
+      const exportData = {
+        name: pdfTemplate.name,
+        isDefault: pdfTemplate.isDefault,
+        sections: pdfTemplate.sections,
+        pageMargins: pdfTemplate.pageMargins,
+      };
+      
+      // Set response headers for JSON download
+      const filename = `template_${pdfTemplate.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.json`;
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting PDF template:", error);
+      res.status(500).json({ message: "Error exporting PDF template" });
+    }
+  });
+
+  // Import PDF template from JSON
+  app.post("/api/damage-check-pdf-templates/import", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
+      
+      // Validate the imported data
+      const validated = insertDamageCheckPdfTemplateSchema.parse(req.body);
+      
+      // If this is being set as default, unset other defaults
+      if (validated.isDefault) {
+        const allTemplates = await storage.getAllDamageCheckPdfTemplates();
+        for (const template of allTemplates) {
+          if (template.isDefault) {
+            await storage.updateDamageCheckPdfTemplate(template.id, { isDefault: false });
+          }
+        }
+      }
+      
+      // Create the template
+      const newTemplate = await storage.createDamageCheckPdfTemplate(validated);
+      
+      res.status(201).json(newTemplate);
+    } catch (error: any) {
+      console.error("Error importing PDF template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid template format", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error importing PDF template" });
+    }
+  });
+
   // Setup static file serving for uploads - now works in any environment
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(getUploadsDir(), req.path);
