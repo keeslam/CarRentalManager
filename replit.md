@@ -42,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **Document Types**: Contracts, maintenance records, photos, receipts
 - **File Validation**: Size limits and type restrictions
 - **Path Management**: Relative path storage
-- **Vehicle Diagram Storage**: **PERSISTENT** - All vehicle diagrams now stored exclusively in Replit object storage (`replit-objstore-c013dbe1-d6c5-4c4c-a8f2-43e849eb3c90`) for persistence across deployments and redeployments. Diagrams survive app restarts and will never be lost. Legacy filesystem fallback removed as of Oct 24, 2025.
+- **Vehicle Diagram Storage**: Intelligent dual-storage system - automatically uses Replit object storage in Replit environment (persistent across restarts) and filesystem storage on own server deployments. Ensures diagrams persist appropriately in both environments. Enhanced matching algorithm with 5 progressive fallback strategies (exact match → partial match → brand-only → generic fallback).
 
 ### Data Validation
 - **Schema Validation**: Zod schemas (shared between frontend/backend)

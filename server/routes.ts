@@ -7824,18 +7824,34 @@ export async function registerRoutes(app: Express): Promise<void> {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const ext = path.extname(req.file.originalname);
       
-      // Always use object storage for persistence across deployments
-      const objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
-      await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
-      console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
+      let objectStorageKey: string | null = null;
+      let diagramPath: string | null = null;
+      
+      // Try object storage first (works in Replit environment)
+      try {
+        objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
+        await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
+        console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
+      } catch (objStorageError) {
+        // Fall back to filesystem storage (works on own server deployments)
+        console.warn("Object storage not available, using filesystem storage:", objStorageError);
+        const diagramDir = path.join(process.cwd(), 'uploads', 'vehicle-diagrams');
+        await fs.promises.mkdir(diagramDir, { recursive: true });
+        const filename = `${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
+        const filePath = path.join(diagramDir, filename);
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        diagramPath = getRelativePath(filePath);
+        objectStorageKey = null;
+        console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
+      }
       
       const templateData = {
         make: req.body.make,
         model: req.body.model,
         yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
         yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
-        diagramPath: null, // No longer using filesystem
-        objectStorageKey: objectStorageKey, // Always use object storage
+        diagramPath: diagramPath, // Filesystem path (used on own server)
+        objectStorageKey: objectStorageKey, // Object storage key (used in Replit)
         description: req.body.description || null,
         createdBy: user ? user.username : null,
         updatedBy: user ? user.username : null,
