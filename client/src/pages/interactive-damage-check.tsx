@@ -949,7 +949,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               <div className="relative w-full">
                 <img 
                   ref={imageRef}
-                  src={`/${diagramTemplate.diagramPath}`}
+                  src={`/api/vehicle-diagram-templates/${diagramTemplate.id}/image`}
                   alt="Vehicle diagram"
                   className="w-full h-auto"
                   crossOrigin="anonymous"
