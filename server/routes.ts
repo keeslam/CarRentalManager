@@ -7521,6 +7521,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Strip server-controlled fields
       const { id: _, createdAt, updatedAt, ...exportData } = template;
       
+      // Log export data for debugging
+      console.log(`Exporting damage check template "${template.name}":`, {
+        inspectionPointsCount: (template.inspectionPoints as any[])?.length || 0,
+        exportDataKeys: Object.keys(exportData)
+      });
+      
       // Sanitize filename: replace special chars, spaces, and limit length
       const sanitizedName = template.name
         .replace(/[^a-zA-Z0-9-_]/g, '_')
@@ -7540,6 +7546,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const user = req.user;
       
+      // Log what we received
+      console.log('Importing damage check template:', {
+        receivedInspectionPointsCount: req.body.inspectionPoints?.length || 0,
+        receivedKeys: Object.keys(req.body)
+      });
+      
       // Add defaults for fields that might be missing from export
       const importData = {
         ...req.body,
@@ -7549,8 +7561,16 @@ export async function registerRoutes(app: Express): Promise<void> {
         inspectionPoints: req.body.inspectionPoints || [],
       };
       
+      console.log('After adding defaults:', {
+        inspectionPointsCount: importData.inspectionPoints?.length || 0
+      });
+      
       // Validate the import data using the insert schema
       const validatedData = insertDamageCheckTemplateSchema.parse(importData);
+      
+      console.log('After validation:', {
+        inspectionPointsCount: (validatedData.inspectionPoints as any[])?.length || 0
+      });
       
       const templateData = {
         ...validatedData,
@@ -7559,6 +7579,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       };
       
       const newTemplate = await storage.createDamageCheckTemplate(templateData);
+      
+      console.log('Template created:', {
+        id: newTemplate.id,
+        name: newTemplate.name,
+        inspectionPointsCount: (newTemplate.inspectionPoints as any[])?.length || 0
+      });
+      
       res.json(newTemplate);
     } catch (error: any) {
       console.error("Error importing damage check template:", error);
