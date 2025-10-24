@@ -2100,12 +2100,7 @@ export class DatabaseStorage implements IStorage {
     const allTemplates = await db.select().from(vehicleDiagramTemplates);
     console.log(`Found ${allTemplates.length} total templates in database`);
     
-    allTemplates.forEach(t => {
-      console.log(`Template ${t.id}: make="${t.make}", model="${t.model}", yearFrom=${t.yearFrom}, yearTo=${t.yearTo}`);
-      console.log(`  Normalized: make="${t.make.trim().toLowerCase()}", model="${t.model.trim().toLowerCase()}"`);
-    });
-    
-    // Try to find exact match with year range
+    // Strategy 1: Exact make + model + year match
     if (year) {
       const exactMatch = allTemplates.find(template => {
         const templateMake = template.make.trim().toLowerCase();
@@ -2118,27 +2113,62 @@ export class DatabaseStorage implements IStorage {
       });
       
       if (exactMatch) {
-        console.log(`Found exact match with year: template ${exactMatch.id}`);
+        console.log(`✅ Strategy 1: Found exact match with year: template ${exactMatch.id}`);
         return exactMatch;
       }
     }
     
-    // Fallback: find make+model without year constraints
-    const fallback = allTemplates.find(template => {
+    // Strategy 2: Exact make + model without year constraints
+    const exactModelMatch = allTemplates.find(template => {
       const templateMake = template.make.trim().toLowerCase();
       const templateModel = template.model.trim().toLowerCase();
-      const matches = templateMake === normalizedMake && templateModel === normalizedModel;
-      console.log(`Checking fallback template ${template.id}: make match=${templateMake === normalizedMake}, model match=${templateModel === normalizedModel}`);
-      return matches;
+      return templateMake === normalizedMake && templateModel === normalizedModel;
     });
     
-    if (fallback) {
-      console.log(`Found fallback match: template ${fallback.id}`);
-    } else {
-      console.log(`No matching template found`);
+    if (exactModelMatch) {
+      console.log(`✅ Strategy 2: Found exact model match (ignoring year): template ${exactModelMatch.id}`);
+      return exactModelMatch;
     }
     
-    return fallback || undefined;
+    // Strategy 3: Partial model match (e.g., "FIAT DUCATO" contains "DUCATO")
+    const partialMatch = allTemplates.find(template => {
+      const templateMake = template.make.trim().toLowerCase();
+      const templateModel = template.model.trim().toLowerCase();
+      
+      // Check if makes match and models partially match
+      const makeMatches = templateMake === normalizedMake;
+      const modelPartialMatch = 
+        normalizedModel.includes(templateModel) || 
+        templateModel.includes(normalizedModel);
+      
+      return makeMatches && modelPartialMatch;
+    });
+    
+    if (partialMatch) {
+      console.log(`✅ Strategy 3: Found partial model match: template ${partialMatch.id}`);
+      return partialMatch;
+    }
+    
+    // Strategy 4: Just make match (as last resort)
+    const makeOnlyMatch = allTemplates.find(template => {
+      const templateMake = template.make.trim().toLowerCase();
+      return templateMake === normalizedMake;
+    });
+    
+    if (makeOnlyMatch) {
+      console.log(`✅ Strategy 4: Found make-only match (fallback): template ${makeOnlyMatch.id}`);
+      return makeOnlyMatch;
+    }
+    
+    // Strategy 5: Return any template as absolute fallback
+    const anyTemplate = allTemplates[0];
+    if (anyTemplate) {
+      console.log(`⚠️ Strategy 5: No match found, using first available template: ${anyTemplate.id}`);
+      return anyTemplate;
+    }
+    
+    console.log(`❌ No templates available in database`);
+    return undefined;
   }
 
   async createVehicleDiagramTemplate(template: InsertVehicleDiagramTemplate): Promise<VehicleDiagramTemplate> {
