@@ -12,6 +12,7 @@ import { Vehicle, type Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 
 interface DamageMarker {
   id: string;
@@ -834,21 +835,12 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label>Vehicle *</Label>
-              <Select 
-                value={selectedVehicleId?.toString() || ""} 
-                onValueChange={(val) => setSelectedVehicleId(parseInt(val))}
-              >
-                <SelectTrigger data-testid="select-vehicle">
-                  <SelectValue placeholder="Select a vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.map(vehicle => (
-                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                      {displayLicensePlate(vehicle.licensePlate)} - {vehicle.brand} {vehicle.model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <VehicleSelector
+                vehicles={vehicles}
+                value={selectedVehicleId?.toString() || ""}
+                onChange={(val) => setSelectedVehicleId(parseInt(val))}
+                placeholder="Select a vehicle"
+              />
             </div>
 
             <div>
