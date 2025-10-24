@@ -136,9 +136,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
       const timestamp = Date.now();
-      const make = req.body.make || 'unknown';
-      const model = req.body.model || 'unknown';
-      cb(null, `${make}-${model}-${timestamp}${ext}`);
+      const randomSuffix = Math.round(Math.random() * 1E9);
+      cb(null, `diagram-${timestamp}-${randomSuffix}${ext}`);
     }
   });
 
@@ -7841,7 +7840,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Multer already saved the file to disk - just get the relative path
       const diagramPath = getRelativePath(req.file.path);
-      console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
+      console.log(`✅ Uploaded vehicle diagram to filesystem:`);
+      console.log(`   Absolute path: ${req.file.path}`);
+      console.log(`   Relative path: ${diagramPath}`);
+      console.log(`   Uploads dir: ${uploadsDir}`);
+      console.log(`   File exists: ${fs.existsSync(req.file.path)}`);
       
       const templateData = {
         make: req.body.make,
@@ -7914,12 +7917,20 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       if (!template.diagramPath) {
+        console.log(`❌ Template ${id} has no diagramPath`);
         return res.status(404).json({ message: "No diagram image available" });
       }
       
       const filePath = path.join(process.cwd(), template.diagramPath);
+      console.log(`📁 Serving diagram template ${id}:`);
+      console.log(`   Stored path: ${template.diagramPath}`);
+      console.log(`   Resolved path: ${filePath}`);
+      console.log(`   File exists: ${fs.existsSync(filePath)}`);
+      console.log(`   Current working dir: ${process.cwd()}`);
+      console.log(`   Uploads dir: ${uploadsDir}`);
       
       if (!fs.existsSync(filePath)) {
+        console.log(`❌ File not found at: ${filePath}`);
         return res.status(404).json({ message: "Diagram image not found" });
       }
       
