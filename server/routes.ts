@@ -124,9 +124,26 @@ export async function registerRoutes(app: Express): Promise<void> {
     },
   });
   
-  // Configure multer for diagram images - using memory storage for object storage persistence
+  // Configure multer for diagram images - using disk storage like all other uploads
+  const diagramStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const diagramsDir = path.join(uploadsDir, 'vehicle-diagrams');
+      if (!fs.existsSync(diagramsDir)) {
+        fs.mkdirSync(diagramsDir, { recursive: true });
+      }
+      cb(null, diagramsDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const timestamp = Date.now();
+      const make = req.body.make || 'unknown';
+      const model = req.body.model || 'unknown';
+      cb(null, `${make}-${model}-${timestamp}${ext}`);
+    }
+  });
+
   const diagramUpload = multer({
-    storage: multer.memoryStorage(), // Store in memory to upload to object storage
+    storage: diagramStorage,
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit for images
     },
@@ -7821,40 +7838,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const user = req.user;
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(req.file.originalname);
       
-      let objectStorageKey: string | null = null;
-      let diagramPath: string | null = null;
-      
-      // Save to BOTH filesystem AND object storage for cross-environment compatibility
-      
-      // 1. Always save to filesystem (works everywhere - Replit and own server)
-      const diagramDir = path.join(process.cwd(), 'uploads', 'vehicle-diagrams');
-      await fs.promises.mkdir(diagramDir, { recursive: true });
-      const filename = `${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
-      const filePath = path.join(diagramDir, filename);
-      await fs.promises.writeFile(filePath, req.file.buffer);
-      diagramPath = getRelativePath(filePath);
+      // Multer already saved the file to disk - just get the relative path
+      const diagramPath = getRelativePath(req.file.path);
       console.log(`✅ Uploaded vehicle diagram to filesystem: ${diagramPath}`);
-      
-      // 2. Also try object storage (works in Replit, fails gracefully on own server)
-      try {
-        objectStorageKey = `${objectStorage.getPrivateObjectDir()}/vehicle-diagrams/${req.body.make}-${req.body.model}-${uniqueSuffix}${ext}`;
-        await objectStorage.uploadBuffer(objectStorageKey, req.file.buffer, req.file.mimetype);
-        console.log(`✅ Uploaded vehicle diagram to object storage: ${objectStorageKey}`);
-      } catch (objStorageError) {
-        console.warn("Object storage not available (expected on own server):", objStorageError);
-        objectStorageKey = null;
-      }
       
       const templateData = {
         make: req.body.make,
         model: req.body.model,
         yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
         yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
-        diagramPath: diagramPath, // Filesystem path (used on own server)
-        objectStorageKey: objectStorageKey, // Object storage key (used in Replit)
+        diagramPath: diagramPath, // Filesystem path (works everywhere)
+        objectStorageKey: null, // Not using object storage anymore
         description: req.body.description || null,
         createdBy: user ? user.username : null,
         updatedBy: user ? user.username : null,
@@ -7880,21 +7875,16 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       // First, unlink this template from any damage checks that reference it
-      // Set diagram_template_id to NULL for all damage checks using this template
       await storage.unlinkDiagramTemplateFromDamageChecks(id);
       
-      // Delete the diagram file from object storage (if it exists)
-      if (template.objectStorageKey) {
+      // Delete the diagram file from filesystem
+      if (template.diagramPath) {
         try {
-          await objectStorage.deleteFile(template.objectStorageKey);
-          console.log(`✅ Deleted vehicle diagram from object storage: ${template.objectStorageKey}`);
-        } catch (err) {
-          console.error("Error deleting diagram file from object storage:", err);
-        }
-      } else if (template.diagramPath) {
-        // Fallback: delete from local filesystem for legacy records
-        try {
-          await fs.promises.unlink(template.diagramPath);
+          const filePath = path.join(process.cwd(), template.diagramPath);
+          if (fs.existsSync(filePath)) {
+            await fs.promises.unlink(filePath);
+            console.log(`✅ Deleted vehicle diagram: ${template.diagramPath}`);
+          }
         } catch (err) {
           console.error("Error deleting diagram file:", err);
         }
@@ -7913,7 +7903,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Download vehicle diagram template image from object storage
+  // Serve vehicle diagram template image
   app.get("/api/vehicle-diagram-templates/:id/image", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -7923,39 +7913,20 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
       
-      // Serve from object storage if available
-      if (template.objectStorageKey) {
-        try {
-          const file = objectStorage.getFile(template.objectStorageKey);
-          const exists = await objectStorage.fileExists(template.objectStorageKey);
-          
-          if (!exists) {
-            return res.status(404).json({ message: "Diagram image not found in storage" });
-          }
-          
-          await objectStorage.downloadObject(file, res);
-          return;
-        } catch (objStorageError) {
-          console.warn("Object storage not available, trying fallback:", objStorageError);
-          // Fall through to filesystem fallback
-        }
-      }
-      
-      // Fallback to local file system (legacy or deployment)
-      if (template.diagramPath) {
-        const filePath = path.join(process.cwd(), template.diagramPath);
-        
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ message: "Diagram image not found" });
-        }
-        
-        res.sendFile(filePath);
-      } else {
+      if (!template.diagramPath) {
         return res.status(404).json({ message: "No diagram image available" });
       }
+      
+      const filePath = path.join(process.cwd(), template.diagramPath);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Diagram image not found" });
+      }
+      
+      res.sendFile(filePath);
     } catch (error) {
-      console.error("Error downloading diagram template image:", error);
-      res.status(500).json({ message: "Error downloading diagram image" });
+      console.error("Error serving diagram template image:", error);
+      res.status(500).json({ message: "Error serving diagram image" });
     }
   });
 
