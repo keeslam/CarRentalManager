@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Car, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Edit, Trash2, Car, CheckCircle2, Circle, Download, Upload } from "lucide-react";
 
 interface InspectionPoint {
   id: string;
@@ -68,6 +68,7 @@ export default function DamageCheckTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<DamageCheckTemplate | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<DamageCheckTemplate | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all templates
   const { data: templates = [], isLoading } = useQuery<DamageCheckTemplate[]>({
@@ -116,6 +117,80 @@ export default function DamageCheckTemplates() {
     return cat ? cat.color : 'bg-gray-100 text-gray-800';
   };
 
+  const handleExportTemplate = async (template: DamageCheckTemplate) => {
+    try {
+      const response = await fetch(`/api/damage-check-templates/${template.id}/export`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export template');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Sanitize filename: replace special chars and limit length
+      const sanitizedName = template.name
+        .replace(/[^a-zA-Z0-9-_]/g, '_')
+        .substring(0, 50);
+      a.download = `damage_check_${sanitizedName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Template exported successfully"
+      });
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export template",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const templateData = JSON.parse(text);
+
+      await apiRequest('POST', '/api/damage-check-templates/import', templateData);
+
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      
+      toast({
+        title: "Success",
+        description: "Template imported successfully"
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error('Error importing template:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import template",
+        variant: "destructive"
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="flex justify-between items-center mb-6">
@@ -128,10 +203,28 @@ export default function DamageCheckTemplates() {
             Create custom vehicle inspection templates for different makes and models
           </p>
         </div>
-        <Button onClick={handleCreateNew} className="gap-2" data-testid="button-create-template">
-          <Plus className="h-4 w-4" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+          <Button 
+            onClick={() => fileInputRef.current?.click()} 
+            variant="outline"
+            className="gap-2" 
+            data-testid="button-import-template"
+          >
+            <Upload className="h-4 w-4" />
+            Import Template
+          </Button>
+          <Button onClick={handleCreateNew} className="gap-2" data-testid="button-create-template">
+            <Plus className="h-4 w-4" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -230,6 +323,14 @@ export default function DamageCheckTemplates() {
                     >
                       <Edit className="h-3.5 w-3.5 mr-1" />
                       Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExportTemplate(template)}
+                      data-testid={`button-export-template-${template.id}`}
+                    >
+                      <Download className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="destructive"

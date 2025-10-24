@@ -7508,6 +7508,70 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Export damage check template
+  app.get("/api/damage-check-templates/:id/export", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getDamageCheckTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Strip server-controlled fields
+      const { id: _, createdAt, updatedAt, ...exportData } = template;
+      
+      // Sanitize filename: replace special chars, spaces, and limit length
+      const sanitizedName = template.name
+        .replace(/[^a-zA-Z0-9-_]/g, '_')
+        .substring(0, 50);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="damage_check_${sanitizedName}.json"`);
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting damage check template:", error);
+      res.status(500).json({ message: "Error exporting damage check template" });
+    }
+  });
+
+  // Import damage check template
+  app.post("/api/damage-check-templates/import", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user;
+      
+      // Add defaults for fields that might be missing from export
+      const importData = {
+        ...req.body,
+        // Ensure defaults for required fields
+        language: req.body.language || 'nl',
+        isDefault: req.body.isDefault ?? false,
+        inspectionPoints: req.body.inspectionPoints || [],
+      };
+      
+      // Validate the import data using the insert schema
+      const validatedData = insertDamageCheckTemplateSchema.parse(importData);
+      
+      const templateData = {
+        ...validatedData,
+        createdBy: user ? user.username : null,
+        updatedBy: user ? user.username : null,
+      };
+      
+      const newTemplate = await storage.createDamageCheckTemplate(templateData);
+      res.json(newTemplate);
+    } catch (error: any) {
+      console.error("Error importing damage check template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid template data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Error importing damage check template" });
+    }
+  });
+
   // Generate damage check PDF for a vehicle
   app.get("/api/vehicles/:id/damage-check-pdf", requireAuth, async (req: Request, res: Response) => {
     try {
