@@ -932,30 +932,6 @@ export default function DamageCheckTemplateEditor() {
                     Export PDF Layout
                   </Button>
                   
-                  {/* Import/Export for Checklist Content */}
-                  <div className="space-y-2 pt-2 border-t">
-                    <p className="text-xs text-gray-500 font-semibold">Checklist Content Template</p>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleExportChecklistTemplate}
-                      disabled={damageCheckTemplates.length === 0}
-                      data-testid="button-export-checklist-template"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export Checklist Data
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => checklistInputRef.current?.click()}
-                      data-testid="button-import-checklist-template"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Import Checklist Data
-                    </Button>
-                  </div>
-                  
                   <Button
                     variant="outline"
                     className="w-full text-red-600"
@@ -1733,6 +1709,41 @@ export default function DamageCheckTemplateEditor() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Checklist Content Template Import/Export Section */}
+        <div className="mt-8 pt-6 border-t">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Damage Check Checklist Content</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Export and import the vehicle inspection checklist content (the questions/items shown in the damage check form).
+              This is separate from the PDF layout above.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleExportChecklistTemplate}
+              disabled={damageCheckTemplates.length === 0}
+              data-testid="button-export-checklist-template"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Checklist Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => checklistInputRef.current?.click()}
+              data-testid="button-import-checklist-template"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import Checklist Data
+            </Button>
+            {damageCheckTemplates.length > 0 && (
+              <div className="ml-auto text-sm text-gray-600 flex items-center">
+                Current checklist: <span className="font-semibold ml-1">{damageCheckTemplates[0].name}</span> ({damageCheckTemplates[0].inspectionPoints?.length || 0} items)
+              </div>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
