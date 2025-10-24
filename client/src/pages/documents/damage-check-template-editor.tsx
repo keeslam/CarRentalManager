@@ -196,6 +196,7 @@ export default function DamageCheckTemplateEditor() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const checklistInputRef = useRef<HTMLInputElement>(null);
 
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
@@ -319,7 +320,7 @@ export default function DamageCheckTemplateEditor() {
       
       toast({
         title: "Success",
-        description: "Template imported successfully"
+        description: "PDF template layout imported successfully"
       });
 
       // Reset file input
@@ -337,6 +338,90 @@ export default function DamageCheckTemplateEditor() {
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleExportChecklistTemplate = async () => {
+    if (damageCheckTemplates.length === 0) {
+      toast({
+        title: "No Template",
+        description: "No checklist template found to export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const template = damageCheckTemplates[0]; // Export first template
+
+    try {
+      const response = await fetch(`/api/damage-check-templates/${template.id}/export`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export checklist template');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const sanitizedName = template.name
+        .replace(/[^a-zA-Z0-9-_]/g, '_')
+        .substring(0, 50);
+      a.download = `damage_check_${sanitizedName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Checklist template exported successfully"
+      });
+    } catch (error) {
+      console.error('Error exporting checklist template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export checklist template",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleImportChecklistFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const templateData = JSON.parse(text);
+
+      const response = await apiRequest('POST', '/api/damage-check-templates/import', templateData);
+
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      
+      toast({
+        title: "Success",
+        description: "Checklist template imported successfully"
+      });
+
+      // Reset file input
+      if (checklistInputRef.current) {
+        checklistInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error('Error importing checklist template:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import checklist template",
+        variant: "destructive"
+      });
+
+      // Reset file input
+      if (checklistInputRef.current) {
+        checklistInputRef.current.value = '';
       }
     }
   };
@@ -576,14 +661,21 @@ export default function DamageCheckTemplateEditor() {
               style={{ display: 'none' }}
               onChange={handleImportFile}
             />
+            <input
+              type="file"
+              ref={checklistInputRef}
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleImportChecklistFile}
+            />
             <Button 
               onClick={() => fileInputRef.current?.click()} 
               size="sm"
               variant="outline"
-              data-testid="button-import-template"
+              data-testid="button-import-pdf-template"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import Template
+              Import PDF Layout
             </Button>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
               <Plus className="w-4 h-4 mr-2" />
@@ -834,11 +926,36 @@ export default function DamageCheckTemplateEditor() {
                     className="w-full"
                     onClick={handleExportTemplate}
                     disabled={!currentTemplate.id}
-                    data-testid="button-export-template"
+                    data-testid="button-export-pdf-template"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Template
+                    Export PDF Layout
                   </Button>
+                  
+                  {/* Import/Export for Checklist Content */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <p className="text-xs text-gray-500 font-semibold">Checklist Content Template</p>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleExportChecklistTemplate}
+                      disabled={damageCheckTemplates.length === 0}
+                      data-testid="button-export-checklist-template"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Checklist Data
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => checklistInputRef.current?.click()}
+                      data-testid="button-import-checklist-template"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import Checklist Data
+                    </Button>
+                  </div>
+                  
                   <Button
                     variant="outline"
                     className="w-full text-red-600"
