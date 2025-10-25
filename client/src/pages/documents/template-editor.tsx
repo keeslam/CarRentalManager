@@ -1411,7 +1411,9 @@ const PDFTemplateEditor = () => {
                             let bgUrl = contractBackground;
                             if (currentTemplate?.backgroundPath) {
                               // Path is relative from working directory (e.g., "uploads/templates/template_9_background.pdf")
-                              bgUrl = `/${currentTemplate.backgroundPath}`;
+                              // Add cache-busting timestamp to prevent browser from showing stale cached background
+                              // Use Date.now() to force fresh load every render
+                              bgUrl = `/${currentTemplate.backgroundPath}?_cb=${Date.now()}`;
                               console.log('🖼️ Loading background from:', bgUrl);
                             }
                             return showGrid ? 
