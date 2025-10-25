@@ -297,16 +297,29 @@ const PDFTemplateEditor = () => {
       console.log('📋 Loaded templates from API:', processedTemplates.map(t => ({ id: t.id, name: t.name, backgroundPath: t.backgroundPath })));
       
       setTemplates(processedTemplates);
-      if (processedTemplates.length > 0 && !currentTemplate) {
-        const defaultTemplate = processedTemplates.find((t: Template) => t.isDefault) || processedTemplates[0];
-        console.log('🎯 Setting current template to:', { id: defaultTemplate.id, name: defaultTemplate.name, backgroundPath: defaultTemplate.backgroundPath });
-        setCurrentTemplate(defaultTemplate);
-        // Reset history and state for new template
-        setHistory([{ fields: JSON.parse(JSON.stringify(defaultTemplate.fields)), timestamp: Date.now() }]);
-        setHistoryIndex(0);
-        setSelectedFields([]);
-        setCopiedFields([]);
-        setFieldHistory([]);
+      
+      // CRITICAL FIX: Always update currentTemplate with fresh data from API
+      // This ensures background path updates are reflected immediately
+      if (processedTemplates.length > 0) {
+        if (!currentTemplate) {
+          // First load - set the default template
+          const defaultTemplate = processedTemplates.find((t: Template) => t.isDefault) || processedTemplates[0];
+          console.log('🎯 Setting current template to:', { id: defaultTemplate.id, name: defaultTemplate.name, backgroundPath: defaultTemplate.backgroundPath });
+          setCurrentTemplate(defaultTemplate);
+          // Reset history and state for new template
+          setHistory([{ fields: JSON.parse(JSON.stringify(defaultTemplate.fields)), timestamp: Date.now() }]);
+          setHistoryIndex(0);
+          setSelectedFields([]);
+          setCopiedFields([]);
+          setFieldHistory([]);
+        } else {
+          // Template already selected - update it with fresh data from API (including background path!)
+          const updatedTemplate = processedTemplates.find(t => t.id === currentTemplate.id);
+          if (updatedTemplate) {
+            console.log('🔄 Updating current template with fresh data:', { id: updatedTemplate.id, backgroundPath: updatedTemplate.backgroundPath });
+            setCurrentTemplate(updatedTemplate);
+          }
+        }
       }
     }
   }, [templateData]);
