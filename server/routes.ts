@@ -5046,33 +5046,69 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Delete old background from object storage if it exists
-      if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
-        try {
-          await objectStorageService.deleteFile(template.backgroundPath);
-          console.log(`Deleted old background: ${template.backgroundPath}`);
-        } catch (error) {
-          console.error("Error deleting old background from object storage:", error);
+      let backgroundPath: string;
+
+      // Check if object storage is available (Replit) or use filesystem (Coolify/Docker)
+      if (objectStorageService.isAvailable()) {
+        console.log('Using object storage for template background (Replit)');
+        
+        // Delete old background from object storage if it exists
+        if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
+          try {
+            await objectStorageService.deleteFile(template.backgroundPath);
+            console.log(`Deleted old background: ${template.backgroundPath}`);
+          } catch (error) {
+            console.error("Error deleting old background from object storage:", error);
+          }
         }
+
+        // Upload to object storage
+        const ext = path.extname(req.file.originalname);
+        const publicPaths = objectStorageService.getPublicObjectSearchPaths();
+        const basePath = publicPaths[0]; // Use first public path
+        backgroundPath = `${basePath}/templates/template_${id}_background${ext}`;
+        
+        await objectStorageService.uploadBuffer(
+          backgroundPath,
+          req.file.buffer,
+          req.file.mimetype
+        );
+        
+        console.log(`Uploaded background to object storage: ${backgroundPath}`);
+      } else {
+        console.log('Using filesystem for template background (Coolify/Docker)');
+        
+        // Use filesystem storage (for Coolify/Docker with volume mounts)
+        const templatesDir = path.join(uploadsDir, 'templates');
+        if (!fs.existsSync(templatesDir)) {
+          fs.mkdirSync(templatesDir, { recursive: true });
+        }
+
+        // Delete old background file if it exists
+        if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
+          const oldBackgroundPath = path.join(process.cwd(), template.backgroundPath);
+          try {
+            await fs.promises.unlink(oldBackgroundPath);
+            console.log(`Deleted old background: ${oldBackgroundPath}`);
+          } catch (error) {
+            console.error("Error deleting old background file:", error);
+          }
+        }
+
+        // Save file to filesystem
+        const ext = path.extname(req.file.originalname);
+        const filename = `template_${id}_background${ext}`;
+        const filePath = path.join(templatesDir, filename);
+        
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        backgroundPath = path.relative(process.cwd(), filePath);
+        
+        console.log(`Uploaded background to filesystem: ${backgroundPath}`);
       }
 
-      // Upload to object storage
-      const ext = path.extname(req.file.originalname);
-      const publicPaths = objectStorageService.getPublicObjectSearchPaths();
-      const basePath = publicPaths[0]; // Use first public path
-      const objectPath = `${basePath}/templates/template_${id}_background${ext}`;
-      
-      await objectStorageService.uploadBuffer(
-        objectPath,
-        req.file.buffer,
-        req.file.mimetype
-      );
-      
-      console.log(`Uploaded background to object storage: ${objectPath}`);
-
-      // Update template with object storage path
+      // Update template with new background path
       const updatedTemplate = await storage.updatePdfTemplate(id, {
-        backgroundPath: objectPath
+        backgroundPath
       });
 
       if (!updatedTemplate) {
@@ -5102,13 +5138,22 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Delete the custom background file from object storage if it exists
+      // Delete the custom background file if it exists
       if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
         try {
-          await objectStorageService.deleteFile(template.backgroundPath);
-          console.log(`Deleted background from object storage: ${template.backgroundPath}`);
+          // Check if it's object storage path (starts with /) or filesystem path
+          if (template.backgroundPath.startsWith('/')) {
+            // Object storage (Replit)
+            await objectStorageService.deleteFile(template.backgroundPath);
+            console.log(`Deleted background from object storage: ${template.backgroundPath}`);
+          } else {
+            // Filesystem (Coolify/Docker)
+            const backgroundPath = path.join(process.cwd(), template.backgroundPath);
+            await fs.promises.unlink(backgroundPath);
+            console.log(`Deleted background from filesystem: ${backgroundPath}`);
+          }
         } catch (error) {
-          console.error("Error deleting background from object storage:", error);
+          console.error("Error deleting background:", error);
         }
       }
 

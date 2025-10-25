@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **File Validation**: Size limits and type restrictions
 - **Path Management**: Relative path storage
 - **Vehicle Diagram Storage**: Simple filesystem storage in `uploads/vehicle-diagrams/` directory - uses the same proven approach as contracts, driver licenses, and all other document uploads. Ensures diagrams persist across all deployment scenarios (Replit, own server, Docker, etc.). Enhanced matching algorithm with 5 progressive fallback strategies (exact match → partial match → brand-only → generic fallback).
-- **Template Background Storage**: Uses Replit Object Storage (persistent cloud storage) for PDF template backgrounds. Backgrounds are stored at `/bucket/public/templates/` and accessible via `/object-storage/*` route. This ensures backgrounds persist across app restarts on Replit. On Coolify/Docker deployments, the default local filesystem still works for the default template.
+- **Template Background Storage**: Environment-aware storage system. On Replit, uses Object Storage (persistent cloud storage) to survive app restarts - backgrounds stored at `/bucket/public/templates/` and served via `/object-storage/*` route. On Coolify/Docker, uses local filesystem with volume mounts (same as other uploads) for persistence.
 
 ### Data Validation
 - **Schema Validation**: Zod schemas (shared between frontend/backend)
