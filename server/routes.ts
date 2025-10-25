@@ -4958,6 +4958,14 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Add user tracking information
       const user = req.user;
       
+      // Log what we received from frontend
+      console.log('🔍 PATCH /api/pdf-templates - Received from frontend:', {
+        id,
+        hasBackgroundPath: 'backgroundPath' in req.body,
+        backgroundPathValue: req.body.backgroundPath,
+        keys: Object.keys(req.body)
+      });
+      
       // Process the request body to ensure fields are properly formatted
       const requestBody = { ...req.body };
       
@@ -4984,9 +4992,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         updatedBy: user ? user.username : null
       };
       
-      console.log('Updating template with processed data:', {
+      console.log('📤 Sending to storage layer:', {
         id,
-        ...templateData,
+        hasBackgroundPath: 'backgroundPath' in templateData,
+        backgroundPathValue: templateData.backgroundPath,
+        keys: Object.keys(templateData),
         fields: templateData.fields ? 'JSON string' : undefined
       });
       

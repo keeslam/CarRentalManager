@@ -1149,6 +1149,13 @@ export class DatabaseStorage implements IStorage {
   
   async updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined> {
     try {
+      console.log('💾 Storage layer received:', {
+        id,
+        hasBackgroundPath: 'backgroundPath' in templateData,
+        backgroundPathValue: templateData.backgroundPath,
+        keys: Object.keys(templateData)
+      });
+      
       // If setting as default, update all other templates to not be default
       if (templateData.isDefault) {
         await db.execute(sql`UPDATE pdf_templates SET is_default = false`);
@@ -1176,7 +1183,10 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (templateData.backgroundPath !== undefined) {
+        console.log('✅ Converting backgroundPath to background_path:', templateData.backgroundPath);
         updateData.background_path = templateData.backgroundPath;
+      } else {
+        console.log('⚠️ backgroundPath is undefined - will not be updated');
       }
       
       // Always update timestamp
