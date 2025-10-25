@@ -1690,6 +1690,12 @@ export function QuickActions() {
                             onChange={(value) => {
                               const vehicle = vehicles.find(v => v.id.toString() === value);
                               setSelectedApkVehicle(vehicle || null);
+                              // Pre-fill the APK date with the vehicle's current APK date
+                              if (vehicle?.apkDate) {
+                                setApkDate(vehicle.apkDate);
+                              } else {
+                                setApkDate("");
+                              }
                             }}
                           />
                         ) : (
