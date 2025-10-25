@@ -4961,12 +4961,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Process the request body to ensure fields are properly formatted
       const requestBody = { ...req.body };
       
-      // Convert camelCase backgroundPath to snake_case background_path for database
-      if (requestBody.hasOwnProperty('backgroundPath')) {
-        requestBody.background_path = requestBody.backgroundPath;
-        delete requestBody.backgroundPath;
-      }
-      
       // Convert fields to string if it's an object (this fixes the date handling issue)
       if (requestBody.fields && typeof requestBody.fields === 'object') {
         requestBody.fields = JSON.stringify(requestBody.fields);
@@ -4977,12 +4971,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         delete requestBody.updatedAt;
       }
       
-      // CRITICAL: Preserve existing background_path if not provided
-      // This ensures Save button doesn't clear the background
-      // Only delete if it's explicitly undefined or null
-      if (requestBody.background_path === undefined || requestBody.background_path === null) {
-        // Don't send null/undefined - omit it entirely to preserve existing value
-        delete requestBody.background_path;
+      // CRITICAL: Keep backgroundPath as-is from frontend
+      // The storage layer will handle the camelCase→snake_case conversion
+      // If backgroundPath is explicitly null, keep it to clear the background
+      // If it's undefined, delete it to preserve existing value
+      if (requestBody.backgroundPath === undefined) {
+        delete requestBody.backgroundPath;
       }
       
       const templateData = {
