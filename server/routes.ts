@@ -67,6 +67,9 @@ function formatDate(dateString: string): string {
 }
 
 export async function registerRoutes(app: Express): Promise<void> {
+  // Initialize object storage service
+  const objectStorageService = new ObjectStorageService();
+  
   // Create uploads directory if it doesn't exist - now works in any environment
   const uploadsDir = getUploadsDir();
   try {
