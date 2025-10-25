@@ -1496,17 +1496,28 @@ const PDFTemplateEditor = () => {
                           backgroundColor: currentTemplate?.backgroundPreviewPath || currentTemplate?.backgroundPath ? 'transparent' : '#ffffff',
                           backgroundImage: (() => {
                             // Use preview image for template backgrounds (PNG converted from PDF)
-                            let bgUrl = contractBackground;
                             if (currentTemplate?.backgroundPreviewPath) {
                               // Preview path is a PNG image that can be displayed in CSS
-                              // Add cache-busting timestamp to prevent browser from showing stale cached background
-                              bgUrl = `/${currentTemplate.backgroundPreviewPath}?_cb=${Date.now()}`;
+                              const bgUrl = `/${currentTemplate.backgroundPreviewPath}`;
                               console.log('🖼️ Loading preview image from:', bgUrl);
+                              return showGrid ? 
+                                `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                                 repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                                 url(${bgUrl})` :
+                                `url(${bgUrl})`;
                             } else if (currentTemplate?.backgroundPath) {
                               // Fallback to backgroundPath for backwards compatibility (images only)
-                              bgUrl = `/${currentTemplate.backgroundPath}?_cb=${Date.now()}`;
+                              const bgUrl = `/${currentTemplate.backgroundPath}`;
                               console.log('🖼️ Loading background (legacy) from:', bgUrl);
+                              return showGrid ? 
+                                `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                                 repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                                 url(${bgUrl})` :
+                                `url(${bgUrl})`;
                             }
+                            
+                            // Default fallback background
+                            const bgUrl = contractBackground;
                             return showGrid ? 
                               `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
                                repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
