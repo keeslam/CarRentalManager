@@ -294,9 +294,12 @@ const PDFTemplateEditor = () => {
         };
       });
       
+      console.log('📋 Loaded templates from API:', processedTemplates.map(t => ({ id: t.id, name: t.name, backgroundPath: t.backgroundPath })));
+      
       setTemplates(processedTemplates);
       if (processedTemplates.length > 0 && !currentTemplate) {
         const defaultTemplate = processedTemplates.find((t: Template) => t.isDefault) || processedTemplates[0];
+        console.log('🎯 Setting current template to:', { id: defaultTemplate.id, name: defaultTemplate.name, backgroundPath: defaultTemplate.backgroundPath });
         setCurrentTemplate(defaultTemplate);
         // Reset history and state for new template
         setHistory([{ fields: JSON.parse(JSON.stringify(defaultTemplate.fields)), timestamp: Date.now() }]);
