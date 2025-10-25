@@ -4772,6 +4772,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {
     try {
       const templates = await storage.getAllPdfTemplates();
+      // Disable caching to ensure fresh data after uploads
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.json(templates);
     } catch (error) {
       console.error("Error fetching PDF templates:", error);

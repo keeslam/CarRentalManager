@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **File Validation**: Size limits and type restrictions
 - **Path Management**: Relative path storage
 - **Vehicle Diagram Storage**: Simple filesystem storage in `uploads/vehicle-diagrams/` directory - uses the same proven approach as contracts, driver licenses, and all other document uploads. Ensures diagrams persist across all deployment scenarios (Replit, own server, Docker, etc.). Enhanced matching algorithm with 5 progressive fallback strategies (exact match → partial match → brand-only → generic fallback).
-- **Template Background Storage**: Environment-aware storage system. On Replit, uses Object Storage (persistent cloud storage) to survive app restarts - backgrounds stored at `/bucket/public/templates/` and served via `/object-storage/*` route. On Coolify/Docker, uses local filesystem with volume mounts (same as other uploads) for persistence.
+- **Template Background Storage**: Environment-aware storage system. On Replit, uses Object Storage (persistent cloud storage) to survive app restarts - backgrounds stored at `/bucket/public/templates/` and served via `/object-storage/*` route. On Coolify/Docker, uses local filesystem with volume mounts (same as other uploads) for persistence. **Cache Management**: GET /api/pdf-templates endpoint includes Cache-Control headers (`no-store, no-cache`) to prevent 304 responses and ensure fresh data after uploads. Frontend uses forced refetch (`refetchQueries`) after background mutations to bypass React Query cache staleness.
 
 ### Data Validation
 - **Schema Validation**: Zod schemas (shared between frontend/backend)

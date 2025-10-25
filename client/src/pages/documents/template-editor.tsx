@@ -197,8 +197,10 @@ const PDFTemplateEditor = () => {
       const data = await res.json();
       return data;
     },
-    onSuccess: (updatedTemplate) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+    onSuccess: async (updatedTemplate) => {
+      // Force refetch to ensure we get fresh data (no 304 cache)
+      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      
       // Update current template to show the new background immediately
       if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
         setCurrentTemplate(updatedTemplate);
@@ -223,8 +225,10 @@ const PDFTemplateEditor = () => {
       const res = await apiRequest('DELETE', `/api/pdf-templates/${templateId}/background`);
       return await res.json();
     },
-    onSuccess: (updatedTemplate) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+    onSuccess: async (updatedTemplate) => {
+      // Force refetch to ensure we get fresh data (no 304 cache)
+      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      
       // Update current template to remove the background immediately
       if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
         setCurrentTemplate(updatedTemplate);
