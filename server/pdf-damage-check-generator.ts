@@ -6,6 +6,41 @@ import { damageCheckPdfTemplates, damageCheckTemplates, vehicleDiagramTemplates 
 import { eq } from 'drizzle-orm';
 import { ObjectStorageService } from './objectStorage';
 
+/**
+ * Format a license plate consistently throughout the application
+ * Removes dashes and spaces, then formats according to Dutch license plate standards
+ */
+function formatLicensePlate(licensePlate: string): string {
+  // Remove any existing dashes or spaces and convert to uppercase
+  const sanitized = licensePlate.replace(/[-\s]/g, '').toUpperCase();
+  
+  // Standard Dutch license plate formats
+  const formats = [
+    { pattern: /^([A-Z]{2})(\d{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-00-00
+    { pattern: /^(\d{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // 00-XX-00
+    { pattern: /^([A-Z]{2})([A-Z]{2})(\d{2})$/, format: '$1-$2-$3' }, // XX-XX-00
+    { pattern: /^([A-Z]{2})(\d{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // XX-00-XX
+    { pattern: /^(\d{2})([A-Z]{2})([A-Z]{2})$/, format: '$1-$2-$3' }, // 00-XX-XX
+    { pattern: /^([A-Z])(\d{3})([A-Z]{2})$/, format: '$1-$2-$3' }, // X-000-XX
+    { pattern: /^([A-Z]{2})(\d{3})([A-Z])$/, format: '$1-$2-$3' }, // XX-000-X
+    { pattern: /^([A-Z])(\d{2})([A-Z]{3})$/, format: '$1-$2-$3' }, // X-00-XXX
+    { pattern: /^([A-Z]{3})(\d{2})([A-Z])$/, format: '$1-$2-$3' }, // XXX-00-X
+    { pattern: /^(\d{1})([A-Z]{3})(\d{2})$/, format: '$1-$2-$3' }, // 0-XXX-00
+    { pattern: /^(\d{2})([A-Z]{3})(\d{1})$/, format: '$1-$2-$3' }, // 00-XXX-0
+  ];
+  
+  // Try to match and format the license plate
+  for (const { pattern, format } of formats) {
+    if (pattern.test(sanitized)) {
+      return sanitized.replace(pattern, format);
+    }
+  }
+  
+  // If no standard format matches, return as-is (already uppercase)
+  return sanitized;
+}
+
 interface VehicleData {
   brand: string;
   model: string;
@@ -202,7 +237,7 @@ export async function generateDamageCheckPDF(
   // Row 1: Brand, Model, License Plate
   drawBox(page, margin, yPosition, vCol1, vBoxHeight, 'Merk', vehicle.brand);
   drawBox(page, margin + vCol1 + 5, yPosition, vCol2, vBoxHeight, 'Type/Model', vehicle.model);
-  drawBox(page, margin + vCol1 + vCol2 + 10, yPosition, vCol3, vBoxHeight, 'Kenteken', vehicle.licensePlate);
+  drawBox(page, margin + vCol1 + vCol2 + 10, yPosition, vCol3, vBoxHeight, 'Kenteken', formatLicensePlate(vehicle.licensePlate));
   
   yPosition -= vBoxHeight + 5;
   
@@ -707,7 +742,7 @@ export async function generateDamageCheckPDFWithTemplate(
             let displayText = item.text;
             if (item.fieldKey) {
               const valueMap: Record<string, string> = {
-                licensePlate: vehicle.licensePlate || 'N/A',
+                licensePlate: vehicle.licensePlate ? formatLicensePlate(vehicle.licensePlate) : 'N/A',
                 brand: vehicle.brand || 'N/A',
                 model: vehicle.model || 'N/A',
                 buildYear: vehicle.buildYear ? String(vehicle.buildYear) : 'N/A',
