@@ -1699,13 +1699,19 @@ export function QuickActions() {
                         )}
                         
                         {selectedApkVehicle && (
-                          <div className="mt-2 p-3 bg-muted/30 border rounded-md">
+                          <div className="mt-2 p-3 bg-muted/30 border rounded-md space-y-2">
                             <div className="flex items-center gap-2">
                               <div className="font-medium">{formatLicensePlate(selectedApkVehicle.licensePlate)}</div>
                               <div className="text-sm text-muted-foreground">
                                 {selectedApkVehicle.brand} {selectedApkVehicle.model}
                               </div>
                             </div>
+                            {selectedApkVehicle.apkDate && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-muted-foreground">Current APK Date:</span>
+                                <span className="font-medium">{formatDate(selectedApkVehicle.apkDate)}</span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1754,8 +1760,13 @@ export function QuickActions() {
                         
                         <div>
                           <label htmlFor="apkDate" className="text-sm font-medium">
-                            APK Date
+                            New APK Date
                           </label>
+                          {selectedApkVehicle.apkDate && (
+                            <div className="text-xs text-muted-foreground mb-1">
+                              Current: {formatDate(selectedApkVehicle.apkDate)}
+                            </div>
+                          )}
                           <Input
                             id="apkDate"
                             type="date"
