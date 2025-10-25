@@ -5013,6 +5013,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   const templateBackgroundStorage = multer.diskStorage({
     destination: (req, file, cb) => {
       const templatesDir = path.join(uploadsDir, 'templates');
+      if (!fs.existsSync(templatesDir)) {
+        fs.mkdirSync(templatesDir, { recursive: true });
+      }
       cb(null, templatesDir);
     },
     filename: (req, file, cb) => {
