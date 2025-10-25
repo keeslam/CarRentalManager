@@ -1709,7 +1709,7 @@ export default function ReservationCalendarPage() {
                               }
                             }}
                             className="flex items-center gap-2 pr-8"
-                            title={`${doc.documentType || 'Document'}${doc.createdAt ? ` | Uploaded: ${format(new Date(doc.createdAt), 'PPp')}` : ''}`}
+                            title={`${doc.documentType || 'Document'}${doc.uploadDate ? ` | Uploaded: ${format(new Date(doc.uploadDate), 'PPp')}` : ''}`}
                           >
                             {getFileIcon(doc.contentType, doc.fileName)}
                             <div className="text-left">
