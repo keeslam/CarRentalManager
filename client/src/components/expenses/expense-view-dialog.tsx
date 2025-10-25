@@ -272,7 +272,7 @@ export function ExpenseViewDialog({ vehicleId, children, onSuccess }: ExpenseVie
               No expenses recorded for this vehicle
             </div>
           ) : (
-            <Accordion type="multiple" defaultValue={expensesByCategory.map(item => item.category)} className="w-full">
+            <Accordion type="multiple" defaultValue={[]} className="w-full">
               {expensesByCategory.map(({ category, expenses: categoryExpenses, amount, count }) => {
                 const currentPage = getCategoryPage(category);
                 const totalPages = Math.ceil(count / ITEMS_PER_PAGE);

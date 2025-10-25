@@ -1820,7 +1820,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     No expenses recorded for this vehicle
                   </div>
                 ) : (
-                  <Accordion type="multiple" defaultValue={totalByCategory.map(item => item.category)} className="w-full">
+                  <Accordion type="multiple" defaultValue={[]} className="w-full">
                     {totalByCategory.map(({ category, expenses: categoryExpenses, amount, count }) => {
                       const currentPage = getExpenseCategoryPage(category);
                       const totalPages = Math.ceil(count / EXPENSE_ITEMS_PER_PAGE);
