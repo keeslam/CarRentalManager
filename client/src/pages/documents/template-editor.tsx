@@ -223,8 +223,12 @@ const PDFTemplateEditor = () => {
       const res = await apiRequest('DELETE', `/api/pdf-templates/${templateId}/background`);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedTemplate) => {
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      // Update current template to remove the background immediately
+      if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
+        setCurrentTemplate(updatedTemplate);
+      }
       toast({
         title: "Success",
         description: "Background removed, using default",
@@ -898,6 +902,7 @@ const PDFTemplateEditor = () => {
       id: currentTemplate.id,
       name: currentTemplate.name,
       isDefault: currentTemplate.isDefault,
+      backgroundPath: currentTemplate.backgroundPath,
       fields: currentTemplate.fields.map(field => ({
         id: field.id,
         name: field.name,
@@ -928,6 +933,7 @@ const PDFTemplateEditor = () => {
       id: currentTemplate.id,
       name: currentTemplate.name,
       isDefault: true,
+      backgroundPath: currentTemplate.backgroundPath,
       fields: currentTemplate.fields.map(field => ({
         id: field.id,
         name: field.name,
