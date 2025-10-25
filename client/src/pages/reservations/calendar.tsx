@@ -1565,8 +1565,8 @@ export default function ReservationCalendarPage() {
                     <span className="text-[10px] text-gray-600 w-full mb-0.5">Quick Upload:</span>
                     {[
                       { type: 'Contract (Signed)', accept: '.pdf' },
+                      { type: 'Damage Check (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
-                      { type: 'Damage Report PDF', accept: '.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
                     ].map(({ type, accept }) => (
                       <Button
@@ -1650,7 +1650,8 @@ export default function ReservationCalendarPage() {
                             d.documentType !== 'Contract' && 
                             !d.documentType?.startsWith('Damage Check') &&
                             d.documentType !== 'Damage Report Photo' && 
-                            d.documentType !== 'Damage Report PDF'
+                            d.documentType !== 'Damage Report PDF' &&
+                            d.documentType !== 'Other'
                           );
                           
                           return [...contractDocs, ...damageCheckDocs, ...damageReportDocs, ...otherDocs];
