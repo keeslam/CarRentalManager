@@ -6,6 +6,7 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
+  templateBackgrounds, type TemplateBackground, type InsertTemplateBackground,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
   drivers, type Driver, type InsertDriver,
@@ -97,6 +98,13 @@ export interface IStorage {
   createPdfTemplate(template: InsertPdfTemplate): Promise<PdfTemplate>;
   updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate | undefined>;
   deletePdfTemplate(id: number): Promise<boolean>;
+  
+  // Template Background Library methods
+  getTemplateBackgrounds(templateId: number): Promise<TemplateBackground[]>;
+  getTemplateBackground(id: number): Promise<TemplateBackground | undefined>;
+  createTemplateBackground(background: InsertTemplateBackground): Promise<TemplateBackground>;
+  deleteTemplateBackground(id: number): Promise<boolean>;
+  selectTemplateBackground(templateId: number, backgroundId: number): Promise<PdfTemplate | undefined>;
   
   // Custom Notification methods
   getAllCustomNotifications(): Promise<CustomNotification[]>;

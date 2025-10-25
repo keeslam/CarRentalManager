@@ -6,6 +6,7 @@ import {
   expenses, type Expense, type InsertExpense,
   documents, type Document, type InsertDocument,
   pdfTemplates, type PdfTemplate, type InsertPdfTemplate,
+  templateBackgrounds, type TemplateBackground, type InsertTemplateBackground,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   backupSettings, type BackupSettings, type InsertBackupSettings,
   appSettings, type AppSettings, type InsertAppSettings,
@@ -1267,6 +1268,56 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return !!deleted;
+  }
+  
+  // Template Background Library methods
+  async getTemplateBackgrounds(templateId: number): Promise<TemplateBackground[]> {
+    return await db
+      .select()
+      .from(templateBackgrounds)
+      .where(eq(templateBackgrounds.templateId, templateId))
+      .orderBy(desc(templateBackgrounds.createdAt));
+  }
+  
+  async getTemplateBackground(id: number): Promise<TemplateBackground | undefined> {
+    const [background] = await db
+      .select()
+      .from(templateBackgrounds)
+      .where(eq(templateBackgrounds.id, id));
+    
+    return background || undefined;
+  }
+  
+  async createTemplateBackground(backgroundData: InsertTemplateBackground): Promise<TemplateBackground> {
+    const [background] = await db
+      .insert(templateBackgrounds)
+      .values(backgroundData)
+      .returning();
+    
+    return background;
+  }
+  
+  async deleteTemplateBackground(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(templateBackgrounds)
+      .where(eq(templateBackgrounds.id, id))
+      .returning();
+    
+    return !!deleted;
+  }
+  
+  async selectTemplateBackground(templateId: number, backgroundId: number): Promise<PdfTemplate | undefined> {
+    // Get the background to retrieve its paths
+    const background = await this.getTemplateBackground(backgroundId);
+    if (!background) {
+      return undefined;
+    }
+    
+    // Update the template to use this background
+    return await this.updatePdfTemplate(templateId, {
+      backgroundPath: background.backgroundPath,
+      backgroundPreviewPath: background.previewPath,
+    });
   }
   
   // Custom Notifications methods
