@@ -293,6 +293,14 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
                 else if (propertyName === 'endDate') value = contractData.endDate;
                 else if (propertyName === 'duration') value = contractData.duration;
                 else if (propertyName === 'totalPrice') value = contractData.totalPrice;
+              } else if (objectName === 'driver') {
+                if (propertyName === 'name') value = contractData.driverName;
+                else if (propertyName === 'firstName') value = contractData.driverFirstName;
+                else if (propertyName === 'lastName') value = contractData.driverLastName;
+                else if (propertyName === 'email') value = contractData.driverEmail;
+                else if (propertyName === 'phone') value = contractData.driverPhone;
+                else if (propertyName === 'licenseNumber') value = contractData.driverLicenseNumber;
+                else if (propertyName === 'licenseExpiry') value = contractData.driverLicenseExpiry;
               }
               
               // If value is still empty, check direct properties as a fallback
@@ -319,6 +327,13 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
               else if (source === 'customerPostalCode') value = contractData.customerPostalCode;
               else if (source === 'customerPhone') value = contractData.customerPhone;
               else if (source === 'driverLicense') value = contractData.driverLicense;
+              else if (source === 'driverName') value = contractData.driverName;
+              else if (source === 'driverFirstName') value = contractData.driverFirstName;
+              else if (source === 'driverLastName') value = contractData.driverLastName;
+              else if (source === 'driverEmail') value = contractData.driverEmail;
+              else if (source === 'driverPhone') value = contractData.driverPhone;
+              else if (source === 'driverLicenseNumber') value = contractData.driverLicenseNumber;
+              else if (source === 'driverLicenseExpiry') value = contractData.driverLicenseExpiry;
               else if (source === 'contractNumber') value = contractData.contractNumber;
               else if (source === 'contractDate') value = contractData.contractDate;
               else if (source === 'licensePlate') value = contractData.licensePlate;
@@ -711,6 +726,16 @@ export function prepareContractData(reservation: Reservation) {
     driverLicenseNumber: "Unknown",
   };
   
+  // Extract driver information if available
+  const driver = (reservation as any).driver || null;
+  const driverName = driver?.displayName || "";
+  const driverFirstName = driver?.firstName || "";
+  const driverLastName = driver?.lastName || "";
+  const driverEmail = driver?.email || "";
+  const driverPhone = driver?.phone || "";
+  const driverLicenseNumber = driver?.driverLicenseNumber || "";
+  const driverLicenseExpiry = driver?.licenseExpiry || "";
+  
   // Calculate duration in days
   const startDate = new Date(reservation.startDate);
   const endDate = reservation.endDate && reservation.endDate.trim() !== '' 
@@ -741,6 +766,13 @@ export function prepareContractData(reservation: Reservation) {
     customerPostalCode: customer.postalCode || "Unknown",
     customerPhone: customer.phone || "Unknown",
     driverLicense: customer.driverLicenseNumber || "Unknown",
+    driverName,
+    driverFirstName,
+    driverLastName,
+    driverEmail,
+    driverPhone,
+    driverLicenseNumber,
+    driverLicenseExpiry,
     startDate: format(startDate, 'MMMM d, yyyy'),
     endDate: endDate ? format(endDate, 'MMMM d, yyyy') : 'To be determined',
     duration: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,

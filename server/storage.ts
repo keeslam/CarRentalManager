@@ -712,11 +712,12 @@ export class MemStorage implements IStorage {
   async getAllReservations(): Promise<Reservation[]> {
     const reservations = Array.from(this.reservations.values());
     
-    // Populate vehicle and customer data
+    // Populate vehicle, customer, and driver data
     return reservations.map(reservation => ({
       ...reservation,
       vehicle: this.vehicles.get(reservation.vehicleId),
-      customer: this.customers.get(reservation.customerId)
+      customer: this.customers.get(reservation.customerId),
+      driver: reservation.driverId ? this.drivers.get(reservation.driverId) : undefined
     }));
   }
 
@@ -726,11 +727,12 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    // Populate vehicle and customer data
+    // Populate vehicle, customer, and driver data
     return {
       ...reservation,
       vehicle: this.vehicles.get(reservation.vehicleId),
-      customer: this.customers.get(reservation.customerId)
+      customer: this.customers.get(reservation.customerId),
+      driver: reservation.driverId ? this.drivers.get(reservation.driverId) : undefined
     };
   }
 
@@ -744,7 +746,8 @@ export class MemStorage implements IStorage {
     return {
       ...reservation,
       vehicle: this.vehicles.get(reservation.vehicleId),
-      customer: this.customers.get(reservation.customerId)
+      customer: this.customers.get(reservation.customerId),
+      driver: reservation.driverId ? this.drivers.get(reservation.driverId) : undefined
     };
   }
 
@@ -766,7 +769,8 @@ export class MemStorage implements IStorage {
     return {
       ...updatedReservation,
       vehicle: this.vehicles.get(updatedReservation.vehicleId),
-      customer: this.customers.get(updatedReservation.customerId)
+      customer: this.customers.get(updatedReservation.customerId),
+      driver: updatedReservation.driverId ? this.drivers.get(updatedReservation.driverId) : undefined
     };
   }
   
