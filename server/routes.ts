@@ -5255,22 +5255,55 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      const backgroundPath = getRelativePath(req.file.path);
-      console.log('📤 Saving background to library:', backgroundPath);
+      // Save file to filesystem (same pattern as regular background upload)
+      console.log('💾 Saving background to library filesystem');
+      
+      const templatesDir = path.join(uploadsDir, 'templates');
+      const ext = path.extname(req.file.originalname);
+      
+      // Generate unique filename with timestamp
+      const timestamp = Date.now();
+      const safeName = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const filename = `template_${templateId}_${safeName}_${timestamp}${ext}`;
+      const filePath = path.join(templatesDir, filename);
+      
+      console.log(`📤 Saving background to: ${filePath}`);
+      
+      // Write file from buffer (memory storage)
+      await fs.promises.writeFile(filePath, req.file.buffer);
+      
+      // Verify file was written
+      const fileExists = fs.existsSync(filePath);
+      if (!fileExists) {
+        throw new Error('File write verification failed');
+      }
+      
+      const stats = fs.statSync(filePath);
+      console.log(`✅ Background saved successfully (${stats.size} bytes)`);
+      
+      // Store relative path
+      const backgroundPath = path.relative(process.cwd(), filePath);
+      console.log(`📝 Storing relative path in database: ${backgroundPath}`);
 
       // Generate preview image if uploaded file is a PDF
       let previewPath = backgroundPath;
-      if (req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf')) {
-        console.log('🖼️ PDF detected, generating preview image...');
-        const { convertPdfToImage } = await import("./utils/pdf-to-image");
-        
-        const pdfPath = path.join(process.cwd(), backgroundPath);
-        const previewFilename = `${path.basename(req.file.path, path.extname(req.file.path))}_preview.png`;
-        const previewFullPath = path.join(path.dirname(req.file.path), previewFilename);
-        
-        await convertPdfToImage(pdfPath, previewFullPath);
-        previewPath = getRelativePath(previewFullPath);
-        console.log('✅ Preview image generated:', previewPath);
+      if (ext.toLowerCase() === '.pdf') {
+        try {
+          console.log('🖼️ PDF detected, generating preview image...');
+          const { convertPdfToPng } = await import('./utils/pdf-to-image');
+          const previewFilename = `template_${templateId}_${safeName}_${timestamp}_preview.png`;
+          const previewFullPath = path.join(templatesDir, previewFilename);
+          
+          await convertPdfToPng(filePath, previewFullPath);
+          previewPath = path.relative(process.cwd(), previewFullPath);
+          console.log(`✅ Preview image generated: ${previewPath}`);
+        } catch (error) {
+          console.error('⚠️ Failed to generate preview image:', error);
+          // Continue without preview
+        }
+      } else {
+        // For image files, use same file for preview
+        console.log('🖼️ Image file detected, using same file for preview');
       }
 
       // Add background to library
