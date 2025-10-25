@@ -571,6 +571,22 @@ export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates)
 export type PdfTemplate = typeof pdfTemplates.$inferSelect;
 export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
 
+// Template Backgrounds table - per-template background library
+export const templateBackgrounds = pgTable("template_backgrounds", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull().references(() => pdfTemplates.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(), // User-friendly label for the background
+  backgroundPath: text("background_path").notNull(), // Path to PDF file
+  previewPath: text("preview_path").notNull(), // Path to PNG preview
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTemplateBackgroundSchema = createInsertSchema(templateBackgrounds)
+  .omit({ id: true, createdAt: true });
+
+export type TemplateBackground = typeof templateBackgrounds.$inferSelect;
+export type InsertTemplateBackground = z.infer<typeof insertTemplateBackgroundSchema>;
+
 // Custom Notifications table
 export const customNotifications = pgTable("custom_notifications", {
   id: serial("id").primaryKey(),
