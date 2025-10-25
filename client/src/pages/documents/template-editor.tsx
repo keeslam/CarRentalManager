@@ -58,6 +58,15 @@ interface Template {
   fields: TemplateField[];
 }
 
+interface TemplateBackground {
+  id: number;
+  templateId: number;
+  name: string;
+  backgroundPath: string;
+  previewPath: string;
+  createdAt: string;
+}
+
 interface HistoryState {
   fields: TemplateField[];
   timestamp: number;
@@ -107,6 +116,8 @@ const PDFTemplateEditor = () => {
   const [selectionBox, setSelectionBox] = useState<{start: {x: number, y: number}, end: {x: number, y: number}} | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
+  const [isBackgroundLibraryOpen, setIsBackgroundLibraryOpen] = useState(false);
+  const [backgroundName, setBackgroundName] = useState('');
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
@@ -243,6 +254,91 @@ const PDFTemplateEditor = () => {
       toast({
         title: "Error",
         description: `Failed to remove background: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Background Library query and mutations
+  const { data: backgroundLibrary = [], refetch: refetchBackgrounds } = useQuery<TemplateBackground[]>({
+    queryKey: ['/api/pdf-templates', currentTemplate?.id, 'backgrounds'],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!currentTemplate && isBackgroundLibraryOpen,
+  });
+
+  const addBackgroundToLibraryMutation = useMutation({
+    mutationFn: async ({ templateId, file, name }: { templateId: number, file: File, name: string }) => {
+      const formData = new FormData();
+      formData.append('background', file);
+      formData.append('name', name);
+      const res = await fetch(`/api/pdf-templates/${templateId}/backgrounds`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Upload failed');
+      }
+      return await res.json();
+    },
+    onSuccess: async () => {
+      await refetchBackgrounds();
+      toast({
+        title: "Success",
+        description: "Background added to library",
+      });
+      setBackgroundName('');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add background: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const selectBackgroundMutation = useMutation({
+    mutationFn: async ({ templateId, backgroundId }: { templateId: number, backgroundId: number }) => {
+      const res = await apiRequest('POST', `/api/pdf-templates/${templateId}/backgrounds/${backgroundId}/select`);
+      return await res.json();
+    },
+    onSuccess: async (updatedTemplate) => {
+      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
+        setCurrentTemplate(updatedTemplate);
+      }
+      toast({
+        title: "Success",
+        description: "Background selected",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to select background: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteBackgroundMutation = useMutation({
+    mutationFn: async ({ templateId, backgroundId }: { templateId: number, backgroundId: number }) => {
+      const res = await apiRequest('DELETE', `/api/pdf-templates/${templateId}/backgrounds/${backgroundId}`);
+      return await res.json();
+    },
+    onSuccess: async () => {
+      await refetchBackgrounds();
+      toast({
+        title: "Success",
+        description: "Background deleted from library",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete background: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -1079,25 +1175,15 @@ const PDFTemplateEditor = () => {
                 <Button onClick={() => handleRedo()} disabled={historyIndex >= history.length - 1} variant="outline" size="sm" title="Redo (Ctrl+Y)">
                   <Redo2 className="h-4 w-4" />
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Background
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleUploadBackground} disabled={!currentTemplate || uploadBackgroundMutation.isPending}>
-                      Upload Custom Background
-                    </DropdownMenuItem>
-                    {currentTemplate?.backgroundPath && (
-                      <DropdownMenuItem onClick={handleRemoveBackground} disabled={removeBackgroundMutation.isPending}>
-                        Remove Custom Background
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsBackgroundLibraryOpen(true)}
+                  disabled={!currentTemplate}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Background Library
+                </Button>
                 <Button variant="outline" onClick={handleDeleteTemplate} disabled={saveTemplateMutation.isPending || deleteTemplateMutation.isPending}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -1839,12 +1925,175 @@ const PDFTemplateEditor = () => {
         )}
       </div>
       
+      {/* Background Library Dialog */}
+      <Dialog open={isBackgroundLibraryOpen} onOpenChange={setIsBackgroundLibraryOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Background Library</DialogTitle>
+            <DialogDescription>
+              Select or upload backgrounds for this template
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Upload New Background */}
+            <div className="border rounded-lg p-4 bg-muted/20">
+              <h3 className="text-sm font-medium mb-3">Add New Background</h3>
+              <div className="flex gap-3">
+                <Input
+                  placeholder="Background name..."
+                  value={backgroundName}
+                  onChange={(e) => setBackgroundName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => backgroundInputRef.current?.click()}
+                  disabled={!backgroundName.trim() || addBackgroundToLibraryMutation.isPending}
+                >
+                  {addBackgroundToLibraryMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Upload
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Supports PDF, JPG, and PNG files
+              </p>
+            </div>
+
+            {/* Background Gallery */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Available Backgrounds ({backgroundLibrary.length})</h3>
+              {backgroundLibrary.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No backgrounds in library yet</p>
+                  <p className="text-sm">Upload your first background above</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {backgroundLibrary.map((bg) => (
+                    <div 
+                      key={bg.id}
+                      className="relative group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => {
+                        if (!currentTemplate) return;
+                        selectBackgroundMutation.mutate({ 
+                          templateId: currentTemplate.id, 
+                          backgroundId: bg.id 
+                        });
+                        setIsBackgroundLibraryOpen(false);
+                      }}
+                    >
+                      {/* Thumbnail */}
+                      <div className="aspect-[1/1.414] bg-gray-100 relative overflow-hidden">
+                        <img 
+                          src={`/${bg.previewPath}?_cb=${Date.now()}`} 
+                          alt={bg.name}
+                          className="w-full h-full object-contain"
+                        />
+                        {/* Selected indicator */}
+                        {currentTemplate?.backgroundPath === bg.backgroundPath && (
+                          <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center">
+                            <div className="bg-blue-500 text-white px-3 py-1 rounded text-sm font-medium">
+                              Active
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Info */}
+                      <div className="p-3 bg-white">
+                        <p className="font-medium text-sm truncate">{bg.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {bg.backgroundPath.split('/').pop()}
+                        </p>
+                      </div>
+
+                      {/* Delete button */}
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!currentTemplate) return;
+                          if (confirm(`Delete "${bg.name}"?`)) {
+                            deleteBackgroundMutation.mutate({
+                              templateId: currentTemplate.id,
+                              backgroundId: bg.id
+                            });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBackgroundLibraryOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Hidden file input for background upload */}
       <input
         ref={backgroundInputRef}
         type="file"
         accept="image/jpeg,image/jpg,image/png,application/pdf"
-        onChange={handleBackgroundFileChange}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file || !currentTemplate) return;
+
+          // Validate file type
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+          if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().match(/\.(jpg|jpeg|png|pdf)$/)) {
+            toast({
+              title: "Invalid file type",
+              description: "Please upload a JPG, PNG, or PDF file",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Validate file size (max 10MB)
+          const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+          if (file.size > maxSize) {
+            toast({
+              title: "File too large",
+              description: "Please upload a file smaller than 10MB",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // If in library dialog with name, add to library
+          if (backgroundName.trim()) {
+            addBackgroundToLibraryMutation.mutate({ 
+              templateId: currentTemplate.id, 
+              file, 
+              name: backgroundName.trim() 
+            });
+          } else {
+            // Otherwise use old upload behavior
+            uploadBackgroundMutation.mutate({ templateId: currentTemplate.id, file });
+          }
+          
+          // Reset input
+          if (backgroundInputRef.current) {
+            backgroundInputRef.current.value = '';
+          }
+        }}
         style={{ display: 'none' }}
       />
     </div>
