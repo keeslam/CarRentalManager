@@ -46,6 +46,7 @@ import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ExpenseForm } from "@/components/expenses/expense-form";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -70,6 +71,7 @@ export default function ExpensesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
@@ -116,6 +118,12 @@ export default function ExpensesIndex() {
   const handleViewExpense = (expense: Expense) => {
     setSelectedExpense(expense);
     setViewDialogOpen(true);
+  };
+  
+  const handleEditExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setViewDialogOpen(false);
+    setEditDialogOpen(true);
   };
   
   const handleDeleteExpense = (expense: Expense) => {
@@ -646,13 +654,12 @@ export default function ExpensesIndex() {
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
                   variant="outline" 
-                  asChild
+                  onClick={() => handleEditExpense(selectedExpense)}
                   className="flex-1"
+                  data-testid="button-edit-from-dialog"
                 >
-                  <Link href={`/expenses/edit/${selectedExpense.id}`}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Expense
-                  </Link>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Expense
                 </Button>
                 <Button 
                   variant="destructive"
@@ -673,6 +680,38 @@ export default function ExpensesIndex() {
                 </Button>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Expense Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Update the expense details below
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedExpense && (
+            <ExpenseForm
+              editMode={true}
+              initialData={{
+                id: selectedExpense.id,
+                vehicleId: selectedExpense.vehicleId,
+                category: selectedExpense.category,
+                amount: Number(selectedExpense.amount),
+                date: selectedExpense.date,
+                description: selectedExpense.description || "",
+                receiptUrl: selectedExpense.receiptUrl || "",
+              }}
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                setSelectedExpense(null);
+                queryClient.invalidateQueries({ queryKey: expensesQueryKey });
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
