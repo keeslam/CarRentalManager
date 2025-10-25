@@ -5108,24 +5108,34 @@ export async function registerRoutes(app: Express): Promise<void> {
         const filename = `template_${id}_background${ext}`;
         const filePath = path.join(templatesDir, filename);
         
-        console.log(`Writing file to: ${filePath}`);
-        console.log(`File size: ${req.file.buffer.length} bytes`);
+        console.log(`📤 UPLOAD DETAILS:`);
+        console.log(`   - Working directory: ${process.cwd()}`);
+        console.log(`   - Uploads directory: ${uploadsDir}`);
+        console.log(`   - Templates directory: ${templatesDir}`);
+        console.log(`   - Target file path (absolute): ${filePath}`);
+        console.log(`   - File size: ${req.file.buffer.length} bytes`);
         
         await fs.promises.writeFile(filePath, req.file.buffer);
         
         // Verify file was written
         const fileExists = fs.existsSync(filePath);
-        console.log(`File exists after write: ${fileExists}`);
+        console.log(`   - File exists after write: ${fileExists}`);
         
         if (fileExists) {
           const stats = fs.statSync(filePath);
-          console.log(`File size on disk: ${stats.size} bytes`);
-          console.log(`File permissions: ${stats.mode.toString(8)}`);
+          console.log(`   - File size on disk: ${stats.size} bytes`);
+          console.log(`   - File permissions: ${stats.mode.toString(8)}`);
+          console.log(`   - Owner: UID ${stats.uid}, GID ${stats.gid}`);
+          
+          // List all files in templates directory
+          const allFiles = fs.readdirSync(templatesDir);
+          console.log(`   - All files in templates dir: ${allFiles.join(', ')}`);
         }
         
         backgroundPath = path.relative(process.cwd(), filePath);
         
-        console.log(`Uploaded background to filesystem: ${backgroundPath}`);
+        console.log(`   - Relative path (saved to DB): ${backgroundPath}`);
+        console.log(`✅ Upload complete`);
       }
 
       // Update template with new background path
