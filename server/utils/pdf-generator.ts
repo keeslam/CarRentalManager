@@ -344,8 +344,10 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
               else if (source === 'endDate') value = contractData.endDate;
               else if (source === 'duration') value = contractData.duration;
               else if (source === 'totalPrice') value = contractData.totalPrice;
-              // Direct access to contract data properties
-              else if (contractData[source] !== undefined) value = contractData[source];
+              // Direct access to contract data properties with type safety
+              else if (source in contractData) {
+                value = String(contractData[source as keyof typeof contractData]);
+              }
               else if (field.name) value = field.name; // Use name as fallback
               else value = source || 'Field'; // Second fallback
             }
