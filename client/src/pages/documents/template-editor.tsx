@@ -261,7 +261,7 @@ const PDFTemplateEditor = () => {
 
   // Background Library query and mutations
   const { data: backgroundLibrary = [], refetch: refetchBackgrounds } = useQuery<TemplateBackground[]>({
-    queryKey: ['/api/pdf-templates', currentTemplate?.id, 'backgrounds'],
+    queryKey: [`/api/pdf-templates/${currentTemplate?.id}/backgrounds`],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!currentTemplate && isBackgroundLibraryOpen,
   });
