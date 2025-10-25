@@ -5117,9 +5117,30 @@ export async function registerRoutes(app: Express): Promise<void> {
       const backgroundPath = path.relative(process.cwd(), filePath);
       console.log(`📝 Storing relative path in database: ${backgroundPath}`);
 
-      // Update template with new background path
+      // If PDF, generate preview image for editor
+      let backgroundPreviewPath: string | null = null;
+      if (ext.toLowerCase() === '.pdf') {
+        try {
+          console.log('🖼️ PDF detected, generating preview image...');
+          const { convertPdfToPng, getPreviewPath } = await import('./utils/pdf-to-image');
+          const previewPath = path.join(templatesDir, `template_${id}_background_preview.png`);
+          await convertPdfToPng(filePath, previewPath);
+          backgroundPreviewPath = path.relative(process.cwd(), previewPath);
+          console.log(`✅ Preview image generated: ${backgroundPreviewPath}`);
+        } catch (error) {
+          console.error('⚠️ Failed to generate preview image:', error);
+          // Continue without preview - PDF will still work for generation
+        }
+      } else {
+        // For image files (PNG/JPG), use the same file for preview
+        backgroundPreviewPath = backgroundPath;
+        console.log('🖼️ Image file detected, using same file for preview');
+      }
+
+      // Update template with background and preview paths
       const updatedTemplate = await storage.updatePdfTemplate(id, {
-        backgroundPath
+        backgroundPath,
+        backgroundPreviewPath
       });
 
       if (!updatedTemplate) {
@@ -5160,10 +5181,22 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
 
-      // Update template to remove background path (will use default)
+      // Delete the preview image if it exists
+      if ((template as any).backgroundPreviewPath) {
+        try {
+          const previewPath = path.join(process.cwd(), (template as any).backgroundPreviewPath);
+          await fs.promises.unlink(previewPath);
+          console.log(`🗑️ Deleted preview image from filesystem: ${previewPath}`);
+        } catch (error) {
+          console.error("Error deleting preview image:", error);
+        }
+      }
+
+      // Update template to remove background paths (will use default)
       const updatedTemplate = await storage.updatePdfTemplate(id, {
-        backgroundPath: null
-      });
+        backgroundPath: null,
+        backgroundPreviewPath: null
+      } as any);
 
       if (!updatedTemplate) {
         return res.status(404).json({ message: "Failed to update template" });

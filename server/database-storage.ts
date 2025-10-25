@@ -1189,6 +1189,11 @@ export class DatabaseStorage implements IStorage {
         console.log('⚠️ backgroundPath is undefined - will not be updated');
       }
       
+      if ('backgroundPreviewPath' in templateData) {
+        console.log('✅ Converting backgroundPreviewPath to background_preview_path:', (templateData as any).backgroundPreviewPath);
+        updateData.background_preview_path = (templateData as any).backgroundPreviewPath;
+      }
+      
       // Always update timestamp
       updateData.updated_at = new Date();
       
@@ -1217,6 +1222,10 @@ export class DatabaseStorage implements IStorage {
       
       if (updateData.background_path !== undefined) {
         setClauses.push(sql`background_path = ${updateData.background_path}`);
+      }
+      
+      if (updateData.background_preview_path !== undefined) {
+        setClauses.push(sql`background_preview_path = ${updateData.background_preview_path}`);
       }
       
       // Always update timestamp
