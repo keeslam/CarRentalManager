@@ -4971,6 +4971,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         delete requestBody.updatedAt;
       }
       
+      // CRITICAL: Preserve existing background_path unless explicitly being updated
+      // Background should only be changed via upload/remove background endpoints
+      if (!requestBody.hasOwnProperty('background_path') || requestBody.background_path === undefined) {
+        delete requestBody.background_path;
+      }
+      
       const templateData = {
         ...requestBody,
         updatedBy: user ? user.username : null
