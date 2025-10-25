@@ -49,6 +49,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [editingCheckId, setEditingCheckId] = useState<number | null>(propEditingCheckId || null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(initialReservationId || null);
+  const [loadingExistingCheck, setLoadingExistingCheck] = useState(false);
   const [diagramTemplate, setDiagramTemplate] = useState<DiagramTemplate | null>(null);
   const [markers, setMarkers] = useState<DamageMarker[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<DamageMarker | null>(null);
@@ -302,6 +303,24 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   // Fetch reservations
   const { data: reservations = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations'],
+  });
+
+  // Fetch existing damage checks for selected vehicle/reservation
+  const { data: existingChecks = [] } = useQuery<any[]>({
+    queryKey: ['/api/interactive-damage-checks', 'vehicle', selectedVehicleId, selectedReservationId],
+    queryFn: async () => {
+      if (!selectedVehicleId) return [];
+      
+      let url = `/api/interactive-damage-checks?vehicleId=${selectedVehicleId}`;
+      if (selectedReservationId) {
+        url += `&reservationId=${selectedReservationId}`;
+      }
+      
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedVehicleId,
   });
 
   // Fetch matching diagram when vehicle is selected
@@ -566,29 +585,20 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault(); // Prevent scrolling
-    console.log('🖐️ Touch start - Drawing mode:', isDrawing);
     
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.log('❌ Canvas not found');
-      return;
-    }
+    if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
     const xPercent = (touch.clientX - rect.left) / rect.width;
     const yPercent = (touch.clientY - rect.top) / rect.height;
     
-    console.log('📍 Touch position:', { xPercent, yPercent, canvasWidth: canvas.width, canvasHeight: canvas.height });
-    
     setTouchStartPos({ x: xPercent, y: yPercent });
     setHasTouchMoved(false);
 
     if (isDrawing) {
-      console.log('✏️ Starting to draw path');
       setCurrentPath(`${xPercent},${yPercent}`);
-    } else {
-      console.log('👆 Tap mode (not drawing)');
     }
   };
 
@@ -597,11 +607,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     
     setHasTouchMoved(true);
     
-    if (!isDrawing || !currentPath) {
-      if (!isDrawing) console.log('⚠️ Touch move but not in drawing mode');
-      if (!currentPath) console.log('⚠️ Touch move but no current path');
-      return;
-    }
+    if (!isDrawing || !currentPath) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -610,7 +616,6 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     const touch = e.touches[0];
     const xPercent = (touch.clientX - rect.left) / rect.width;
     const yPercent = (touch.clientY - rect.top) / rect.height;
-    console.log('✏️ Drawing at:', { xPercent, yPercent });
     setCurrentPath(prev => `${prev} ${xPercent},${yPercent}`);
 
     // Draw preview
@@ -694,6 +699,83 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
   const clearDrawings = () => {
     setDrawingPaths([]);
+  };
+
+  // Load an existing damage check
+  const loadExistingCheck = async (checkId: number) => {
+    if (!checkId) return;
+    
+    setLoadingExistingCheck(true);
+    try {
+      const response = await fetch(`/api/interactive-damage-checks/${checkId}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load damage check');
+      }
+
+      const savedCheck = await response.json();
+      
+      // Set editing mode
+      setEditingCheckId(checkId);
+      
+      // Populate form fields
+      setCheckType(savedCheck.checkType);
+      setFuelLevel(savedCheck.fuelLevel || '');
+      setMileage(savedCheck.mileage || '');
+      setNotes(savedCheck.notes || '');
+
+      // Load damage markers
+      if (savedCheck.damageMarkers) {
+        const loadedMarkers = typeof savedCheck.damageMarkers === 'string'
+          ? JSON.parse(savedCheck.damageMarkers)
+          : savedCheck.damageMarkers;
+        setMarkers(loadedMarkers || []);
+      }
+
+      // Load drawing paths
+      if (savedCheck.drawingPaths) {
+        const loadedPaths = typeof savedCheck.drawingPaths === 'string'
+          ? JSON.parse(savedCheck.drawingPaths)
+          : savedCheck.drawingPaths;
+        setDrawingPaths(loadedPaths || []);
+      }
+
+      // Load checklist data
+      if (savedCheck.checklistData) {
+        const loadedChecklist = typeof savedCheck.checklistData === 'string'
+          ? JSON.parse(savedCheck.checklistData)
+          : savedCheck.checklistData;
+        setChecklistItems({
+          interior: loadedChecklist.interior || checklistItems.interior,
+          exterior: loadedChecklist.exterior || checklistItems.exterior,
+          delivery: loadedChecklist.delivery || checklistItems.delivery,
+        });
+      }
+
+      // Load signatures
+      if (savedCheck.renterSignature) {
+        setRenterSignature(savedCheck.renterSignature);
+      }
+      if (savedCheck.customerSignature) {
+        setCustomerSignature(savedCheck.customerSignature);
+      }
+
+      toast({
+        title: "Check Loaded",
+        description: `Loaded damage check from ${new Date(savedCheck.checkDate || savedCheck.createdAt).toLocaleDateString()}`,
+      });
+    } catch (error) {
+      console.error('Error loading damage check:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load damage check",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingExistingCheck(false);
+    }
   };
 
   // Signature handling
@@ -948,7 +1030,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
         {/* Vehicle Selection - Full Width */}
         <Card className="p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <Label>Vehicle *</Label>
               <VehicleSelector
@@ -1010,6 +1092,66 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               </Button>
             </div>
           </div>
+
+          {/* Load Previous Check Dropdown */}
+          {existingChecks.length > 0 && (
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm text-gray-600">Load Previous Damage Check</Label>
+                  <Select 
+                    value={editingCheckId?.toString() || "new"} 
+                    onValueChange={(val) => {
+                      if (val === "new") {
+                        setEditingCheckId(null);
+                        setMarkers([]);
+                        setDrawingPaths([]);
+                        setFuelLevel("");
+                        setMileage("");
+                        setNotes("");
+                        setRenterSignature(null);
+                        setCustomerSignature(null);
+                      } else {
+                        loadExistingCheck(parseInt(val));
+                      }
+                    }}
+                    disabled={loadingExistingCheck}
+                  >
+                    <SelectTrigger className="w-full" data-testid="select-previous-check">
+                      <SelectValue placeholder="Create new check..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">
+                        <span className="font-medium">+ Create New Check</span>
+                      </SelectItem>
+                      {existingChecks
+                        .sort((a, b) => new Date(b.checkDate || b.createdAt).getTime() - new Date(a.checkDate || a.createdAt).getTime())
+                        .map((check) => {
+                          const date = new Date(check.checkDate || check.createdAt).toLocaleDateString();
+                          const damageCount = check.damageMarkers ? JSON.parse(check.damageMarkers).length : 0;
+                          return (
+                            <SelectItem key={check.id} value={check.id.toString()}>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-xs ${check.checkType === 'pickup' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {check.checkType}
+                                </span>
+                                <span>{date}</span>
+                                {damageCount > 0 && (
+                                  <span className="text-xs text-gray-500">({damageCount} damage points)</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {existingChecks.length} check(s) found
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Diagram Canvas - Full Width */}
