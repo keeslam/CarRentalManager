@@ -16,6 +16,7 @@ import {
   insertDocumentSchema,
   insertUserSchema,
   insertPdfTemplateSchema,
+  insertTemplateBackgroundSchema,
   insertDriverSchema,
   insertDamageCheckTemplateSchema,
   createPlaceholderReservationSchema,
@@ -5207,6 +5208,163 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.error("Error removing template background:", error);
       res.status(500).json({ 
         message: "Failed to remove template background", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // ==================== TEMPLATE BACKGROUND LIBRARY ROUTES ====================
+  // Get all backgrounds for a template
+  app.get("/api/pdf-templates/:id/backgrounds", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      if (isNaN(templateId)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      const backgrounds = await storage.getTemplateBackgrounds(templateId);
+      res.json(backgrounds);
+    } catch (error) {
+      console.error("Error fetching template backgrounds:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch template backgrounds", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Add a background to the template library
+  app.post("/api/pdf-templates/:id/backgrounds", requireAuth, templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      if (isNaN(templateId)) {
+        return res.status(400).json({ message: "Invalid template ID" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { name } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Background name is required" });
+      }
+
+      const template = await storage.getPdfTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const backgroundPath = getRelativePath(req.file.path);
+      console.log('📤 Saving background to library:', backgroundPath);
+
+      // Generate preview image if uploaded file is a PDF
+      let previewPath = backgroundPath;
+      if (req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf')) {
+        console.log('🖼️ PDF detected, generating preview image...');
+        const { convertPdfToImage } = await import("./utils/pdf-to-image");
+        
+        const pdfPath = path.join(process.cwd(), backgroundPath);
+        const previewFilename = `${path.basename(req.file.path, path.extname(req.file.path))}_preview.png`;
+        const previewFullPath = path.join(path.dirname(req.file.path), previewFilename);
+        
+        await convertPdfToImage(pdfPath, previewFullPath);
+        previewPath = getRelativePath(previewFullPath);
+        console.log('✅ Preview image generated:', previewPath);
+      }
+
+      // Add background to library
+      const background = await storage.createTemplateBackground({
+        templateId,
+        name,
+        backgroundPath,
+        previewPath
+      });
+
+      res.status(201).json(background);
+    } catch (error) {
+      console.error("Error adding background to library:", error);
+      res.status(400).json({ 
+        message: "Failed to add background to library", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Select a background from the library (set as active)
+  app.post("/api/pdf-templates/:id/backgrounds/:backgroundId/select", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const backgroundId = parseInt(req.params.backgroundId);
+      
+      if (isNaN(templateId) || isNaN(backgroundId)) {
+        return res.status(400).json({ message: "Invalid template or background ID" });
+      }
+
+      const updatedTemplate = await storage.selectTemplateBackground(templateId, backgroundId);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Template or background not found" });
+      }
+
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error selecting background:", error);
+      res.status(500).json({ 
+        message: "Failed to select background", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Delete a background from the library
+  app.delete("/api/pdf-templates/:id/backgrounds/:backgroundId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const backgroundId = parseInt(req.params.backgroundId);
+      
+      if (isNaN(templateId) || isNaN(backgroundId)) {
+        return res.status(400).json({ message: "Invalid template or background ID" });
+      }
+
+      // Get background to retrieve file paths before deletion
+      const background = await storage.getTemplateBackground(backgroundId);
+      if (!background) {
+        return res.status(404).json({ message: "Background not found" });
+      }
+
+      // Delete the background files from filesystem
+      try {
+        const backgroundPath = path.join(process.cwd(), background.backgroundPath);
+        await fs.promises.unlink(backgroundPath);
+        console.log(`🗑️ Deleted background file: ${backgroundPath}`);
+      } catch (error) {
+        console.error("Error deleting background file:", error);
+      }
+
+      // Delete the preview image if different from background
+      if (background.previewPath !== background.backgroundPath) {
+        try {
+          const previewPath = path.join(process.cwd(), background.previewPath);
+          await fs.promises.unlink(previewPath);
+          console.log(`🗑️ Deleted preview file: ${previewPath}`);
+        } catch (error) {
+          console.error("Error deleting preview file:", error);
+        }
+      }
+
+      // Delete from database
+      const deleted = await storage.deleteTemplateBackground(backgroundId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Background not found" });
+      }
+
+      res.json({ message: "Background deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting background:", error);
+      res.status(500).json({ 
+        message: "Failed to delete background", 
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
