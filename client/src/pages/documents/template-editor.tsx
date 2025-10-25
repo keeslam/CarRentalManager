@@ -54,6 +54,7 @@ interface Template {
   name: string;
   isDefault: boolean;
   backgroundPath?: string | null;
+  backgroundPreviewPath?: string | null; // PNG preview for PDF backgrounds
   fields: TemplateField[];
 }
 
@@ -1407,14 +1408,17 @@ const PDFTemplateEditor = () => {
                           height: `${842 * zoomLevel}px`,
                           margin: '0 auto',
                           backgroundImage: (() => {
-                            // Use filesystem path for template backgrounds (same as contract PDFs)
+                            // Use preview image for template backgrounds (PNG converted from PDF)
                             let bgUrl = contractBackground;
-                            if (currentTemplate?.backgroundPath) {
-                              // Path is relative from working directory (e.g., "uploads/templates/template_9_background.pdf")
+                            if (currentTemplate?.backgroundPreviewPath) {
+                              // Preview path is a PNG image that can be displayed in CSS
                               // Add cache-busting timestamp to prevent browser from showing stale cached background
-                              // Use Date.now() to force fresh load every render
+                              bgUrl = `/${currentTemplate.backgroundPreviewPath}?_cb=${Date.now()}`;
+                              console.log('🖼️ Loading preview image from:', bgUrl);
+                            } else if (currentTemplate?.backgroundPath) {
+                              // Fallback to backgroundPath for backwards compatibility (images only)
                               bgUrl = `/${currentTemplate.backgroundPath}?_cb=${Date.now()}`;
-                              console.log('🖼️ Loading background from:', bgUrl);
+                              console.log('🖼️ Loading background (legacy) from:', bgUrl);
                             }
                             return showGrid ? 
                               `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),

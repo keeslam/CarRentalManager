@@ -3,8 +3,9 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fs from 'fs';
 import path from 'path';
 
-// Set up PDF.js worker
+// Set up PDF.js worker to avoid runtime warnings
 const workerSrc = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs');
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 /**
  * Convert the first page of a PDF to a PNG image
