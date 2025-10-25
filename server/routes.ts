@@ -80,6 +80,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.log(`✅ Uploads directory exists: ${uploadsDir}`);
     }
     
+    // Check templates directory
+    const templatesDir = path.join(uploadsDir, 'templates');
+    if (fs.existsSync(templatesDir)) {
+      const files = fs.readdirSync(templatesDir);
+      console.log(`📁 Templates directory contains ${files.length} files:`, files);
+    } else {
+      console.log(`📁 Templates directory does not exist yet`);
+    }
+    
     // Test write permissions
     const testFile = path.join(uploadsDir, '.write-test');
     fs.writeFileSync(testFile, 'test');
@@ -5100,7 +5109,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         const filename = `template_${id}_background${ext}`;
         const filePath = path.join(templatesDir, filename);
         
+        console.log(`Writing file to: ${filePath}`);
+        console.log(`File size: ${req.file.buffer.length} bytes`);
+        
         await fs.promises.writeFile(filePath, req.file.buffer);
+        
+        // Verify file was written
+        const fileExists = fs.existsSync(filePath);
+        console.log(`File exists after write: ${fileExists}`);
+        
+        if (fileExists) {
+          const stats = fs.statSync(filePath);
+          console.log(`File size on disk: ${stats.size} bytes`);
+          console.log(`File permissions: ${stats.mode.toString(8)}`);
+        }
+        
         backgroundPath = path.relative(process.cwd(), filePath);
         
         console.log(`Uploaded background to filesystem: ${backgroundPath}`);
