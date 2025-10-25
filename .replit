@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["poppler", "imagemagick", "ghostscript"]
+packages = ["poppler", "imagemagick", "ghostscript", "cairo", "pango", "libuuid", "pkg-config"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -30,6 +30,10 @@ externalPort = 5000
 [[ports]]
 localPort = 37079
 externalPort = 8000
+
+[[ports]]
+localPort = 37731
+externalPort = 8081
 
 [[ports]]
 localPort = 38369
