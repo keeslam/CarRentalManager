@@ -68,15 +68,37 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
     try {
       // Use custom background if specified in template, otherwise use default
       const backgroundPath = template?.backgroundPath || 'uploads/templates/rental_contract_template.pdf';
-      const templatePath = path.join(process.cwd(), backgroundPath);
       const defaultTemplatePath = path.join(process.cwd(), 'uploads/templates/rental_contract_template.pdf');
       
-      console.log('Loading template from path:', templatePath);
+      console.log('Loading template from path:', backgroundPath);
       
-      // Check if the file exists
-      if (fs.existsSync(templatePath)) {
-        const templateBytes = fs.readFileSync(templatePath);
-        const ext = path.extname(templatePath).toLowerCase();
+      let templateBytes: Buffer;
+      let ext: string;
+      
+      // Check if path is object storage (starts with /) or local filesystem
+      if (backgroundPath.startsWith('/')) {
+        // Object storage path
+        console.log('Loading background from object storage');
+        const { ObjectStorageService } = await import('../objectStorage');
+        const objStorageService = new ObjectStorageService();
+        const file = objStorageService.getFile(backgroundPath);
+        const [fileBuffer] = await file.download();
+        templateBytes = Buffer.from(fileBuffer);
+        ext = path.extname(backgroundPath).toLowerCase();
+        console.log('Successfully loaded background from object storage');
+      } else {
+        // Local filesystem path
+        const templatePath = path.join(process.cwd(), backgroundPath);
+        if (fs.existsSync(templatePath)) {
+          templateBytes = fs.readFileSync(templatePath);
+          ext = path.extname(templatePath).toLowerCase();
+        } else {
+          throw new Error('Local template file not found');
+        }
+      }
+      
+      // Process the loaded template bytes
+      if (templateBytes) {
         
         // Handle PDF files
         if (ext === '.pdf') {

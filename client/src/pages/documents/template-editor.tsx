@@ -1389,8 +1389,8 @@ const PDFTemplateEditor = () => {
                           backgroundImage: showGrid ? 
                             `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
                              repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
-                             url(${currentTemplate?.backgroundPath ? `/${currentTemplate.backgroundPath}` : contractBackground})` :
-                            `url(${currentTemplate?.backgroundPath ? `/${currentTemplate.backgroundPath}` : contractBackground})`,
+                             url(${currentTemplate?.backgroundPath ? (currentTemplate.backgroundPath.startsWith('/') ? `/object-storage${currentTemplate.backgroundPath}` : `/${currentTemplate.backgroundPath}`) : contractBackground})` :
+                            `url(${currentTemplate?.backgroundPath ? (currentTemplate.backgroundPath.startsWith('/') ? `/object-storage${currentTemplate.backgroundPath}` : `/${currentTemplate.backgroundPath}`) : contractBackground})`,
                           backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, cover` : 'cover',
                           backgroundPosition: 'center',
                           backgroundRepeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',

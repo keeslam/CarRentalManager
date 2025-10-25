@@ -5009,24 +5009,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Configure multer for template background uploads
-  const templateBackgroundStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      const templatesDir = path.join(uploadsDir, 'templates');
-      if (!fs.existsSync(templatesDir)) {
-        fs.mkdirSync(templatesDir, { recursive: true });
-      }
-      cb(null, templatesDir);
-    },
-    filename: (req, file, cb) => {
-      const id = req.params.id;
-      const ext = path.extname(file.originalname);
-      cb(null, `template_${id}_background${ext}`);
-    }
-  });
-
+  // Configure multer for template background uploads (memory storage for object storage)
   const templateBackgroundUpload = multer({
-    storage: templateBackgroundStorage,
+    storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit for backgrounds
     },
@@ -5055,30 +5040,36 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Get template to verify it exists
       const template = await storage.getPdfTemplate(id);
       if (!template) {
-        // Clean up uploaded file if template doesn't exist
-        try {
-          await fs.promises.unlink(req.file.path);
-        } catch (error) {
-          console.error("Error cleaning up file:", error);
-        }
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Delete old background if it exists and is not the default
+      // Delete old background from object storage if it exists
       if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
-        const oldBackgroundPath = path.join(process.cwd(), template.backgroundPath);
         try {
-          await fs.promises.unlink(oldBackgroundPath);
+          await objectStorageService.deleteFile(template.backgroundPath);
+          console.log(`Deleted old background: ${template.backgroundPath}`);
         } catch (error) {
-          console.error("Error deleting old background:", error);
+          console.error("Error deleting old background from object storage:", error);
         }
       }
 
-      // Update template with new background path
-      const backgroundPath = path.relative(process.cwd(), req.file.path);
+      // Upload to object storage
+      const ext = path.extname(req.file.originalname);
+      const publicPaths = objectStorageService.getPublicObjectSearchPaths();
+      const basePath = publicPaths[0]; // Use first public path
+      const objectPath = `${basePath}/templates/template_${id}_background${ext}`;
       
+      await objectStorageService.uploadBuffer(
+        objectPath,
+        req.file.buffer,
+        req.file.mimetype
+      );
+      
+      console.log(`Uploaded background to object storage: ${objectPath}`);
+
+      // Update template with object storage path
       const updatedTemplate = await storage.updatePdfTemplate(id, {
-        backgroundPath
+        backgroundPath: objectPath
       });
 
       if (!updatedTemplate) {
@@ -5108,13 +5099,13 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Delete the custom background file if it exists and is not the default
+      // Delete the custom background file from object storage if it exists
       if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
-        const backgroundPath = path.join(process.cwd(), template.backgroundPath);
         try {
-          await fs.promises.unlink(backgroundPath);
+          await objectStorageService.deleteFile(template.backgroundPath);
+          console.log(`Deleted background from object storage: ${template.backgroundPath}`);
         } catch (error) {
-          console.error("Error deleting background file:", error);
+          console.error("Error deleting background from object storage:", error);
         }
       }
 
@@ -8561,6 +8552,26 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid template format", errors: error.errors });
       }
       res.status(500).json({ message: "Error importing PDF template" });
+    }
+  });
+
+  // Serve object storage files (for template backgrounds)
+  app.get('/object-storage/*', async (req, res) => {
+    try {
+      const objectPath = req.path.replace('/object-storage', '');
+      console.log(`Serving object storage file: ${objectPath}`);
+      
+      const file = objectStorageService.getFile(objectPath);
+      const [exists] = await file.exists();
+      
+      if (!exists) {
+        return res.status(404).send('File not found in object storage');
+      }
+      
+      await objectStorageService.downloadObject(file, res);
+    } catch (error) {
+      console.error('Error serving object storage file:', error);
+      res.status(500).send('Error loading file from object storage');
     }
   });
 
