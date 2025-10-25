@@ -9,13 +9,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Eye, Trash2, Wrench, CircleDot, AlertTriangle, Hammer, Fuel, Shield, FileText, Sparkles, Package, MoreHorizontal, Disc } from "lucide-react";
+import { Eye, Trash2, Wrench, CircleDot, AlertTriangle, Hammer, Fuel, Shield, FileText, Sparkles, Package, MoreHorizontal, Disc, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { Expense, Vehicle } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -56,12 +62,23 @@ interface ExpenseViewDialogProps {
   onSuccess?: () => void;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 export function ExpenseViewDialog({ vehicleId, children, onSuccess }: ExpenseViewDialogProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Get current page for a category, default to 1
+  const getCategoryPage = (category: string) => categoryPages[category] || 1;
+  
+  // Set page for a category
+  const setCategoryPage = (category: string, page: number) => {
+    setCategoryPages(prev => ({ ...prev, [category]: page }));
+  };
 
   // Fetch expenses for this vehicle
   const { data: expenses, isLoading: isLoadingExpenses } = useQuery<Expense[]>({
@@ -129,12 +146,20 @@ export function ExpenseViewDialog({ vehicleId, children, onSuccess }: ExpenseVie
 
   // Calculate total and category breakdown
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const expensesByCategory = allCategories.map(category => ({
-    category,
-    amount: expenses?.filter(expense => expense.category === category)
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0) || 0,
-    count: expenses?.filter(expense => expense.category === category).length || 0
-  })).filter(item => item.amount > 0);
+  
+  // Group expenses by category with sorting (most recent first)
+  const expensesByCategory = allCategories.map(category => {
+    const categoryExpenses = (expenses?.filter(expense => expense.category === category) || [])
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    return {
+      category,
+      expenses: categoryExpenses,
+      amount: categoryExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
+      count: categoryExpenses.length
+    };
+  }).filter(item => item.count > 0)
+    .sort((a, b) => b.amount - a.amount); // Sort categories by total amount
 
   // Custom trigger or default "View All Expenses" button
   const trigger = children || (
@@ -237,128 +262,169 @@ export function ExpenseViewDialog({ vehicleId, children, onSuccess }: ExpenseVie
             </Card>
           </div>
 
-          {/* Expenses Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingExpenses ? (
-                <div className="flex justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : filteredExpenses.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {expenses?.length === 0 ? "No expenses recorded for this vehicle" : "No expenses match your search criteria"}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>
+          {/* Expenses by Category - Collapsible */}
+          {isLoadingExpenses ? (
+            <div className="flex justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : expensesByCategory.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No expenses recorded for this vehicle
+            </div>
+          ) : (
+            <Accordion type="multiple" defaultValue={expensesByCategory.map(item => item.category)} className="w-full">
+              {expensesByCategory.map(({ category, expenses: categoryExpenses, amount, count }) => {
+                const currentPage = getCategoryPage(category);
+                const totalPages = Math.ceil(count / ITEMS_PER_PAGE);
+                const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+                const endIndex = startIndex + ITEMS_PER_PAGE;
+                const paginatedExpenses = categoryExpenses.slice(startIndex, endIndex);
+                
+                return (
+                  <AccordionItem key={category} value={category}>
+                    <AccordionTrigger className="hover:bg-gray-50 px-4 py-3 rounded-md">
+                      <div className="flex justify-between items-center w-full">
+                        <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2">
-                            {getExpenseIcon(expense.category)}
-                            <Badge variant="outline">{expense.category}</Badge>
+                            {getExpenseIcon(category)}
+                            <Badge variant="outline" className="text-sm font-medium">
+                              {category}
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{expense.description || 'No description'}</p>
-                            {expense.receiptUrl && (
-                              <p className="text-xs text-muted-foreground">Has receipt</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatDate(expense.date)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(expense.amount)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {expense.receiptUrl && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(expense.receiptUrl, '_blank')}
-                                className="h-8 w-8 p-0"
-                                title="View receipt"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
-                                  title="Delete expense"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Expense</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this {expense.category.toLowerCase()} expense of {formatCurrency(expense.amount)}?
-                                    This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteExpenseMutation.mutate(expense.id)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Category Breakdown */}
-          {expensesByCategory.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Expenses by Category</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {expensesByCategory.map(({ category, amount, count }) => (
-                    <div key={category} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {getExpenseIcon(category)}
-                        <span className="font-medium">{category}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {count} expense{count !== 1 ? 's' : ''}
-                        </Badge>
+                          <span className="text-gray-500 text-sm">
+                            ({count} expense{count !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+                        <div className="font-semibold text-right">
+                          {formatCurrency(amount)}
+                        </div>
                       </div>
-                      <span className="font-semibold">{formatCurrency(amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="pt-2 pb-4">
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Amount</TableHead>
+                                <TableHead className="text-center">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {paginatedExpenses.map((expense) => (
+                                <TableRow key={expense.id}>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{expense.description || 'No description'}</p>
+                                      {expense.receiptUrl && (
+                                        <p className="text-xs text-muted-foreground">Has receipt</p>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{formatDate(expense.date)}</TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    {formatCurrency(Number(expense.amount))}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      {expense.receiptUrl && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => expense.receiptUrl && window.open(expense.receiptUrl, '_blank')}
+                                          className="h-8 w-8 p-0"
+                                          title="View receipt"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                                            title="Delete expense"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete this {expense.category.toLowerCase()} expense of {formatCurrency(Number(expense.amount))}?
+                                              This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                                              className="bg-red-600 hover:bg-red-700"
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between mt-4 px-2">
+                            <p className="text-sm text-muted-foreground">
+                              Showing {startIndex + 1} to {Math.min(endIndex, count)} of {count} expenses
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCategoryPage(category, currentPage - 1)}
+                                disabled={currentPage === 1}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                              </Button>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                  <Button
+                                    key={page}
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setCategoryPage(category, page)}
+                                    className="w-8 h-8 p-0"
+                                  >
+                                    {page}
+                                  </Button>
+                                ))}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCategoryPage(category, currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                              >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           )}
         </div>
       </DialogContent>
