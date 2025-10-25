@@ -1407,17 +1407,12 @@ const PDFTemplateEditor = () => {
                           height: `${842 * zoomLevel}px`,
                           margin: '0 auto',
                           backgroundImage: (() => {
-                            // Extract the correct path for object storage files
+                            // Use filesystem path for template backgrounds (same as contract PDFs)
                             let bgUrl = contractBackground;
                             if (currentTemplate?.backgroundPath) {
-                              // If path contains /replit-objstore-, extract just the /public/... part
-                              const match = currentTemplate.backgroundPath.match(/\/replit-objstore-[^/]+(\/.+)/);
-                              const relativePath = match ? match[1] : currentTemplate.backgroundPath;
-                              bgUrl = currentTemplate.backgroundPath.startsWith('/replit-objstore-') 
-                                ? `/object-storage${relativePath}` 
-                                : currentTemplate.backgroundPath.startsWith('/') 
-                                  ? `/object-storage${currentTemplate.backgroundPath}` 
-                                  : `/${currentTemplate.backgroundPath}`;
+                              // Path is relative from working directory (e.g., "uploads/templates/template_9_background.pdf")
+                              bgUrl = `/${currentTemplate.backgroundPath}`;
+                              console.log('🖼️ Loading background from:', bgUrl);
                             }
                             return showGrid ? 
                               `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),

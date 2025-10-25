@@ -5066,87 +5066,44 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      let backgroundPath: string;
+      // ALWAYS use filesystem storage (same as contract PDFs)
+      // Works reliably on both Replit and Coolify/Docker
+      console.log('💾 Saving template background to local filesystem');
+      
+      const templatesDir = path.join(uploadsDir, 'templates');
 
-      // Check if object storage is available (Replit) or use filesystem (Coolify/Docker)
-      if (objectStorageService.isAvailable()) {
-        console.log('Using object storage for template background (Replit)');
-        
-        // Delete old background from object storage if it exists
-        if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
-          try {
-            await objectStorageService.deleteFile(template.backgroundPath);
-            console.log(`Deleted old background: ${template.backgroundPath}`);
-          } catch (error) {
-            console.error("Error deleting old background from object storage:", error);
-          }
+      // Delete old background file if it exists (skip default template)
+      if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
+        const oldBackgroundPath = path.join(process.cwd(), template.backgroundPath);
+        try {
+          await fs.promises.unlink(oldBackgroundPath);
+          console.log(`🗑️ Deleted old background: ${oldBackgroundPath}`);
+        } catch (error) {
+          console.error("Error deleting old background file:", error);
         }
-
-        // Upload to object storage
-        const ext = path.extname(req.file.originalname);
-        const publicPaths = objectStorageService.getPublicObjectSearchPaths();
-        const basePath = publicPaths[0]; // Use first public path
-        backgroundPath = `${basePath}/templates/template_${id}_background${ext}`;
-        
-        await objectStorageService.uploadBuffer(
-          backgroundPath,
-          req.file.buffer,
-          req.file.mimetype
-        );
-        
-        console.log(`Uploaded background to object storage: ${backgroundPath}`);
-      } else {
-        console.log('Using filesystem for template background (Coolify/Docker)');
-        
-        // Use filesystem storage (for Coolify/Docker with volume mounts)
-        // Note: templatesDir is created at startup to ensure it's inside the mounted volume
-        const templatesDir = path.join(uploadsDir, 'templates');
-
-        // Delete old background file if it exists
-        if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
-          const oldBackgroundPath = path.join(process.cwd(), template.backgroundPath);
-          try {
-            await fs.promises.unlink(oldBackgroundPath);
-            console.log(`Deleted old background: ${oldBackgroundPath}`);
-          } catch (error) {
-            console.error("Error deleting old background file:", error);
-          }
-        }
-
-        // Save file to filesystem
-        const ext = path.extname(req.file.originalname);
-        const filename = `template_${id}_background${ext}`;
-        const filePath = path.join(templatesDir, filename);
-        
-        console.log(`📤 UPLOAD DETAILS:`);
-        console.log(`   - Working directory: ${process.cwd()}`);
-        console.log(`   - Uploads directory: ${uploadsDir}`);
-        console.log(`   - Templates directory: ${templatesDir}`);
-        console.log(`   - Target file path (absolute): ${filePath}`);
-        console.log(`   - File size: ${req.file.buffer.length} bytes`);
-        
-        await fs.promises.writeFile(filePath, req.file.buffer);
-        
-        // Verify file was written
-        const fileExists = fs.existsSync(filePath);
-        console.log(`   - File exists after write: ${fileExists}`);
-        
-        if (fileExists) {
-          const stats = fs.statSync(filePath);
-          console.log(`   - File size on disk: ${stats.size} bytes`);
-          console.log(`   - File permissions: ${stats.mode.toString(8)}`);
-          console.log(`   - Owner: UID ${stats.uid}, GID ${stats.gid}`);
-          
-          // List all files in templates directory
-          const allFiles = fs.readdirSync(templatesDir);
-          console.log(`   - All files in templates dir: ${allFiles.join(', ')}`);
-        }
-        
-        backgroundPath = path.relative(process.cwd(), filePath);
-        
-        console.log(`   - Relative path (saved to DB): ${backgroundPath}`);
-        console.log(`✅ Upload complete`);
       }
+
+      // Save file to filesystem
+      const ext = path.extname(req.file.originalname);
+      const filename = `template_${id}_background${ext}`;
+      const filePath = path.join(templatesDir, filename);
+      
+      console.log(`📤 Saving background to: ${filePath}`);
+      
+      await fs.promises.writeFile(filePath, req.file.buffer);
+      
+      // Verify file was written
+      const fileExists = fs.existsSync(filePath);
+      if (!fileExists) {
+        throw new Error('File write verification failed');
+      }
+      
+      const stats = fs.statSync(filePath);
+      console.log(`✅ Background saved successfully (${stats.size} bytes)`);
+      
+      // Store relative path (like contract PDFs)
+      const backgroundPath = path.relative(process.cwd(), filePath);
+      console.log(`📝 Storing relative path in database: ${backgroundPath}`);
 
       // Update template with new background path
       const updatedTemplate = await storage.updatePdfTemplate(id, {
@@ -5180,20 +5137,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Delete the custom background file if it exists
+      // Delete the custom background file if it exists (filesystem only)
       if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
         try {
-          // Check if it's object storage path (starts with /) or filesystem path
-          if (template.backgroundPath.startsWith('/')) {
-            // Object storage (Replit)
-            await objectStorageService.deleteFile(template.backgroundPath);
-            console.log(`Deleted background from object storage: ${template.backgroundPath}`);
-          } else {
-            // Filesystem (Coolify/Docker)
-            const backgroundPath = path.join(process.cwd(), template.backgroundPath);
-            await fs.promises.unlink(backgroundPath);
-            console.log(`Deleted background from filesystem: ${backgroundPath}`);
-          }
+          const backgroundPath = path.join(process.cwd(), template.backgroundPath);
+          await fs.promises.unlink(backgroundPath);
+          console.log(`🗑️ Deleted background from filesystem: ${backgroundPath}`);
         } catch (error) {
           console.error("Error deleting background:", error);
         }
