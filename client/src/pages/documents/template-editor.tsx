@@ -1123,6 +1123,21 @@ const PDFTemplateEditor = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-4">
+                <Label>Current Background</Label>
+                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    {currentTemplate?.backgroundPath ? (
+                      <p className="text-sm truncate" title={currentTemplate.backgroundPath}>
+                        {currentTemplate.backgroundPath.split('/').pop()}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Default background</p>
+                    )}
+                  </div>
+                </div>
+              </div>
               {currentTemplate && !currentTemplate.isDefault && (
                 <div className="space-y-4">
                   <Label>Set as Default</Label>
