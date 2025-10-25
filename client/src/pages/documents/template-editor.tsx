@@ -1299,6 +1299,13 @@ const PDFTemplateEditor = () => {
                                   <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
                                   <SelectItem value="customerPhone">Customer Phone</SelectItem>
                                   <SelectItem value="driverLicense">Driver License</SelectItem>
+                                  <SelectItem value="driverName">Driver Name</SelectItem>
+                                  <SelectItem value="driverFirstName">Driver First Name</SelectItem>
+                                  <SelectItem value="driverLastName">Driver Last Name</SelectItem>
+                                  <SelectItem value="driverEmail">Driver Email</SelectItem>
+                                  <SelectItem value="driverPhone">Driver Phone</SelectItem>
+                                  <SelectItem value="driverLicenseNumber">Driver License Number</SelectItem>
+                                  <SelectItem value="driverLicenseExpiry">Driver License Expiry</SelectItem>
                                   <SelectItem value="startDate">Start Date</SelectItem>
                                   <SelectItem value="endDate">End Date</SelectItem>
                                   <SelectItem value="duration">Duration</SelectItem>
@@ -1487,6 +1494,13 @@ const PDFTemplateEditor = () => {
                             <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
                             <SelectItem value="customerPhone">Customer Phone</SelectItem>
                             <SelectItem value="driverLicense">Driver License</SelectItem>
+                            <SelectItem value="driverName">Driver Name</SelectItem>
+                            <SelectItem value="driverFirstName">Driver First Name</SelectItem>
+                            <SelectItem value="driverLastName">Driver Last Name</SelectItem>
+                            <SelectItem value="driverEmail">Driver Email</SelectItem>
+                            <SelectItem value="driverPhone">Driver Phone</SelectItem>
+                            <SelectItem value="driverLicenseNumber">Driver License Number</SelectItem>
+                            <SelectItem value="driverLicenseExpiry">Driver License Expiry</SelectItem>
                             <SelectItem value="startDate">Start Date</SelectItem>
                             <SelectItem value="endDate">End Date</SelectItem>
                             <SelectItem value="duration">Duration</SelectItem>
