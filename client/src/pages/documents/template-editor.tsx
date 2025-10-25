@@ -1426,8 +1426,8 @@ const PDFTemplateEditor = () => {
                                url(${bgUrl})` :
                               `url(${bgUrl})`;
                           })(),
-                          backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, cover` : 'cover',
-                          backgroundPosition: 'center',
+                          backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, 100% 100%` : '100% 100%',
+                          backgroundPosition: 'top left',
                           backgroundRepeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',
                         }}
                         onMouseMove={handleMouseMove}
