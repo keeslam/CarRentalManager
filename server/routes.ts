@@ -80,13 +80,14 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.log(`✅ Uploads directory exists: ${uploadsDir}`);
     }
     
-    // Check templates directory
+    // Create templates directory at startup to ensure it's inside the mounted volume
     const templatesDir = path.join(uploadsDir, 'templates');
-    if (fs.existsSync(templatesDir)) {
-      const files = fs.readdirSync(templatesDir);
-      console.log(`📁 Templates directory contains ${files.length} files:`, files);
+    if (!fs.existsSync(templatesDir)) {
+      fs.mkdirSync(templatesDir, { recursive: true });
+      console.log(`✅ Created templates directory: ${templatesDir}`);
     } else {
-      console.log(`📁 Templates directory does not exist yet`);
+      const files = fs.readdirSync(templatesDir);
+      console.log(`📁 Templates directory exists with ${files.length} files:`, files);
     }
     
     // Test write permissions
@@ -5088,10 +5089,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         console.log('Using filesystem for template background (Coolify/Docker)');
         
         // Use filesystem storage (for Coolify/Docker with volume mounts)
+        // Note: templatesDir is created at startup to ensure it's inside the mounted volume
         const templatesDir = path.join(uploadsDir, 'templates');
-        if (!fs.existsSync(templatesDir)) {
-          fs.mkdirSync(templatesDir, { recursive: true });
-        }
 
         // Delete old background file if it exists
         if (template.backgroundPath && !template.backgroundPath.includes('rental_contract_template.pdf')) {
