@@ -1059,18 +1059,26 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           )}
 
           {diagramTemplate ? (
-            <div ref={containerRef} className="relative bg-white border rounded-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
-              <div className="relative w-full">
+            <div 
+              ref={containerRef} 
+              className="relative bg-white border rounded-lg overflow-auto" 
+              style={{ maxHeight: 'calc(100vh - 400px)', touchAction: isDrawing ? 'none' : 'auto' }}
+            >
+              <div className="relative w-full" style={{ touchAction: isDrawing ? 'none' : 'auto' }}>
                 <img 
                   ref={imageRef}
                   src={`/api/vehicle-diagram-templates/${diagramTemplate.id}/image`}
                   alt="Vehicle diagram"
-                  className="w-full h-auto"
+                  className="w-full h-auto pointer-events-none"
                   crossOrigin="anonymous"
                 />
                 <canvas
                   ref={canvasRef}
-                  className="absolute top-0 left-0 cursor-crosshair w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full"
+                  style={{ 
+                    cursor: isDrawing ? 'crosshair' : 'pointer',
+                    touchAction: 'none'
+                  }}
                   onClick={handleCanvasClick}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -1081,7 +1089,6 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                   onTouchEnd={handleTouchEnd}
                   onTouchCancel={handleTouchEnd}
                   data-testid="damage-canvas"
-                  style={{ touchAction: 'none' }}
                 />
               </div>
             </div>
