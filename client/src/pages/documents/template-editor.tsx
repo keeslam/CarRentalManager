@@ -1488,11 +1488,12 @@ const PDFTemplateEditor = () => {
                     >
                       <div 
                         ref={pdfContainerRef}
-                        className={`relative bg-white border border-gray-300 shadow-lg ${showGrid ? 'bg-grid' : ''}`}
+                        className={`relative border border-gray-300 shadow-lg ${showGrid ? 'bg-grid' : ''}`}
                         style={{ 
                           width: `${595 * zoomLevel}px`, 
                           height: `${842 * zoomLevel}px`,
                           margin: '0 auto',
+                          backgroundColor: currentTemplate?.backgroundPreviewPath || currentTemplate?.backgroundPath ? 'transparent' : '#ffffff',
                           backgroundImage: (() => {
                             // Use preview image for template backgrounds (PNG converted from PDF)
                             let bgUrl = contractBackground;
