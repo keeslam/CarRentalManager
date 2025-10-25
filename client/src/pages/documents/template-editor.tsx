@@ -1406,11 +1406,25 @@ const PDFTemplateEditor = () => {
                           width: `${595 * zoomLevel}px`, 
                           height: `${842 * zoomLevel}px`,
                           margin: '0 auto',
-                          backgroundImage: showGrid ? 
-                            `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
-                             repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
-                             url(${currentTemplate?.backgroundPath ? (currentTemplate.backgroundPath.startsWith('/') ? `/object-storage${currentTemplate.backgroundPath}` : `/${currentTemplate.backgroundPath}`) : contractBackground})` :
-                            `url(${currentTemplate?.backgroundPath ? (currentTemplate.backgroundPath.startsWith('/') ? `/object-storage${currentTemplate.backgroundPath}` : `/${currentTemplate.backgroundPath}`) : contractBackground})`,
+                          backgroundImage: (() => {
+                            // Extract the correct path for object storage files
+                            let bgUrl = contractBackground;
+                            if (currentTemplate?.backgroundPath) {
+                              // If path contains /replit-objstore-, extract just the /public/... part
+                              const match = currentTemplate.backgroundPath.match(/\/replit-objstore-[^/]+(\/.+)/);
+                              const relativePath = match ? match[1] : currentTemplate.backgroundPath;
+                              bgUrl = currentTemplate.backgroundPath.startsWith('/replit-objstore-') 
+                                ? `/object-storage${relativePath}` 
+                                : currentTemplate.backgroundPath.startsWith('/') 
+                                  ? `/object-storage${currentTemplate.backgroundPath}` 
+                                  : `/${currentTemplate.backgroundPath}`;
+                            }
+                            return showGrid ? 
+                              `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                               repeating-linear-gradient(90deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
+                               url(${bgUrl})` :
+                              `url(${bgUrl})`;
+                          })(),
                           backgroundSize: showGrid ? `${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, ${gridSize * zoomLevel}px ${gridSize * zoomLevel}px, cover` : 'cover',
                           backgroundPosition: 'center',
                           backgroundRepeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',
