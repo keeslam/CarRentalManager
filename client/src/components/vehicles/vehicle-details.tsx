@@ -45,7 +45,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download, ChevronDown, ChevronRight, ChevronLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -101,8 +107,16 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [showAllRepairs, setShowAllRepairs] = useState(false);
   const [interactiveDamageCheckDialogOpen, setInteractiveDamageCheckDialogOpen] = useState(false);
   const [editingCheckId, setEditingCheckId] = useState<number | null>(null);
+  const [expenseCategoryPages, setExpenseCategoryPages] = useState<Record<string, number>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Expense pagination helpers
+  const EXPENSE_ITEMS_PER_PAGE = 5;
+  const getExpenseCategoryPage = (category: string) => expenseCategoryPages[category] || 1;
+  const setExpenseCategoryPage = (category: string, page: number) => {
+    setExpenseCategoryPages(prev => ({ ...prev, [category]: page }));
+  };
   
   // Delete vehicle mutation
   const deleteVehicleMutation = useMutation({
@@ -659,11 +673,16 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     return grouped;
   }, {} as Record<string, Expense[]>) || {};
   
-  // Calculate total amount by category
-  const totalByCategory = Object.entries(expensesByCategory).map(([category, expenses]) => ({
-    category,
-    amount: expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
-  })).sort((a, b) => b.amount - a.amount);
+  // Calculate total amount by category with sorted expenses
+  const totalByCategory = Object.entries(expensesByCategory).map(([category, categoryExpenses]) => {
+    const sortedExpenses = categoryExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return {
+      category,
+      expenses: sortedExpenses,
+      amount: sortedExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0),
+      count: sortedExpenses.length
+    };
+  }).sort((a, b) => b.amount - a.amount);
   
   // Find current active RENTAL reservation (not maintenance)
   const activeReservation = reservations?.find(reservation => {
@@ -1796,27 +1815,99 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   </div>
-                ) : expenses?.length === 0 ? (
+                ) : totalByCategory.length === 0 ? (
                   <div className="text-center py-6 text-gray-500">
                     No expenses recorded for this vehicle
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {expenses?.map((expense) => (
-                      <div key={expense.id} className="border-b pb-4 last:border-0 last:pb-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{expense.description}</p>
-                            <div className="flex items-center mt-1">
-                              <Badge variant="outline">{expense.category}</Badge>
-                              <span className="text-sm text-gray-500 ml-2">{formatDate(expense.date)}</span>
+                  <Accordion type="multiple" defaultValue={totalByCategory.map(item => item.category)} className="w-full">
+                    {totalByCategory.map(({ category, expenses: categoryExpenses, amount, count }) => {
+                      const currentPage = getExpenseCategoryPage(category);
+                      const totalPages = Math.ceil(count / EXPENSE_ITEMS_PER_PAGE);
+                      const startIndex = (currentPage - 1) * EXPENSE_ITEMS_PER_PAGE;
+                      const endIndex = startIndex + EXPENSE_ITEMS_PER_PAGE;
+                      const paginatedExpenses = categoryExpenses.slice(startIndex, endIndex);
+                      
+                      return (
+                        <AccordionItem key={category} value={category}>
+                          <AccordionTrigger className="hover:bg-gray-50 px-4 py-3 rounded-md">
+                            <div className="flex justify-between items-center w-full pr-4">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-sm font-medium">
+                                  {category}
+                                </Badge>
+                                <span className="text-gray-500 text-sm">
+                                  ({count} expense{count !== 1 ? 's' : ''})
+                                </span>
+                              </div>
+                              <div className="font-semibold text-right">
+                                {formatCurrency(amount)}
+                              </div>
                             </div>
-                          </div>
-                          <p className="text-lg font-semibold">{formatCurrency(expense.amount)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="pt-2 pb-4 space-y-3">
+                              {paginatedExpenses.map((expense) => (
+                                <div key={expense.id} className="border-b pb-3 last:border-0 last:pb-0">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-medium">{expense.description}</p>
+                                      <div className="flex items-center mt-1">
+                                        <span className="text-sm text-gray-500">{formatDate(expense.date)}</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-lg font-semibold">{formatCurrency(Number(expense.amount))}</p>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {/* Pagination Controls */}
+                              {totalPages > 1 && (
+                                <div className="flex items-center justify-between mt-4 px-2 pt-3 border-t">
+                                  <p className="text-sm text-muted-foreground">
+                                    Showing {startIndex + 1} to {Math.min(endIndex, count)} of {count} expenses
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setExpenseCategoryPage(category, currentPage - 1)}
+                                      disabled={currentPage === 1}
+                                    >
+                                      <ChevronLeft className="h-4 w-4" />
+                                      Previous
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                        <Button
+                                          key={page}
+                                          variant={currentPage === page ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setExpenseCategoryPage(category, page)}
+                                          className="w-8 h-8 p-0"
+                                        >
+                                          {page}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setExpenseCategoryPage(category, currentPage + 1)}
+                                      disabled={currentPage === totalPages}
+                                    >
+                                      Next
+                                      <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 )}
               </CardContent>
             </Card>
