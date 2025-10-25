@@ -566,20 +566,29 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault(); // Prevent scrolling
+    console.log('🖐️ Touch start - Drawing mode:', isDrawing);
     
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('❌ Canvas not found');
+      return;
+    }
 
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
     const xPercent = (touch.clientX - rect.left) / rect.width;
     const yPercent = (touch.clientY - rect.top) / rect.height;
     
+    console.log('📍 Touch position:', { xPercent, yPercent, canvasWidth: canvas.width, canvasHeight: canvas.height });
+    
     setTouchStartPos({ x: xPercent, y: yPercent });
     setHasTouchMoved(false);
 
     if (isDrawing) {
+      console.log('✏️ Starting to draw path');
       setCurrentPath(`${xPercent},${yPercent}`);
+    } else {
+      console.log('👆 Tap mode (not drawing)');
     }
   };
 
@@ -588,7 +597,11 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     
     setHasTouchMoved(true);
     
-    if (!isDrawing || !currentPath) return;
+    if (!isDrawing || !currentPath) {
+      if (!isDrawing) console.log('⚠️ Touch move but not in drawing mode');
+      if (!currentPath) console.log('⚠️ Touch move but no current path');
+      return;
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -597,6 +610,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     const touch = e.touches[0];
     const xPercent = (touch.clientX - rect.left) / rect.width;
     const yPercent = (touch.clientY - rect.top) / rect.height;
+    console.log('✏️ Drawing at:', { xPercent, yPercent });
     setCurrentPath(prev => `${prev} ${xPercent},${yPercent}`);
 
     // Draw preview
@@ -1056,7 +1070,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 />
                 <canvas
                   ref={canvasRef}
-                  className="absolute top-0 left-0 cursor-crosshair w-full"
+                  className="absolute top-0 left-0 cursor-crosshair w-full h-full"
                   onClick={handleCanvasClick}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
