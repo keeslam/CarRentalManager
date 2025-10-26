@@ -1871,7 +1871,7 @@ export default function MaintenanceCalendar() {
                 {[...completedMaintenanceBlocks]
                   .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
                   .map((maintenance) => {
-                    const vehicle = vehicles.find(v => v.id === maintenance.vehicleId);
+                    const vehicle = vehicles?.find(v => v.id === maintenance.vehicleId);
                     const maintenanceType = maintenance.notes?.split(':')[0] || 'Maintenance';
                     const maintenanceDetails = maintenance.notes?.split('\n')?.[1] || '';
                     const categoryBadge = maintenance.maintenanceCategory === 'scheduled_maintenance' ? 'Scheduled' : 'Repair';
