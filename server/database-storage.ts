@@ -1264,8 +1264,22 @@ export class DatabaseStorage implements IStorage {
       `);
       
       if (result.rows.length > 0) {
-        console.log('Template updated successfully:', result.rows[0]);
-        return result.rows[0] as PdfTemplate;
+        const row: any = result.rows[0];
+        console.log('Template updated successfully:', row);
+        
+        // Map snake_case column names to camelCase for consistency
+        const template: PdfTemplate = {
+          id: row.id,
+          name: row.name,
+          isDefault: row.is_default,
+          backgroundPath: row.background_path,
+          backgroundPreviewPath: row.background_preview_path,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          fields: typeof row.fields === 'string' ? JSON.parse(row.fields) : row.fields
+        };
+        
+        return template;
       }
       
       console.log('Template not found for update');
