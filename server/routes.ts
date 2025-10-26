@@ -179,8 +179,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   const objectStorage = new ObjectStorageService();
 
   // ==================== USER MANAGEMENT ROUTES ====================
-  // Get all users (admin only)
-  app.get("/api/users", requireAdmin, async (req, res) => {
+  // Get all users (requires MANAGE_USERS permission)
+  app.get("/api/users", requireAuth, hasPermission(UserPermission.MANAGE_USERS), async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       
@@ -197,8 +197,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Get single user (admin only)
-  app.get("/api/users/:id", requireAdmin, async (req, res) => {
+  // Get single user (requires MANAGE_USERS permission)
+  app.get("/api/users/:id", requireAuth, hasPermission(UserPermission.MANAGE_USERS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -222,8 +222,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Create user (admin only)
-  app.post("/api/users", requireAdmin, async (req, res) => {
+  // Create user (requires MANAGE_USERS permission)
+  app.post("/api/users", requireAuth, hasPermission(UserPermission.MANAGE_USERS), async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       
@@ -274,11 +274,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      // Allow users to update their own profile, but require admin for others
+      // Allow users to update their own profile, admin, or users with MANAGE_USERS permission for others
       const isSelfUpdate = id === req.user.id;
       const isAdmin = req.user.role === UserRole.ADMIN;
+      const hasManageUsersPermission = req.user.permissions?.includes(UserPermission.MANAGE_USERS) || false;
       
-      if (!isSelfUpdate && !isAdmin) {
+      if (!isSelfUpdate && !isAdmin && !hasManageUsersPermission) {
         return res.status(403).json({ message: "Not authorized to update other user accounts" });
       }
       
@@ -298,7 +299,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // For self-update, only allow certain fields (username, fullName, email)
       let userData;
-      if (isSelfUpdate && !isAdmin) {
+      if (isSelfUpdate && !isAdmin && !hasManageUsersPermission) {
         const { username, fullName, email } = req.body;
         userData = {
           username,
@@ -312,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           userData[key] === undefined && delete userData[key]
         );
       } else {
-        // Admin can update all fields
+        // Admin and users with MANAGE_USERS permission can update all fields
         userData = {
           ...req.body,
           updatedBy: req.user.username
@@ -320,8 +321,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       // Special handling for admin-only operations
-      if (!isAdmin) {
-        // Non-admins can't change roles or permissions
+      if (!isAdmin && !hasManageUsersPermission) {
+        // Non-admins and users without MANAGE_USERS can't change roles or permissions
         delete userData.role;
         delete userData.permissions;
         delete userData.active;
@@ -445,8 +446,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Delete user (admin only)
-  app.delete("/api/users/:id", requireAdmin, async (req, res) => {
+  // Delete user (requires MANAGE_USERS permission)
+  app.delete("/api/users/:id", requireAuth, hasPermission(UserPermission.MANAGE_USERS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
