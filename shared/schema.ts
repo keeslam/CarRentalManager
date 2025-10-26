@@ -7,17 +7,52 @@ export const UserRole = {
   ADMIN: 'admin',
   MANAGER: 'manager',
   USER: 'user',
+  CLEANER: 'cleaner',
+  VIEWER: 'viewer',
+  ACCOUNTANT: 'accountant',
+  MAINTENANCE: 'maintenance',
 } as const;
 
 // Permissions
 export const UserPermission = {
+  // User Management
   MANAGE_USERS: 'manage_users',
+  
+  // Vehicle Management
   MANAGE_VEHICLES: 'manage_vehicles',
+  VIEW_VEHICLES: 'view_vehicles',
+  
+  // Customer Management
   MANAGE_CUSTOMERS: 'manage_customers',
+  VIEW_CUSTOMERS: 'view_customers',
+  
+  // Reservation Management
   MANAGE_RESERVATIONS: 'manage_reservations',
+  VIEW_RESERVATIONS: 'view_reservations',
+  
+  // Maintenance & Expenses
   MANAGE_MAINTENANCE: 'manage_maintenance',
   MANAGE_EXPENSES: 'manage_expenses',
+  
+  // Documents & Templates
   MANAGE_DOCUMENTS: 'manage_documents',
+  MANAGE_PDF_TEMPLATES: 'manage_pdf_templates',
+  
+  // Damage Checks
+  MANAGE_DAMAGE_CHECKS: 'manage_damage_checks',
+  VIEW_DAMAGE_CHECKS: 'view_damage_checks',
+  
+  // Reports & Analytics
+  MANAGE_REPORTS: 'manage_reports',
+  VIEW_REPORTS: 'view_reports',
+  
+  // System Administration
+  MANAGE_BACKUPS: 'manage_backups',
+  MANAGE_SETTINGS: 'manage_settings',
+  MANAGE_EMAIL_TEMPLATES: 'manage_email_templates',
+  MANAGE_NOTIFICATIONS: 'manage_notifications',
+  
+  // General
   VIEW_DASHBOARD: 'view_dashboard',
 } as const;
 
