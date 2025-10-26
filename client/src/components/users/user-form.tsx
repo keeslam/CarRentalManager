@@ -298,6 +298,10 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
                           <SelectItem value={UserRole.ADMIN}>Administrator</SelectItem>
                           <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
                           <SelectItem value={UserRole.USER}>Regular User</SelectItem>
+                          <SelectItem value={UserRole.CLEANER}>Cleaner</SelectItem>
+                          <SelectItem value={UserRole.VIEWER}>Viewer</SelectItem>
+                          <SelectItem value={UserRole.ACCOUNTANT}>Accountant</SelectItem>
+                          <SelectItem value={UserRole.MAINTENANCE}>Maintenance Staff</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
