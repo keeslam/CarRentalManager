@@ -128,6 +128,38 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     }
   }, [initialVehicleId]);
 
+  // Fetch latest vehicle data (fuel level and mileage) when vehicle is selected
+  useEffect(() => {
+    const fetchLatestVehicleData = async () => {
+      if (!selectedVehicleId) return;
+      
+      try {
+        const response = await fetch(`/api/vehicles/${selectedVehicleId}/latest-data`, {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Only auto-populate if fields are empty (don't override user input or loaded check data)
+          if (!fuelLevel && data.fuelLevel) {
+            setFuelLevel(data.fuelLevel);
+          }
+          if (!mileage && data.mileage) {
+            setMileage(data.mileage.toString());
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching latest vehicle data:', error);
+      }
+    };
+
+    // Only fetch if not editing an existing check
+    if (!editingCheckId && selectedVehicleId) {
+      fetchLatestVehicleData();
+    }
+  }, [selectedVehicleId, editingCheckId]);
+
   // Sync editingCheckId when prop changes
   useEffect(() => {
     if (propEditingCheckId !== undefined) {
@@ -1623,12 +1655,18 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Fuel Level</Label>
-              <Input 
-                placeholder="e.g., 3/4, 50%" 
-                value={fuelLevel}
-                onChange={(e) => setFuelLevel(e.target.value)}
-                data-testid="input-fuel-level"
-              />
+              <Select value={fuelLevel} onValueChange={setFuelLevel}>
+                <SelectTrigger data-testid="select-fuel-level">
+                  <SelectValue placeholder="Select fuel level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Empty">Empty</SelectItem>
+                  <SelectItem value="1/4">1/4</SelectItem>
+                  <SelectItem value="1/2">1/2</SelectItem>
+                  <SelectItem value="3/4">3/4</SelectItem>
+                  <SelectItem value="Full">Full</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

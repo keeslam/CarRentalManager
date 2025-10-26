@@ -658,6 +658,66 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(vehicle);
   });
 
+  // Get latest vehicle data (fuel level and mileage) for damage check
+  app.get("/api/vehicles/:id/latest-data", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const vehicle = await storage.getVehicle(id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // Get latest reservation for this vehicle
+      const allReservations = await storage.getAllReservations();
+      const vehicleReservations = allReservations
+        .filter(r => r.vehicleId === id && r.endDate)
+        .sort((a, b) => new Date(b.endDate!).getTime() - new Date(a.endDate!).getTime());
+
+      // Get latest damage check for this vehicle
+      const allDamageChecks = await storage.getAllInteractiveDamageChecks();
+      const vehicleDamageChecks = allDamageChecks
+        .filter(dc => dc.vehicleId === id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      let latestFuelLevel = null;
+      let latestMileage = vehicle.currentMileage || null;
+
+      // Priority 1: Latest damage check fuel level
+      if (vehicleDamageChecks.length > 0 && vehicleDamageChecks[0].fuelLevel) {
+        latestFuelLevel = vehicleDamageChecks[0].fuelLevel;
+      }
+      // Priority 2: Latest reservation fuel level
+      else if (vehicleReservations.length > 0 && vehicleReservations[0].fuelLevelReturn) {
+        // Convert from lowercase to capitalized format
+        const fuelMap: Record<string, string> = {
+          'empty': 'Empty',
+          '1/4': '1/4',
+          '1/2': '1/2',
+          '3/4': '3/4',
+          'full': 'Full'
+        };
+        latestFuelLevel = fuelMap[vehicleReservations[0].fuelLevelReturn] || vehicleReservations[0].fuelLevelReturn;
+      }
+
+      // Get latest mileage from damage check (prioritize over vehicle.currentMileage)
+      if (vehicleDamageChecks.length > 0 && vehicleDamageChecks[0].mileage) {
+        latestMileage = vehicleDamageChecks[0].mileage;
+      }
+
+      res.json({
+        fuelLevel: latestFuelLevel,
+        mileage: latestMileage
+      });
+    } catch (error) {
+      console.error("Error fetching latest vehicle data:", error);
+      res.status(500).json({ message: "Failed to fetch latest vehicle data" });
+    }
+  });
+
   // Create vehicle
   app.post("/api/vehicles", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
