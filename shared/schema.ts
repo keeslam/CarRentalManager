@@ -560,6 +560,7 @@ export const pdfTemplates = pgTable("pdf_templates", {
   isDefault: boolean("is_default").default(false),
   backgroundPath: text("background_path"), // Custom background PDF/image path (null = use default)
   backgroundPreviewPath: text("background_preview_path"), // Preview image for editor (PNG converted from PDF)
+  templatePreviewPath: text("template_preview_path"), // Preview thumbnail of the complete template for library display
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   fields: jsonb("fields").default([])
