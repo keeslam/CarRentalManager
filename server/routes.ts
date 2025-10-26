@@ -3547,13 +3547,13 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get all documents
-  app.get("/api/documents", async (req, res) => {
+  app.get("/api/documents", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req, res) => {
     const documents = await storage.getAllDocuments();
     res.json(documents);
   });
 
   // Get documents by vehicle
-  app.get("/api/documents/vehicle/:vehicleId", async (req, res) => {
+  app.get("/api/documents/vehicle/:vehicleId", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);
     if (isNaN(vehicleId)) {
       return res.status(400).json({ message: "Invalid vehicle ID" });
@@ -3564,7 +3564,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get documents by reservation
-  app.get("/api/documents/reservation/:reservationId", async (req, res) => {
+  app.get("/api/documents/reservation/:reservationId", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req, res) => {
     const reservationId = parseInt(req.params.reservationId);
     if (isNaN(reservationId)) {
       return res.status(400).json({ message: "Invalid reservation ID" });
@@ -3575,7 +3575,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get all damage check documents (must be before :id route)
-  app.get("/api/documents/damage-checks", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/documents/damage-checks", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const allDocuments = await storage.getAllDocuments();
       const damageChecks = allDocuments.filter(doc => doc.documentType === 'damage_check');
@@ -3587,7 +3587,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get single document
-  app.get("/api/documents/:id", async (req, res) => {
+  app.get("/api/documents/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid document ID" });
@@ -3602,7 +3602,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Upload document
-  app.post("/api/documents", requireAuth, documentUpload.single('file'), async (req: Request, res: Response) => {
+  app.post("/api/documents", hasPermission(UserPermission.MANAGE_DOCUMENTS), documentUpload.single('file'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -3660,7 +3660,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update document
-  app.patch("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/documents/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3702,7 +3702,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // View document (for preview/print)
-  app.get("/api/documents/view/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/documents/view/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3750,7 +3750,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Download document
-  app.get("/api/documents/download/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/documents/download/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3798,7 +3798,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Email document - MailerSend integration 
-  app.post("/api/documents/:id/email", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/documents/:id/email", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3887,7 +3887,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete document
-  app.delete("/api/documents/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/documents/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4601,7 +4601,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== DAMAGE CHECK GENERATION ====================
   // Generate damage check PDF for a reservation
-  app.get("/api/damage-checks/generate/:reservationId", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-checks/generate/:reservationId", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const reservationId = parseInt(req.params.reservationId);
       if (isNaN(reservationId)) {
@@ -4774,7 +4774,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== PDF TEMPLATES ====================
   // Get all PDF templates
-  app.get("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/pdf-templates", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const templates = await storage.getAllPdfTemplates();
       // Disable caching to ensure fresh data after uploads
@@ -4792,7 +4792,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get the default PDF template
-  app.get("/api/pdf-templates/default", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/pdf-templates/default", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const defaultTemplate = await storage.getDefaultPdfTemplate();
       if (!defaultTemplate) {
@@ -4810,7 +4810,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get a specific PDF template
-  app.get("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/pdf-templates/:id", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4833,7 +4833,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Generate preview PDF for template editor
-  app.get("/api/pdf-templates/:id/preview", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/pdf-templates/:id/preview", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4921,7 +4921,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create a new PDF template
-  app.post("/api/pdf-templates", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/pdf-templates", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       // Add user tracking information
       const user = req.user;
@@ -4947,7 +4947,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update a PDF template
-  app.patch("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/pdf-templates/:id", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5021,7 +5021,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete a PDF template
-  app.delete("/api/pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/pdf-templates/:id", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5066,7 +5066,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Upload template background
-  app.post("/api/pdf-templates/:id/background", requireAuth, templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
+  app.post("/api/pdf-templates/:id/background", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5163,7 +5163,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Remove template background (reset to default)
-  app.delete("/api/pdf-templates/:id/background", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/pdf-templates/:id/background", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5219,7 +5219,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== TEMPLATE BACKGROUND LIBRARY ROUTES ====================
   // Get all backgrounds for a template
-  app.get("/api/pdf-templates/:id/backgrounds", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/pdf-templates/:id/backgrounds", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const templateId = parseInt(req.params.id);
       if (isNaN(templateId)) {
@@ -5238,7 +5238,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Add a background to the template library
-  app.post("/api/pdf-templates/:id/backgrounds", requireAuth, templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
+  app.post("/api/pdf-templates/:id/backgrounds", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), templateBackgroundUpload.single('background'), async (req: Request, res: Response) => {
     try {
       const templateId = parseInt(req.params.id);
       if (isNaN(templateId)) {
@@ -5329,7 +5329,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Select a background from the library (set as active)
-  app.post("/api/pdf-templates/:id/backgrounds/:backgroundId/select", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/pdf-templates/:id/backgrounds/:backgroundId/select", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const templateId = parseInt(req.params.id);
       const backgroundId = parseInt(req.params.backgroundId);
@@ -5355,7 +5355,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete a background from the library
-  app.delete("/api/pdf-templates/:id/backgrounds/:backgroundId", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/pdf-templates/:id/backgrounds/:backgroundId", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const templateId = parseInt(req.params.id);
       const backgroundId = parseInt(req.params.backgroundId);
@@ -5409,7 +5409,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== CUSTOM NOTIFICATIONS ROUTES ====================
   // Get all custom notifications
-  app.get("/api/custom-notifications", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/custom-notifications", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const notifications = await storage.getAllCustomNotifications();
       res.json(notifications);
@@ -5423,7 +5423,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get unread custom notifications
-  app.get("/api/custom-notifications/unread", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/custom-notifications/unread", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const notifications = await storage.getUnreadCustomNotifications();
       res.json(notifications);
@@ -5437,7 +5437,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get custom notifications by type
-  app.get("/api/custom-notifications/type/:type", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/custom-notifications/type/:type", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const type = req.params.type;
       const notifications = await storage.getCustomNotificationsByType(type);
@@ -5452,7 +5452,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get custom notifications for current user
-  app.get("/api/custom-notifications/user", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/custom-notifications/user", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const userId = req.user.id;
       const notifications = await storage.getCustomNotificationsByUser(userId);
@@ -5467,7 +5467,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get single custom notification
-  app.get("/api/custom-notifications/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/custom-notifications/:id", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5490,7 +5490,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create a new custom notification
-  app.post("/api/custom-notifications", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/custom-notifications", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       // Add user info to notification data
       const notificationData = {
@@ -5521,7 +5521,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update a custom notification
-  app.patch("/api/custom-notifications/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/custom-notifications/:id", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5559,7 +5559,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Mark notification as read
-  app.post("/api/custom-notifications/:id/read", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/custom-notifications/:id/read", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5584,7 +5584,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Mark notification as unread
-  app.post("/api/custom-notifications/:id/unread", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/custom-notifications/:id/unread", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5609,7 +5609,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete a custom notification
-  app.delete("/api/custom-notifications/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/custom-notifications/:id", hasPermission(UserPermission.MANAGE_NOTIFICATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5800,7 +5800,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ==================== BACKUP SETTINGS ROUTES ====================
   
   // Get backup settings
-  app.get("/api/backup-settings", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backup-settings", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const settings = await storage.getBackupSettings();
       if (!settings) {
@@ -5814,7 +5814,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create or update backup settings
-  app.post("/api/backup-settings", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backup-settings", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const currentUser = req.user as any;
       const settingsData = {
@@ -5832,7 +5832,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update backup settings
-  app.put("/api/backup-settings/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.put("/api/backup-settings/:id", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const currentUser = req.user as any;
@@ -5855,7 +5855,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ==================== BACKUP ROUTES ====================
   
   // Simple download app data (database only)
-  app.get("/api/backups/download-data", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/download-data", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
@@ -5900,7 +5900,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Simple download app code (source files)
-  app.get("/api/backups/download-code", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/download-code", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
@@ -5951,7 +5951,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Restore app data from uploaded SQL file
-  app.post("/api/backups/restore-data", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+  app.post("/api/backups/restore-data", hasPermission(UserPermission.MANAGE_BACKUPS), backupUpload.single('backup'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No backup file uploaded' });
@@ -6030,7 +6030,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Restore app code from uploaded tar.gz file
-  app.post("/api/backups/restore-code", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+  app.post("/api/backups/restore-code", hasPermission(UserPermission.MANAGE_BACKUPS), backupUpload.single('backup'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No backup file uploaded' });
@@ -6078,7 +6078,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Download uploaded files (uploads directory)
-  app.get("/api/backups/download-files", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/download-files", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
@@ -6137,7 +6137,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Restore uploaded files from tar.gz archive
-  app.post("/api/backups/restore-files", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+  app.post("/api/backups/restore-files", hasPermission(UserPermission.MANAGE_BACKUPS), backupUpload.single('backup'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No backup file uploaded' });
@@ -6180,7 +6180,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // List available backups
-  app.get("/api/backups/list", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/list", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const type = req.query.type as 'database' | 'files' | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
@@ -6201,7 +6201,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Download a specific backup file
-  app.get("/api/backups/download/:filename", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/download/:filename", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { filename } = req.params;
       
@@ -6251,7 +6251,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get backup status
-  app.get("/api/backups/status", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/status", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const status = backupService.getStatus();
       res.json(status);
@@ -6262,7 +6262,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // List available backups
-  app.get("/api/backups", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const type = req.query.type as 'database' | 'files' | undefined;
       const backups = await backupService.listBackups(type);
@@ -6274,7 +6274,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Run backup manually
-  app.post("/api/backups/run", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backups/run", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const result = await backupService.runBackup();
       res.json({
@@ -6291,7 +6291,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Download backup file
-  app.get("/api/backups/download/:type/:filename", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/backups/download/:type/:filename", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { type, filename } = req.params;
       
@@ -6320,7 +6320,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete backup file
-  app.delete("/api/backups/:type/:filename", requireAuth, requireAdmin, async (req, res) => {
+  app.delete("/api/backups/:type/:filename", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { type, filename } = req.params;
       
@@ -6341,7 +6341,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Cleanup old backups
-  app.post("/api/backups/cleanup", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backups/cleanup", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       await backupService.cleanupOldBackups();
       res.json({
@@ -6355,7 +6355,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Upload backup file
-  app.post("/api/backups/upload", requireAuth, requireAdmin, backupUpload.single('backup'), async (req, res) => {
+  app.post("/api/backups/upload", hasPermission(UserPermission.MANAGE_BACKUPS), backupUpload.single('backup'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No backup file provided" });
@@ -6439,7 +6439,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ==================== BACKUP RESTORE ROUTES ====================
   
   // Restore database from backup
-  app.post("/api/backups/restore/database", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backups/restore/database", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { filename } = req.body;
       
@@ -6472,7 +6472,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Restore files from backup
-  app.post("/api/backups/restore/files", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backups/restore/files", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { filename, targetPath } = req.body;
       
@@ -6504,7 +6504,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Complete system restore (database + files)
-  app.post("/api/backups/restore/complete", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/backups/restore/complete", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { databaseBackup, filesBackup } = req.body;
       
@@ -6548,7 +6548,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // App Settings Routes
-  app.get("/api/settings", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/settings", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const settings = await storage.getAllAppSettings();
       res.json(settings);
@@ -6558,7 +6558,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/settings/category/:category", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/settings/category/:category", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { category } = req.params;
       const settings = await storage.getAppSettingsByCategory(category);
@@ -6569,7 +6569,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/settings/key/:key", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/settings/key/:key", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const { key } = req.params;
       const setting = await storage.getAppSettingByKey(key);
@@ -6585,7 +6585,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/settings/:id", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const setting = await storage.getAppSetting(id);
@@ -6601,7 +6601,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/settings", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/settings", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const username = req.user?.username || 'Unknown';
       const settingData = {
@@ -6624,7 +6624,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.patch("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.patch("/api/settings/:id", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const username = req.user?.username || 'Unknown';
@@ -6651,7 +6651,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/settings/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.delete("/api/settings/:id", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -6716,7 +6716,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Get all drivers for a specific customer
-  app.get("/api/customers/:customerId/drivers", requireAuth, async (req, res) => {
+  app.get("/api/customers/:customerId/drivers", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const customerId = parseInt(req.params.customerId);
       if (isNaN(customerId)) {
@@ -6731,7 +6731,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get active drivers for a specific customer
-  app.get("/api/customers/:customerId/drivers/active", requireAuth, async (req, res) => {
+  app.get("/api/customers/:customerId/drivers/active", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const customerId = parseInt(req.params.customerId);
       if (isNaN(customerId)) {
@@ -6746,7 +6746,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get a specific driver
-  app.get("/api/drivers/:id", requireAuth, async (req, res) => {
+  app.get("/api/drivers/:id", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -6764,7 +6764,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create a new driver
-  app.post("/api/customers/:customerId/drivers", requireAuth, driverLicenseUpload.single('licenseFile'), async (req, res) => {
+  app.post("/api/customers/:customerId/drivers", hasPermission(UserPermission.MANAGE_CUSTOMERS), driverLicenseUpload.single('licenseFile'), async (req, res) => {
     try {
       const customerId = parseInt(req.params.customerId);
       if (isNaN(customerId)) {
@@ -6813,7 +6813,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update a driver
-  app.patch("/api/drivers/:id", requireAuth, driverLicenseUpload.single('licenseFile'), async (req, res) => {
+  app.patch("/api/drivers/:id", hasPermission(UserPermission.MANAGE_CUSTOMERS), driverLicenseUpload.single('licenseFile'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -6862,7 +6862,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Serve driver license file
-  app.get("/api/drivers/:id/license", requireAuth, async (req, res) => {
+  app.get("/api/drivers/:id/license", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -6896,7 +6896,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete a driver
-  app.delete("/api/drivers/:id", requireAuth, async (req, res) => {
+  app.delete("/api/drivers/:id", hasPermission(UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -7421,7 +7421,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ============================================
 
   // Maintenance Cost Analysis Report
-  app.get("/api/reports/maintenance-costs", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/reports/maintenance-costs", hasPermission(UserPermission.VIEW_REPORTS, UserPermission.MANAGE_REPORTS), async (req: Request, res: Response) => {
     try {
       const { timeRange, brand } = req.query;
       
@@ -7577,7 +7577,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ============================================
 
   // Get all saved reports
-  app.get("/api/reports/saved", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/reports/saved", hasPermission(UserPermission.VIEW_REPORTS, UserPermission.MANAGE_REPORTS), async (req: Request, res: Response) => {
     try {
       const reports = await storage.getAllSavedReports();
       res.json(reports);
@@ -7588,7 +7588,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Save a new report
-  app.post("/api/reports/saved", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reports/saved", hasPermission(UserPermission.MANAGE_REPORTS), async (req: Request, res: Response) => {
     try {
       const user = req.user;
       const config: any = req.body;
@@ -7617,7 +7617,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete a saved report
-  app.delete("/api/reports/saved/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/reports/saved/:id", hasPermission(UserPermission.MANAGE_REPORTS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteSavedReport(id);
@@ -7629,7 +7629,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Execute a report
-  app.post("/api/reports/execute", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reports/execute", hasPermission(UserPermission.VIEW_REPORTS, UserPermission.MANAGE_REPORTS), async (req: Request, res: Response) => {
     try {
       const config: any = req.body;
 
@@ -7650,7 +7650,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ============================================
 
   // Get all damage check templates
-  app.get("/api/damage-check-templates", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-templates", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const templates = await storage.getAllDamageCheckTemplates();
       res.json(templates);
@@ -7661,7 +7661,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get damage check template by ID
-  app.get("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-templates/:id", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const template = await storage.getDamageCheckTemplate(id);
@@ -7678,7 +7678,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get templates by vehicle criteria
-  app.get("/api/damage-check-templates/by-vehicle", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-templates/by-vehicle", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const { make, model, type } = req.query;
       const templates = await storage.getDamageCheckTemplatesByVehicle(
@@ -7694,7 +7694,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get default damage check template
-  app.get("/api/damage-check-templates/default/template", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-templates/default/template", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const template = await storage.getDefaultDamageCheckTemplate();
       
@@ -7710,7 +7710,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Upload diagrams for damage check templates
-  app.post("/api/damage-check-templates/upload-diagrams", requireAuth, diagramUpload.fields([
+  app.post("/api/damage-check-templates/upload-diagrams", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), diagramUpload.fields([
     { name: 'topView', maxCount: 1 },
     { name: 'frontView', maxCount: 1 },
     { name: 'rearView', maxCount: 1 },
@@ -7741,7 +7741,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create new damage check template
-  app.post("/api/damage-check-templates", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/damage-check-templates", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const user = req.user;
       const templateData = {
@@ -7759,7 +7759,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update damage check template
-  app.put("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/damage-check-templates/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const user = req.user;
@@ -7782,7 +7782,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete damage check template
-  app.delete("/api/damage-check-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/damage-check-templates/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteDamageCheckTemplate(id);
@@ -7799,7 +7799,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Export damage check template
-  app.get("/api/damage-check-templates/:id/export", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-templates/:id/export", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const template = await storage.getDamageCheckTemplate(id);
@@ -7832,7 +7832,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Import damage check template
-  app.post("/api/damage-check-templates/import", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/damage-check-templates/import", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const user = req.user;
       
@@ -8598,7 +8598,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // DAMAGE CHECK PDF TEMPLATE ROUTES
   
   // Get all PDF templates
-  app.get("/api/damage-check-pdf-templates", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-pdf-templates", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const templates = await storage.getAllDamageCheckPdfTemplates();
       res.json(templates);
@@ -8609,7 +8609,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get default PDF template
-  app.get("/api/damage-check-pdf-templates/default", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-pdf-templates/default", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const template = await storage.getDefaultDamageCheckPdfTemplate();
       res.json(template);
@@ -8620,7 +8620,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get PDF template by ID
-  app.get("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-pdf-templates/:id", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const template = await storage.getDamageCheckPdfTemplate(id);
@@ -8637,7 +8637,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create PDF template
-  app.post("/api/damage-check-pdf-templates", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/damage-check-pdf-templates", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
       const validated = insertDamageCheckPdfTemplateSchema.parse(req.body);
@@ -8664,7 +8664,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update PDF template
-  app.put("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/damage-check-pdf-templates/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
       const id = parseInt(req.params.id);
@@ -8697,7 +8697,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete PDF template
-  app.delete("/api/damage-check-pdf-templates/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/damage-check-pdf-templates/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteDamageCheckPdfTemplate(id);
@@ -8714,7 +8714,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Preview PDF template with sample data
-  app.get("/api/damage-check-pdf-templates/:id/preview", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-pdf-templates/:id/preview", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -8773,7 +8773,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Export PDF template as JSON
-  app.get("/api/damage-check-pdf-templates/:id/export", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/damage-check-pdf-templates/:id/export", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -8804,7 +8804,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Import PDF template from JSON
-  app.post("/api/damage-check-pdf-templates/import", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/damage-check-pdf-templates/import", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
       const { insertDamageCheckPdfTemplateSchema } = await import('../shared/schema');
       
