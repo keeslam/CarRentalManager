@@ -191,8 +191,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     next();
   };
   
-  // Check if user has specific permission
-  const hasPermission = (permission: string) => {
+  // Check if user has specific permission(s) - supports multiple permissions (OR logic)
+  const hasPermission = (...permissions: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Not authenticated" });
@@ -204,9 +204,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const userPermissions = req.user.permissions || [];
-      if (!userPermissions.includes(permission)) {
+      const hasRequiredPermission = permissions.some(permission => 
+        userPermissions.includes(permission)
+      );
+      
+      if (!hasRequiredPermission) {
         return res.status(403).json({ 
-          message: `Not authorized. '${permission}' permission required.` 
+          message: `Not authorized. One of these permissions required: ${permissions.join(', ')}` 
         });
       }
       
@@ -564,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   // ==================== VEHICLE ROUTES ====================
   // Get available vehicles (optionally for a specific date range)
-  app.get("/api/vehicles/available", async (req, res) => {
+  app.get("/api/vehicles/available", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     const { startDate, endDate, excludeVehicleId } = req.query;
     
     let vehicles;
@@ -587,19 +591,19 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get vehicles with APK expiring soon
-  app.get("/api/vehicles/apk-expiring", async (req, res) => {
+  app.get("/api/vehicles/apk-expiring", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     const vehicles = await storage.getVehiclesWithApkExpiringSoon();
     res.json(vehicles);
   });
 
   // Get vehicles with warranty expiring soon
-  app.get("/api/vehicles/warranty-expiring", async (req, res) => {
+  app.get("/api/vehicles/warranty-expiring", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon();
     res.json(vehicles);
   });
 
   // Get overlapping regular reservations for a vehicle during maintenance period
-  app.get("/api/vehicles/:vehicleId/overlaps", requireAuth, async (req, res) => {
+  app.get("/api/vehicles/:vehicleId/overlaps", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
       const { vehicleId } = req.params;
       const { startDate, endDate } = req.query;
@@ -666,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Get all vehicles with optional search
-  app.get("/api/vehicles", async (req, res) => {
+  app.get("/api/vehicles", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
       const searchQuery = req.query.search as string | undefined;
       const vehicles = await storage.getAllVehicles(searchQuery);
@@ -678,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get single vehicle
-  app.get("/api/vehicles/:id", async (req, res) => {
+  app.get("/api/vehicles/:id", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid vehicle ID" });
@@ -693,7 +697,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create vehicle
-  app.post("/api/vehicles", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/vehicles", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
       console.log("Received vehicle data:", JSON.stringify(req.body));
       
@@ -820,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update vehicle
-  app.patch("/api/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/vehicles/:id", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -923,7 +927,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Update vehicle mileage only (special endpoint for partial updates)
-  app.patch("/api/vehicles/:id/mileage", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/vehicles/:id/mileage", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -997,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Toggle vehicle registration status
-  app.patch("/api/vehicles/:id/toggle-registration", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/vehicles/:id/toggle-registration", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1137,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete vehicle
-  app.delete("/api/vehicles/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/vehicles/:id", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
