@@ -49,6 +49,8 @@ export default function DocumentsIndex() {
   const [expandedDocumentTypes, setExpandedDocumentTypes] = useState<Set<string>>(new Set());
   const [itemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [templateDeleteDialogOpen, setTemplateDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<any | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -117,6 +119,30 @@ export default function DocumentsIndex() {
       });
     },
   });
+
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: number) => {
+      const response = await apiRequest('DELETE', `/api/pdf-templates/${templateId}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Template deleted",
+        description: "The PDF template has been successfully deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pdf-templates"] });
+      setTemplateDeleteDialogOpen(false);
+      setTemplateToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete template. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Handle delete document
   const handleDeleteDocument = (document: Document) => {
@@ -155,6 +181,19 @@ export default function DocumentsIndex() {
   const canEmailDocument = (documentType: string) => {
     const emailableTypes = ['damage', 'contract'];
     return emailableTypes.some(type => documentType.toLowerCase().includes(type));
+  };
+
+  // Handle delete template
+  const handleDeleteTemplate = (template: any) => {
+    setTemplateToDelete(template);
+    setTemplateDeleteDialogOpen(true);
+  };
+
+  // Confirm delete template
+  const confirmDeleteTemplate = () => {
+    if (templateToDelete) {
+      deleteTemplateMutation.mutate(templateToDelete.id);
+    }
   };
   
   // Handle view document
@@ -837,21 +876,33 @@ export default function DocumentsIndex() {
                             )}
                           </div>
                           
-                          <div className="mt-4 flex justify-between">
-                            <Link href="/documents/template-editor">
-                              <Button variant="outline" size="sm">
-                                <FileEdit className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                            </Link>
-                            <a 
-                              href={`/api/pdf-templates/${template.id}/preview`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 py-2"
+                          <div className="mt-4 flex justify-between items-center gap-2">
+                            <div className="flex gap-2">
+                              <Link href="/documents/template-editor">
+                                <Button variant="outline" size="sm" data-testid={`button-edit-template-${template.id}`}>
+                                  <FileEdit className="h-3 w-3 mr-1" />
+                                  Edit
+                                </Button>
+                              </Link>
+                              <a 
+                                href={`/api/pdf-templates/${template.id}/preview`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 py-2"
+                                data-testid={`button-preview-template-${template.id}`}
+                              >
+                                Preview
+                              </a>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDeleteTemplate(template)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`button-delete-template-${template.id}`}
                             >
-                              Preview
-                            </a>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -893,6 +944,29 @@ export default function DocumentsIndex() {
               disabled={deleteDocumentMutation.isPending}
             >
               {deleteDocumentMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Template Confirmation Dialog */}
+      <AlertDialog open={templateDeleteDialogOpen} onOpenChange={setTemplateDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete PDF Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the template "{templateToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteTemplate}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteTemplateMutation.isPending}
+              data-testid="button-confirm-delete-template"
+            >
+              {deleteTemplateMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
