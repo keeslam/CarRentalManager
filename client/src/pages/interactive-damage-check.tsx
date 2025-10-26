@@ -53,6 +53,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [diagramTemplate, setDiagramTemplate] = useState<DiagramTemplate | null>(null);
   const [markers, setMarkers] = useState<DamageMarker[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<DamageMarker | null>(null);
+  const [selectedDamageType, setSelectedDamageType] = useState<'scratch' | 'dent' | 'crack' | 'missing' | 'other' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingPaths, setDrawingPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -515,12 +516,22 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (clickedMarker) {
       setSelectedMarker(clickedMarker);
     } else {
+      // Only add marker if a damage type is selected
+      if (!selectedDamageType) {
+        toast({
+          title: "Select Damage Type",
+          description: "Please select a damage type (Dent, Scratch, etc.) before marking on the diagram",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Add new marker with percentage coordinates
       const newMarker: DamageMarker = {
         id: Date.now().toString(),
         x: xPercent,
         y: yPercent,
-        type: 'scratch',
+        type: selectedDamageType,
         severity: 'minor',
         notes: '',
       };
@@ -1183,6 +1194,68 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             </div>
           </div>
 
+          {/* Damage Type Selector */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-sm mb-3 text-blue-900">Select Damage Type, Then Click on Diagram:</h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <Button
+                variant={selectedDamageType === 'dent' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDamageType('dent')}
+                className={selectedDamageType === 'dent' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                data-testid="button-select-dent"
+              >
+                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">1</span>
+                Dent
+              </Button>
+              <Button
+                variant={selectedDamageType === 'scratch' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDamageType('scratch')}
+                className={selectedDamageType === 'scratch' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                data-testid="button-select-scratch"
+              >
+                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">2</span>
+                Scratch
+              </Button>
+              <Button
+                variant={selectedDamageType === 'crack' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDamageType('crack')}
+                className={selectedDamageType === 'crack' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                data-testid="button-select-crack"
+              >
+                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">3</span>
+                Crack
+              </Button>
+              <Button
+                variant={selectedDamageType === 'missing' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDamageType('missing')}
+                className={selectedDamageType === 'missing' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                data-testid="button-select-missing"
+              >
+                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">4</span>
+                Missing Part
+              </Button>
+              <Button
+                variant={selectedDamageType === 'other' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDamageType('other')}
+                className={selectedDamageType === 'other' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                data-testid="button-select-other"
+              >
+                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">5</span>
+                Other
+              </Button>
+            </div>
+            {selectedDamageType && (
+              <p className="text-xs text-blue-700 mt-2 font-medium">
+                ✓ Selected: <span className="uppercase">{selectedDamageType}</span> - Now click on the diagram to mark damage locations
+              </p>
+            )}
+          </div>
+
           {/* Comparison Mode Legend */}
           {showComparison && pickupCheckData && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1240,33 +1313,6 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               <p className="text-sm mt-2">Vehicle diagrams can be added in Documents → Damage Check → Diagram Templates</p>
             </div>
           )}
-
-          {/* Damage Type Legend */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Damage Type Reference</h4>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">1</span>
-                <span>Dent</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">2</span>
-                <span>Scratch</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">3</span>
-                <span>Crack</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">4</span>
-                <span>Missing Part</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">5</span>
-                <span>Other</span>
-              </div>
-            </div>
-          </div>
 
           {markers.length > 0 && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
