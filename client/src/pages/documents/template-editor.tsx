@@ -1498,7 +1498,9 @@ const PDFTemplateEditor = () => {
                             // Use preview image for template backgrounds (PNG converted from PDF)
                             if (currentTemplate?.backgroundPreviewPath) {
                               // Preview path is a PNG image that can be displayed in CSS
-                              const bgUrl = `/${currentTemplate.backgroundPreviewPath}`;
+                              // Add cache-busting parameter to force browser to reload when background changes
+                              const timestamp = currentTemplate.updatedAt ? new Date(currentTemplate.updatedAt).getTime() : Date.now();
+                              const bgUrl = `/${currentTemplate.backgroundPreviewPath}?v=${timestamp}`;
                               console.log('🖼️ Loading preview image from:', bgUrl);
                               return showGrid ? 
                                 `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
@@ -1507,7 +1509,9 @@ const PDFTemplateEditor = () => {
                                 `url(${bgUrl})`;
                             } else if (currentTemplate?.backgroundPath) {
                               // Fallback to backgroundPath for backwards compatibility (images only)
-                              const bgUrl = `/${currentTemplate.backgroundPath}`;
+                              // Add cache-busting parameter to force browser to reload when background changes
+                              const timestamp = currentTemplate.updatedAt ? new Date(currentTemplate.updatedAt).getTime() : Date.now();
+                              const bgUrl = `/${currentTemplate.backgroundPath}?v=${timestamp}`;
                               console.log('🖼️ Loading background (legacy) from:', bgUrl);
                               return showGrid ? 
                                 `repeating-linear-gradient(0deg, transparent, transparent ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel - 1}px, #e5e7eb ${gridSize * zoomLevel}px),
