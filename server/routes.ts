@@ -1203,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== CUSTOMER ROUTES ====================
   // Get all customers with optional search
-  app.get("/api/customers", async (req, res) => {
+  app.get("/api/customers", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const searchQuery = req.query.search as string | undefined;
       const customers = await storage.getAllCustomers(searchQuery);
@@ -1215,7 +1215,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get customers with reservation status
-  app.get("/api/customers/with-reservations", async (req, res) => {
+  app.get("/api/customers/with-reservations", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
       const customers = await storage.getAllCustomers();
       const reservations = await storage.getAllReservations();
@@ -1255,7 +1255,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get single customer
-  app.get("/api/customers/:id", async (req, res) => {
+  app.get("/api/customers/:id", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid customer ID" });
@@ -1270,7 +1270,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create customer
-  app.post("/api/customers", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/customers", hasPermission(UserPermission.MANAGE_CUSTOMERS), async (req: Request, res: Response) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
       
@@ -1294,7 +1294,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update customer
-  app.patch("/api/customers/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/customers/:id", hasPermission(UserPermission.MANAGE_CUSTOMERS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1343,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete customer
-  app.delete("/api/customers/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/customers/:id", hasPermission(UserPermission.MANAGE_CUSTOMERS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1368,7 +1368,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // ==================== RESERVATION ROUTES ====================
   // Get reservations for a date range
-  app.get("/api/reservations/range", async (req, res) => {
+  app.get("/api/reservations/range", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     try {
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
@@ -1390,7 +1390,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  app.get("/api/reservations/range/:startDate/:endDate", async (req, res) => {
+  app.get("/api/reservations/range/:startDate/:endDate", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const { startDate, endDate } = req.params;
     // Disable HTTP caching to ensure fresh data after deletions
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -1401,7 +1401,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get upcoming reservations
-  app.get("/api/reservations/upcoming", async (req, res) => {
+  app.get("/api/reservations/upcoming", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     // Disable HTTP caching to ensure fresh data after deletions
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.setHeader('Pragma', 'no-cache');
@@ -1411,7 +1411,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get upcoming maintenance reservations
-  app.get("/api/reservations/upcoming-maintenance", async (req, res) => {
+  app.get("/api/reservations/upcoming-maintenance", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS, UserPermission.MANAGE_MAINTENANCE), async (req, res) => {
     // Disable HTTP caching to ensure fresh data
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.setHeader('Pragma', 'no-cache');
@@ -1421,7 +1421,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get reservations by vehicle
-  app.get("/api/reservations/vehicle/:vehicleId", async (req, res) => {
+  app.get("/api/reservations/vehicle/:vehicleId", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);
     if (isNaN(vehicleId)) {
       return res.status(400).json({ message: "Invalid vehicle ID" });
@@ -1432,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get reservations by customer
-  app.get("/api/reservations/customer/:customerId", async (req, res) => {
+  app.get("/api/reservations/customer/:customerId", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const customerId = parseInt(req.params.customerId);
     if (isNaN(customerId)) {
       return res.status(400).json({ message: "Invalid customer ID" });
@@ -1443,7 +1443,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Check availability
-  app.get("/api/reservations/check-availability/:vehicleId/:startDate/:endDate", async (req, res) => {
+  app.get("/api/reservations/check-availability/:vehicleId/:startDate/:endDate", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);
     const { startDate, endDate } = req.params;
     
@@ -1456,7 +1456,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Check for conflicts using query parameters (used by reservation form)
-  app.get("/api/reservations/check-conflicts", async (req, res) => {
+  app.get("/api/reservations/check-conflicts", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const vehicleId = parseInt(req.query.vehicleId as string);
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
@@ -1490,7 +1490,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get all reservations with optional search
-  app.get("/api/reservations", async (req, res) => {
+  app.get("/api/reservations", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     try {
       // Disable HTTP caching to ensure fresh data after deletions
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -1506,7 +1506,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get single reservation
-  app.get("/api/reservations/:id", async (req, res) => {
+  app.get("/api/reservations/:id", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid reservation ID" });
@@ -1616,7 +1616,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Create reservation with damage check upload
-  app.post("/api/reservations", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
+  app.post("/api/reservations", hasPermission(UserPermission.MANAGE_RESERVATIONS), damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
       // Handle JSON data that comes through multer middleware
       let bodyData = req.body;
@@ -1851,7 +1851,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create maintenance with spare vehicle assignment
-  app.post("/api/reservations/maintenance-with-spare", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reservations/maintenance-with-spare", hasPermission(UserPermission.MANAGE_RESERVATIONS, UserPermission.MANAGE_MAINTENANCE), async (req: Request, res: Response) => {
     try {
       console.log('Raw request body:', req.body);
       
@@ -2080,7 +2080,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update reservation data (JSON endpoint without file upload)
-  app.patch("/api/reservations/:id/basic", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/reservations/:id/basic", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2160,7 +2160,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update reservation status only (special endpoint for status changes)
-  app.patch("/api/reservations/:id/status", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/reservations/:id/status", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2245,7 +2245,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update reservation with damage check upload
-  app.patch("/api/reservations/:id", requireAuth, damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
+  app.patch("/api/reservations/:id", hasPermission(UserPermission.MANAGE_RESERVATIONS), damageCheckUpload.single('damageCheckFile'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2469,7 +2469,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Mark a reservation's vehicle as needing service
-  app.post("/api/reservations/:id/mark-needs-service", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reservations/:id/mark-needs-service", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const reservationId = parseInt(req.params.id);
       if (isNaN(reservationId)) {
@@ -2521,7 +2521,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Assign a spare vehicle to a reservation
-  app.post("/api/reservations/:id/assign-spare", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reservations/:id/assign-spare", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const originalReservationId = parseInt(req.params.id);
       if (isNaN(originalReservationId)) {
@@ -2566,7 +2566,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Return vehicle from service and close replacement
-  app.post("/api/reservations/:id/return-from-service", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reservations/:id/return-from-service", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const replacementReservationId = parseInt(req.params.id);
       if (isNaN(replacementReservationId)) {
@@ -2603,7 +2603,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get active replacement by original reservation
-  app.get("/api/reservations/:id/active-replacement", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/reservations/:id/active-replacement", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const originalReservationId = parseInt(req.params.id);
       if (isNaN(originalReservationId)) {
@@ -2625,7 +2625,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update legacy notes with vehicle details
-  app.post("/api/reservations/update-legacy-notes", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/reservations/update-legacy-notes", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
       const updatedCount = await storage.updateLegacyNotesWithVehicleDetails();
       
@@ -3049,14 +3049,14 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/expenses/recent", async (req, res) => {
+  app.get("/api/expenses/recent", hasPermission(UserPermission.MANAGE_EXPENSES), async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     const expenses = await storage.getRecentExpenses(limit);
     res.json(expenses);
   });
   
   // Get expenses by vehicle - This MUST come before the generic :id route
-  app.get("/api/expenses/vehicle/:vehicleId", async (req, res) => {
+  app.get("/api/expenses/vehicle/:vehicleId", hasPermission(UserPermission.MANAGE_EXPENSES), async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);
     if (isNaN(vehicleId)) {
       return res.status(400).json({ message: "Invalid vehicle ID" });
@@ -3068,13 +3068,13 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
   
   // Get all expenses
-  app.get("/api/expenses", async (req, res) => {
+  app.get("/api/expenses", hasPermission(UserPermission.MANAGE_EXPENSES), async (req, res) => {
     const expenses = await storage.getAllExpenses();
     res.json(expenses);
   });
 
   // Get single expense - This MUST come after the more specific routes
-  app.get("/api/expenses/:id", async (req, res) => {
+  app.get("/api/expenses/:id", hasPermission(UserPermission.MANAGE_EXPENSES), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid expense ID" });
@@ -3120,7 +3120,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Delete expense
-  app.delete("/api/expenses/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/expenses/:id", hasPermission(UserPermission.MANAGE_EXPENSES), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3154,7 +3154,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Create expense with receipt upload
-  app.post("/api/expenses", requireAuth, expenseReceiptUpload.single('receiptFile'), async (req: Request, res: Response) => {
+  app.post("/api/expenses", hasPermission(UserPermission.MANAGE_EXPENSES), expenseReceiptUpload.single('receiptFile'), async (req: Request, res: Response) => {
     try {
       // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
@@ -5635,7 +5635,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Invoice scanning endpoint
-  app.post("/api/expenses/scan", requireAuth, upload.single('invoice'), async (req: Request, res: Response) => {
+  app.post("/api/expenses/scan", hasPermission(UserPermission.MANAGE_EXPENSES), upload.single('invoice'), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No invoice file provided" });
@@ -5723,7 +5723,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
 
   // Create expenses from scanned invoice
-  app.post("/api/expenses/from-invoice", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/expenses/from-invoice", hasPermission(UserPermission.MANAGE_EXPENSES), async (req: Request, res: Response) => {
     try {
       const { invoice, vehicleId, filePath, invoiceHash, lineItems } = req.body;
 
