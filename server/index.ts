@@ -298,7 +298,14 @@ await registerRoutes(app);
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const publicPath = path.join(appRoot, 'dist', 'public');
-  console.log('📦 Serving static files from:', publicPath);
+  const indexPath = path.join(publicPath, 'index.html');
+  
+  console.log('📦 Production build configuration:');
+  console.log('   App root:', appRoot);
+  console.log('   Public path:', publicPath);
+  console.log('   Index path:', indexPath);
+  console.log('   Public exists:', fs.existsSync(publicPath));
+  console.log('   Index exists:', fs.existsSync(indexPath));
 
   try {
     if (fs.existsSync(publicPath)) {
@@ -311,41 +318,37 @@ if (process.env.NODE_ENV === "production") {
         app.use('/assets', express.static(assetsPath, { maxAge: '1y', etag: true }));
         console.log('✅ Assets directory found');
       } else {
-        console.warn('⚠️ Assets directory not found');
+        console.warn('⚠️ Assets directory not found at:', assetsPath);
       }
     } else {
-      console.warn('⚠️ Public directory NOT found - frontend build missing');
+      console.warn('⚠️ Public directory NOT found at:', publicPath);
     }
   } catch (fsError) {
     console.error('❌ File system error:', fsError);
   }
 
-  // SPA fallback
+  // SPA fallback - MUST be last, after all API routes
   app.get('*', (req: Request, res: Response) => {
-    if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API endpoint not found' });
+    console.log('🔍 SPA Fallback triggered for:', req.path);
+    
+    if (req.path.startsWith('/api')) {
+      console.log('❌ API route not found:', req.path);
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
 
-    const indexPath = path.join(publicPath, 'index.html');
     if (fs.existsSync(indexPath)) {
+      console.log('✅ Serving index.html for:', req.path);
       res.sendFile(indexPath);
     } else {
+      console.error('❌ index.html not found at:', indexPath);
       res.status(404).json({
         error: 'Frontend not built',
-        message: 'Run "npm run build" to generate frontend assets'
+        message: 'index.html not found. Run "npm run build" to generate frontend assets',
+        path: indexPath
       });
     }
   });
 }
-
-// API routes already registered above - no need to register again here
-
-// 404 for API
-app.use('/api/*', (_req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `API endpoint not found`,
-    available: ['/api/health', '/api/cars', '/api/rentals']
-  });
-});
 
 // Vite will be set up after server creation
 
