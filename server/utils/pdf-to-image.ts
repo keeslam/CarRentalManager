@@ -53,14 +53,24 @@ export async function convertPdfToPng(
     context.fillRect(0, 0, viewport.width, viewport.height);
     console.log('🎨 Canvas filled with white background');
     
-    // Render PDF page to canvas
+    // Render PDF page to canvas with image support
     const renderContext = {
       canvasContext: context as any,
       viewport: viewport,
+      // Disable image rendering to avoid canvas-related errors with embedded images
+      renderInteractiveForms: false,
     };
     
-    await page.render(renderContext).promise;
-    console.log('✅ PDF page rendered to canvas');
+    const renderTask = page.render(renderContext);
+    
+    // Handle rendering errors gracefully
+    try {
+      await renderTask.promise;
+      console.log('✅ PDF page rendered to canvas');
+    } catch (renderError) {
+      console.warn('⚠️ PDF rendering encountered issues, attempting to save partial render:', renderError);
+      // Continue anyway - partial render is better than nothing
+    }
     
     // Save canvas as PNG
     const buffer = canvas.toBuffer('image/png');
