@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get latest vehicle data (fuel level and mileage) for damage check
-  app.get("/api/vehicles/:id/latest-data", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
+  app.get("/api/vehicles/:id/latest-data", requireAuth, hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
