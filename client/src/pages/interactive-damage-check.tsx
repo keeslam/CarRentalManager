@@ -1241,6 +1241,33 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             </div>
           )}
 
+          {/* Damage Type Legend */}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">Damage Type Reference</h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">1</span>
+                <span>Dent</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">2</span>
+                <span>Scratch</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">3</span>
+                <span>Crack</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">4</span>
+                <span>Missing Part</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center">5</span>
+                <span>Other</span>
+              </div>
+            </div>
+          </div>
+
           {markers.length > 0 && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-sm mb-2">Damage Points ({markers.length})</h4>
@@ -1259,6 +1286,75 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             </div>
           )}
         </Card>
+
+        {/* Damage Point Details - Directly Below Diagram */}
+        {selectedMarker && (
+          <Card className="p-4 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">
+                Damage Point #{markers.indexOf(selectedMarker) + 1} Details
+              </h3>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => deleteMarker(selectedMarker.id)}
+                data-testid="button-delete-marker"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Damage Type</Label>
+                <Select 
+                  value={selectedMarker.type} 
+                  onValueChange={(val: any) => updateMarker({ type: val })}
+                >
+                  <SelectTrigger data-testid="select-damage-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dent">1 - Dent</SelectItem>
+                    <SelectItem value="scratch">2 - Scratch</SelectItem>
+                    <SelectItem value="crack">3 - Crack</SelectItem>
+                    <SelectItem value="missing">4 - Missing Part</SelectItem>
+                    <SelectItem value="other">5 - Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Severity</Label>
+                <Select 
+                  value={selectedMarker.severity} 
+                  onValueChange={(val: any) => updateMarker({ severity: val })}
+                >
+                  <SelectTrigger data-testid="select-severity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minor">Minor</SelectItem>
+                    <SelectItem value="moderate">Moderate</SelectItem>
+                    <SelectItem value="severe">Severe</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Notes</Label>
+                <Textarea 
+                  placeholder="Describe the damage..." 
+                  value={selectedMarker.notes}
+                  onChange={(e) => updateMarker({ notes: e.target.value })}
+                  rows={3}
+                  data-testid="textarea-marker-notes"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Inspection Checklist - Full Width */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -1475,112 +1571,43 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           </Card>
         </div>
 
-        {/* Additional Information - Full Width */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-4">Vehicle Details</h3>
-            <div className="space-y-4">
-              <div>
-                <Label>Fuel Level</Label>
-                <Input 
-                  placeholder="e.g., 3/4, 50%" 
-                  value={fuelLevel}
-                  onChange={(e) => setFuelLevel(e.target.value)}
-                  data-testid="input-fuel-level"
-                />
-              </div>
-
-              <div>
-                <Label>Mileage</Label>
-                <Input 
-                  type="number" 
-                  placeholder="Current mileage" 
-                  value={mileage}
-                  onChange={(e) => setMileage(e.target.value)}
-                  data-testid="input-mileage"
-                />
-              </div>
-
-              <div>
-                <Label>General Notes</Label>
-                <Textarea 
-                  placeholder="Add general observations..." 
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                  data-testid="textarea-notes"
-                />
-              </div>
+        {/* Vehicle Details */}
+        <Card className="p-4 mb-6">
+          <h3 className="font-semibold mb-4">Vehicle Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Fuel Level</Label>
+              <Input 
+                placeholder="e.g., 3/4, 50%" 
+                value={fuelLevel}
+                onChange={(e) => setFuelLevel(e.target.value)}
+                data-testid="input-fuel-level"
+              />
             </div>
-          </Card>
 
-          {selectedMarker && (
-            <Card className="p-4 md:col-span-2">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">
-                  Damage Point #{markers.indexOf(selectedMarker) + 1}
-                </h3>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => deleteMarker(selectedMarker.id)}
-                  data-testid="button-delete-marker"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+            <div>
+              <Label>Mileage</Label>
+              <Input 
+                type="number" 
+                placeholder="Current mileage" 
+                value={mileage}
+                onChange={(e) => setMileage(e.target.value)}
+                data-testid="input-mileage"
+              />
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Damage Type</Label>
-                  <Select 
-                    value={selectedMarker.type} 
-                    onValueChange={(val: any) => updateMarker({ type: val })}
-                  >
-                    <SelectTrigger data-testid="select-damage-type">
-                      <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="scratch">Scratch</SelectItem>
-                        <SelectItem value="dent">Dent</SelectItem>
-                        <SelectItem value="crack">Crack</SelectItem>
-                        <SelectItem value="missing">Missing Part</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Severity</Label>
-                    <Select 
-                      value={selectedMarker.severity} 
-                      onValueChange={(val: any) => updateMarker({ severity: val })}
-                    >
-                      <SelectTrigger data-testid="select-severity">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minor">Minor</SelectItem>
-                        <SelectItem value="moderate">Moderate</SelectItem>
-                        <SelectItem value="severe">Severe</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea 
-                      placeholder="Describe the damage..." 
-                      value={selectedMarker.notes}
-                      onChange={(e) => updateMarker({ notes: e.target.value })}
-                      rows={3}
-                      data-testid="textarea-marker-notes"
-                    />
-                  </div>
-                </div>
-              </Card>
-            )}
+            <div>
+              <Label>General Notes</Label>
+              <Textarea 
+                placeholder="Add general observations..." 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                data-testid="textarea-notes"
+              />
+            </div>
           </div>
+        </Card>
 
         {/* Signatures Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
