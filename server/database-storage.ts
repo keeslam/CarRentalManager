@@ -1027,8 +1027,8 @@ export class DatabaseStorage implements IStorage {
       sql`SELECT id, name, is_default, background_path, background_preview_path, created_at, updated_at, fields FROM pdf_templates`
     );
     
-    // Map the raw result to PdfTemplate type with proper camelCase field names
-    return result.map((row: any) => ({
+    // Map the raw result rows to PdfTemplate type with proper camelCase field names
+    return result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       isDefault: row.is_default,
