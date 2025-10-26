@@ -48,6 +48,11 @@ export async function convertPdfToPng(
     const canvas = createCanvas(viewport.width, viewport.height);
     const context = canvas.getContext('2d');
     
+    // Fill canvas with white background first (PDF.js renders with transparency)
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, viewport.width, viewport.height);
+    console.log('🎨 Canvas filled with white background');
+    
     // Render PDF page to canvas
     const renderContext = {
       canvasContext: context as any,
