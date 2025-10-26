@@ -1022,7 +1022,22 @@ export class DatabaseStorage implements IStorage {
   
   // PDF Template methods
   async getAllPdfTemplates(): Promise<PdfTemplate[]> {
-    return await db.select().from(pdfTemplates);
+    // Use raw SQL to ensure we get ALL columns including background_preview_path
+    const result = await db.execute(
+      sql`SELECT id, name, is_default, background_path, background_preview_path, created_at, updated_at, fields FROM pdf_templates`
+    );
+    
+    // Map the raw result to PdfTemplate type with proper camelCase field names
+    return result.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      isDefault: row.is_default,
+      backgroundPath: row.background_path,
+      backgroundPreviewPath: row.background_preview_path,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      fields: typeof row.fields === 'string' ? JSON.parse(row.fields) : row.fields
+    }));
   }
   
   async getPdfTemplate(id: number): Promise<PdfTemplate | undefined> {
