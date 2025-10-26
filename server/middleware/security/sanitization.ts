@@ -1,17 +1,38 @@
 import { Request, Response, NextFunction } from 'express';
-import DOMPurify from 'isomorphic-dompurify';
+
+/**
+ * Strip HTML tags and dangerous characters from a string
+ */
+function stripHtml(value: string): string {
+  // Remove HTML tags
+  let sanitized = value.replace(/<[^>]*>/g, '');
+  
+  // Remove script and style content
+  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Remove dangerous protocols
+  sanitized = sanitized.replace(/javascript:/gi, '');
+  sanitized = sanitized.replace(/data:text\/html/gi, '');
+  sanitized = sanitized.replace(/vbscript:/gi, '');
+  
+  // Decode HTML entities to prevent double encoding attacks
+  sanitized = sanitized.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  sanitized = sanitized.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  sanitized = sanitized.replace(/&amp;/g, '&');
+  
+  // Remove the decoded tags again
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  
+  return sanitized.trim();
+}
 
 /**
  * Sanitize string values to prevent XSS attacks
  */
 function sanitizeValue(value: any): any {
   if (typeof value === 'string') {
-    // Sanitize HTML content
-    return DOMPurify.sanitize(value, {
-      ALLOWED_TAGS: [], // Strip all HTML tags
-      ALLOWED_ATTR: [], // Strip all attributes
-      KEEP_CONTENT: true, // Keep text content
-    });
+    return stripHtml(value);
   }
 
   if (Array.isArray(value)) {
@@ -52,11 +73,9 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction): 
  * Sanitize HTML content while preserving safe tags (for rich text editors)
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    ALLOW_DATA_ATTR: false,
-  });
+  // For now, strip all HTML to prevent XSS
+  // If you need rich text, consider using a dedicated library like sanitize-html
+  return stripHtml(html);
 }
 
 /**
