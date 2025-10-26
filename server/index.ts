@@ -297,7 +297,7 @@ await registerRoutes(app);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
-  const publicPath = path.join(__dirname, 'public'); // server/dist/public
+  const publicPath = path.join(appRoot, 'dist', 'public');
   console.log('📦 Serving static files from:', publicPath);
 
   try {
