@@ -19,6 +19,35 @@ This is a comprehensive car rental management system offering full management of
 
 **IMPORTANT**: After this update, administrators should review and re-assign permissions to existing users through the user management interface to ensure they have the appropriate access rights.
 
+### Enterprise-Grade Security Features
+- **Rate Limiting**: Login endpoint protected with 5 attempts per 15 minutes per IP address to prevent brute force attacks
+- **CSRF Protection**: All state-changing requests (POST/PATCH/DELETE) require valid CSRF tokens. Tokens issued via cookie and validated via X-CSRF-Token header. Logout route protected at route level with csrfProtection middleware
+- **Audit Logging**: Comprehensive activity tracking for critical actions (login/logout, user management, permission changes, data modifications) with timestamp, user ID, username, action type, IP address, user agent, and status
+- **Password History**: Prevents password reuse by storing bcrypt hashes of last 5 passwords per user
+- **Account Lockout**: Automatic account lockout after 5 failed login attempts, preventing brute force attacks
+- **Login Attempt Tracking**: Records all login attempts (successful and failed) with username, IP address, timestamp, and success status
+- **Session Management**: Active session tracking with device information, location, last activity timestamp, and ability to revoke sessions remotely
+- **Session Cleanup**: Automated hourly cleanup of expired sessions from database
+- **Security Headers**: Helmet.js integration for XSS protection, clickjacking prevention (X-Frame-Options), content security policy (CSP), HSTS, and other security headers
+- **Input Sanitization**: All user inputs sanitized to prevent XSS attacks using DOMPurify with HTML stripping
+
+**Database Tables for Security:**
+- `auditLogs`: Tracks all critical system actions
+- `passwordHistory`: Stores hashed password history per user
+- `loginAttempts`: Records login attempts for security monitoring
+- `activeSessions`: Manages active user sessions across devices
+
+**Security Middleware Order:**
+1. Security headers (Helmet.js)
+2. Rate limiting
+3. JSON/URL-encoded body parsing
+4. Input sanitization
+5. Session middleware
+6. CSRF token issuance
+7. Authentication routes (login/logout/register)
+8. Route-level CSRF protection (on logout)
+9. Application routes with permission enforcement
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
