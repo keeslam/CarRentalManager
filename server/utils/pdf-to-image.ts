@@ -48,28 +48,45 @@ export async function convertPdfToPng(
     const canvas = createCanvas(viewport.width, viewport.height);
     const context = canvas.getContext('2d');
     
-    // Fill canvas with white background first (PDF.js renders with transparency)
+    // Fill canvas with white background to ensure visibility
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, viewport.width, viewport.height);
     console.log('🎨 Canvas filled with white background');
     
-    // Render PDF page to canvas with image support
+    // Render PDF page to canvas with all rendering options enabled
     const renderContext = {
       canvasContext: context as any,
       viewport: viewport,
-      // Disable image rendering to avoid canvas-related errors with embedded images
+      intent: 'print', // Use print intent for better quality
       renderInteractiveForms: false,
+      enableWebGL: false,
     };
     
     const renderTask = page.render(renderContext);
     
-    // Handle rendering errors gracefully
+    // Wait for render to complete
     try {
       await renderTask.promise;
       console.log('✅ PDF page rendered to canvas');
+      
+      // Check if canvas has any non-white pixels
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      let hasContent = false;
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] !== 255 || imageData.data[i+1] !== 255 || imageData.data[i+2] !== 255) {
+          hasContent = true;
+          break;
+        }
+      }
+      
+      if (!hasContent) {
+        console.warn('⚠️ Canvas appears to be blank - PDF might not have renderable content');
+      } else {
+        console.log('✅ Canvas contains visible content');
+      }
     } catch (renderError) {
-      console.warn('⚠️ PDF rendering encountered issues, attempting to save partial render:', renderError);
-      // Continue anyway - partial render is better than nothing
+      console.warn('⚠️ PDF rendering encountered issues:', renderError);
+      throw renderError; // Re-throw to indicate conversion failed
     }
     
     // Save canvas as PNG
