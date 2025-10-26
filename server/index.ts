@@ -297,10 +297,14 @@ await registerRoutes(app);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
-  const publicPath = path.join(appRoot, 'dist', 'public');
+  // In production, the built server is in dist/server/index.js
+  // and the frontend is in dist/public/
+  // So we need to go up from dist/server to dist, then to public
+  const publicPath = path.join(__dirname, '..', 'public');
   const indexPath = path.join(publicPath, 'index.html');
   
   console.log('📦 Production build configuration:');
+  console.log('   __dirname:', __dirname);
   console.log('   App root:', appRoot);
   console.log('   Public path:', publicPath);
   console.log('   Index path:', indexPath);
