@@ -32,6 +32,7 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { BackupService } from "./backupService";
 import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
+import { hasPermission, requireAdmin } from "./middleware/permissions.js";
 import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
 import { 
   getWelcomeTemplate, 
@@ -178,46 +179,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   const objectStorage = new ObjectStorageService();
 
   // ==================== USER MANAGEMENT ROUTES ====================
-  // A middleware to check for admin permissions
-  const requireAdmin = (req: Request & { user?: any; isAuthenticated?: () => boolean }, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated?.()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    if (req.user?.role !== UserRole.ADMIN) {
-      return res.status(403).json({ message: "Not authorized. Admin access required." });
-    }
-    
-    next();
-  };
-  
-  // Check if user has specific permission(s) - supports multiple permissions (OR logic)
-  const hasPermission = (...permissions: string[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      // Admin role always has all permissions
-      if (req.user.role === UserRole.ADMIN) {
-        return next();
-      }
-      
-      const userPermissions = req.user.permissions || [];
-      const hasRequiredPermission = permissions.some(permission => 
-        userPermissions.includes(permission)
-      );
-      
-      if (!hasRequiredPermission) {
-        return res.status(403).json({ 
-          message: `Not authorized. One of these permissions required: ${permissions.join(', ')}` 
-        });
-      }
-      
-      next();
-    };
-  };
-  
   // Get all users (admin only)
   app.get("/api/users", requireAdmin, async (req, res) => {
     try {

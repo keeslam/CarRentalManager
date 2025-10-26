@@ -16,6 +16,8 @@ import vehiclesWithReservationsRoutes from "./routes/vehicles-with-reservations.
 import filteredVehiclesRoutes from "./routes/filtered-vehicles.js";
 import emailTemplatesRoutes from "./routes/email-templates.js";
 import emailLogsRoutes from "./routes/email-logs.js";
+import { hasPermission } from "./middleware/permissions.js";
+import { UserPermission } from "../shared/schema.js";
 
 // Graceful shutdown implementation
 let server: any = null;
@@ -265,11 +267,11 @@ app.get('/api', (_req, res) => {
 });
 
 // Register API routes FIRST (before production static files)  
-app.use('/api/notifications', requireAuth, notificationRoutes);
-app.use('/api/vehicles/with-reservations', requireAuth, vehiclesWithReservationsRoutes);
-app.use('/api/vehicles/filtered', requireAuth, filteredVehiclesRoutes);
-app.use('/api/email-templates', requireAuth, emailTemplatesRoutes);
-app.use('/api/email-logs', requireAuth, emailLogsRoutes);
+app.use('/api/notifications', requireAuth, hasPermission(UserPermission.MANAGE_NOTIFICATIONS), notificationRoutes);
+app.use('/api/vehicles/with-reservations', requireAuth, hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES, UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), vehiclesWithReservationsRoutes);
+app.use('/api/vehicles/filtered', requireAuth, hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), filteredVehiclesRoutes);
+app.use('/api/email-templates', requireAuth, hasPermission(UserPermission.MANAGE_EMAIL_TEMPLATES), emailTemplatesRoutes);
+app.use('/api/email-logs', requireAuth, hasPermission(UserPermission.MANAGE_EMAIL_TEMPLATES), emailLogsRoutes);
 await registerRoutes(app);
 
 // Serve frontend in production

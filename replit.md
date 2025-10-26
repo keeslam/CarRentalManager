@@ -3,6 +3,22 @@
 ## Overview
 This is a comprehensive car rental management system offering full management of vehicles, customers, reservations, expenses, and documents. It features a dashboard for key metrics, calendar views for reservations, and extensive reporting. The system includes recent enhancements such as a damage check template editor, a simplified one-button backup system, auto-logout security, advanced reporting with a custom report builder, maintenance cost analysis, and a complete multi-driver management system. Key project ambitions include providing a robust and user-friendly platform for efficient car rental operations.
 
+## Recent Changes (October 26, 2025)
+### Comprehensive Permission System Implementation
+- **New Roles Added**: CLEANER, VIEWER, ACCOUNTANT, MAINTENANCE (in addition to ADMIN, MANAGER, USER)
+- **New Granular Permissions**: 
+  - Vehicle management: VIEW_VEHICLES, MANAGE_VEHICLES
+  - Customer management: VIEW_CUSTOMERS, MANAGE_CUSTOMERS  
+  - Reservation management: VIEW_RESERVATIONS, MANAGE_RESERVATIONS
+  - Document/Template management: MANAGE_DOCUMENTS, MANAGE_PDF_TEMPLATES
+  - Damage checks: VIEW_DAMAGE_CHECKS, MANAGE_DAMAGE_CHECKS
+  - Reports: VIEW_REPORTS, MANAGE_REPORTS
+  - System admin: MANAGE_BACKUPS, MANAGE_SETTINGS, MANAGE_EMAIL_TEMPLATES, MANAGE_NOTIFICATIONS
+- **Permission Enforcement**: All backend routes now enforce granular permissions using shared middleware
+- **User Form**: Updated to show all new roles and permissions as individual toggles
+
+**IMPORTANT**: After this update, administrators should review and re-assign permissions to existing users through the user management interface to ensure they have the appropriate access rights.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
