@@ -854,8 +854,35 @@ export default function DocumentsIndex() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {templates.map((template: any) => (
                       <Card key={template.id} className="overflow-hidden">
-                        <div className="bg-gray-100 p-8 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text text-gray-600">
+                        <div className="bg-gray-100 p-2 flex items-center justify-center aspect-[8.5/11] relative">
+                          {template.templatePreviewPath ? (
+                            <img 
+                              src={`/${template.templatePreviewPath}`} 
+                              alt={`Preview of ${template.name}`}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                // Fallback to icon if image fails to load
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent) {
+                                  const icon = parent.querySelector('.fallback-icon') as HTMLElement;
+                                  if (icon) icon.style.display = 'block';
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            width="40" 
+                            height="40" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="1" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            className={`fallback-icon lucide lucide-file-text text-gray-600 ${template.templatePreviewPath ? 'hidden' : 'block'}`}
+                          >
                             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                             <polyline points="14 2 14 8 20 8" />
                             <line x1="16" x2="8" y1="13" y2="13" />
