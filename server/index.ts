@@ -19,6 +19,13 @@ import emailLogsRoutes from "./routes/email-logs.js";
 import { hasPermission } from "./middleware/permissions.js";
 import { UserPermission } from "../shared/schema.js";
 
+// Security middleware imports
+import { securityHeaders, customSecurityHeaders } from "./middleware/security/headers.js";
+import { sanitizeInput } from "./middleware/security/sanitization.js";
+import { apiLimiter } from "./middleware/security/rateLimiter.js";
+import { attachCsrfToken } from "./middleware/security/csrf.js";
+import { startSessionCleanupScheduler } from "./utils/security/sessionManager.js";
+
 // Graceful shutdown implementation
 let server: any = null;
 let io: SocketIOServer | null = null;
@@ -133,12 +140,26 @@ const appRoot = path.resolve(__dirname, '..'); // /app in Docker
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
+// Security: Apply security headers first
+app.use(securityHeaders);
+app.use(customSecurityHeaders);
+
+// Security: Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
+
 // Middleware - Increase limits for damage check diagrams with base64 images
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// Setup authentication
+// Security: Sanitize all inputs to prevent XSS
+app.use(sanitizeInput);
+
+// Setup authentication (includes session middleware)
+// Note: This also registers /api/login, /api/register, and /api/logout routes
 const { requireAuth } = setupAuth(app);
+
+// Security: Attach CSRF token to all responses (after session middleware)
+app.use(attachCsrfToken);
 
 // Real-time WebSocket event system
 function setupSocketIO(server: any) {
@@ -346,6 +367,10 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 // Initialize backup scheduler
 backupScheduler = new BackupScheduler();
 backupScheduler.start();
+
+// Initialize session cleanup scheduler (runs every hour)
+const sessionCleanupScheduler = startSessionCleanupScheduler(60);
+console.log('🔒 Session cleanup scheduler started - runs hourly');
 
 // SSL/HTTPS Configuration
 const sslKeyPath = process.env.SSL_KEY_PATH;

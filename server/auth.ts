@@ -10,6 +10,12 @@ import { pool } from "./db";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 
+// Security imports
+import { AuditLogger } from "./utils/security/auditLogger.js";
+import { checkAccountLockout, recordLoginAttempt, clearFailedAttempts, loginLimiter } from "./middleware/security/rateLimiter.js";
+import { trackSession } from "./utils/security/sessionManager.js";
+import { csrfProtection } from "./middleware/security/csrf.js";
+
 // Extend Express.User interface with our User type properties
 declare global {
   namespace Express {
@@ -191,13 +197,97 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate("local", (err: any, user: User | false, info: { message?: string }) => {
+  app.post("/api/login", loginLimiter, async (req: Request, res: Response, next: NextFunction) => {
+    const { username } = req.body;
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+
+    // Check for account lockout before attempting login
+    if (username) {
+      const lockStatus = await checkAccountLockout(username, ipAddress);
+      if (lockStatus.locked) {
+        const minutes = Math.ceil((lockStatus.remainingTime || 0) / 60);
+        
+        // Log failed login attempt (only if username exists)
+        if (username) {
+          await recordLoginAttempt(username, ipAddress, userAgent, false, 'account_locked');
+          await AuditLogger.log({
+            username,
+            action: 'user.login.failed',
+            details: { reason: 'account_locked', attemptsCount: lockStatus.attemptsCount },
+            ipAddress,
+            userAgent,
+            status: 'failure',
+          });
+        }
+
+        return res.status(429).json({
+          message: `Account temporarily locked due to too many failed login attempts. Please try again in ${minutes} minute(s).`,
+          remainingTime: lockStatus.remainingTime,
+        });
+      }
+    }
+
+    passport.authenticate("local", async (err: any, user: User | false, info: { message?: string }) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Authentication failed" });
       
-      req.login(user, (err: any) => {
+      if (!user) {
+        // Record failed login attempt (only if username exists)
+        if (username) {
+          await recordLoginAttempt(username, ipAddress, userAgent, false, 'invalid_credentials');
+          await AuditLogger.log({
+            username,
+            action: 'user.login.failed',
+            details: { reason: info?.message || 'invalid_credentials' },
+            ipAddress,
+            userAgent,
+            status: 'failure',
+          });
+        }
+        
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+
+      // Check if user account is active
+      if (!user.active) {
+        await recordLoginAttempt(username, ipAddress, userAgent, false, 'account_disabled');
+        await AuditLogger.log({
+          userId: user.id,
+          username: user.username,
+          action: 'user.login.failed',
+          details: { reason: 'account_disabled' },
+          ipAddress,
+          userAgent,
+          status: 'failure',
+        });
+        
+        return res.status(403).json({ message: "Account has been disabled" });
+      }
+      
+      req.login(user, async (err: any) => {
         if (err) return next(err);
+        
+        // Record successful login attempt
+        await recordLoginAttempt(username, ipAddress, userAgent, true);
+        
+        // Clear failed login attempts
+        await clearFailedAttempts(username);
+        
+        // Track active session
+        const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        await trackSession(req.sessionID, user.id, user.username, req, sessionExpiry);
+        
+        // Log successful login
+        await AuditLogger.log({
+          userId: user.id,
+          username: user.username,
+          action: 'user.login',
+          details: { role: user.role },
+          ipAddress,
+          userAgent,
+          status: 'success',
+        });
+        
         // Return user without password
         const { password, ...userWithoutPassword } = user;
         res.status(200).json(userWithoutPassword);
@@ -205,7 +295,23 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/logout", csrfProtection, async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user as User | undefined;
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+    
+    // Log logout before destroying session
+    if (user) {
+      await AuditLogger.log({
+        userId: user.id,
+        username: user.username,
+        action: 'user.logout',
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
+    }
+    
     req.logout((err: any) => {
       if (err) return next(err);
       res.status(200).json({ message: "Logged out successfully" });

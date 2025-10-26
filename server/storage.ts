@@ -13,7 +13,11 @@ import {
   savedReports, type SavedReport, type InsertSavedReport,
   damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate,
   vehicleDiagramTemplates, type VehicleDiagramTemplate, type InsertVehicleDiagramTemplate,
-  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck
+  interactiveDamageChecks, type InteractiveDamageCheck, type InsertInteractiveDamageCheck,
+  auditLogs, type AuditLog, type InsertAuditLog,
+  passwordHistory, type PasswordHistory, type InsertPasswordHistory,
+  loginAttempts, type LoginAttempt, type InsertLoginAttempt,
+  activeSessions, type ActiveSession, type InsertActiveSession
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -185,6 +189,37 @@ export interface IStorage {
   createDamageCheckPdfTemplate(template: any): Promise<any>;
   updateDamageCheckPdfTemplate(id: number, templateData: any): Promise<any | undefined>;
   deleteDamageCheckPdfTemplate(id: number): Promise<boolean>;
+  
+  // Security: Audit Log methods
+  createAuditLog(log: any): Promise<any>;
+  getAuditLogs(filters?: {
+    userId?: number;
+    action?: string;
+    resourceType?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<any[]>;
+  
+  // Security: Password History methods
+  addPasswordHistory(userId: number, passwordHash: string): Promise<void>;
+  getPasswordHistory(userId: number, limit?: number): Promise<any[]>;
+  checkPasswordInHistory(userId: number, passwordHash: string): Promise<boolean>;
+  
+  // Security: Login Attempt methods
+  recordLoginAttempt(attempt: any): Promise<any>;
+  getRecentLoginAttempts(username: string, minutes?: number): Promise<any[]>;
+  getFailedLoginAttempts(username: string, ipAddress: string, minutes?: number): Promise<number>;
+  clearLoginAttempts(username: string): Promise<void>;
+  
+  // Security: Active Session methods
+  createActiveSession(session: any): Promise<any>;
+  getActiveSessionBySessionId(sessionId: string): Promise<any | undefined>;
+  getUserActiveSessions(userId: number): Promise<any[]>;
+  updateSessionActivity(sessionId: string): Promise<void>;
+  revokeSession(sessionId: string): Promise<boolean>;
+  revokeUserSessions(userId: number, exceptSessionId?: string): Promise<number>;
+  cleanExpiredSessions(): Promise<number>;
   
 }
 

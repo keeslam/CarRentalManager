@@ -1170,3 +1170,84 @@ export const insertDamageCheckPdfTemplateSchema = createInsertSchema(damageCheck
 
 export type DamageCheckPdfTemplate = typeof damageCheckPdfTemplates.$inferSelect;
 export type InsertDamageCheckPdfTemplate = z.infer<typeof insertDamageCheckPdfTemplateSchema>;
+
+// Security Tables
+
+// Audit Logs - Track all critical actions for compliance and security
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  username: text("username"), // Denormalized for deleted users
+  action: text("action").notNull(), // e.g., 'user.login', 'user.create', 'vehicle.delete'
+  resourceType: text("resource_type"), // e.g., 'user', 'vehicle', 'customer', 'reservation'
+  resourceId: text("resource_id"), // ID of affected resource
+  details: jsonb("details").$type<Record<string, any>>(), // Additional context
+  ipAddress: text("ip_address"), // User's IP address
+  userAgent: text("user_agent"), // Browser/client info
+  status: text("status").notNull().default("success"), // 'success' | 'failure'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Password History - Prevent password reuse (last 5 passwords)
+export const passwordHistory = pgTable("password_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPasswordHistorySchema = createInsertSchema(passwordHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type PasswordHistory = typeof passwordHistory.$inferSelect;
+export type InsertPasswordHistory = z.infer<typeof insertPasswordHistorySchema>;
+
+// Login Attempts - Track failed login attempts for rate limiting
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  ipAddress: text("ip_address").notNull(),
+  userAgent: text("user_agent"),
+  success: boolean("success").notNull(),
+  failureReason: text("failure_reason"), // e.g., 'invalid_password', 'account_locked', 'invalid_username'
+  attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
+});
+
+export const insertLoginAttemptSchema = createInsertSchema(loginAttempts).omit({
+  id: true,
+  attemptedAt: true,
+});
+
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
+
+// Active Sessions - Track user sessions for revocation capability
+export const activeSessions = pgTable("active_sessions", {
+  id: serial("id").primaryKey(),
+  sessionId: text("session_id").notNull().unique(), // Express session ID
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  username: text("username").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  lastActivity: timestamp("last_activity").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertActiveSessionSchema = createInsertSchema(activeSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ActiveSession = typeof activeSessions.$inferSelect;
+export type InsertActiveSession = z.infer<typeof insertActiveSessionSchema>;
