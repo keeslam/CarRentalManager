@@ -29,7 +29,7 @@ import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
 import DamageCheckTemplateEditor from "./damage-check-template-editor";
-import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit } from "lucide-react";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
