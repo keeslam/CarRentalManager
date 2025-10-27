@@ -39,6 +39,7 @@ import {
 import { Mail } from "lucide-react";
 import { useLocation } from "wouter";
 import { formatLicensePlate, capitalizeWords } from "@/lib/format-utils";
+import { OIL_GRADES } from "@/constants/oil-grades";
 
 // Utility function to handle null values for form inputs
 const handleFieldValue = (value: any): string => {
@@ -956,6 +957,43 @@ export function VehicleForm({
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="recommendedOil"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Recommended Oil</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={handleFieldValue(field.value) || undefined}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-recommended-oil">
+                              <SelectValue placeholder="Select oil grade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-[300px]">
+                            {OIL_GRADES.map(grade => (
+                              <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Or type custom specification below
+                        </FormDescription>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Putoline N-Tech Pro R+ 10W-50" 
+                            value={handleFieldValue(field.value)}
+                            onChange={field.onChange}
+                            data-testid="input-recommended-oil-custom"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

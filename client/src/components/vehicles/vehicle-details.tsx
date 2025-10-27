@@ -1335,6 +1335,13 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   </div>
                   
                   <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">🛢️ Recommended Oil</h4>
+                    <p className="text-base font-semibold" data-testid="text-recommended-oil">
+                      {vehicle.recommendedOil || <span className="text-gray-400 font-normal">Not specified</span>}
+                    </p>
+                  </div>
+                  
+                  <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">AdBlue</h4>
                     <div className="flex items-center gap-2">
                       <Switch checked={!!vehicle.adBlue} disabled />

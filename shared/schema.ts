@@ -145,6 +145,9 @@ export const vehicles = pgTable("vehicles", {
   lastServiceDate: text("last_service_date"),
   lastServiceMileage: integer("last_service_mileage"),
   
+  // Oil specification
+  recommendedOil: text("recommended_oil"), // e.g., "5W-30", "10W-40", or custom specification
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
