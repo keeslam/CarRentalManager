@@ -38,9 +38,9 @@ function verifyCsrfToken(token: string, secret: string): boolean {
       return false;
     }
 
-    // Check if token is not too old (1 hour)
+    // Check if token is not too old (24 hours)
     const tokenAge = Date.now() - parseInt(timestamp);
-    if (tokenAge > 60 * 60 * 1000) {
+    if (tokenAge > 24 * 60 * 60 * 1000) {
       return false;
     }
 

@@ -333,7 +333,10 @@ if (process.env.NODE_ENV === "production") {
 
   // SPA fallback - MUST be last, after all API routes
   app.get('*', (req: Request, res: Response) => {
-    console.log('🔍 SPA Fallback triggered for:', req.path);
+    // Only log non-asset requests to reduce noise
+    if (!req.path.startsWith('/assets/') && !req.path.endsWith('.js') && !req.path.endsWith('.css')) {
+      console.log('🔍 SPA Fallback for:', req.path);
+    }
     
     if (req.path.startsWith('/api')) {
       console.log('❌ API route not found:', req.path);
@@ -341,7 +344,6 @@ if (process.env.NODE_ENV === "production") {
     }
 
     if (fs.existsSync(indexPath)) {
-      console.log('✅ Serving index.html for:', req.path);
       res.sendFile(indexPath);
     } else {
       console.error('❌ index.html not found at:', indexPath);
