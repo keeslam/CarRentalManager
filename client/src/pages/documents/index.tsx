@@ -1412,6 +1412,8 @@ function DiagramTemplateManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [yearFrom, setYearFrom] = useState("");
@@ -1454,6 +1456,40 @@ function DiagramTemplateManager() {
       toast({
         title: "Error",
         description: error.message || "Failed to upload diagram template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit mutation
+  const editMutation = useMutation({
+    mutationFn: async ({ id, formData }: { id: number; formData: FormData }) => {
+      const response = await fetch(`/api/vehicle-diagram-templates/${id}`, {
+        method: 'PATCH',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Update failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      toast({
+        title: "Success",
+        description: "Vehicle diagram template updated successfully",
+      });
+      setEditDialogOpen(false);
+      setEditingTemplate(null);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update diagram template",
         variant: "destructive",
       });
     },
@@ -1511,6 +1547,38 @@ function DiagramTemplateManager() {
     formData.append('diagram', diagramFile);
 
     uploadMutation.mutate(formData);
+  };
+
+  const handleEdit = (template: any) => {
+    setEditingTemplate(template);
+    setMake(template.make || "");
+    setModel(template.model || "");
+    setYearFrom(template.yearFrom?.toString() || "");
+    setYearTo(template.yearTo?.toString() || "");
+    setDescription(template.description || "");
+    setDiagramFile(null); // Don't pre-fill file
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdate = () => {
+    if (!editingTemplate || !make || !model) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide make and model",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('make', make);
+    formData.append('model', model);
+    if (yearFrom) formData.append('yearFrom', yearFrom);
+    if (yearTo) formData.append('yearTo', yearTo);
+    if (description) formData.append('description', description);
+    if (diagramFile) formData.append('diagram', diagramFile); // Only if new image uploaded
+
+    editMutation.mutate({ id: editingTemplate.id, formData });
   };
 
   const handleDelete = (template: any) => {
@@ -1571,16 +1639,28 @@ function DiagramTemplateManager() {
                   <p className="text-xs text-gray-500 mt-2">
                     Added {formatDate(template.createdAt)}
                   </p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="mt-3 w-full"
-                    onClick={() => handleDelete(template)}
-                    data-testid={`button-delete-diagram-template-${template.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleEdit(template)}
+                      data-testid={`button-edit-diagram-template-${template.id}`}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleDelete(template)}
+                      data-testid={`button-delete-diagram-template-${template.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -1681,6 +1761,117 @@ function DiagramTemplateManager() {
               data-testid="button-submit-upload-diagram"
             >
               {uploadMutation.isPending ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingTemplate(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Vehicle Diagram Template</DialogTitle>
+            <DialogDescription>
+              Update vehicle diagram template information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-make">Make *</Label>
+                <Input
+                  id="edit-make"
+                  placeholder="e.g., Toyota"
+                  value={make}
+                  onChange={(e) => setMake(e.target.value)}
+                  data-testid="input-edit-make"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-model">Model *</Label>
+                <Input
+                  id="edit-model"
+                  placeholder="e.g., Camry"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  data-testid="input-edit-model"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-yearFrom">Year From (Optional)</Label>
+                <Input
+                  id="edit-yearFrom"
+                  type="number"
+                  placeholder="e.g., 2015"
+                  value={yearFrom}
+                  onChange={(e) => setYearFrom(e.target.value)}
+                  data-testid="input-edit-year-from"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-yearTo">Year To (Optional)</Label>
+                <Input
+                  id="edit-yearTo"
+                  type="number"
+                  placeholder="e.g., 2020"
+                  value={yearTo}
+                  onChange={(e) => setYearTo(e.target.value)}
+                  data-testid="input-edit-year-to"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description (Optional)</Label>
+              <Input
+                id="edit-description"
+                placeholder="e.g., Sedan body style"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                data-testid="input-edit-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-diagram">New Diagram Image (Optional)</Label>
+              <Input
+                id="edit-diagram"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setDiagramFile(e.target.files?.[0] || null)}
+                data-testid="input-edit-diagram-file"
+              />
+              {diagramFile && (
+                <p className="text-sm text-green-600">New image selected: {diagramFile.name}</p>
+              )}
+              {!diagramFile && (
+                <p className="text-xs text-gray-500">Leave empty to keep current diagram</p>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              setEditDialogOpen(false);
+              setEditingTemplate(null);
+              resetForm();
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdate} 
+              disabled={editMutation.isPending || !make || !model}
+              data-testid="button-submit-edit-diagram"
+            >
+              {editMutation.isPending ? "Updating..." : "Update"}
             </Button>
           </div>
         </DialogContent>
