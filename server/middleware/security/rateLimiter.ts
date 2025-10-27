@@ -6,8 +6,8 @@ import { eq, and, gte, sql } from 'drizzle-orm';
 
 /**
  * General API rate limiter - 1000 requests per 15 minutes per IP
- * This allows for normal SPA usage with multiple concurrent requests
- * Prevents abuse while not blocking legitimate heavy usage
+ * Only applies to unauthenticated requests (public endpoints)
+ * Authenticated users bypass this limiter to prevent shared IP issues
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -15,6 +15,11 @@ export const apiLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for authenticated users
+    // This prevents issues with multiple users on same IP (office networks)
+    return req.isAuthenticated && req.isAuthenticated();
+  },
 });
 
 /**
