@@ -5,11 +5,13 @@ import { loginAttempts } from '../../../shared/schema';
 import { eq, and, gte, sql } from 'drizzle-orm';
 
 /**
- * General API rate limiter - 100 requests per 15 minutes per IP
+ * General API rate limiter - 1000 requests per 15 minutes per IP
+ * This allows for normal SPA usage with multiple concurrent requests
+ * Prevents abuse while not blocking legitimate heavy usage
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Limit each IP to 1000 requests per windowMs (~66 per minute)
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
