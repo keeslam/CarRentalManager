@@ -1361,17 +1361,23 @@ export default function MaintenanceCalendar() {
                                 variant="outline"
                                 onClick={async () => {
                                   try {
-                                    const response = await fetch('/api/reservations');
-                                    const allReservations = await response.json();
-                                    const actualReservation = allReservations.find((r: any) => 
-                                      r.vehicleId === event.vehicleId && 
-                                      r.type === 'maintenance_block' &&
-                                      r.startDate === event.date
-                                    );
+                                    // Extract reservation ID from event ID (format: "scheduled_maintenance_123")
+                                    let reservationId: number;
+                                    if (typeof event.id === 'string') {
+                                      const match = event.id.match(/\d+$/);
+                                      reservationId = match ? parseInt(match[0]) : 0;
+                                    } else {
+                                      reservationId = event.id;
+                                    }
                                     
-                                    if (actualReservation) {
-                                      setReservationToDelete(actualReservation);
-                                      setDeleteDialogOpen(true);
+                                    if (reservationId && reservationId > 0) {
+                                      // Fetch only the specific reservation instead of all
+                                      const response = await fetch(`/api/reservations/${reservationId}`);
+                                      if (response.ok) {
+                                        const reservation = await response.json();
+                                        setReservationToDelete(reservation);
+                                        setDeleteDialogOpen(true);
+                                      }
                                     }
                                   } catch (error) {
                                     console.error('Failed to fetch reservation:', error);
