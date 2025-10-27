@@ -8162,6 +8162,68 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Update vehicle diagram template
+  app.patch("/api/vehicle-diagram-templates/:id", requireAuth, diagramUpload.single('diagram'), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.user as Express.User | undefined;
+      const template = await storage.getVehicleDiagramTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      let diagramPath = template.diagramPath; // Keep existing path by default
+      
+      // If a new diagram file was uploaded, handle it
+      if (req.file) {
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        const diagramsDir = path.join(uploadsDir, 'vehicle-diagrams');
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(diagramsDir)) {
+          fs.mkdirSync(diagramsDir, { recursive: true });
+        }
+        
+        // Delete old diagram file if it exists
+        if (template.diagramPath) {
+          try {
+            const oldFilePath = path.join(process.cwd(), template.diagramPath);
+            if (fs.existsSync(oldFilePath)) {
+              await fs.promises.unlink(oldFilePath);
+              console.log(`✅ Deleted old diagram: ${template.diagramPath}`);
+            }
+          } catch (err) {
+            console.error("Error deleting old diagram file:", err);
+          }
+        }
+        
+        // Move new file to diagrams directory
+        const newFileName = `${req.body.make}-${req.body.model}-${Date.now()}${path.extname(req.file.originalname)}`;
+        const newFilePath = path.join(diagramsDir, newFileName);
+        await fs.promises.rename(req.file.path, newFilePath);
+        diagramPath = `uploads/vehicle-diagrams/${newFileName}`;
+      }
+      
+      const updateData = {
+        make: req.body.make,
+        model: req.body.model,
+        yearFrom: req.body.yearFrom ? parseInt(req.body.yearFrom) : null,
+        yearTo: req.body.yearTo ? parseInt(req.body.yearTo) : null,
+        diagramPath: diagramPath,
+        description: req.body.description || null,
+        updatedBy: user ? user.username : null,
+      };
+      
+      const updated = await storage.updateVehicleDiagramTemplate(id, updateData);
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating vehicle diagram template:", error);
+      res.status(500).json({ message: "Error updating vehicle diagram template" });
+    }
+  });
+
   // Delete vehicle diagram template
   app.delete("/api/vehicle-diagram-templates/:id", requireAuth, async (req: Request, res: Response) => {
     try {
