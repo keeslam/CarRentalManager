@@ -239,7 +239,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5" />
