@@ -799,17 +799,6 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
             </DialogContent>
           </Dialog>
 
-          <Button 
-            variant="outline"
-            onClick={() => {
-              window.open(`/api/vehicles/${vehicleId}/damage-check-pdf`, '_blank');
-            }}
-            data-testid="button-download-damage-check"
-          >
-            <FileCheck className="mr-2 h-4 w-4" />
-            Download Damage Check
-          </Button>
-
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="text-red-600 hover:text-red-700">
