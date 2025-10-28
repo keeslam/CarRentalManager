@@ -1249,7 +1249,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 className={selectedDamageType === 'dent' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-blue-50'}
                 data-testid="button-select-dent"
               >
-                <span className="font-bold bg-white text-blue-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">1</span>
+                <span className="font-bold bg-white text-blue-600 w-10 h-10 md:w-9 md:h-9 lg:w-7 lg:h-7 rounded-full flex items-center justify-center mr-2 text-base md:text-sm">1</span>
                 Dent
               </Button>
               <Button
@@ -1259,7 +1259,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 className={selectedDamageType === 'scratch' ? 'bg-orange-600 hover:bg-orange-700' : 'hover:bg-orange-50'}
                 data-testid="button-select-scratch"
               >
-                <span className="font-bold bg-white text-orange-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">2</span>
+                <span className="font-bold bg-white text-orange-600 w-10 h-10 md:w-9 md:h-9 lg:w-7 lg:h-7 rounded-full flex items-center justify-center mr-2 text-base md:text-sm">2</span>
                 Scratch
               </Button>
               <Button
@@ -1269,7 +1269,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 className={selectedDamageType === 'crack' ? 'bg-red-600 hover:bg-red-700' : 'hover:bg-red-50'}
                 data-testid="button-select-crack"
               >
-                <span className="font-bold bg-white text-red-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">3</span>
+                <span className="font-bold bg-white text-red-600 w-10 h-10 md:w-9 md:h-9 lg:w-7 lg:h-7 rounded-full flex items-center justify-center mr-2 text-base md:text-sm">3</span>
                 Crack
               </Button>
               <Button
@@ -1279,7 +1279,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 className={selectedDamageType === 'missing' ? 'bg-purple-600 hover:bg-purple-700' : 'hover:bg-purple-50'}
                 data-testid="button-select-missing"
               >
-                <span className="font-bold bg-white text-purple-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">4</span>
+                <span className="font-bold bg-white text-purple-600 w-10 h-10 md:w-9 md:h-9 lg:w-7 lg:h-7 rounded-full flex items-center justify-center mr-2 text-base md:text-sm">4</span>
                 Missing Part
               </Button>
               <Button
@@ -1289,7 +1289,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 className={selectedDamageType === 'other' ? 'bg-gray-600 hover:bg-gray-700' : 'hover:bg-gray-50'}
                 data-testid="button-select-other"
               >
-                <span className="font-bold bg-white text-gray-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">5</span>
+                <span className="font-bold bg-white text-gray-600 w-10 h-10 md:w-9 md:h-9 lg:w-7 lg:h-7 rounded-full flex items-center justify-center mr-2 text-base md:text-sm">5</span>
                 Other
               </Button>
             </div>
