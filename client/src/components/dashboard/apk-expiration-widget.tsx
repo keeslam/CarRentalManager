@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/format-utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useLocation } from "wouter";
 import { Vehicle } from "@shared/schema";
-import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
+import { ApkInspectionDialog } from "@/components/vehicles/apk-inspection-dialog";
 
 // Function to get days until a date
 function getDaysUntil(dateStr: string): number {
@@ -33,7 +33,7 @@ export function ApkExpirationWidget() {
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles/apk-expiring"],
@@ -47,7 +47,7 @@ export function ApkExpirationWidget() {
   
   // Function to handle clicking on a vehicle to schedule APK inspection
   const handleScheduleClick = (vehicle: Vehicle) => {
-    setSelectedVehicleId(vehicle.id);
+    setSelectedVehicle(vehicle);
     setScheduleDialogOpen(true);
   };
   
@@ -59,7 +59,7 @@ export function ApkExpirationWidget() {
   const handleDialogClose = (isOpen: boolean) => {
     setScheduleDialogOpen(isOpen);
     if (!isOpen) {
-      setSelectedVehicleId(null);
+      setSelectedVehicle(null);
     }
   };
   
@@ -129,13 +129,14 @@ export function ApkExpirationWidget() {
         </div>
       </CardContent>
       
-      <ScheduleMaintenanceDialog
-        open={scheduleDialogOpen}
-        onOpenChange={handleDialogClose}
-        onSuccess={handleScheduleSuccess}
-        initialVehicleId={selectedVehicleId || undefined}
-        initialMaintenanceType="apk_inspection"
-      />
+      {selectedVehicle && (
+        <ApkInspectionDialog
+          open={scheduleDialogOpen}
+          onOpenChange={handleDialogClose}
+          vehicle={selectedVehicle}
+          onSuccess={handleScheduleSuccess}
+        />
+      )}
     </Card>
   );
 }
