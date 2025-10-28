@@ -250,8 +250,8 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[75vh]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-2">
+        <ScrollArea className="max-h-[calc(90vh-200px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-2 pr-4">
             {/* Calendar View */}
             <div className="space-y-4">
               <Card>
