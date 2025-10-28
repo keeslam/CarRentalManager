@@ -118,52 +118,50 @@ export function RecentExpenses() {
         ) : expenses?.length === 0 ? (
           <div className="text-center py-4 text-gray-500">No recent expenses</div>
         ) : (
-          <div className="max-h-[265px] overflow-y-auto pr-1 space-y-3">
+          <div className="max-h-[265px] overflow-y-auto pr-1 space-y-2">
             {expenses?.slice(0, 10).map((expense, index) => (
-              <div key={expense.id} className={`${index < (expenses?.length ?? 0) - 1 ? 'border-b pb-3' : ''}`}>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                      {getExpenseIcon(expense.category)}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{formatLicensePlate(expense.vehicle?.licensePlate || '')} - {expense.description}</div>
-                      <div className="text-xs text-gray-500">{formatDate(expense.date)} • {expense.category}</div>
-                    </div>
+              <div key={expense.id} className={`flex justify-between items-center ${index < (expenses?.length ?? 0) - 1 ? 'border-b pb-2' : ''}`}>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    {getExpenseIcon(expense.category)}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">{formatCurrency(Number(expense.amount || 0))}</div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
-                          <Eye className="h-3 w-3 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditExpense(expense)}>
-                          <Pencil className="h-3 w-3 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        {expense.receiptFilePath && (
-                          <DropdownMenuItem asChild>
-                            <a
-                              href={`/api/expenses/${expense.id}/receipt`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center cursor-pointer"
-                            >
-                              <Printer className="h-3 w-3 mr-2" />
-                              View Receipt
-                            </a>
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div className="text-sm truncate">
+                    <span className="font-medium">{formatLicensePlate(expense.vehicle?.licensePlate || '')}</span>
+                    <span className="text-gray-500">: {expense.category}</span>
                   </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-sm font-semibold text-gray-900">{formatCurrency(Number(expense.amount || 0))}</div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
+                        <Eye className="h-3 w-3 mr-2" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditExpense(expense)}>
+                        <Pencil className="h-3 w-3 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      {expense.receiptFilePath && (
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={`/api/expenses/${expense.id}/receipt`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center cursor-pointer"
+                          >
+                            <Printer className="h-3 w-3 mr-2" />
+                            View Receipt
+                          </a>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}
