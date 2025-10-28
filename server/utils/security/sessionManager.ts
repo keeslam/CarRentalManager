@@ -144,11 +144,25 @@ export async function revokeUserSessions(
 export async function cleanExpiredSessions(): Promise<number> {
   try {
     const now = new Date();
+    
+    // Clean up activeSessions table (custom session tracking)
     await db
       .delete(activeSessions)
       .where(lt(activeSessions.expiresAt, now));
     
-    return 0;
+    // Clean up main session table (express-session storage)
+    // This is critical for preventing session table bloat in production
+    const result = await db.execute(
+      `DELETE FROM session WHERE expire < NOW()`
+    );
+    
+    const deletedCount = result.rowCount || 0;
+    
+    if (deletedCount > 0) {
+      console.log(`🧹 Cleaned up ${deletedCount} expired sessions from database`);
+    }
+    
+    return deletedCount;
   } catch (error) {
     console.error('Error cleaning expired sessions:', error);
     return 0;
