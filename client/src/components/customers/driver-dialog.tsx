@@ -158,7 +158,11 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Driver" : "Add Driver"}</DialogTitle>
           <DialogDescription>
