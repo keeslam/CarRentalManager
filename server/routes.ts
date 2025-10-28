@@ -634,6 +634,11 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get all vehicles with optional search
   app.get("/api/vehicles", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
+      // Prevent caching to ensure fresh data is always returned
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const searchQuery = req.query.search as string | undefined;
       const vehicles = await storage.getAllVehicles(searchQuery);
       res.json(vehicles);
@@ -1227,6 +1232,11 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get all customers with optional search
   app.get("/api/customers", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {
+      // Prevent caching to ensure fresh data is always returned
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const searchQuery = req.query.search as string | undefined;
       const customers = await storage.getAllCustomers(searchQuery);
       res.json(customers);
@@ -3091,6 +3101,11 @@ export async function registerRoutes(app: Express): Promise<void> {
   
   // Get all expenses
   app.get("/api/expenses", hasPermission(UserPermission.MANAGE_EXPENSES), async (req, res) => {
+    // Prevent caching to ensure fresh data is always returned
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const expenses = await storage.getAllExpenses();
     res.json(expenses);
   });
@@ -3570,6 +3585,11 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Get all documents
   app.get("/api/documents", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req, res) => {
+    // Prevent caching to ensure fresh data is always returned
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const documents = await storage.getAllDocuments();
     res.json(documents);
   });
