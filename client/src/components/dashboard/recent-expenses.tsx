@@ -82,7 +82,9 @@ interface GroupedExpense {
 export function RecentExpenses() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupedExpense | null>(null);
   const queryClient = useQueryClient();
   
   const { data: expenses, isLoading } = useQuery<Expense[]>({
@@ -130,6 +132,11 @@ export function RecentExpenses() {
     setSelectedExpense(expense);
     setEditDialogOpen(true);
   };
+
+  const handleViewGroup = (group: GroupedExpense) => {
+    setSelectedGroup(group);
+    setGroupDialogOpen(true);
+  };
   
   const handleEditComplete = () => {
     setEditDialogOpen(false);
@@ -161,7 +168,11 @@ export function RecentExpenses() {
           <div className="max-h-[265px] overflow-y-auto pr-1 space-y-2">
             {groupedExpenses?.map((group, index) => (
               <div key={group.expenses[0].id} className={`flex justify-between items-center ${index < (groupedExpenses?.length ?? 0) - 1 ? 'border-b pb-2' : ''}`}>
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div 
+                  className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 py-1 rounded transition-colors"
+                  onClick={() => handleViewGroup(group)}
+                  data-testid={`expense-group-${group.expenses[0].id}`}
+                >
                   <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                     {getExpenseIcon(group.categories[0])}
                   </div>
@@ -293,6 +304,106 @@ export function RecentExpenses() {
               initialData={selectedExpense}
               onSuccess={handleEditComplete}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Dialog */}
+      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedGroup && (
+                <div className="flex items-center gap-2">
+                  <span>Expenses for {formatLicensePlate(selectedGroup.vehicle?.licensePlate || '')}</span>
+                  {selectedGroup.expenses.length > 1 && (
+                    <Badge variant="secondary">{selectedGroup.expenses.length} items</Badge>
+                  )}
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedGroup && (
+            <div className="space-y-4">
+              {selectedGroup.expenses.map((expense, index) => (
+                <div 
+                  key={expense.id} 
+                  className={`p-4 rounded-lg border ${index < selectedGroup.expenses.length - 1 ? 'border-b' : ''}`}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          {getExpenseIcon(expense.category)}
+                        </div>
+                        <div>
+                          <Badge>{expense.category}</Badge>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Date</h4>
+                        <div className="flex items-center text-sm">
+                          <Calendar className="h-4 w-4 mr-2 text-primary" />
+                          {formatDate(expense.date)}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Amount</h4>
+                        <div className="text-lg font-bold">
+                          {formatCurrency(Number(expense.amount || 0))}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                        <p className="text-sm">
+                          {expense.description || "No description"}
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {expense.receiptFilePath && (
+                          <a
+                            href={`/api/expenses/${expense.id}/receipt`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline flex items-center"
+                          >
+                            <FileCheck className="h-4 w-4 mr-1" />
+                            View Receipt
+                          </a>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setGroupDialogOpen(false);
+                            handleEditExpense(expense);
+                          }}
+                          className="text-sm"
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">Total</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {formatCurrency(selectedGroup.totalAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
