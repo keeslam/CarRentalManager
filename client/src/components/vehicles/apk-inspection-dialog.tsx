@@ -58,6 +58,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
 
   const form = useForm<ApkInspectionFormData>({
     resolver: zodResolver(apkInspectionSchema),
+    mode: "onChange",
     defaultValues: {
       scheduledDate: "",
       duration: 1,
@@ -216,7 +217,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
   const handleDateSelect = (day: Date) => {
     setSelectedDate(day);
     const dateString = format(day, 'yyyy-MM-dd');
-    form.setValue('scheduledDate', dateString);
+    form.setValue('scheduledDate', dateString, { shouldValidate: true, shouldDirty: true });
   };
 
   // Navigate calendar months
