@@ -250,8 +250,8 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+        <ScrollArea className="max-h-[75vh]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-2">
             {/* Calendar View */}
             <div className="space-y-4">
               <Card>
@@ -396,7 +396,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
             {/* Form */}
             <div>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                   <FormField
                     control={form.control}
                     name="scheduledDate"
@@ -454,7 +454,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
                           <Textarea 
                             {...field}
                             placeholder="Additional notes about the APK inspection..."
-                            rows={3}
+                            rows={2}
                             data-testid="textarea-apk-notes"
                           />
                         </FormControl>
