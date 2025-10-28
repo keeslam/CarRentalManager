@@ -54,29 +54,32 @@ import { SocketProvider } from "@/hooks/use-socket";
 import { ProtectedRoute } from "@/components/protected-route";
 import { GlobalDialogProvider } from "@/contexts/GlobalDialogContext";
 import { GlobalDialogs } from "@/components/global-dialogs";
-import { useInactivityTimeout } from "@/hooks/use-inactivity-timeout";
-import { useToast } from "@/hooks/use-toast";
+import { InactivityPrompt } from "@/components/InactivityPrompt";
+import { apiRequest } from "@/lib/queryClient";
 
 function AppRoutes() {
-  const { user, logout } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  useInactivityTimeout({
-    timeoutMinutes: 2,
-    onTimeout: async () => {
-      if (user) {
-        await logout();
-        toast({
-          title: "Session expired",
-          description: "You have been logged out due to inactivity",
-          variant: "destructive",
-        });
-      }
-    },
-  });
+  const handleReauthenticate = async (password: string): Promise<boolean> => {
+    try {
+      await apiRequest('POST', '/api/reauthenticate', { password });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
   
   return (
-    <Switch>
+    <>
+      {/* Inactivity prompt - only show for authenticated users */}
+      {user && (
+        <InactivityPrompt 
+          onReauthenticate={handleReauthenticate}
+          username={user.username}
+        />
+      )}
+      
+      <Switch>
       {/* Staff Routes - With MainLayout */}
       <Route>
         {() => (
@@ -142,6 +145,7 @@ function AppRoutes() {
         )}
       </Route>
     </Switch>
+    </>
   );
 }
 

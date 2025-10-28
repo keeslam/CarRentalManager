@@ -78,7 +78,7 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: createSessionStore(useDatabase),
     cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      // No maxAge = session cookie (expires when browser closes)
       secure: process.env.SECURE_COOKIES === 'true', // Only use secure cookies when explicitly set (requires HTTPS)
       httpOnly: true, // Prevent XSS attacks
       sameSite: 'lax' // CSRF protection while allowing normal navigation
@@ -326,6 +326,63 @@ export function setupAuth(app: Express) {
     // Return user without password
     const { password, ...userWithoutPassword } = req.user as User;
     res.json(userWithoutPassword);
+  });
+
+  // Re-authenticate endpoint (verify password without creating new session)
+  app.post("/api/reauthenticate", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { password } = req.body;
+      const user = req.user as User;
+      
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+      
+      // Get the full user record with password
+      const fullUser = await storage.getUserById(user.id);
+      if (!fullUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify password
+      const passwordMatches = await comparePasswords(password, fullUser.password);
+      
+      if (!passwordMatches) {
+        const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+        const userAgent = req.get('user-agent') || 'unknown';
+        
+        await AuditLogger.log({
+          userId: user.id,
+          username: user.username,
+          action: 'user.reauthenticate.failed',
+          details: { reason: 'invalid_password' },
+          ipAddress,
+          userAgent,
+          status: 'failure',
+        });
+        
+        return res.status(401).json({ message: "Invalid password" });
+      }
+      
+      // Password is correct
+      const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+      
+      await AuditLogger.log({
+        userId: user.id,
+        username: user.username,
+        action: 'user.reauthenticate',
+        details: { reason: 'inactivity_prompt' },
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Re-authentication error:", error);
+      res.status(500).json({ message: "Re-authentication failed" });
+    }
   });
 
   // Return the auth middleware
