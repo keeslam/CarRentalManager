@@ -418,6 +418,18 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     };
   }, [diagramTemplate, markers, drawingPaths, pickupCheckData]);
 
+  // Helper function to get color for damage type
+  const getDamageTypeColor = (type: string): string => {
+    switch (type) {
+      case 'dent': return '#3B82F6'; // Blue
+      case 'scratch': return '#F97316'; // Orange
+      case 'crack': return '#EF4444'; // Red
+      case 'missing': return '#A855F7'; // Purple
+      case 'other': return '#6B7280'; // Gray
+      default: return '#3B82F6';
+    }
+  };
+
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -499,7 +511,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
     // Draw current/new markers - convert from percentages to pixels
     markers.forEach(marker => {
-      const markerColor = marker.severity === 'severe' ? '#DC2626' : marker.severity === 'moderate' ? '#F59E0B' : '#10B981';
+      const markerColor = getDamageTypeColor(marker.type);
       
       // Convert percentage coordinates to pixels
       const x = marker.x * canvas.width;
@@ -1234,50 +1246,50 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                 variant={selectedDamageType === 'dent' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedDamageType('dent')}
-                className={selectedDamageType === 'dent' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={selectedDamageType === 'dent' ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-blue-50'}
                 data-testid="button-select-dent"
               >
-                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">1</span>
+                <span className="font-bold bg-white text-blue-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">1</span>
                 Dent
               </Button>
               <Button
                 variant={selectedDamageType === 'scratch' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedDamageType('scratch')}
-                className={selectedDamageType === 'scratch' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={selectedDamageType === 'scratch' ? 'bg-orange-600 hover:bg-orange-700' : 'hover:bg-orange-50'}
                 data-testid="button-select-scratch"
               >
-                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">2</span>
+                <span className="font-bold bg-white text-orange-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">2</span>
                 Scratch
               </Button>
               <Button
                 variant={selectedDamageType === 'crack' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedDamageType('crack')}
-                className={selectedDamageType === 'crack' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={selectedDamageType === 'crack' ? 'bg-red-600 hover:bg-red-700' : 'hover:bg-red-50'}
                 data-testid="button-select-crack"
               >
-                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">3</span>
+                <span className="font-bold bg-white text-red-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">3</span>
                 Crack
               </Button>
               <Button
                 variant={selectedDamageType === 'missing' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedDamageType('missing')}
-                className={selectedDamageType === 'missing' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={selectedDamageType === 'missing' ? 'bg-purple-600 hover:bg-purple-700' : 'hover:bg-purple-50'}
                 data-testid="button-select-missing"
               >
-                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">4</span>
+                <span className="font-bold bg-white text-purple-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">4</span>
                 Missing Part
               </Button>
               <Button
                 variant={selectedDamageType === 'other' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedDamageType('other')}
-                className={selectedDamageType === 'other' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={selectedDamageType === 'other' ? 'bg-gray-600 hover:bg-gray-700' : 'hover:bg-gray-50'}
                 data-testid="button-select-other"
               >
-                <span className="font-bold bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center mr-2">5</span>
+                <span className="font-bold bg-white text-gray-600 w-8 h-8 md:w-7 md:h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center mr-2 text-sm md:text-xs">5</span>
                 Other
               </Button>
             </div>
