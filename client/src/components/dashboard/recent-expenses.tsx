@@ -71,6 +71,14 @@ function getExpenseIcon(category: string) {
   }
 }
 
+interface GroupedExpense {
+  expenses: Expense[];
+  totalAmount: number;
+  vehicle: any;
+  date: string;
+  categories: string[];
+}
+
 export function RecentExpenses() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -80,6 +88,38 @@ export function RecentExpenses() {
   const { data: expenses, isLoading } = useQuery<Expense[]>({
     queryKey: ["/api/expenses/recent", { limit: 10 }],
   });
+
+  // Group expenses by invoice number or vehicle+date
+  const groupExpenses = (expenses: Expense[]): GroupedExpense[] => {
+    const groups = new Map<string, Expense[]>();
+    
+    expenses?.forEach(expense => {
+      // Try to extract invoice number from description
+      const invoiceMatch = expense.description?.match(/Invoice:\s*(\S+)/i);
+      const invoiceNumber = invoiceMatch ? invoiceMatch[1] : null;
+      
+      // Create group key: invoice number or vehicle+date
+      const groupKey = invoiceNumber 
+        ? `invoice-${invoiceNumber}`
+        : `${expense.vehicleId}-${expense.date}-${expense.id}`;
+      
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, []);
+      }
+      groups.get(groupKey)!.push(expense);
+    });
+    
+    // Convert to array and calculate totals
+    return Array.from(groups.values()).map(expenseGroup => ({
+      expenses: expenseGroup,
+      totalAmount: expenseGroup.reduce((sum, exp) => sum + Number(exp.amount || 0), 0),
+      vehicle: expenseGroup[0].vehicle,
+      date: expenseGroup[0].date,
+      categories: [...new Set(expenseGroup.map(e => e.category))],
+    }));
+  };
+
+  const groupedExpenses = groupExpenses(expenses || []).slice(0, 10);
   
   const handleViewExpense = (expense: Expense) => {
     setSelectedExpense(expense);
@@ -115,23 +155,26 @@ export function RecentExpenses() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </div>
-        ) : expenses?.length === 0 ? (
+        ) : groupedExpenses?.length === 0 ? (
           <div className="text-center py-4 text-gray-500">No recent expenses</div>
         ) : (
           <div className="max-h-[265px] overflow-y-auto pr-1 space-y-2">
-            {expenses?.slice(0, 10).map((expense, index) => (
-              <div key={expense.id} className={`flex justify-between items-center ${index < (expenses?.length ?? 0) - 1 ? 'border-b pb-2' : ''}`}>
+            {groupedExpenses?.map((group, index) => (
+              <div key={group.expenses[0].id} className={`flex justify-between items-center ${index < (groupedExpenses?.length ?? 0) - 1 ? 'border-b pb-2' : ''}`}>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    {getExpenseIcon(expense.category)}
+                    {getExpenseIcon(group.categories[0])}
                   </div>
                   <div className="text-sm truncate">
-                    <span className="font-medium">{formatLicensePlate(expense.vehicle?.licensePlate || '')}</span>
-                    <span className="text-gray-500">: {expense.category}</span>
+                    <span className="font-medium">{formatLicensePlate(group.vehicle?.licensePlate || '')}</span>
+                    <span className="text-gray-500">: {group.categories.join(', ')}</span>
+                    {group.expenses.length > 1 && (
+                      <span className="text-xs text-gray-400 ml-1">({group.expenses.length} items)</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="text-sm font-semibold text-gray-900">{formatCurrency(Number(expense.amount || 0))}</div>
+                  <div className="text-sm font-semibold text-gray-900">{formatCurrency(group.totalAmount)}</div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
@@ -139,27 +182,14 @@ export function RecentExpenses() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
-                        <Eye className="h-3 w-3 mr-2" />
-                        View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEditExpense(expense)}>
-                        <Pencil className="h-3 w-3 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      {expense.receiptFilePath && (
-                        <DropdownMenuItem asChild>
-                          <a
-                            href={`/api/expenses/${expense.id}/receipt`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center cursor-pointer"
-                          >
-                            <Printer className="h-3 w-3 mr-2" />
-                            View Receipt
-                          </a>
-                        </DropdownMenuItem>
-                      )}
+                      {group.expenses.map((expense) => (
+                        <div key={expense.id}>
+                          <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
+                            <Eye className="h-3 w-3 mr-2" />
+                            View {expense.category} - {formatCurrency(Number(expense.amount || 0))}
+                          </DropdownMenuItem>
+                        </div>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
