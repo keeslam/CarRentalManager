@@ -13,10 +13,11 @@ This is a comprehensive car rental management system offering full management of
 - **Customer Email Management**: Smart email selection from customer records (emailGeneral with fallback to emailForInvoices), plus option for custom email addresses
 - **Reservation Calendar Integration**: "Email Documents to Customer" button in reservation calendar for quick access to email functionality
 - **Email Preview**: Real-time preview of subject and message with placeholders replaced before sending
-- **Backend Enhancement**: New `/api/email/send-documents` endpoint using MailerSend for reliable email delivery with attachments
+- **Backend Enhancement**: New `/api/email/send-documents` endpoint using configured email service (SMTP/MailerSend/SendGrid) from database settings
 - **Settings Storage**: Templates stored in appSettings table with keys: email_template_contract_en_subject/message, email_template_contract_nl_subject/message, email_template_damagecheck_en_subject/message, email_template_damagecheck_nl_subject/message
+- **Email Service Integration**: Uses existing email configuration from Settings → Email Configuration (same as APK reminders), supporting multiple providers with configured sender address and credentials
 
-**Email Provider Note**: Monitor email sending volume to avoid rate limits. Current implementation supports production use with MailerSend.
+**Email Provider Note**: Email sending uses your configured email settings from the Settings page. Ensure email configuration is set up before sending documents.
 
 ## Recent Changes (October 26, 2025)
 ### Comprehensive Permission System Implementation

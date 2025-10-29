@@ -34,7 +34,6 @@ import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
 import { hasPermission, requireAdmin } from "./middleware/permissions.js";
 import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
-import { MailerSend, EmailParams, Sender, Recipient, Attachment } from "mailersend";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -3922,7 +3921,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Email multiple documents - MailerSend integration with multiple attachments
+  // Email multiple documents - uses configured email service from settings
   app.post("/api/email/send-documents", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
       const { documentIds, recipientEmail, subject, message } = req.body;
@@ -3962,13 +3961,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
 
-      // Use MailerSend to send email with multiple attachments
-      const mailerSend = new MailerSend({
-        apiKey: process.env.MAILERSEND_API_KEY,
-      });
-
-      // Create attachments for all documents
-      const attachments: any[] = [];
+      // Prepare attachments for all documents
+      const attachments: { filename: string; content: Buffer; encoding?: string }[] = [];
       
       for (const document of validDocuments) {
         if (!document || !document.filePath) continue;
@@ -3984,29 +3978,32 @@ export async function registerRoutes(app: Express): Promise<void> {
 
         // Read file data for attachment
         const fileData = fs.readFileSync(absolutePath);
-        const base64Data = fileData.toString('base64');
         
-        // Create attachment
-        const attachment = new Attachment(base64Data, document.fileName, "attachment");
-        attachments.push(attachment);
+        attachments.push({
+          filename: document.fileName,
+          content: fileData,
+          encoding: 'base64'
+        });
       }
 
       if (attachments.length === 0) {
         return res.status(404).json({ message: "No valid document files found" });
       }
 
-      const sentFrom = new Sender("noreply@yourdomain.com", "Car Rental System");
-      const recipients_list = [new Recipient(recipientEmail)];
+      // Use the existing email service which gets sender address from database settings
+      const emailSent = await sendEmail({
+        to: recipientEmail,
+        subject: subject,
+        text: message || "Please find the attached documents.",
+        html: `<p>${(message || "Please find the attached documents.").replace(/\n/g, '<br>')}</p>`,
+        attachments: attachments
+      }, 'custom');
 
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients_list)
-        .setSubject(subject)
-        .setText(message || "Please find the attached documents.")
-        .setHtml(`<p>${(message || "Please find the attached documents.").replace(/\n/g, '<br>')}</p>`)
-        .setAttachments(attachments);
-
-      await mailerSend.email.send(emailParams);
+      if (!emailSent) {
+        return res.status(500).json({ 
+          message: "Failed to send email. Please check your email configuration in Settings." 
+        });
+      }
 
       res.json({ 
         message: "Email sent successfully",

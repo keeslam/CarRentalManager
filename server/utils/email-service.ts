@@ -1,12 +1,19 @@
 import { storage } from "../storage";
 import nodemailer from "nodemailer";
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  encoding?: string;
+}
+
 export interface EmailOptions {
   to: string;
   toName?: string;
   subject: string;
   html?: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailError {
@@ -205,13 +212,17 @@ async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<
 
     const transporter = nodemailer.createTransport(transportOptions);
 
-    const mailOptions = {
+    const mailOptions: any = {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: options.to,
       subject: options.subject,
       text: options.text,
       html: options.html,
     };
+
+    if (options.attachments && options.attachments.length > 0) {
+      mailOptions.attachments = options.attachments;
+    }
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ SMTP email sent:', info.messageId);
@@ -229,7 +240,7 @@ async function sendViaSmtp(config: EmailConfig, options: EmailOptions): Promise<
 
 async function sendViaMailerSend(config: EmailConfig, options: EmailOptions): Promise<boolean> {
   try {
-    const { MailerSend, EmailParams, Sender, Recipient } = await import("mailersend");
+    const { MailerSend, EmailParams, Sender, Recipient, Attachment } = await import("mailersend");
     
     const mailerSend = new MailerSend({ apiKey: config.apiKey! });
     const sentFrom = new Sender(config.fromEmail, config.fromName);
@@ -245,6 +256,16 @@ async function sendViaMailerSend(config: EmailConfig, options: EmailOptions): Pr
     }
     if (options.text) {
       emailParams.setText(options.text);
+    }
+
+    if (options.attachments && options.attachments.length > 0) {
+      const mailerSendAttachments = options.attachments.map(att => {
+        const content = att.encoding === 'base64' 
+          ? att.content.toString() 
+          : Buffer.from(att.content).toString('base64');
+        return new Attachment(content, att.filename, "attachment");
+      });
+      emailParams.setAttachments(mailerSendAttachments);
     }
 
     await mailerSend.email.send(emailParams);
@@ -277,6 +298,17 @@ async function sendViaSendGrid(config: EmailConfig, options: EmailOptions): Prom
     }
     if (options.html) {
       emailData.html = options.html;
+    }
+
+    if (options.attachments && options.attachments.length > 0) {
+      emailData.attachments = options.attachments.map(att => ({
+        content: att.encoding === 'base64' 
+          ? att.content.toString() 
+          : Buffer.from(att.content).toString('base64'),
+        filename: att.filename,
+        type: 'application/pdf',
+        disposition: 'attachment'
+      }));
     }
 
     await mailService.send(emailData);
