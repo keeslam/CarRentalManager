@@ -3,6 +3,21 @@
 ## Overview
 This is a comprehensive car rental management system offering full management of vehicles, customers, reservations, expenses, and documents. It features a dashboard for key metrics, calendar views for reservations, and extensive reporting. The system includes recent enhancements such as a damage check template editor, a simplified one-button backup system, auto-logout security, advanced reporting with a custom report builder, maintenance cost analysis, and a complete multi-driver management system. Key project ambitions include providing a robust and user-friendly platform for efficient car rental operations.
 
+## Recent Changes (October 29, 2025)
+### Document Email Functionality with Multilingual Templates
+- **Email Templates Management**: Settings page now includes dedicated section for configuring email templates for contracts and damage checks in English and Dutch
+- **Template Customization**: Full-featured rich text editor for subject lines and message bodies with placeholder support
+- **Available Placeholders**: {customerName}, {vehiclePlate}, {startDate}, {endDate} - automatically filled from reservation and customer data
+- **Multi-Document Email**: Send multiple documents (contracts, damage checks) in a single email with multiple file attachments
+- **Language Selection**: Choose between English or Dutch templates for each email sent
+- **Customer Email Management**: Smart email selection from customer records (emailGeneral with fallback to emailForInvoices), plus option for custom email addresses
+- **Reservation Calendar Integration**: "Email Documents to Customer" button in reservation calendar for quick access to email functionality
+- **Email Preview**: Real-time preview of subject and message with placeholders replaced before sending
+- **Backend Enhancement**: New `/api/email/send-documents` endpoint using MailerSend for reliable email delivery with attachments
+- **Settings Storage**: Templates stored in appSettings table with keys: email_template_contract_en_subject/message, email_template_contract_nl_subject/message, email_template_damagecheck_en_subject/message, email_template_damagecheck_nl_subject/message
+
+**Email Provider Note**: Monitor email sending volume to avoid rate limits. Current implementation supports production use with MailerSend.
+
 ## Recent Changes (October 26, 2025)
 ### Comprehensive Permission System Implementation
 - **New Roles Added**: CLEANER, VIEWER, ACCOUNTANT, MAINTENANCE (in addition to ADMIN, MANAGER, USER)
