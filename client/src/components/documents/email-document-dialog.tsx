@@ -60,15 +60,18 @@ export function EmailDocumentDialog({
 
   // Auto-select template based on selected documents
   useEffect(() => {
+    // If multiple documents are selected, use combined template
+    if (selectedDocIds.length > 1) {
+      setTemplateType('combined');
+      return;
+    }
+    
+    // For single document, detect type and use appropriate template
     const selectedDocs = documents.filter(doc => selectedDocIds.includes(doc.id));
     const hasContract = selectedDocs.some(doc => doc.documentType === 'contract');
     const hasDamageCheck = selectedDocs.some(doc => doc.documentType === 'damage_check');
     
-    // If both contract AND damage check are selected, use combined template
-    // Otherwise, use specific template for the type selected
-    if (hasContract && hasDamageCheck) {
-      setTemplateType('combined');
-    } else if (hasContract) {
+    if (hasContract) {
       setTemplateType('contract');
     } else if (hasDamageCheck) {
       setTemplateType('damage_check');
