@@ -166,6 +166,16 @@ export default function Settings() {
         subject: "Schade Inspectierapport - {vehiclePlate}",
         message: "Beste {customerName},\n\nBijgevoegd vindt u het schade inspectierapport voor {vehiclePlate}.\n\nHuurperiode: {startDate} tot {endDate}\n\nGelieve het document zorgvuldig door te nemen en contact op te nemen bij vragen.\n\nMet vriendelijke groet,\nAutoverhuur Team"
       }
+    },
+    combined: {
+      en: {
+        subject: "Rental Documents - {vehiclePlate}",
+        message: "Dear {customerName},\n\nPlease find attached your rental documents for {vehiclePlate}:\n- Rental Contract\n- Vehicle Inspection Report\n\nRental Period: {startDate} to {endDate}\n\nPlease review all documents carefully and keep them for your records.\n\nBest regards,\nCar Rental Team"
+      },
+      nl: {
+        subject: "Huurdocumenten - {vehiclePlate}",
+        message: "Beste {customerName},\n\nBijgevoegd vindt u uw huurdocumenten voor {vehiclePlate}:\n- Huurovereenkomst\n- Schade Inspectierapport\n\nHuurperiode: {startDate} tot {endDate}\n\nGelieve alle documenten zorgvuldig door te nemen en te bewaren voor uw administratie.\n\nMet vriendelijke groet,\nAutoverhuur Team"
+      }
     }
   });
 
@@ -1096,6 +1106,97 @@ export default function Settings() {
                           rows={6}
                           placeholder="E-mail bericht..."
                           data-testid="textarea-damage-nl-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Combined Documents Email - English */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Combined Documents Email (English)
+                    </h4>
+                    <p className="text-sm text-gray-600">Used when sending both contract AND damage check together</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="combined-en-subject">Subject</Label>
+                        <Input
+                          id="combined-en-subject"
+                          value={docEmailTemplates.combined.en.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              en: { ...prev.combined.en, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="Email subject..."
+                          data-testid="input-combined-en-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="combined-en-message">Message</Label>
+                        <Textarea
+                          id="combined-en-message"
+                          value={docEmailTemplates.combined.en.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              en: { ...prev.combined.en, message: e.target.value }
+                            }
+                          }))}
+                          rows={8}
+                          placeholder="Email message..."
+                          data-testid="textarea-combined-en-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Dutch Tab */}
+                <TabsContent value="nl" className="space-y-6">
+                  {/* Combined Documents Email - Dutch */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Gecombineerde Documenten E-mail (Nederlands)
+                    </h4>
+                    <p className="text-sm text-gray-600">Gebruikt bij het verzenden van zowel contract ALS schadecontrole</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="combined-nl-subject">Onderwerp</Label>
+                        <Input
+                          id="combined-nl-subject"
+                          value={docEmailTemplates.combined.nl.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              nl: { ...prev.combined.nl, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="E-mail onderwerp..."
+                          data-testid="input-combined-nl-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="combined-nl-message">Bericht</Label>
+                        <Textarea
+                          id="combined-nl-message"
+                          value={docEmailTemplates.combined.nl.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              nl: { ...prev.combined.nl, message: e.target.value }
+                            }
+                          }))}
+                          rows={8}
+                          placeholder="E-mail bericht..."
+                          data-testid="textarea-combined-nl-message"
                         />
                       </div>
                     </div>

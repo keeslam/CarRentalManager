@@ -55,8 +55,13 @@ export function EmailDocumentDialog({
   const hasContract = selectedDocs.some(doc => doc.documentType === 'contract');
   const hasDamageCheck = selectedDocs.some(doc => doc.documentType === 'damage_check');
   
-  // Determine which template to use (prioritize contract if both types selected)
-  const templateType = hasContract ? 'contract' : hasDamageCheck ? 'damage_check' : null;
+  // Determine which template to use
+  // If both contract AND damage check are selected, use combined template
+  // Otherwise, use specific template for the type selected
+  const templateType = (hasContract && hasDamageCheck) ? 'combined' 
+                      : hasContract ? 'contract' 
+                      : hasDamageCheck ? 'damage_check' 
+                      : null;
 
   // Load template when language or template type changes
   useEffect(() => {

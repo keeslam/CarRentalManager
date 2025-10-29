@@ -5,8 +5,12 @@ This is a comprehensive car rental management system offering full management of
 
 ## Recent Changes (October 29, 2025)
 ### Document Email Functionality with Multilingual Templates
-- **Email Templates Management**: Settings page now includes dedicated section for configuring email templates for contracts and damage checks in English and Dutch
+- **Email Templates Management**: Settings page now includes dedicated section for configuring email templates for contracts, damage checks, and combined documents in English and Dutch
 - **Template Customization**: Full-featured rich text editor for subject lines and message bodies with placeholder support
+- **Smart Template Selection**: Automatically selects the appropriate template based on selected documents:
+  - Contract template when sending only contracts
+  - Damage check template when sending only damage checks
+  - Combined template when sending both contracts AND damage checks together
 - **Available Placeholders**: {customerName}, {vehiclePlate}, {startDate}, {endDate} - automatically filled from reservation and customer data
 - **Multi-Document Email**: Send multiple documents (contracts, damage checks) in a single email with multiple file attachments
 - **Language Selection**: Choose between English or Dutch templates for each email sent
@@ -14,10 +18,10 @@ This is a comprehensive car rental management system offering full management of
 - **Reservation Calendar Integration**: "Email Documents to Customer" button in reservation calendar for quick access to email functionality
 - **Email Preview**: Real-time preview of subject and message with placeholders replaced before sending
 - **Backend Enhancement**: New `/api/email/send-documents` endpoint using configured email service (SMTP/MailerSend/SendGrid) from database settings
-- **Settings Storage**: Templates stored in appSettings table with keys: email_template_contract_en_subject/message, email_template_contract_nl_subject/message, email_template_damagecheck_en_subject/message, email_template_damagecheck_nl_subject/message
-- **Email Service Integration**: Uses existing email configuration from Settings → Email Configuration (same as APK reminders), supporting multiple providers with configured sender address and credentials
+- **Settings Storage**: Templates stored in appSettings table with document_email_templates key containing contract, damage_check, and combined templates for both EN and NL
+- **Email Service Integration**: Uses existing email configuration from Settings → Email Configuration with purpose set to 'documents', supporting multiple providers with configured sender address and credentials
 
-**Email Provider Note**: Email sending uses your configured email settings from the Settings page. Ensure email configuration is set up before sending documents.
+**Email Provider Note**: Email sending uses your configured email settings from the Settings page. Ensure email configuration with purpose "Documents Email" is set up before sending documents.
 
 ## Recent Changes (October 26, 2025)
 ### Comprehensive Permission System Implementation
