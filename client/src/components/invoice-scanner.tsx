@@ -416,7 +416,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                 {scanInvoiceMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Scanning Invoice...
+                    Processing with AI... (usually 1-3 seconds)
                   </>
                 ) : (
                   <>

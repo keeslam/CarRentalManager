@@ -166,26 +166,31 @@ function categorizeLineItem(description: string): string {
 }
 
 /**
- * Available Gemini models in order of preference (best to fallback)
+ * Available Gemini models in order of preference (fastest to slowest)
+ * Optimized for speed - starts with fastest models first
  */
 const GEMINI_MODELS = [
-  'gemini-2.5-pro',        // Most capable, but more likely to be overloaded
-  'gemini-2.5-flash',      // Best price-performance ratio
-  'gemini-2.0-flash',      // Fast and reliable
-  'gemini-2.5-flash-lite', // Cost-effective, high throughput
-  'gemini-2.0-flash-lite'  // Most cost-effective fallback
+  'gemini-2.0-flash-lite',  // Fastest, most cost-effective (try first)
+  'gemini-2.5-flash-lite',  // Fast, high throughput
+  'gemini-2.0-flash',       // Fast and reliable
+  'gemini-2.5-flash',       // Best price-performance ratio
+  'gemini-2.5-pro'          // Most capable but slower (last resort)
 ];
 
 /**
  * Process invoice with Google Gemini Vision API using model fallback strategy
  */
 export async function processInvoiceWithAI(pdfPath: string): Promise<ParsedInvoice> {
-  const modelRetryDelay = 1500; // 1.5 seconds delay between model attempts
+  const modelRetryDelay = 500; // 500ms delay between model attempts (optimized for speed)
+  const startTime = Date.now();
+  
+  console.log(`🔍 Starting invoice scan with ${GEMINI_MODELS.length} available models...`);
   
   // Try each model in sequence
   for (let modelIndex = 0; modelIndex < GEMINI_MODELS.length; modelIndex++) {
     const currentModel = GEMINI_MODELS[modelIndex];
-    console.log(`Attempting invoice processing with model: ${currentModel} (${modelIndex + 1}/${GEMINI_MODELS.length})`);
+    const modelStartTime = Date.now();
+    console.log(`⚡ Trying model ${modelIndex + 1}/${GEMINI_MODELS.length}: ${currentModel}...`);
     
     try {
     // Check if API key is configured
@@ -235,6 +240,7 @@ IMPORTANT INSTRUCTIONS:
 Please respond ONLY with the JSON object, no additional text.
 `;
 
+    console.log(`📤 Sending invoice to ${currentModel} for processing...`);
     const response = await ai.models.generateContent({
       model: currentModel,
       config: {
@@ -283,6 +289,10 @@ Please respond ONLY with the JSON object, no additional text.
     });
 
     const result = JSON.parse(response.text || '{}');
+    const modelTime = Date.now() - modelStartTime;
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Success! Model ${currentModel} processed invoice in ${modelTime}ms (total time: ${totalTime}ms)`);
+    console.log(`📊 Extracted: ${result.lineItems?.length || 0} line items from ${result.vendor || 'Unknown Vendor'}`);
     
     // Validate and clean up the result
     const parsedInvoice: ParsedInvoice = {
@@ -340,7 +350,7 @@ Please respond ONLY with the JSON object, no additional text.
         
         // If this model is overloaded and we have more models to try, continue to next model
         if (isModelOverloaded && modelIndex < GEMINI_MODELS.length - 1) {
-          console.log(`Model ${currentModel} is overloaded. Trying next model in ${modelRetryDelay}ms...`);
+          console.log(`⚠️  Model ${currentModel} is busy/overloaded. Switching to backup model in ${modelRetryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
           continue; // Try next model
         }
@@ -348,7 +358,7 @@ Please respond ONLY with the JSON object, no additional text.
         // Check for rate limit errors
         if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
           if (modelIndex < GEMINI_MODELS.length - 1) {
-            console.log(`Rate limit hit for ${currentModel}. Trying next model in ${modelRetryDelay}ms...`);
+            console.log(`⚠️  Rate limit reached for ${currentModel}. Trying backup model in ${modelRetryDelay}ms...`);
             await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
             continue; // Try next model
           } else {
@@ -363,7 +373,7 @@ Please respond ONLY with the JSON object, no additional text.
         
         // For other errors, if we have more models, try them
         if (modelIndex < GEMINI_MODELS.length - 1) {
-          console.log(`Model ${currentModel} failed with error: ${errorMessage}. Trying next model...`);
+          console.log(`⚠️  Model ${currentModel} failed: ${errorMessage}. Trying backup model in ${modelRetryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
           continue; // Try next model
         }
@@ -374,7 +384,7 @@ Please respond ONLY with the JSON object, no additional text.
       
       // For non-Error objects, if we have more models, try them
       if (modelIndex < GEMINI_MODELS.length - 1) {
-        console.log(`Model ${currentModel} failed. Trying next model...`);
+        console.log(`⚠️  Model ${currentModel} encountered an error. Trying backup model in ${modelRetryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, modelRetryDelay));
         continue;
       }
@@ -384,6 +394,8 @@ Please respond ONLY with the JSON object, no additional text.
   }
   
   // If we get here, all models failed
+  const totalTime = Date.now() - startTime;
+  console.log(`❌ All ${GEMINI_MODELS.length} models failed after ${totalTime}ms`);
   throw new Error('Failed to process invoice with all available AI models. The service may be temporarily unavailable.');
 }
 
