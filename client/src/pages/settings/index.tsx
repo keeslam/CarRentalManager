@@ -473,6 +473,27 @@ export default function Settings() {
     saveEmailSetting.mutate(emailData);
   };
 
+  const handleDeleteEmailConfig = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this email configuration? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await apiRequest('DELETE', `/api/settings/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['/api/app-settings/email'] });
+      toast({ 
+        title: "Success", 
+        description: "Email configuration deleted successfully" 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to delete email configuration",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Holiday management
   const handleAddHoliday = () => {
     if (!newHolidayDate || !newHolidayName) {
@@ -1585,15 +1606,27 @@ export default function Settings() {
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEmailDialog(setting)}
-                          data-testid={`button-edit-email-${setting.id}`}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEmailDialog(setting)}
+                            data-testid={`button-edit-email-${setting.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEmailConfig(setting.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-delete-email-${setting.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}

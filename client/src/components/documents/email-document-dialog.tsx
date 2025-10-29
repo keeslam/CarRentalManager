@@ -95,10 +95,6 @@ export function EmailDocumentDialog({
   // Set default recipient email when customer changes
   useEffect(() => {
     if (customer) {
-      console.log('📧 Email Dialog - Customer data:', customer);
-      console.log('📧 emailGeneral:', customer.emailGeneral);
-      console.log('📧 emailForInvoices:', customer.emailForInvoices);
-      
       // Priority: emailGeneral > emailForInvoices > custom
       if (customer.emailGeneral) {
         setRecipientEmail("general");
