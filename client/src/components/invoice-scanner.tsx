@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { 
   Select,
@@ -106,6 +107,8 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
   const [editableLineItems, setEditableLineItems] = useState<ParsedInvoiceLineItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [groupByCategory, setGroupByCategory] = useState<boolean>(true);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStage, setScanStage] = useState('');
 
   // Auto-match vehicle based on license plate when invoice is scanned
   const autoSelectVehicleFromInvoice = (invoice: ParsedInvoice, vehicles: Vehicle[]) => {
@@ -229,6 +232,41 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       });
     }
   });
+
+  // Simulate progress during scanning
+  useEffect(() => {
+    if (!scanInvoiceMutation.isPending) {
+      setScanProgress(0);
+      setScanStage('');
+      return;
+    }
+
+    setScanProgress(0);
+    setScanStage('Uploading invoice...');
+    
+    const stages = [
+      { progress: 15, stage: 'Uploading invoice...', delay: 200 },
+      { progress: 30, stage: 'Trying fastest AI model...', delay: 400 },
+      { progress: 50, stage: 'Processing with AI...', delay: 600 },
+      { progress: 70, stage: 'Extracting line items...', delay: 800 },
+      { progress: 85, stage: 'Categorizing expenses...', delay: 1000 },
+      { progress: 95, stage: 'Finalizing...', delay: 1200 }
+    ];
+
+    const timeouts: NodeJS.Timeout[] = [];
+    
+    stages.forEach(({ progress, stage, delay }) => {
+      const timeout = setTimeout(() => {
+        setScanProgress(progress);
+        setScanStage(stage);
+      }, delay);
+      timeouts.push(timeout);
+    });
+
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [scanInvoiceMutation.isPending]);
 
   // Create expenses mutation
   const createExpensesMutation = useMutation({
@@ -407,6 +445,23 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                 )}
               </div>
 
+              {scanInvoiceMutation.isPending && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-blue-900">{scanStage}</span>
+                        <span className="text-blue-700">{scanProgress}%</span>
+                      </div>
+                      <Progress value={scanProgress} className="h-2" />
+                      <p className="text-xs text-blue-600 text-center">
+                        AI is analyzing your invoice...
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Button 
                 onClick={handleScan} 
                 disabled={!file || scanInvoiceMutation.isPending}
@@ -416,7 +471,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
                 {scanInvoiceMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing with AI... (usually 1-3 seconds)
+                    Processing...
                   </>
                 ) : (
                   <>
