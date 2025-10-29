@@ -16,10 +16,11 @@ const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 interface InactivityPromptProps {
   onReauthenticate: (password: string) => Promise<boolean>;
+  onLogout: () => void;
   username: string;
 }
 
-export function InactivityPrompt({ onReauthenticate, username }: InactivityPromptProps) {
+export function InactivityPrompt({ onReauthenticate, onLogout, username }: InactivityPromptProps) {
   const [isInactive, setIsInactive] = useState(false);
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -105,7 +106,7 @@ export function InactivityPrompt({ onReauthenticate, username }: InactivityPromp
   };
   
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    onLogout();
   };
   
   return (

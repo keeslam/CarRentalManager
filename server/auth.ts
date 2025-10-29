@@ -339,7 +339,7 @@ export function setupAuth(app: Express) {
       }
       
       // Get the full user record with password
-      const fullUser = await storage.getUserById(user.id);
+      const fullUser = await storage.getUserByUsername(user.username);
       if (!fullUser) {
         return res.status(404).json({ message: "User not found" });
       }

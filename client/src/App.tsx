@@ -58,7 +58,7 @@ import { InactivityPrompt } from "@/components/InactivityPrompt";
 import { apiRequest } from "@/lib/queryClient";
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
 
   const handleReauthenticate = async (password: string): Promise<boolean> => {
     try {
@@ -68,6 +68,10 @@ function AppRoutes() {
       return false;
     }
   };
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
   
   return (
     <>
@@ -75,6 +79,7 @@ function AppRoutes() {
       {user && (
         <InactivityPrompt 
           onReauthenticate={handleReauthenticate}
+          onLogout={handleLogout}
           username={user.username}
         />
       )}
