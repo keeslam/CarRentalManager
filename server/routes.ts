@@ -3997,7 +3997,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         text: message || "Please find the attached documents.",
         html: `<p>${(message || "Please find the attached documents.").replace(/\n/g, '<br>')}</p>`,
         attachments: attachments
-      }, 'custom');
+      }, 'documents');
 
       if (!emailSent) {
         return res.status(500).json({ 

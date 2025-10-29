@@ -39,7 +39,7 @@ interface EmailConfig {
 const cachedConfigs: Map<string, { config: EmailConfig; timestamp: number }> = new Map();
 const CONFIG_CACHE_TTL = 60000; // Cache for 1 minute
 
-async function getEmailConfig(purpose?: 'apk' | 'maintenance' | 'gps' | 'custom'): Promise<EmailConfig | null> {
+async function getEmailConfig(purpose?: 'apk' | 'maintenance' | 'gps' | 'documents' | 'custom'): Promise<EmailConfig | null> {
   const now = Date.now();
   const cacheKey = purpose || 'default';
   
@@ -320,7 +320,7 @@ async function sendViaSendGrid(config: EmailConfig, options: EmailOptions): Prom
   }
 }
 
-export async function sendEmail(options: EmailOptions, purpose?: 'apk' | 'maintenance' | 'gps' | 'custom'): Promise<boolean> {
+export async function sendEmail(options: EmailOptions, purpose?: 'apk' | 'maintenance' | 'gps' | 'documents' | 'custom'): Promise<boolean> {
   const config = await getEmailConfig(purpose);
   
   if (!config) {

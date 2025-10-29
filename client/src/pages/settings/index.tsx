@@ -49,7 +49,7 @@ interface EmailSetting {
     smtpUser?: string;
     smtpPassword?: string;
     provider?: string;
-    purpose?: 'apk' | 'maintenance' | 'gps' | 'custom' | 'default';
+    purpose?: 'apk' | 'maintenance' | 'gps' | 'documents' | 'custom' | 'default';
   };
   category: string;
   description?: string;
@@ -67,6 +67,7 @@ const EMAIL_PURPOSES = [
   { value: 'apk', label: 'APK Reminders', description: 'For sending APK inspection reminders' },
   { value: 'maintenance', label: 'Maintenance Alerts', description: 'For maintenance notifications' },
   { value: 'gps', label: 'GPS/IEI Information', description: 'For sending GPS and IEI numbers' },
+  { value: 'documents', label: 'Documents Email', description: 'For sending contracts and damage checks to customers' },
   { value: 'custom', label: 'Custom Messages', description: 'For custom email communications' },
   { value: 'default', label: 'Default/General', description: 'Default email for all other purposes' },
 ] as const;
@@ -87,7 +88,7 @@ export default function Settings() {
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPassword, setSmtpPassword] = useState("");
   const [provider, setProvider] = useState("mailersend");
-  const [purpose, setPurpose] = useState<'apk' | 'maintenance' | 'gps' | 'custom' | 'default'>('default');
+  const [purpose, setPurpose] = useState<'apk' | 'maintenance' | 'gps' | 'documents' | 'custom' | 'default'>('default');
   
   // GPS settings state
   const [gpsRecipientEmail, setGpsRecipientEmail] = useState("");
@@ -1467,6 +1468,7 @@ export default function Settings() {
                                 setting.value.purpose === 'apk' ? 'bg-blue-100 text-blue-800' :
                                 setting.value.purpose === 'maintenance' ? 'bg-green-100 text-green-800' :
                                 setting.value.purpose === 'gps' ? 'bg-purple-100 text-purple-800' :
+                                setting.value.purpose === 'documents' ? 'bg-indigo-100 text-indigo-800' :
                                 setting.value.purpose === 'custom' ? 'bg-orange-100 text-orange-800' :
                                 'bg-gray-100 text-gray-800'
                               }
