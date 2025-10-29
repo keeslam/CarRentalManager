@@ -143,6 +143,30 @@ export default function Settings() {
   const [defaultMaintenanceDuration, setDefaultMaintenanceDuration] = useState("1");
   const [reservationReminderHours, setReservationReminderHours] = useState("24");
 
+  // Document Email Templates state
+  const [docEmailTemplates, setDocEmailTemplates] = useState({
+    contract: {
+      en: {
+        subject: "Your Rental Contract - {vehiclePlate}",
+        message: "Dear {customerName},\n\nPlease find attached your rental agreement for {vehiclePlate}.\n\nRental Period: {startDate} to {endDate}\n\nPlease review and keep this document for your records.\n\nBest regards,\nCar Rental Team"
+      },
+      nl: {
+        subject: "Uw Huurcontract - {vehiclePlate}",
+        message: "Beste {customerName},\n\nBijgevoegd vindt u uw huurovereenkomst voor {vehiclePlate}.\n\nHuurperiode: {startDate} tot {endDate}\n\nGelieve dit document te bewaren voor uw administratie.\n\nMet vriendelijke groet,\nAutoverhuur Team"
+      }
+    },
+    damage_check: {
+      en: {
+        subject: "Vehicle Inspection Report - {vehiclePlate}",
+        message: "Dear {customerName},\n\nAttached is the vehicle inspection report for {vehiclePlate}.\n\nInspection Date: {checkDate}\nInspection Type: {checkType}\n\nPlease review the document carefully.\n\nBest regards,\nCar Rental Team"
+      },
+      nl: {
+        subject: "Schade Inspectierapport - {vehiclePlate}",
+        message: "Beste {customerName},\n\nBijgevoegd is het schade inspectierapport voor {vehiclePlate}.\n\nInspectiedatum: {checkDate}\nInspectie Type: {checkType}\n\nGelieve het document zorgvuldig door te nemen.\n\nMet vriendelijke groet,\nAutoverhuur Team"
+      }
+    }
+  });
+
   // Fetch all app settings
   const { data: appSettings, isLoading: loadingSettings } = useQuery<AppSetting[]>({
     queryKey: ['/api/app-settings'],
@@ -213,6 +237,12 @@ export default function Settings() {
       setGpsActivationMessage(gpsTemplates.value.activationMessage || "");
       setGpsSwapSubject(gpsTemplates.value.swapSubject || "");
       setGpsSwapMessage(gpsTemplates.value.swapMessage || "");
+    }
+    
+    // Document Email Templates
+    const docTemplates = appSettings.find(s => s.key === 'document_email_templates');
+    if (docTemplates?.value) {
+      setDocEmailTemplates(docTemplates.value);
     }
   }, [appSettings]);
 
@@ -302,6 +332,22 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
       toast({ title: "Success", description: "Calendar settings saved successfully" });
+    },
+  });
+
+  const saveDocumentEmailTemplates = useMutation({
+    mutationFn: async () => {
+      const data = {
+        key: 'document_email_templates',
+        category: 'email',
+        description: 'Email templates for sending contracts and damage checks to customers',
+        value: docEmailTemplates
+      };
+      await apiRequest('POST', '/api/app-settings', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      toast({ title: "Success", description: "Document email templates saved successfully" });
     },
   });
 
@@ -461,7 +507,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="business" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Business Rules</span>
@@ -476,6 +522,11 @@ export default function Settings() {
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Documents</span>
             <span className="sm:hidden">Docs</span>
+          </TabsTrigger>
+          <TabsTrigger value="doc-emails" className="gap-2">
+            <Mail className="h-4 w-4" />
+            <span className="hidden sm:inline">Doc Emails</span>
+            <span className="sm:hidden">Emails</span>
           </TabsTrigger>
           <TabsTrigger value="calendar" className="gap-2">
             <CalendarIcon className="h-4 w-4" />
@@ -838,6 +889,222 @@ export default function Settings() {
                 data-testid="button-save-document-settings"
               >
                 {saveDocumentSettings.isPending ? "Saving..." : "Save Document Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Document Emails Tab */}
+        <TabsContent value="doc-emails" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Document Email Templates
+              </CardTitle>
+              <CardDescription>
+                Configure email templates for sending contracts and damage checks to customers in English and Dutch
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Available Placeholders:</strong> {'{customerName}'}, {'{vehiclePlate}'}, {'{startDate}'}, {'{endDate}'}, {'{checkDate}'}, {'{checkType}'}
+                </p>
+              </div>
+
+              <Tabs defaultValue="en" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="en">English Templates</TabsTrigger>
+                  <TabsTrigger value="nl">Dutch Templates</TabsTrigger>
+                </TabsList>
+
+                {/* English Templates */}
+                <TabsContent value="en" className="space-y-6 mt-6">
+                  {/* Contract Email - English */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Contract Email (English)
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="contract-en-subject">Subject Line</Label>
+                        <Input
+                          id="contract-en-subject"
+                          value={docEmailTemplates.contract.en.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            contract: {
+                              ...prev.contract,
+                              en: { ...prev.contract.en, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="Email subject..."
+                          data-testid="input-contract-en-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contract-en-message">Email Message</Label>
+                        <Textarea
+                          id="contract-en-message"
+                          value={docEmailTemplates.contract.en.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            contract: {
+                              ...prev.contract,
+                              en: { ...prev.contract.en, message: e.target.value }
+                            }
+                          }))}
+                          rows={6}
+                          placeholder="Email message body..."
+                          data-testid="textarea-contract-en-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Damage Check Email - English */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileCheck className="h-4 w-4" />
+                      Damage Check Email (English)
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="damage-en-subject">Subject Line</Label>
+                        <Input
+                          id="damage-en-subject"
+                          value={docEmailTemplates.damage_check.en.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            damage_check: {
+                              ...prev.damage_check,
+                              en: { ...prev.damage_check.en, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="Email subject..."
+                          data-testid="input-damage-en-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="damage-en-message">Email Message</Label>
+                        <Textarea
+                          id="damage-en-message"
+                          value={docEmailTemplates.damage_check.en.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            damage_check: {
+                              ...prev.damage_check,
+                              en: { ...prev.damage_check.en, message: e.target.value }
+                            }
+                          }))}
+                          rows={6}
+                          placeholder="Email message body..."
+                          data-testid="textarea-damage-en-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Dutch Templates */}
+                <TabsContent value="nl" className="space-y-6 mt-6">
+                  {/* Contract Email - Dutch */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Huurcontract E-mail (Nederlands)
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="contract-nl-subject">Onderwerp</Label>
+                        <Input
+                          id="contract-nl-subject"
+                          value={docEmailTemplates.contract.nl.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            contract: {
+                              ...prev.contract,
+                              nl: { ...prev.contract.nl, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="E-mail onderwerp..."
+                          data-testid="input-contract-nl-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contract-nl-message">Bericht</Label>
+                        <Textarea
+                          id="contract-nl-message"
+                          value={docEmailTemplates.contract.nl.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            contract: {
+                              ...prev.contract,
+                              nl: { ...prev.contract.nl, message: e.target.value }
+                            }
+                          }))}
+                          rows={6}
+                          placeholder="E-mail bericht..."
+                          data-testid="textarea-contract-nl-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Damage Check Email - Dutch */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileCheck className="h-4 w-4" />
+                      Schade Controle E-mail (Nederlands)
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="damage-nl-subject">Onderwerp</Label>
+                        <Input
+                          id="damage-nl-subject"
+                          value={docEmailTemplates.damage_check.nl.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            damage_check: {
+                              ...prev.damage_check,
+                              nl: { ...prev.damage_check.nl, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="E-mail onderwerp..."
+                          data-testid="input-damage-nl-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="damage-nl-message">Bericht</Label>
+                        <Textarea
+                          id="damage-nl-message"
+                          value={docEmailTemplates.damage_check.nl.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            damage_check: {
+                              ...prev.damage_check,
+                              nl: { ...prev.damage_check.nl, message: e.target.value }
+                            }
+                          }))}
+                          rows={6}
+                          placeholder="E-mail bericht..."
+                          data-testid="textarea-damage-nl-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Button 
+                onClick={() => saveDocumentEmailTemplates.mutate()}
+                disabled={saveDocumentEmailTemplates.isPending}
+                className="w-full md:w-auto"
+                data-testid="button-save-document-email-templates"
+              >
+                {saveDocumentEmailTemplates.isPending ? "Saving..." : "Save Email Templates"}
               </Button>
             </CardContent>
           </Card>
