@@ -37,10 +37,11 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail } from "lucide-react";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
+import { EmailDocumentDialog } from "@/components/documents/email-document-dialog";
 
 // Calendar view options
 type CalendarView = "month";
@@ -158,6 +159,9 @@ export default function ReservationCalendarPage() {
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   const [compareWithCheckId, setCompareWithCheckId] = useState<number | null>(null);
+  
+  // Email document dialog state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
@@ -1629,7 +1633,19 @@ export default function ReservationCalendarPage() {
                   {/* Uploaded Documents */}
                   {reservationDocuments && reservationDocuments.length > 0 && (
                     <div>
-                      <span className="text-[10px] font-semibold text-gray-700 block mb-1.5">Uploaded:</span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-semibold text-gray-700">Uploaded:</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEmailDialogOpen(true)}
+                          className="h-6 text-[10px] gap-1"
+                          data-testid="button-email-documents"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Email to Customer
+                        </Button>
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {/* Group documents by type */}
                         {(() => {
@@ -2281,6 +2297,18 @@ export default function ReservationCalendarPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Email Document Dialog */}
+      {selectedReservation && (
+        <EmailDocumentDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          documents={reservationDocuments || []}
+          customer={selectedReservation.customer}
+          vehicle={vehicles?.find(v => v.id === selectedReservation.vehicleId)}
+          reservation={selectedReservation}
+        />
+      )}
     </div>
   );
 }

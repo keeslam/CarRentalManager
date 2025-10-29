@@ -158,11 +158,11 @@ export default function Settings() {
     damage_check: {
       en: {
         subject: "Vehicle Inspection Report - {vehiclePlate}",
-        message: "Dear {customerName},\n\nAttached is the vehicle inspection report for {vehiclePlate}.\n\nInspection Date: {checkDate}\nInspection Type: {checkType}\n\nPlease review the document carefully.\n\nBest regards,\nCar Rental Team"
+        message: "Dear {customerName},\n\nPlease find attached the vehicle inspection report for {vehiclePlate}.\n\nRental Period: {startDate} to {endDate}\n\nPlease review the document carefully and contact us if you have any questions.\n\nBest regards,\nCar Rental Team"
       },
       nl: {
         subject: "Schade Inspectierapport - {vehiclePlate}",
-        message: "Beste {customerName},\n\nBijgevoegd is het schade inspectierapport voor {vehiclePlate}.\n\nInspectiedatum: {checkDate}\nInspectie Type: {checkType}\n\nGelieve het document zorgvuldig door te nemen.\n\nMet vriendelijke groet,\nAutoverhuur Team"
+        message: "Beste {customerName},\n\nBijgevoegd vindt u het schade inspectierapport voor {vehiclePlate}.\n\nHuurperiode: {startDate} tot {endDate}\n\nGelieve het document zorgvuldig door te nemen en contact op te nemen bij vragen.\n\nMet vriendelijke groet,\nAutoverhuur Team"
       }
     }
   });
@@ -909,7 +909,10 @@ export default function Settings() {
             <CardContent className="space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Available Placeholders:</strong> {'{customerName}'}, {'{vehiclePlate}'}, {'{startDate}'}, {'{endDate}'}, {'{checkDate}'}, {'{checkType}'}
+                  <strong>Available Placeholders:</strong> {'{customerName}'}, {'{vehiclePlate}'}, {'{startDate}'}, {'{endDate}'}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  All placeholders are automatically filled with reservation and customer data when sending emails.
                 </p>
               </div>
 

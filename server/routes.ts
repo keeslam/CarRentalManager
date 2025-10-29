@@ -3928,6 +3928,108 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Email multiple documents - MailerSend integration with multiple attachments
+  app.post("/api/email/send-documents", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
+    try {
+      const { documentIds, recipientEmail, subject, message } = req.body;
+      
+      if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+        return res.status(400).json({ message: "Document IDs array is required" });
+      }
+      
+      if (!recipientEmail || !subject) {
+        return res.status(400).json({ message: "Recipient email and subject are required" });
+      }
+
+      // Get all documents
+      const documents = await Promise.all(
+        documentIds.map((id: number) => storage.getDocument(id))
+      );
+
+      // Filter out null documents
+      const validDocuments = documents.filter(doc => doc !== null);
+      
+      if (validDocuments.length === 0) {
+        return res.status(404).json({ message: "No valid documents found" });
+      }
+
+      // Check if all documents are allowed types (damage or contract only)
+      const allowedTypes = ['damage', 'contract'];
+      const invalidDocs = validDocuments.filter(doc => {
+        if (!doc) return false;
+        return !allowedTypes.some(type => 
+          doc.documentType.toLowerCase().includes(type)
+        );
+      });
+      
+      if (invalidDocs.length > 0) {
+        return res.status(403).json({ 
+          message: "Some documents cannot be emailed. Only damage and contract documents are allowed." 
+        });
+      }
+
+      // Use MailerSend to send email with multiple attachments
+      const { MailerSend, EmailParams, Sender, Recipient, Attachment } = require("mailersend");
+
+      const mailerSend = new MailerSend({
+        apiKey: process.env.MAILERSEND_API_KEY,
+      });
+
+      // Create attachments for all documents
+      const attachments: any[] = [];
+      
+      for (const document of validDocuments) {
+        if (!document || !document.filePath) continue;
+        
+        // Convert relative path to absolute path
+        const absolutePath = path.join(process.cwd(), document.filePath);
+        
+        // Check if file exists
+        if (!fs.existsSync(absolutePath)) {
+          console.warn(`Document file not found: ${absolutePath}`);
+          continue;
+        }
+
+        // Read file data for attachment
+        const fileData = fs.readFileSync(absolutePath);
+        const base64Data = fileData.toString('base64');
+        
+        // Create attachment
+        const attachment = new Attachment(base64Data, document.fileName, "attachment");
+        attachments.push(attachment);
+      }
+
+      if (attachments.length === 0) {
+        return res.status(404).json({ message: "No valid document files found" });
+      }
+
+      const sentFrom = new Sender("noreply@yourdomain.com", "Car Rental System");
+      const recipients_list = [new Recipient(recipientEmail)];
+
+      const emailParams = new EmailParams()
+        .setFrom(sentFrom)
+        .setTo(recipients_list)
+        .setSubject(subject)
+        .setText(message || "Please find the attached documents.")
+        .setHtml(`<p>${(message || "Please find the attached documents.").replace(/\n/g, '<br>')}</p>`)
+        .setAttachments(attachments);
+
+      await mailerSend.email.send(emailParams);
+
+      res.json({ 
+        message: "Email sent successfully",
+        recipient: recipientEmail,
+        documentsAttached: attachments.length
+      });
+    } catch (error) {
+      console.error("Error sending email with multiple documents:", error);
+      res.status(500).json({ 
+        message: "Failed to send email", 
+        error: error instanceof Error ? error.message : "Email service error" 
+      });
+    }
+  });
+
   // Delete document
   app.delete("/api/documents/:id", hasPermission(UserPermission.MANAGE_DOCUMENTS), async (req: Request, res: Response) => {
     try {
