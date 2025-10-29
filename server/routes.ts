@@ -34,13 +34,7 @@ import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
 import { hasPermission, requireAdmin } from "./middleware/permissions.js";
 import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
-import { 
-  getWelcomeTemplate, 
-  getPasswordResetTemplate, 
-  getApkReminderTemplate, 
-  getMaintenanceReminderTemplate,
-  getCustomMessageTemplate 
-} from "./utils/email-templates-i18n";
+import { MailerSend, EmailParams, Sender, Recipient, Attachment } from "mailersend";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -3969,8 +3963,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       // Use MailerSend to send email with multiple attachments
-      const { MailerSend, EmailParams, Sender, Recipient, Attachment } = require("mailersend");
-
       const mailerSend = new MailerSend({
         apiKey: process.env.MAILERSEND_API_KEY,
       });
