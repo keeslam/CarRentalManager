@@ -233,7 +233,7 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
     }
   });
 
-  // Simulate progress during scanning
+  // Simulate progress during scanning (matched to actual 3-6 second AI processing time)
   useEffect(() => {
     if (!scanInvoiceMutation.isPending) {
       setScanProgress(0);
@@ -245,12 +245,13 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
     setScanStage('Uploading invoice...');
     
     const stages = [
-      { progress: 15, stage: 'Uploading invoice...', delay: 200 },
-      { progress: 30, stage: 'Trying fastest AI model...', delay: 400 },
-      { progress: 50, stage: 'Processing with AI...', delay: 600 },
-      { progress: 70, stage: 'Extracting line items...', delay: 800 },
-      { progress: 85, stage: 'Categorizing expenses...', delay: 1000 },
-      { progress: 95, stage: 'Finalizing...', delay: 1200 }
+      { progress: 10, stage: 'Uploading invoice...', delay: 200 },
+      { progress: 20, stage: 'Trying fastest AI model...', delay: 600 },
+      { progress: 40, stage: 'Reading invoice with AI...', delay: 1200 },
+      { progress: 60, stage: 'Processing text & numbers...', delay: 2000 },
+      { progress: 75, stage: 'Extracting line items...', delay: 3000 },
+      { progress: 85, stage: 'Categorizing expenses...', delay: 4000 },
+      { progress: 95, stage: 'Finalizing...', delay: 5000 }
     ];
 
     const timeouts: NodeJS.Timeout[] = [];
