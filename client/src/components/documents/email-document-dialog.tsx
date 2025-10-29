@@ -95,9 +95,13 @@ export function EmailDocumentDialog({
   // Set default recipient email when customer changes
   useEffect(() => {
     if (customer) {
-      const defaultEmail = customer.emailGeneral || customer.emailForInvoices || "";
-      setRecipientEmail(defaultEmail ? "general" : "custom");
-      if (!defaultEmail) {
+      // Priority: emailGeneral > emailForInvoices > custom
+      if (customer.emailGeneral) {
+        setRecipientEmail("general");
+      } else if (customer.emailForInvoices) {
+        setRecipientEmail("invoices");
+      } else {
+        setRecipientEmail("custom");
         setCustomEmail("");
       }
     }
