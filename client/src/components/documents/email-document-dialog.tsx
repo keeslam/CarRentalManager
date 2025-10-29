@@ -42,6 +42,7 @@ export function EmailDocumentDialog({
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customEmail, setCustomEmail] = useState("");
   const [language, setLanguage] = useState<"en" | "nl">("nl");
+  const [templateType, setTemplateType] = useState<"contract" | "damage_check" | "combined">("contract");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
@@ -56,19 +57,6 @@ export function EmailDocumentDialog({
       setSelectedDocIds(defaultDocumentIds);
     }
   }, [open, defaultDocumentIds]);
-
-  // Determine document type for template selection
-  const selectedDocs = documents.filter(doc => selectedDocIds.includes(doc.id));
-  const hasContract = selectedDocs.some(doc => doc.documentType === 'contract');
-  const hasDamageCheck = selectedDocs.some(doc => doc.documentType === 'damage_check');
-  
-  // Determine which template to use
-  // If both contract AND damage check are selected, use combined template
-  // Otherwise, use specific template for the type selected
-  const templateType = (hasContract && hasDamageCheck) ? 'combined' 
-                      : hasContract ? 'contract' 
-                      : hasDamageCheck ? 'damage_check' 
-                      : null;
 
   // Load template when language or template type changes
   useEffect(() => {
@@ -335,6 +323,22 @@ export function EmailDocumentDialog({
                 data-testid="input-custom-email"
               />
             )}
+          </div>
+
+          {/* Template Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="template-type" className="text-base font-semibold">Email Template</Label>
+            <Select value={templateType} onValueChange={(val) => setTemplateType(val as "contract" | "damage_check" | "combined")}>
+              <SelectTrigger id="template-type" data-testid="select-template-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="contract">Contract Email</SelectItem>
+                <SelectItem value="damage_check">Damage Check Email</SelectItem>
+                <SelectItem value="combined">Combined Documents Email</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">Choose which template to use for this email</p>
           </div>
 
           {/* Language Selection */}
