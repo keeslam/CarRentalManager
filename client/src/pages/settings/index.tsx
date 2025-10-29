@@ -1021,6 +1021,50 @@ export default function Settings() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Combined Documents Email - English */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Combined Documents Email (English)
+                    </h4>
+                    <p className="text-sm text-gray-600">Used when sending both contract AND damage check together</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="combined-en-subject">Subject Line</Label>
+                        <Input
+                          id="combined-en-subject"
+                          value={docEmailTemplates.combined.en.subject}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              en: { ...prev.combined.en, subject: e.target.value }
+                            }
+                          }))}
+                          placeholder="Email subject..."
+                          data-testid="input-combined-en-subject"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="combined-en-message">Email Message</Label>
+                        <Textarea
+                          id="combined-en-message"
+                          value={docEmailTemplates.combined.en.message}
+                          onChange={(e) => setDocEmailTemplates(prev => ({
+                            ...prev,
+                            combined: {
+                              ...prev.combined,
+                              en: { ...prev.combined.en, message: e.target.value }
+                            }
+                          }))}
+                          rows={8}
+                          placeholder="Email message..."
+                          data-testid="textarea-combined-en-message"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </TabsContent>
 
                 {/* Dutch Templates */}
@@ -1111,53 +1155,6 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Combined Documents Email - English */}
-                  <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
-                    <h4 className="font-semibold text-lg flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Combined Documents Email (English)
-                    </h4>
-                    <p className="text-sm text-gray-600">Used when sending both contract AND damage check together</p>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="combined-en-subject">Subject</Label>
-                        <Input
-                          id="combined-en-subject"
-                          value={docEmailTemplates.combined.en.subject}
-                          onChange={(e) => setDocEmailTemplates(prev => ({
-                            ...prev,
-                            combined: {
-                              ...prev.combined,
-                              en: { ...prev.combined.en, subject: e.target.value }
-                            }
-                          }))}
-                          placeholder="Email subject..."
-                          data-testid="input-combined-en-subject"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="combined-en-message">Message</Label>
-                        <Textarea
-                          id="combined-en-message"
-                          value={docEmailTemplates.combined.en.message}
-                          onChange={(e) => setDocEmailTemplates(prev => ({
-                            ...prev,
-                            combined: {
-                              ...prev.combined,
-                              en: { ...prev.combined.en, message: e.target.value }
-                            }
-                          }))}
-                          rows={8}
-                          placeholder="Email message..."
-                          data-testid="textarea-combined-en-message"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Dutch Tab */}
-                <TabsContent value="nl" className="space-y-6">
                   {/* Combined Documents Email - Dutch */}
                   <div className="space-y-4 border rounded-lg p-4 bg-indigo-50">
                     <h4 className="font-semibold text-lg flex items-center gap-2">

@@ -38,7 +38,7 @@ export function EmailDocumentDialog({
   defaultDocumentIds = [],
 }: EmailDocumentDialogProps) {
   const { toast } = useToast();
-  const [selectedDocIds, setSelectedDocIds] = useState<number[]>(defaultDocumentIds);
+  const [selectedDocIds, setSelectedDocIds] = useState<number[]>([]);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [customEmail, setCustomEmail] = useState("");
   const [language, setLanguage] = useState<"en" | "nl">("nl");
@@ -49,6 +49,13 @@ export function EmailDocumentDialog({
   const { data: appSettings } = useQuery<AppSetting[]>({
     queryKey: ['/api/app-settings'],
   });
+
+  // Update selected documents when dialog opens or defaultDocumentIds changes
+  useEffect(() => {
+    if (open && defaultDocumentIds.length > 0) {
+      setSelectedDocIds(defaultDocumentIds);
+    }
+  }, [open, defaultDocumentIds]);
 
   // Determine document type for template selection
   const selectedDocs = documents.filter(doc => selectedDocIds.includes(doc.id));
