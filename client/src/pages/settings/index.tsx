@@ -28,6 +28,7 @@ import {
   Building2,
   Bell,
   FileText,
+  FileCheck,
   Calendar as CalendarIcon,
   DollarSign,
   Clock,
