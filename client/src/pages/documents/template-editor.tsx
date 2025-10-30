@@ -1555,7 +1555,6 @@ const PDFTemplateEditor = () => {
                               top: `${field.y * zoomLevel}px`,
                               fontSize: `${field.fontSize * zoomLevel}px`,
                               fontWeight: field.isBold ? 'bold' : 'normal',
-                              transform: 'translate(-50%, -50%)',
                               backgroundColor: selectedFields.includes(field.id) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.85)',
                               color: '#000000',
                               padding: `${1 * zoomLevel}px ${6 * zoomLevel}px`,

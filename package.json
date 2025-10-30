@@ -117,7 +117,7 @@
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
-    "@replit/vite-plugin-cartographer": "^0.1.2",
+    "@replit/vite-plugin-cartographer": "^0.4.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
     "@types/connect-pg-simple": "^7.0.3",
