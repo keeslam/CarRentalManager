@@ -381,8 +381,9 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           }
           
           // Ensure we have a value to display
+          // If no value, use empty string for cleaner appearance
           if (!value) {
-            value = field.label || field.source || '(empty)';
+            value = '';
           }
           
           // Determine text alignment
@@ -755,19 +756,19 @@ Date: ${contractData.contractDate}
  */
 export function prepareContractData(reservation: Reservation) {
   const vehicle = reservation.vehicle || {
-    licensePlate: "Unknown",
-    brand: "Unknown",
-    model: "Unknown",
-    chassisNumber: "Unknown",
+    licensePlate: "",
+    brand: "",
+    model: "",
+    chassisNumber: "",
   };
   
   const customer = reservation.customer || {
-    name: "Unknown",
-    address: "Unknown",
-    city: "Unknown",
-    postalCode: "Unknown",
-    phone: "Unknown",
-    driverLicenseNumber: "Unknown",
+    name: "",
+    address: "",
+    city: "",
+    postalCode: "",
+    phone: "",
+    driverLicenseNumber: "",
   };
   
   // Extract driver information if available
@@ -803,13 +804,13 @@ export function prepareContractData(reservation: Reservation) {
     licensePlate: formatLicensePlate(vehicle.licensePlate),
     brand: vehicle.brand,
     model: vehicle.model,
-    chassisNumber: vehicle.chassisNumber || "Unknown",
+    chassisNumber: vehicle.chassisNumber || "",
     customerName: customer.name,
-    customerAddress: customer.address || "Unknown",
-    customerCity: customer.city || "Unknown",
-    customerPostalCode: customer.postalCode || "Unknown",
-    customerPhone: customer.phone || "Unknown",
-    driverLicense: customer.driverLicenseNumber || "Unknown",
+    customerAddress: customer.address || "",
+    customerCity: customer.city || "",
+    customerPostalCode: customer.postalCode || "",
+    customerPhone: customer.phone || "",
+    driverLicense: customer.driverLicenseNumber || "",
     driverName,
     driverFirstName,
     driverLastName,
