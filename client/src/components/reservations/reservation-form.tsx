@@ -303,13 +303,21 @@ export function ReservationForm({
 
   // Set default template when templates are loaded
   useEffect(() => {
-    if (pdfTemplates && pdfTemplates.length > 0 && selectedTemplateId === null) {
-      const defaultTemplate = pdfTemplates.find((template: any) => template.isDefault);
-      if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id);
-      } else {
-        // If no default, use the first template
-        setSelectedTemplateId(pdfTemplates[0].id);
+    if (pdfTemplates && pdfTemplates.length > 0) {
+      // Only set if not already set OR if the current selectedTemplateId is invalid
+      const currentTemplateExists = selectedTemplateId !== null && 
+        pdfTemplates.some((t: any) => t.id === selectedTemplateId);
+      
+      if (!currentTemplateExists) {
+        const defaultTemplate = pdfTemplates.find((template: any) => template.isDefault);
+        if (defaultTemplate) {
+          console.log('Setting default template:', defaultTemplate.id);
+          setSelectedTemplateId(defaultTemplate.id);
+        } else {
+          // If no default, use the first template
+          console.log('Setting first template:', pdfTemplates[0].id);
+          setSelectedTemplateId(pdfTemplates[0].id);
+        }
       }
     }
   }, [pdfTemplates, selectedTemplateId]);
