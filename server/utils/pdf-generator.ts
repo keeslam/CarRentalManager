@@ -426,13 +426,42 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           console.log(`Field: ${field.name || field.source} - Original positions: X=${field.x} (${typeof field.x}), Y=${field.y} (${typeof field.y})`);
           console.log(`Parsed to X=${x}, Y=${y}, fontSize=${fontSize}`);
           
-          // Use exact coordinates from the template editor 
-          // The key is to use the coordinates exactly as provided without any automatic adjustments
+          // Get the font for this field
+          const font = field.isBold ? helveticaBold : helveticaFont;
+          
+          // Editor uses padding: 1px vertical, 6px horizontal
+          const paddingX = 6;
+          const paddingY = 1;
+          
+          // Calculate font metrics for proper baseline positioning
+          // The editor positions text from top-left, but PDF uses baseline
+          const fontHeight = font.heightAtSize(fontSize);
+          const ascent = fontHeight * 0.85; // Approximate ascent (distance from baseline to top)
+          
+          // Adjust coordinates to match editor preview:
+          // - Add horizontal padding
+          // - Convert from top-left to baseline positioning
+          // - Account for PDF's bottom-left origin (842 - y)
+          let adjustedX = x + paddingX;
+          let adjustedY = 842 - y - paddingY - ascent;
+          
+          // Handle text alignment (pdf-lib doesn't support alignment natively in drawText)
+          // The editor uses flexbox justifyContent, we need to replicate that behavior
+          const textWidth = font.widthOfTextAtSize(value, fontSize);
+          if (field.textAlign === 'center') {
+            // For center alignment, x is the center point, so subtract half the text width
+            adjustedX = x - (textWidth / 2);
+          } else if (field.textAlign === 'right') {
+            // For right alignment, x is the right edge, so subtract full text width plus padding
+            adjustedX = x - textWidth - paddingX;
+          }
+          
+          // Use adjusted coordinates that match the template editor preview
           const options: any = {
-            x: x,
-            y: 842 - y, // Convert from top-left (0,0) to PDF coordinates (bottom-left origin)
+            x: adjustedX,
+            y: adjustedY,
             size: fontSize,
-            font: field.isBold ? helveticaBold : helveticaFont,
+            font: font,
             color: previewMode ? rgb(0, 0.4, 0.8) : textColor // Use blue color for preview mode to make fields stand out
           };
           
@@ -440,8 +469,8 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
           if (previewMode) {
             // Draw a light rectangle around the field to make it more visible
             try {
-              // Calculate text width (approximate)
-              const textWidth = helveticaFont.widthOfTextAtSize(value, fontSize);
+              // Calculate text width for preview highlighting
+              const textWidth = font.widthOfTextAtSize(value, fontSize);
               const textHeight = fontSize * 1.2;
               
               // Draw rectangle with slight padding
@@ -460,16 +489,7 @@ export async function generateRentalContractFromTemplate(reservation: Reservatio
             }
           }
           
-          // Add alignment property as part of PDF.js options
-          if (textAlignment === TextAlignment.Center) {
-            // @ts-ignore: TextAlignment is not properly typed in pdf-lib
-            options.textAlign = TextAlignment.Center;
-          } else if (textAlignment === TextAlignment.Right) {
-            // @ts-ignore: TextAlignment is not properly typed in pdf-lib
-            options.textAlign = TextAlignment.Right;
-          }
-          
-          console.log(`Drawing field: ${field.label || field.source} at position (${options.x}, ${options.y}) with value: ${value}`);
+          console.log(`Drawing field: ${field.label || field.source} at position (${options.x}, ${options.y}) with value: ${value}, align: ${field.textAlign || 'left'}`);
           page.drawText(value, options);
         } catch (error) {
           console.error(`Error drawing field ${field.label || field.source}:`, error);
