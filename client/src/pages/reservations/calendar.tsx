@@ -25,9 +25,22 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { ReservationListDialog } from "@/components/reservations/reservation-list-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
@@ -162,6 +175,9 @@ export default function ReservationCalendarPage() {
   
   // Email document dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  
+  // Completed rentals dialog
+  const [completedRentalsDialogOpen, setCompletedRentalsDialogOpen] = useState(false);
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
@@ -407,7 +423,7 @@ export default function ReservationCalendarPage() {
   });
   
   // Fetch reservations for the full calendar view (including adjacent month dates)
-  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
+  const { data: allReservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: [
       "/api/reservations/range", 
       {
@@ -415,6 +431,22 @@ export default function ReservationCalendarPage() {
         endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
       }
     ],
+  });
+  
+  // Filter out completed reservations from calendar view
+  const reservations = useMemo(() => {
+    if (!allReservations) return [];
+    // Only show pending, confirmed, active, and cancelled in calendar
+    return allReservations.filter(r => 
+      r.status !== 'completed' || r.type === 'maintenance_block' // Keep maintenance blocks always visible
+    );
+  }, [allReservations]);
+  
+  // Fetch completed rentals separately for the completed list
+  const { data: completedRentals = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    select: (reservations: Reservation[]) => 
+      reservations.filter(r => r.status === 'completed' && r.type !== 'maintenance_block') // Only completed rentals, not maintenance
   });
 
   // Fetch documents for selected reservation
@@ -682,6 +714,13 @@ export default function ReservationCalendarPage() {
               <line x1="3" x2="3" y1="18" y2="18" />
             </svg>
             List View
+          </Button>
+          <Button variant="outline" onClick={() => setCompletedRentalsDialogOpen(true)} data-testid="button-view-completed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            View Completed ({completedRentals.length})
           </Button>
           <ReservationAddDialog>
             <Button>
@@ -2309,6 +2348,145 @@ export default function ReservationCalendarPage() {
           reservation={selectedReservation}
         />
       )}
+
+      {/* Completed Rentals Dialog */}
+      <Dialog open={completedRentalsDialogOpen} onOpenChange={setCompletedRentalsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Completed Rentals History</DialogTitle>
+            <DialogDescription>
+              View, revert, or delete completed rental records
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {completedRentals.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No completed rentals found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {[...completedRentals]
+                  .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                  .map((rental) => {
+                    const vehicle = vehicles?.find(v => v.id === rental.vehicleId);
+                    const customerName = rental.customer?.name || 'Unknown Customer';
+                    
+                    return (
+                      <div key={rental.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium">{vehicle ? `${vehicle.brand} ${vehicle.model} (${formatLicensePlate(vehicle.licensePlate)})` : 'Unknown Vehicle'}</h4>
+                              <Badge variant="outline">
+                                {customerName}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {format(parseISO(rental.startDate), 'MMM d, yyyy')} - {rental.endDate ? format(parseISO(rental.endDate), 'MMM d, yyyy') : 'TBD'}
+                            </p>
+                            {rental.notes && (
+                              <p className="text-sm mt-2 text-gray-700">{rental.notes}</p>
+                            )}
+                            {rental.totalPrice && (
+                              <p className="text-sm font-medium text-green-600 mt-1">
+                                Total: {formatCurrency(Number(rental.totalPrice))}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await apiRequest('PATCH', `/api/reservations/${rental.id}`, {
+                                    status: 'active'
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+                                  toast({
+                                    title: "Rental Reverted",
+                                    description: "Rental has been marked as active again"
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to revert rental",
+                                    variant: "destructive"
+                                  });
+                                }
+                              }}
+                              data-testid={`button-revert-${rental.id}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                                <path d="M8 16H3v5"/>
+                              </svg>
+                              Revert
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                  data-testid={`button-delete-${rental.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Completed Rental?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this rental record. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={async () => {
+                                      try {
+                                        await apiRequest('DELETE', `/api/reservations/${rental.id}`);
+                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+                                        toast({
+                                          title: "Rental Deleted",
+                                          description: "The rental record has been permanently deleted"
+                                        });
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to delete rental",
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompletedRentalsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
