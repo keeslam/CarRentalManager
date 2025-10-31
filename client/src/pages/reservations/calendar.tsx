@@ -2401,13 +2401,15 @@ export default function ReservationCalendarPage() {
                               onClick={async () => {
                                 try {
                                   await apiRequest('PATCH', `/api/reservations/${rental.id}`, {
-                                    status: 'active'
+                                    status: 'active',
+                                    returnMileage: null,
+                                    returnFuelLevel: null
                                   });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
                                   toast({
                                     title: "Rental Reverted",
-                                    description: "Rental has been marked as active again"
+                                    description: "Rental has been marked as active and return mileage cleared"
                                   });
                                 } catch (error) {
                                   toast({
