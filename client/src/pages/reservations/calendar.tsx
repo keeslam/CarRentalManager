@@ -2403,7 +2403,9 @@ export default function ReservationCalendarPage() {
                                   await apiRequest('PATCH', `/api/reservations/${rental.id}`, {
                                     status: 'active',
                                     returnMileage: null,
-                                    returnFuelLevel: null
+                                    returnFuelLevel: null,
+                                    fuelCost: null,
+                                    fuelNotes: null
                                   });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
