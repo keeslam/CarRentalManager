@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
@@ -41,6 +43,11 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editReservationId, setEditReservationId] = useState<number | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Filter state
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [vehicleFilter, setVehicleFilter] = useState<string>("");
   
   // Define query keys for easier reference
   const customerQueryKey = [`/api/customers/${customerId}`];
@@ -86,22 +93,51 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
       };
     }
 
+    // Apply filters
+    const applyFilters = (rental: Reservation) => {
+      // Date range filter
+      if (dateFrom && new Date(rental.startDate) < new Date(dateFrom)) {
+        return false;
+      }
+      if (dateTo) {
+        // Check if rental starts after the "to" date
+        if (new Date(rental.startDate) > new Date(dateTo)) {
+          return false;
+        }
+        // Also check endDate if it exists
+        if (rental.endDate && new Date(rental.endDate) > new Date(dateTo)) {
+          return false;
+        }
+      }
+      
+      // Vehicle filter (search in license plate, brand, model)
+      if (vehicleFilter) {
+        const searchTerm = vehicleFilter.toLowerCase();
+        const vehicleText = `${rental.vehicle?.licensePlate || ''} ${rental.vehicle?.brand || ''} ${rental.vehicle?.model || ''}`.toLowerCase();
+        if (!vehicleText.includes(searchTerm)) {
+          return false;
+        }
+      }
+      
+      return true;
+    };
+
     // Active rentals: pending, confirmed, or active status (regardless of date)
-    const active = reservations.filter(r => 
-      ["pending", "confirmed", "active"].includes(r.status.toLowerCase())
-    );
+    const active = reservations
+      .filter(r => ["pending", "confirmed", "active"].includes(r.status.toLowerCase()))
+      .filter(applyFilters);
     
     // Past rentals: completed or cancelled status
-    const past = reservations.filter(r => 
-      ["completed", "cancelled"].includes(r.status.toLowerCase())
-    );
+    const past = reservations
+      .filter(r => ["completed", "cancelled"].includes(r.status.toLowerCase()))
+      .filter(applyFilters);
     
     // Sort past rentals by most recent first
     const sortedPast = [...past].sort((a, b) => 
       new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     );
     
-    // Calculate completed count
+    // Calculate stats from ALL reservations (not filtered)
     const completedCount = reservations.filter(r => 
       r.status.toLowerCase() === 'completed'
     ).length;
@@ -119,12 +155,12 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
       pastRentals: sortedPast,
       rentalStats: {
         totalRentals: reservations.length,
-        activeRentals: active.length,
+        activeRentals: reservations.filter(r => ["pending", "confirmed", "active"].includes(r.status.toLowerCase())).length,
         completedRentals: completedCount,
         totalKilometersDriven: totalKm
       }
     };
-  }, [reservations]);
+  }, [reservations, dateFrom, dateTo, vehicleFilter]);
   
   // Handle edit reservation
   const handleEditReservation = (reservationId: number) => {
@@ -823,6 +859,65 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         {/* Reservations Tab */}
         <TabsContent value="reservations" className="mt-6">
           <div className="space-y-6">
+            {/* Filter Controls */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Filter Rentals</CardTitle>
+                <CardDescription>Filter rentals by date range or vehicle</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date-from">Date From</Label>
+                    <Input
+                      id="date-from"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      data-testid="input-filter-date-from"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date-to">Date To</Label>
+                    <Input
+                      id="date-to"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      data-testid="input-filter-date-to"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-search">Vehicle Search</Label>
+                    <Input
+                      id="vehicle-search"
+                      type="text"
+                      placeholder="Search by license plate, brand, model..."
+                      value={vehicleFilter}
+                      onChange={(e) => setVehicleFilter(e.target.value)}
+                      data-testid="input-filter-vehicle"
+                    />
+                  </div>
+                </div>
+                {(dateFrom || dateTo || vehicleFilter) && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDateFrom("");
+                        setDateTo("");
+                        setVehicleFilter("");
+                      }}
+                      data-testid="button-clear-filters"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
             {/* Summary Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
