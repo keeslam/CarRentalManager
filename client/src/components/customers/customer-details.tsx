@@ -463,10 +463,11 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
       
       {/* Tabs */}
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-3xl">
+        <TabsList className="grid w-full grid-cols-4 max-w-4xl">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="drivers">Drivers</TabsTrigger>
-          <TabsTrigger value="reservations">Reservations</TabsTrigger>
+          <TabsTrigger value="active">Active Rentals</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         
         {/* Personal Info Tab */}
@@ -856,8 +857,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
           </Card>
         </TabsContent>
         
-        {/* Reservations Tab */}
-        <TabsContent value="reservations" className="mt-6">
+        {/* Active Rentals Tab */}
+        <TabsContent value="active" className="mt-6">
           <div className="space-y-6">
             {/* Filter Controls */}
             <Card>
@@ -965,7 +966,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
               </Card>
             </div>
             
-            {/* Active Rentals Section */}
+            {/* Active Rentals Table */}
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -994,8 +995,119 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                 )}
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Rental History Tab */}
+        <TabsContent value="history" className="mt-6">
+          <div className="space-y-6">
+            {/* Filter Controls */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Filter History</CardTitle>
+                <CardDescription>Filter rental history by date range or vehicle</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date-from-history">Date From</Label>
+                    <Input
+                      id="date-from-history"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      data-testid="input-filter-date-from"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date-to-history">Date To</Label>
+                    <Input
+                      id="date-to-history"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      data-testid="input-filter-date-to"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-search-history">Vehicle Search</Label>
+                    <Input
+                      id="vehicle-search-history"
+                      type="text"
+                      placeholder="Search by license plate, brand, model..."
+                      value={vehicleFilter}
+                      onChange={(e) => setVehicleFilter(e.target.value)}
+                      data-testid="input-filter-vehicle"
+                    />
+                  </div>
+                </div>
+                {(dateFrom || dateTo || vehicleFilter) && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDateFrom("");
+                        setDateTo("");
+                        setVehicleFilter("");
+                      }}
+                      data-testid="button-clear-filters"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
             
-            {/* Rental History Section */}
+            {/* Summary Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-medium">Total Rentals</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{rentalStats.totalRentals}</div>
+                  <p className="text-xs text-muted-foreground mt-1">All-time reservations</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-medium">Active Rentals</CardTitle>
+                  <Car className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{rentalStats.activeRentals}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Currently active</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  <Check className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{rentalStats.completedRentals}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Past rentals</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-medium">Total KM Driven</CardTitle>
+                  <Car className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{rentalStats.totalKilometersDriven.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Kilometers</p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Rental History Table */}
             <Card>
               <CardHeader>
                 <CardTitle>Rental History</CardTitle>
