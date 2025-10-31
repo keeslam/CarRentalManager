@@ -436,9 +436,10 @@ export default function ReservationCalendarPage() {
   // Filter out completed reservations from calendar view
   const reservations = useMemo(() => {
     if (!allReservations) return [];
-    // Only show pending, confirmed, active, and cancelled in calendar
+    // Only show pending, confirmed, active reservations OR maintenance blocks
     return allReservations.filter(r => 
-      r.status !== 'completed' || r.type === 'maintenance_block' // Keep maintenance blocks always visible
+      r.type === 'maintenance_block' || 
+      ['pending', 'confirmed', 'active'].includes(r.status || '')
     );
   }, [allReservations]);
   
