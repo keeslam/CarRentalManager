@@ -669,41 +669,42 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Vehicle not found" });
       }
 
-      // Get latest reservation for this vehicle
+      // Get current active reservation for this vehicle (confirmed or pending status)
       const allReservations = await storage.getAllReservations();
-      const vehicleReservations = allReservations
-        .filter(r => r.vehicleId === id && r.endDate)
-        .sort((a, b) => new Date(b.endDate!).getTime() - new Date(a.endDate!).getTime());
-
-      // Get latest damage check for this vehicle
-      const allDamageChecks = await storage.getAllInteractiveDamageChecks();
-      const vehicleDamageChecks = allDamageChecks
-        .filter(dc => dc.vehicleId === id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const currentReservation = allReservations
+        .filter(r => r.vehicleId === id && (r.status === 'confirmed' || r.status === 'pending'))
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
 
       let latestFuelLevel = null;
       let latestMileage = vehicle.currentMileage || null;
 
-      // Priority 1: Latest damage check fuel level
-      if (vehicleDamageChecks.length > 0 && vehicleDamageChecks[0].fuelLevel) {
-        latestFuelLevel = vehicleDamageChecks[0].fuelLevel;
-      }
-      // Priority 2: Latest reservation fuel level
-      else if (vehicleReservations.length > 0 && vehicleReservations[0].fuelLevelReturn) {
-        // Convert from lowercase to capitalized format
-        const fuelMap: Record<string, string> = {
-          'empty': 'Empty',
-          '1/4': '1/4',
-          '1/2': '1/2',
-          '3/4': '3/4',
-          'full': 'Full'
-        };
-        latestFuelLevel = fuelMap[vehicleReservations[0].fuelLevelReturn] || vehicleReservations[0].fuelLevelReturn;
-      }
+      // If there's an active reservation, get data from it and its damage checks
+      if (currentReservation) {
+        // Get damage checks for the current reservation only
+        const allDamageChecks = await storage.getAllInteractiveDamageChecks();
+        const currentReservationDamageChecks = allDamageChecks
+          .filter(dc => dc.vehicleId === id && dc.reservationId === currentReservation.id)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      // Get latest mileage from damage check (prioritize over vehicle.currentMileage)
-      if (vehicleDamageChecks.length > 0 && vehicleDamageChecks[0].mileage) {
-        latestMileage = vehicleDamageChecks[0].mileage;
+        // Priority 1: Latest damage check from current reservation
+        if (currentReservationDamageChecks.length > 0) {
+          if (currentReservationDamageChecks[0].fuelLevel) {
+            latestFuelLevel = currentReservationDamageChecks[0].fuelLevel;
+          }
+          if (currentReservationDamageChecks[0].mileage) {
+            latestMileage = currentReservationDamageChecks[0].mileage;
+          }
+        }
+        
+        // Priority 2: Current reservation fuel level (if no damage check data)
+        if (!latestFuelLevel && currentReservation.fuelLevelPickup) {
+          latestFuelLevel = currentReservation.fuelLevelPickup;
+        }
+        
+        // Priority 3: Current reservation pickup mileage (if no damage check data)
+        if (!latestMileage && currentReservation.pickupMileage) {
+          latestMileage = currentReservation.pickupMileage;
+        }
       }
 
       res.json({
