@@ -2403,7 +2403,7 @@ export default function ReservationCalendarPage() {
                                   await apiRequest('PATCH', `/api/reservations/${rental.id}`, {
                                     status: 'active',
                                     returnMileage: null,
-                                    returnFuelLevel: null,
+                                    fuelLevelReturn: null,
                                     fuelCost: null,
                                     fuelNotes: null
                                   });
