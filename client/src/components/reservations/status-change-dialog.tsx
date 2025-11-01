@@ -198,11 +198,13 @@ export function StatusChangeDialog({
       };
       
       // Add mileage to reservation for historical tracking
-      if (data.status === "confirmed" && data.startMileage !== undefined && data.startMileage !== null) {
+      if (data.startMileage !== undefined && data.startMileage !== null) {
         reservationUpdateData.pickupMileage = data.startMileage;
+        reservationUpdateData.startMileage = data.startMileage; // Also send as startMileage for backend processing
       }
-      if (data.status === "completed" && data.departureMileage !== undefined && data.departureMileage !== null) {
+      if (data.departureMileage !== undefined && data.departureMileage !== null) {
         reservationUpdateData.returnMileage = data.departureMileage;
+        reservationUpdateData.departureMileage = data.departureMileage; // Also send as departureMileage for backend processing
       }
       
       // Add fuel tracking fields if present
