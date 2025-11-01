@@ -128,6 +128,43 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     }
   }, [initialVehicleId]);
 
+  // Fetch and populate initial data from reservation when opening from reservation dialog
+  useEffect(() => {
+    const fetchReservationData = async () => {
+      if (!initialReservationId || editingCheckId) return; // Skip if editing existing check
+      
+      try {
+        const response = await fetch(`/api/reservations/${initialReservationId}`, {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const reservation = await response.json();
+          
+          // Populate fuel level based on check type
+          if (checkType === 'pickup' && reservation.fuelLevelPickup && !fuelLevel) {
+            const capitalizedFuelLevel = reservation.fuelLevelPickup.charAt(0).toUpperCase() + reservation.fuelLevelPickup.slice(1);
+            setFuelLevel(capitalizedFuelLevel);
+          } else if (checkType === 'return' && reservation.fuelLevelReturn && !fuelLevel) {
+            const capitalizedFuelLevel = reservation.fuelLevelReturn.charAt(0).toUpperCase() + reservation.fuelLevelReturn.slice(1);
+            setFuelLevel(capitalizedFuelLevel);
+          }
+          
+          // Populate mileage based on check type
+          if (checkType === 'pickup' && reservation.pickupMileage && !mileage) {
+            setMileage(reservation.pickupMileage.toString());
+          } else if (checkType === 'return' && reservation.returnMileage && !mileage) {
+            setMileage(reservation.returnMileage.toString());
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching reservation data:', error);
+      }
+    };
+
+    fetchReservationData();
+  }, [initialReservationId, checkType, editingCheckId]);
+
   // Fetch latest vehicle data (fuel level and mileage) when vehicle is selected
   useEffect(() => {
     const fetchLatestVehicleData = async () => {
