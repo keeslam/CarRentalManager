@@ -259,7 +259,7 @@ export class DatabaseStorage implements IStorage {
   async getAvailableVehicles(): Promise<Vehicle[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get all vehicles that don't have a non-cancelled, non-deleted reservation that includes today
+    // Get all vehicles that don't have a non-cancelled, non-completed, non-deleted reservation that includes today
     // Exclude maintenance blocks - rentals continue during maintenance (monthly payment)
     const reservedVehicleIds = await db
       .select({ vehicleId: reservations.vehicleId })
@@ -267,6 +267,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.status} != 'completed'`,
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`, // Exclude placeholder reservations
