@@ -36,7 +36,7 @@ function getStatusBadge(status: string) {
 
 export function UpcomingReservations() {
   const { data: reservations, isLoading } = useQuery<Reservation[]>({
-    queryKey: ["/api/reservations/upcoming?limit=10"],
+    queryKey: ["/api/reservations/upcoming"],
   });
   
   return (
