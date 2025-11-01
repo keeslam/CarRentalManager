@@ -157,6 +157,13 @@ export const vehicles = pgTable("vehicles", {
   lastServiceDate: text("last_service_date"),
   lastServiceMileage: integer("last_service_mileage"),
   
+  // Fuel level tracking (independent of reservations)
+  currentFuelLevel: text("current_fuel_level"), // 'empty' | '1/4' | '1/2' | '3/4' | 'full'
+  fuelRefillCost: numeric("fuel_refill_cost"), // Cost of last refill
+  fuelRefillReceipt: text("fuel_refill_receipt"), // Path to receipt image/PDF
+  fuelRefillNotes: text("fuel_refill_notes"), // Notes about the refill
+  fuelRefillDate: timestamp("fuel_refill_date"), // When the refill was done
+  
   // Oil specification
   recommendedOil: text("recommended_oil"), // e.g., "5W-30", "10W-40", or custom specification
   
