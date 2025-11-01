@@ -316,6 +316,10 @@ export const reservations = pgTable("reservations", {
   spareAssignmentDecision: text("spare_assignment_decision"), // 'spare_assigned' | 'customer_arranging' | 'not_handled' for maintenance tracking
   affectedRentalId: integer("affected_rental_id"), // FK to the rental that's affected by this maintenance
   
+  // Mileage Tracking
+  pickupMileage: integer("pickup_mileage"), // Odometer reading when vehicle was picked up
+  returnMileage: integer("return_mileage"), // Odometer reading when vehicle was returned
+  
   // Fuel Management
   fuelLevelPickup: text("fuel_level_pickup"), // Fuel level at pickup ('empty', '1/4', '1/2', '3/4', 'full')
   fuelLevelReturn: text("fuel_level_return"), // Fuel level at return

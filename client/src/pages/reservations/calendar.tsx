@@ -1381,14 +1381,28 @@ export default function ReservationCalendarPage() {
                     <div className="text-xs text-gray-600">
                       {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
                     </div>
-                    {selectedReservation.vehicle?.departureMileage !== null && selectedReservation.vehicle?.departureMileage !== undefined && (
-                      <div className="mt-1.5 pt-1.5 border-t border-gray-200">
-                        <div className="text-[10px] text-gray-500 uppercase">Pickup Mileage</div>
-                        <div className="text-xs font-semibold text-gray-900">
-                          {selectedReservation.vehicle.departureMileage.toLocaleString()} km
-                        </div>
+                    {/* Show Mileage Information from Reservation */}
+                    {(selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined) || 
+                     (selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined) ? (
+                      <div className="mt-1.5 pt-1.5 border-t border-gray-200 space-y-1">
+                        {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
+                          <div>
+                            <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
+                            <div className="text-xs font-semibold text-gray-900">
+                              {selectedReservation.pickupMileage.toLocaleString()} km
+                            </div>
+                          </div>
+                        )}
+                        {selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined && (
+                          <div>
+                            <div className="text-[10px] text-gray-500 uppercase">Returned</div>
+                            <div className="text-xs font-semibold text-gray-900">
+                              {selectedReservation.returnMileage.toLocaleString()} km
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
