@@ -8533,6 +8533,22 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const created = await storage.createInteractiveDamageCheck(checkData);
       
+      // Sync fuel level to reservation
+      if (created.reservationId && created.fuelLevel) {
+        const reservation = await storage.getReservation(created.reservationId);
+        if (reservation) {
+          const updateData: any = {};
+          if (created.checkType === 'pickup') {
+            updateData.fuelLevelPickup = created.fuelLevel;
+          } else if (created.checkType === 'return') {
+            updateData.fuelLevelReturn = created.fuelLevel;
+          }
+          if (Object.keys(updateData).length > 0) {
+            await storage.updateReservation(created.reservationId, updateData);
+          }
+        }
+      }
+      
       // Generate and save PDF as a document
       try {
         // Get vehicle data
@@ -8629,6 +8645,22 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       if (!updated) {
         return res.status(404).json({ message: "Damage check not found" });
+      }
+      
+      // Sync fuel level to reservation
+      if (updated.reservationId && updated.fuelLevel) {
+        const reservation = await storage.getReservation(updated.reservationId);
+        if (reservation) {
+          const updateData: any = {};
+          if (updated.checkType === 'pickup') {
+            updateData.fuelLevelPickup = updated.fuelLevel;
+          } else if (updated.checkType === 'return') {
+            updateData.fuelLevelReturn = updated.fuelLevel;
+          }
+          if (Object.keys(updateData).length > 0) {
+            await storage.updateReservation(updated.reservationId, updateData);
+          }
+        }
       }
       
       // Regenerate PDF and mark old one as outdated
