@@ -148,7 +148,9 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           
           // Only auto-populate if fields are empty (don't override user input or loaded check data)
           if (!fuelLevel && data.fuelLevel) {
-            setFuelLevel(data.fuelLevel);
+            // Capitalize fuel level to match Select options (e.g., "full" -> "Full")
+            const capitalizedFuelLevel = data.fuelLevel.charAt(0).toUpperCase() + data.fuelLevel.slice(1);
+            setFuelLevel(capitalizedFuelLevel);
           }
           if (!mileage && data.mileage) {
             setMileage(data.mileage.toString());
