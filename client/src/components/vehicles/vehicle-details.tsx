@@ -835,54 +835,317 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
             </AlertDialogContent>
           </AlertDialog>
 
-          <Dialog open={isNewReservationOpen} onOpenChange={setIsNewReservationOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-new-reservation">
-                <Calendar className="h-4 w-4 mr-2" />
-                New Reservation
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Reservation</DialogTitle>
-                <DialogDescription>
-                  Create a new reservation for {vehicle?.brand} {vehicle?.model} ({formatLicensePlate(vehicle?.licensePlate || "")})
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...newReservationForm}>
-                <form onSubmit={newReservationForm.handleSubmit((data) => createReservationMutation.mutate(data))} className="space-y-3">
-                  {/* Customer Selection */}
-                  <FormField
-                    control={newReservationForm.control}
-                    name="customerId"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Customer *</FormLabel>
-                        <FormControl>
-                          <SearchableCombobox
-                            options={customerOptions}
-                            value={field.value ? field.value.toString() : ''}
-                            onChange={(value) => {
-                              newReservationForm.setValue("customerId", parseInt(value), {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                                shouldValidate: true
-                              });
-                            }}
-                            placeholder="Search and select a customer..."
-                            searchPlaceholder="Search by name, phone, or email..."
-                            groups={false}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+          <ReservationAddDialog initialVehicleId={vehicleId.toString()}>
+            <Button data-testid="button-new-reservation">
+              <Calendar className="h-4 w-4 mr-2" />
+              New Reservation
+            </Button>
+          </ReservationAddDialog>
+          
+          {/* Quick Status Change Button for Active Reservation */}
+          <QuickStatusChangeButton vehicleId={vehicleId} />
+        </div>
+      </div>
+      
+      {/* Vehicle Info Cards */}
+      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Vehicle Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{vehicle.vehicleType || "N/A"}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">APK Expiration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <p className="text-2xl font-semibold">{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
+              {vehicle.apkDate && (
+                <Badge className={apkUrgencyClass}>
+                  {daysUntilApk} days
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Warranty Expiration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <p className="text-2xl font-semibold">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
+              {vehicle.warrantyEndDate && (
+                <Badge className={warrantyUrgencyClass}>
+                  {daysUntilWarranty} days
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {activeReservation && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Current Renter</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomerViewDialog customerId={activeReservation.customerId}>
+                <p className="text-2xl font-semibold text-blue-900 hover:text-blue-600 cursor-pointer transition-colors">
+                  {activeReservation.customer?.name || "N/A"}
+                </p>
+              </CustomerViewDialog>
+              {(activeReservation.customer?.phone || activeReservation.customer?.driverPhone) && (
+                <div className="text-sm text-blue-700 mt-1 space-y-0.5">
+                  {activeReservation.customer?.phone && (
+                    <p>
+                      <span className="font-medium">Phone:</span> {activeReservation.customer.phone}
+                    </p>
+                  )}
+                  {activeReservation.customer?.driverPhone && (
+                    <p>
+                      <span className="font-medium">Driver:</span> {activeReservation.customer.driverPhone}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="text-sm text-blue-700 mt-2 pt-2 border-t border-blue-200">
+                <p className="font-medium">Rental Period:</p>
+                <p className="text-xs mt-0.5">
+                  {formatDate(activeReservation.startDate)} - {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {upcomingReservation && (
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">Upcoming Reservation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomerViewDialog customerId={upcomingReservation.customerId}>
+                <p className="text-2xl font-semibold text-green-900 hover:text-green-600 cursor-pointer transition-colors">
+                  {upcomingReservation.customer?.name || "N/A"}
+                </p>
+              </CustomerViewDialog>
+              {(upcomingReservation.customer?.phone || upcomingReservation.customer?.driverPhone) && (
+                <div className="text-sm text-green-700 mt-1 space-y-0.5">
+                  {upcomingReservation.customer?.phone && (
+                    <p>
+                      <span className="font-medium">Phone:</span> {upcomingReservation.customer.phone}
+                    </p>
+                  )}
+                  {upcomingReservation.customer?.driverPhone && (
+                    <p>
+                      <span className="font-medium">Driver:</span> {upcomingReservation.customer.driverPhone}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="text-sm text-green-700 mt-2 pt-2 border-t border-green-200">
+                <p className="font-medium">Rental Period:</p>
+                <p className="text-xs mt-0.5">
+                  {formatDate(upcomingReservation.startDate)} - {formatDate(upcomingReservation.endDate)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      
+      {/* Tabs */}
+      <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="reservations">Reservations</TabsTrigger>
+          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+        
+        {/* General Information Tab */}
+        <TabsContent value="general" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Vehicle Details</CardTitle>
+              <CardDescription>General information about this vehicle</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Vehicle ID</h4>
+                    <p className="text-base">{vehicle.id}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">License Plate</h4>
+                    <p className="text-base">{formatLicensePlate(vehicle.licensePlate)}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Brand</h4>
+                    <p className="text-base">{vehicle.brand}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Model</h4>
+                    <p className="text-base">{vehicle.model}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Vehicle Type</h4>
+                    <p className="text-base">{vehicle.vehicleType || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Chassis Number</h4>
+                    <p className="text-base">{vehicle.chassisNumber || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Dates and Status Row */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <FormField
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Technical Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Type</h4>
+                    <p className="text-base">{vehicle.fuel || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">🛢️ Recommended Oil</h4>
+                    <p className="text-base font-semibold" data-testid="text-recommended-oil">
+                      {vehicle.recommendedOil || <span className="text-gray-400 font-normal">Not specified</span>}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">AdBlue</h4>
+                    <p className="text-base">{isTrueValue(vehicle.adBlue) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">APK Date</h4>
+                    <p className="text-base">{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Production Date</h4>
+                    <p className="text-base">{vehicle.productionDate ? formatDate(vehicle.productionDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Warranty End Date</h4>
+                    <p className="text-base">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Status Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Company</h4>
+                    <p className="text-base">{isTrueValue(vehicle.company) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To</h4>
+                    <p className="text-base">{isTrueValue(vehicle.registeredTo) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To Date</h4>
+                    <p className="text-base">{vehicle.registeredToDate ? formatDate(vehicle.registeredToDate) : "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4">Equipment & Features</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">GPS</h4>
+                    <p className="text-base">{isTrueValue(vehicle.gps) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">GPS Activated</h4>
+                    <p className="text-base">{isTrueValue(vehicle.gpsActivated) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">GPS IMEI</h4>
+                    <p className="text-base">{vehicle.imei || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Roadside Assistance</h4>
+                    <p className="text-base">{isTrueValue(vehicle.roadsideAssistance) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Key</h4>
+                    <p className="text-base">{isTrueValue(vehicle.spareKey) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Winter Tires</h4>
+                    <p className="text-base">{isTrueValue(vehicle.winterTires) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Tire</h4>
+                    <p className="text-base">{isTrueValue(vehicle.spareTire) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Tools & Jack</h4>
+                    <p className="text-base">{isTrueValue(vehicle.toolsAndJack) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Seat Covers</h4>
+                    <p className="text-base">{isTrueValue(vehicle.seatcovers) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Backup Beepers</h4>
+                    <p className="text-base">{isTrueValue(vehicle.backupbeepers) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Tire Size</h4>
+                    <p className="text-base">{vehicle.tireSize || "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Radio Code</h4>
+                    <p className="text-base">{vehicle.radioCode || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {vehicle.remarks && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold border-b pb-2 mb-4">Remarks</h3>
+                  <p className="text-base whitespace-pre-wrap">{vehicle.remarks}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
                       control={newReservationForm.control}
                       name="startDate"
                       render={({ field }) => (
