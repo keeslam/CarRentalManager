@@ -866,6 +866,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         if (!latestMileage && currentReservation.pickupMileage) {
           latestMileage = currentReservation.pickupMileage;
         }
+      } else {
+        // No active reservation - use vehicle's currentFuelLevel if available
+        if (vehicle.currentFuelLevel) {
+          latestFuelLevel = vehicle.currentFuelLevel;
+        }
       }
 
       res.json({
