@@ -859,7 +859,12 @@ export class MemStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     
     const reservations = Array.from(this.reservations.values())
-      .filter(r => r.startDate >= today && r.status !== "cancelled")
+      .filter(r => 
+        r.startDate >= today && 
+        r.status !== "cancelled" && 
+        r.status !== "completed" &&
+        r.type !== "maintenance_block" // Don't show maintenance blocks in regular upcoming
+      )
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
       .slice(0, 5); // Limit to 5 reservations
     
