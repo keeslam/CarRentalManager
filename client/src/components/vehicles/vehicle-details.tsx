@@ -1098,15 +1098,17 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               </div>
 
               {/* Current Rental Mileage & Fuel Status */}
-              {currentActiveReservation && (
+              {(currentActiveReservation || vehicle.departureMileage || vehicle.returnMileage) && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold border-b pb-2 mb-4">Current Rental Status</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Pickup Mileage</h4>
                       <p className="text-base">
-                        {currentActiveReservation.pickupMileage != null 
-                          ? `${currentActiveReservation.pickupMileage.toLocaleString()} km` 
+                        {currentActiveReservation?.pickupMileage != null 
+                          ? `${currentActiveReservation.pickupMileage.toLocaleString()} km`
+                          : vehicle.departureMileage != null
+                          ? `${Number(vehicle.departureMileage).toLocaleString()} km`
                           : "Not recorded"}
                       </p>
                     </div>
@@ -1114,8 +1116,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
                       <p className="text-base">
-                        {currentActiveReservation.returnMileage != null 
-                          ? `${currentActiveReservation.returnMileage.toLocaleString()} km` 
+                        {currentActiveReservation?.returnMileage != null 
+                          ? `${currentActiveReservation.returnMileage.toLocaleString()} km`
+                          : vehicle.returnMileage != null
+                          ? `${Number(vehicle.returnMileage).toLocaleString()} km`
                           : "Not recorded"}
                       </p>
                     </div>
@@ -1123,14 +1127,14 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Pickup</h4>
                       <p className="text-base capitalize">
-                        {currentActiveReservation.fuelLevelPickup || "Not recorded"}
+                        {currentActiveReservation?.fuelLevelPickup || "Not recorded"}
                       </p>
                     </div>
                     
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Return</h4>
                       <p className="text-base capitalize">
-                        {currentActiveReservation.fuelLevelReturn || "Not recorded"}
+                        {currentActiveReservation?.fuelLevelReturn || "Not recorded"}
                       </p>
                     </div>
                   </div>
