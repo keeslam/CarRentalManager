@@ -407,19 +407,6 @@ export function ReservationForm({
     }
   }, [vehicleIdWatch, customerIdWatch, selectedTemplateId, startDateWatch, endDateWatch]);
   
-  // Auto-populate pickup mileage with vehicle's current mileage when vehicle is selected
-  useEffect(() => {
-    // Only auto-populate for new reservations (not when editing existing ones)
-    if (!editMode && !createdReservationId && selectedVehicle) {
-      // If vehicle has current mileage and we haven't manually set a start mileage yet
-      if (selectedVehicle.currentMileage && !startMileage) {
-        console.log(`🚗 Auto-populating pickup mileage with vehicle's current mileage: ${selectedVehicle.currentMileage}`);
-        setStartMileage(selectedVehicle.currentMileage);
-        form.setValue("startMileage", selectedVehicle.currentMileage);
-      }
-    }
-  }, [selectedVehicle, editMode, createdReservationId, startMileage, form]);
-  
   // Flag to hide duplicate date fields in section 3 (dates are already handled in section 1)
   const SHOW_DUPLICATE_DATES = false;
   
@@ -474,6 +461,19 @@ export function ReservationForm({
     if (!drivers || !driverIdWatch) return null;
     return drivers.find(d => d.id === Number(driverIdWatch)) || null;
   }, [drivers, driverIdWatch]);
+  
+  // Auto-populate pickup mileage with vehicle's current mileage when vehicle is selected
+  useEffect(() => {
+    // Only auto-populate for new reservations (not when editing existing ones)
+    if (!editMode && !createdReservationId && selectedVehicle) {
+      // If vehicle has current mileage and we haven't manually set a start mileage yet
+      if (selectedVehicle.currentMileage && !startMileage) {
+        console.log(`🚗 Auto-populating pickup mileage with vehicle's current mileage: ${selectedVehicle.currentMileage}`);
+        setStartMileage(selectedVehicle.currentMileage);
+        form.setValue("startMileage", selectedVehicle.currentMileage);
+      }
+    }
+  }, [selectedVehicle, editMode, createdReservationId, startMileage, form]);
   
   // Calculate rental duration
   const rentalDuration = useMemo(() => {
