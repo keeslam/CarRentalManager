@@ -72,6 +72,7 @@ export function formatLicensePlate(licensePlate: string): string {
 export function formatReservationStatus(status: string): string {
   switch (status.toLowerCase()) {
     case 'pending':
+    case 'scheduled':
       return 'Booked';
     case 'confirmed':
     case 'active':
@@ -80,8 +81,6 @@ export function formatReservationStatus(status: string): string {
       return 'Returned';
     case 'cancelled':
       return 'Cancelled';
-    case 'scheduled':
-      return 'Scheduled';
     default:
       return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
