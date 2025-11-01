@@ -133,6 +133,7 @@ export function StatusChangeDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
+  const [fuelReceiptFile, setFuelReceiptFile] = useState<File | null>(null);
   
   // Create defaultValues object to ensure stable reference
   const defaultValues = {
@@ -317,6 +318,32 @@ export function StatusChangeDialog({
       }
     },
     onSuccess: async () => {
+      // Upload fuel receipt if one was selected
+      if (fuelReceiptFile && vehicle?.id) {
+        try {
+          const formData = new FormData();
+          formData.append('vehicleId', vehicle.id.toString());
+          formData.append('reservationId', reservationId.toString());
+          formData.append('documentType', 'Fuel Receipt');
+          formData.append('file', fuelReceiptFile);
+          
+          const uploadResponse = await fetch('/api/documents', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+          });
+          
+          if (!uploadResponse.ok) {
+            console.error('Failed to upload fuel receipt');
+          } else {
+            // Invalidate documents query
+            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+          }
+        } catch (error) {
+          console.error('Error uploading fuel receipt:', error);
+        }
+      }
+      
       // Use unified invalidation system for comprehensive cache updates
       await invalidateRelatedQueries('reservations', { 
         id: reservationId,
@@ -327,6 +354,9 @@ export function StatusChangeDialog({
         title: "Status Updated",
         description: `Reservation status has been changed to ${formatReservationStatus(currentStatus)}.`,
       });
+      
+      // Reset fuel receipt file
+      setFuelReceiptFile(null);
       
       // Close the dialog
       onOpenChange(false);
@@ -695,14 +725,14 @@ export function StatusChangeDialog({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          // TODO: Handle fuel receipt upload
+                          setFuelReceiptFile(file);
                           console.log('Fuel receipt selected:', file.name);
                         }
                       }}
                     />
                   </FormControl>
                   <FormDescription>
-                    Upload a receipt if you refilled the vehicle to full
+                    {fuelReceiptFile ? `Selected: ${fuelReceiptFile.name}` : 'Upload a receipt if you refilled the vehicle to full'}
                   </FormDescription>
                 </FormItem>
                 

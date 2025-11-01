@@ -200,13 +200,28 @@ export default function ReservationCalendarPage() {
     setDamageCheckDialogOpen(true);
   };
 
-  const handleCloseDamageCheckDialog = () => {
+  const handleCloseDamageCheckDialog = async () => {
     setDamageCheckDialogOpen(false);
     setEditingDamageCheckId(null);
     setCompareWithCheckId(null);
     // Refetch damage checks when dialog closes
     refetchDamageChecks();
     refetchDocuments();
+    
+    // Refetch calendar data to get updated mileage/fuel values
+    await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+    
+    // If view dialog is open, update the selected reservation with fresh data
+    if (viewDialogOpen && selectedReservation) {
+      const updatedReservations = queryClient.getQueryData(["/api/reservations/range"]) as any[];
+      if (updatedReservations) {
+        const updatedReservation = updatedReservations.find((r: any) => r.id === selectedReservation.id);
+        if (updatedReservation) {
+          console.log('✅ Updating selected reservation after damage check save:', updatedReservation);
+          setSelectedReservation(updatedReservation);
+        }
+      }
+    }
   };
 
   const handleDeleteDamageCheck = async (checkId: number) => {
@@ -1625,6 +1640,7 @@ export default function ReservationCalendarPage() {
                       { type: 'Contract (Signed)', accept: '.pdf' },
                       { type: 'Damage Check (Signed)', accept: '.pdf' },
                       { type: 'Damage Report Photo', accept: '.jpg,.jpeg,.png' },
+                      { type: 'Fuel Receipt', accept: 'image/*,.pdf' },
                       { type: 'Other', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' }
                     ].map(({ type, accept }) => (
                       <Button
@@ -1714,6 +1730,9 @@ export default function ReservationCalendarPage() {
                           const damageReportDocs = reservationDocuments.filter(d => 
                             d.documentType === 'Damage Report Photo' || d.documentType === 'Damage Report PDF'
                           );
+                          const fuelReceiptDocs = reservationDocuments.filter(d => 
+                            d.documentType === 'Fuel Receipt'
+                          );
                           const otherDocs = reservationDocuments.filter(d => 
                             !d.documentType?.startsWith('Contract (Unsigned)') && 
                             !d.documentType?.startsWith('Contract (Signed)') && 
@@ -1721,10 +1740,11 @@ export default function ReservationCalendarPage() {
                             !d.documentType?.startsWith('Damage Check') &&
                             d.documentType !== 'Damage Report Photo' && 
                             d.documentType !== 'Damage Report PDF' &&
+                            d.documentType !== 'Fuel Receipt' &&
                             d.documentType !== 'Other'
                           );
                           
-                          return [...contractDocs, ...damageCheckDocs, ...damageReportDocs, ...otherDocs];
+                          return [...contractDocs, ...damageCheckDocs, ...damageReportDocs, ...fuelReceiptDocs, ...otherDocs];
                         })().map((doc) => {
                       const getFileIcon = (contentType: string | null, fileName: string) => {
                         const ext = fileName.split('.').pop()?.toLowerCase();
