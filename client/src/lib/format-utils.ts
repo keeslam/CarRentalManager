@@ -73,7 +73,7 @@ export function formatReservationStatus(status: string): string {
   switch (status.toLowerCase()) {
     case 'pending':
     case 'scheduled':
-      return 'Booked';
+      return 'Scheduled';
     case 'confirmed':
     case 'active':
       return 'Picked up';

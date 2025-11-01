@@ -330,8 +330,9 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         reservation.vehicle?.model?.toLowerCase().includes(searchTerm) ||
         reservation.customer?.name?.toLowerCase().includes(searchTerm);
 
-      // Status filter
-      const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
+      // Status filter - handle comma-separated values for grouped statuses
+      const matchesStatus = statusFilter === "all" || 
+        statusFilter.split(',').includes(reservation.status);
 
       // Vehicle type filter
       const matchesVehicleType = vehicleTypeFilter === "all" || 
@@ -391,7 +392,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Booked</SelectItem>
+                  <SelectItem value="pending,scheduled">Scheduled</SelectItem>
                   <SelectItem value="confirmed">Picked up</SelectItem>
                   <SelectItem value="completed">Returned</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
