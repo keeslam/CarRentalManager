@@ -2305,19 +2305,20 @@ export async function registerRoutes(app: Express): Promise<void> {
         updatedBy: user ? user.username : null
       };
       
-      // Add pickup mileage when status is confirmed (picked up)
-      if (status === "confirmed" && req.body.startMileage !== undefined) {
+      // Add pickup mileage when status is confirmed (picked up) OR when updating mileage for confirmed reservation
+      if (req.body.startMileage !== undefined) {
         const pickupMileage = parseInt(req.body.startMileage);
-        if (!isNaN(pickupMileage)) {
+        if (!isNaN(pickupMileage) && (status === "confirmed" || existingReservation.status === "confirmed")) {
           dataWithTracking.pickupMileage = pickupMileage;
           
-          // Also update the vehicle's current mileage
+          // Also update the vehicle's current mileage and departureMileage
           if (existingReservation.vehicleId) {
             try {
               const vehicle = await storage.getVehicle(existingReservation.vehicleId);
               if (vehicle) {
                 await storage.updateVehicle(existingReservation.vehicleId, {
                   currentMileage: pickupMileage,
+                  departureMileage: pickupMileage,
                   updatedBy: user ? user.username : null,
                   registeredToBy: vehicle.registeredToBy,
                   companyBy: vehicle.companyBy
@@ -2325,6 +2326,32 @@ export async function registerRoutes(app: Express): Promise<void> {
               }
             } catch (error) {
               console.error("Error updating vehicle current mileage:", error);
+              // Continue with reservation update even if vehicle update fails
+            }
+          }
+        }
+      }
+      
+      // Add return mileage when completing reservation
+      if (status === "completed" && req.body.departureMileage !== undefined) {
+        const returnMileage = parseInt(req.body.departureMileage);
+        if (!isNaN(returnMileage)) {
+          dataWithTracking.returnMileage = returnMileage;
+          
+          // Also update the vehicle's returnMileage
+          if (existingReservation.vehicleId) {
+            try {
+              const vehicle = await storage.getVehicle(existingReservation.vehicleId);
+              if (vehicle) {
+                await storage.updateVehicle(existingReservation.vehicleId, {
+                  returnMileage: returnMileage,
+                  updatedBy: user ? user.username : null,
+                  registeredToBy: vehicle.registeredToBy,
+                  companyBy: vehicle.companyBy
+                });
+              }
+            } catch (error) {
+              console.error("Error updating vehicle return mileage:", error);
               // Continue with reservation update even if vehicle update fails
             }
           }
