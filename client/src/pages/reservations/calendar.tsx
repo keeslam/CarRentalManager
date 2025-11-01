@@ -50,7 +50,7 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search } from "lucide-react";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
@@ -178,6 +178,8 @@ export default function ReservationCalendarPage() {
   
   // Completed rentals dialog
   const [completedRentalsDialogOpen, setCompletedRentalsDialogOpen] = useState(false);
+  const [completedRentalsSearch, setCompletedRentalsSearch] = useState('');
+  const [completedRentalsDateFilter, setCompletedRentalsDateFilter] = useState<'all' | '7days' | '30days' | '90days' | 'year'>('all');
   
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
@@ -2404,23 +2406,92 @@ export default function ReservationCalendarPage() {
 
       {/* Completed Rentals Dialog */}
       <Dialog open={completedRentalsDialogOpen} onOpenChange={setCompletedRentalsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-7xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Completed Rentals History</DialogTitle>
             <DialogDescription>
               View, revert, or delete completed rental records
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            {completedRentals.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No completed rentals found</p>
+          
+          {/* Search and Filter Controls */}
+          <div className="flex gap-3 items-end mb-2">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1.5 block">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by vehicle, customer, or license plate..."
+                  value={completedRentalsSearch}
+                  onChange={(e) => setCompletedRentalsSearch(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {[...completedRentals]
-                  .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-                  .map((rental) => {
+            </div>
+            <div className="w-48">
+              <label className="text-sm font-medium mb-1.5 block">Time Period</label>
+              <Select value={completedRentalsDateFilter} onValueChange={(value: any) => setCompletedRentalsDateFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="7days">Last 7 Days</SelectItem>
+                  <SelectItem value="30days">Last 30 Days</SelectItem>
+                  <SelectItem value="90days">Last 90 Days</SelectItem>
+                  <SelectItem value="year">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <ScrollArea className="max-h-[55vh]">
+            {(() => {
+              // Apply filters and search
+              const now = new Date();
+              const filtered = completedRentals.filter((rental) => {
+                const vehicle = vehicles?.find(v => v.id === rental.vehicleId);
+                const customerName = rental.customer?.name || '';
+                const vehicleInfo = vehicle ? `${vehicle.brand} ${vehicle.model} ${formatLicensePlate(vehicle.licensePlate)}` : '';
+                
+                // Search filter
+                const searchLower = completedRentalsSearch.toLowerCase();
+                const matchesSearch = !completedRentalsSearch || 
+                  vehicleInfo.toLowerCase().includes(searchLower) ||
+                  customerName.toLowerCase().includes(searchLower);
+                
+                // Date filter
+                const rentalDate = new Date(rental.startDate);
+                let matchesDate = true;
+                if (completedRentalsDateFilter === '7days') {
+                  matchesDate = (now.getTime() - rentalDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+                } else if (completedRentalsDateFilter === '30days') {
+                  matchesDate = (now.getTime() - rentalDate.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+                } else if (completedRentalsDateFilter === '90days') {
+                  matchesDate = (now.getTime() - rentalDate.getTime()) <= 90 * 24 * 60 * 60 * 1000;
+                } else if (completedRentalsDateFilter === 'year') {
+                  matchesDate = (now.getTime() - rentalDate.getTime()) <= 365 * 24 * 60 * 60 * 1000;
+                }
+                
+                return matchesSearch && matchesDate;
+              });
+              
+              if (filtered.length === 0) {
+                return (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No completed rentals found</p>
+                    {(completedRentalsSearch || completedRentalsDateFilter !== 'all') && (
+                      <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                    )}
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="space-y-3">
+                  {filtered
+                    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                    .map((rental) => {
                     const vehicle = vehicles?.find(v => v.id === rental.vehicleId);
                     const customerName = rental.customer?.name || 'Unknown Customer';
                     
@@ -2586,8 +2657,9 @@ export default function ReservationCalendarPage() {
                       </div>
                     );
                   })}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompletedRentalsDialogOpen(false)}>
