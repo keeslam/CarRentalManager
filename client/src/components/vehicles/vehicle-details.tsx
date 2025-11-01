@@ -1102,33 +1102,37 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold border-b pb-2 mb-4">Current Rental Status</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {currentActiveReservation.pickupMileage && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Pickup Mileage</h4>
-                        <p className="text-base">{currentActiveReservation.pickupMileage.toLocaleString()} km</p>
-                      </div>
-                    )}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Pickup Mileage</h4>
+                      <p className="text-base">
+                        {currentActiveReservation.pickupMileage != null 
+                          ? `${currentActiveReservation.pickupMileage.toLocaleString()} km` 
+                          : "Not recorded"}
+                      </p>
+                    </div>
                     
-                    {currentActiveReservation.returnMileage && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
-                        <p className="text-base">{currentActiveReservation.returnMileage.toLocaleString()} km</p>
-                      </div>
-                    )}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
+                      <p className="text-base">
+                        {currentActiveReservation.returnMileage != null 
+                          ? `${currentActiveReservation.returnMileage.toLocaleString()} km` 
+                          : "Not recorded"}
+                      </p>
+                    </div>
                     
-                    {currentActiveReservation.fuelLevelPickup && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Pickup</h4>
-                        <p className="text-base capitalize">{currentActiveReservation.fuelLevelPickup}</p>
-                      </div>
-                    )}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Pickup</h4>
+                      <p className="text-base capitalize">
+                        {currentActiveReservation.fuelLevelPickup || "Not recorded"}
+                      </p>
+                    </div>
                     
-                    {currentActiveReservation.fuelLevelReturn && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Return</h4>
-                        <p className="text-base capitalize">{currentActiveReservation.fuelLevelReturn}</p>
-                      </div>
-                    )}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Return</h4>
+                      <p className="text-base capitalize">
+                        {currentActiveReservation.fuelLevelReturn || "Not recorded"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
