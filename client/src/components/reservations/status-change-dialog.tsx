@@ -420,7 +420,7 @@ export function StatusChangeDialog({
                   {/* Show Vehicle Mileage Information */}
                   {vehicle.currentMileage !== undefined && vehicle.currentMileage !== null && (
                     <div className="flex items-center">
-                      <span className="text-muted-foreground mr-1">Current:</span>
+                      <span className="text-muted-foreground mr-1">At pickup:</span>
                       <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
                     </div>
                   )}
