@@ -84,6 +84,27 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
   
+  async setMileageOverridePassword(id: number, hashedPassword: string | null): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({
+        mileageOverridePasswordHash: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+      
+    return result.rowCount > 0;
+  }
+  
+  async getMileageOverridePasswordHash(id: number): Promise<string | null> {
+    const [user] = await db
+      .select({ mileageOverridePasswordHash: users.mileageOverridePasswordHash })
+      .from(users)
+      .where(eq(users.id, id));
+      
+    return user?.mileageOverridePasswordHash || null;
+  }
+  
   async deleteUser(id: number): Promise<boolean> {
     try {
       const result = await db.delete(users).where(eq(users.id, id));
