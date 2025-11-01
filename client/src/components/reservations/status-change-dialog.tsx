@@ -464,19 +464,6 @@ export function StatusChangeDialog({
     
     console.log("✅ No mileage decrease detected, proceeding with validations");
     
-    // Custom validation - check for start mileage >= return mileage when confirming
-    if (data.status === "confirmed" && 
-        data.startMileage !== undefined && 
-        vehicle?.returnMileage !== undefined && 
-        vehicle.returnMileage !== null && 
-        data.startMileage < vehicle.returnMileage) {
-      form.setError("startMileage", { 
-        type: "manual", 
-        message: `Start mileage must be at least ${vehicle.returnMileage} km (previous return mileage)` 
-      });
-      return; // Don't submit
-    }
-    
     // Require return mileage when status is "completed"
     if (data.status === "completed" && !data.departureMileage) {
       form.setError("departureMileage", { 
@@ -659,8 +646,10 @@ export function StatusChangeDialog({
                         </div>
                       </FormControl>
                       <FormDescription>
-                        {vehicle.returnMileage !== undefined && vehicle.returnMileage !== null
-                          ? `Must be at least ${vehicle.returnMileage} km (previous return mileage)`
+                        {vehicle.currentMileage !== undefined && vehicle.currentMileage !== null
+                          ? `Last known mileage: ${vehicle.currentMileage.toLocaleString()} km`
+                          : vehicle.departureMileage !== undefined && vehicle.departureMileage !== null
+                          ? `Last known mileage: ${vehicle.departureMileage.toLocaleString()} km`
                           : "Enter the vehicle's odometer reading when it was picked up"}
                       </FormDescription>
                       <FormMessage />
