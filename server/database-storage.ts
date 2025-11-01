@@ -800,6 +800,7 @@ export class DatabaseStorage implements IStorage {
     const baseConditions = [
       eq(reservations.vehicleId, vehicleId),
       sql`${reservations.status} != 'cancelled'`,
+      sql`${reservations.status} != 'completed'`,
       isNull(reservations.deletedAt),
       sql`(
         (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
@@ -1670,6 +1671,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           not(eq(reservations.status, 'cancelled')),
+          not(eq(reservations.status, 'completed')),
           not(eq(reservations.type, 'maintenance_block')), // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`,
