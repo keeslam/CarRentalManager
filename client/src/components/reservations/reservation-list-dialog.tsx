@@ -217,16 +217,34 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
       header: "Status",
       cell: ({ row }) => {
         const reservation = row.original;
+        const status = reservation.status.toLowerCase();
+        let badgeClass = "";
+        
+        switch (status) {
+          case "confirmed":
+            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
+            break;
+          case "active":
+            badgeClass = "bg-green-100 text-green-800 border-green-200";
+            break;
+          case "pending":
+            badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+            break;
+          case "scheduled":
+            badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
+            break;
+          case "cancelled":
+            badgeClass = "bg-red-100 text-red-800 border-red-200";
+            break;
+          case "completed":
+            badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
+            break;
+          default:
+            badgeClass = "bg-gray-100 text-gray-800";
+        }
+        
         return (
-          <Badge 
-            variant={
-              reservation.status === "confirmed" ? "default" :
-              reservation.status === "pending" ? "secondary" :
-              reservation.status === "cancelled" ? "destructive" :
-              reservation.status === "completed" ? "outline" :
-              "secondary"
-            }
-          >
+          <Badge className={badgeClass}>
             {formatReservationStatus(reservation.status)}
           </Badge>
         );
@@ -377,10 +395,12 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Booked</SelectItem>
+                  <SelectItem value="confirmed">Picked up</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Returned</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
                 </SelectContent>
               </Select>
 
