@@ -75,10 +75,14 @@ export function formatReservationStatus(status: string): string {
       return 'Booked';
     case 'confirmed':
       return 'Picked up';
+    case 'active':
+      return 'Active';
     case 'completed':
       return 'Returned';
     case 'cancelled':
       return 'Cancelled';
+    case 'scheduled':
+      return 'Scheduled';
     default:
       return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
