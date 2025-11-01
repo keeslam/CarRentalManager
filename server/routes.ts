@@ -2357,6 +2357,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         req.body.recurringFrequency = null;
       }
       
+      // Handle mileage fields
+      if (req.body.pickupMileage === "null" || req.body.pickupMileage === "" || req.body.pickupMileage === null) {
+        req.body.pickupMileage = null;
+      } else if (req.body.pickupMileage) {
+        const parsed = parseInt(req.body.pickupMileage);
+        req.body.pickupMileage = isNaN(parsed) ? null : parsed;
+      }
+      
+      if (req.body.returnMileage === "null" || req.body.returnMileage === "" || req.body.returnMileage === null) {
+        req.body.returnMileage = null;
+      } else if (req.body.returnMileage) {
+        const parsed = parseInt(req.body.returnMileage);
+        req.body.returnMileage = isNaN(parsed) ? null : parsed;
+      }
+      
       // Handle fuel-related fields
       // fuelLevelPickup and fuelLevelReturn are text strings (e.g., "full", "1/2", "empty")
       if (req.body.fuelLevelPickup === "null" || req.body.fuelLevelPickup === "" || req.body.fuelLevelPickup === null || req.body.fuelLevelPickup === "not_recorded") {
