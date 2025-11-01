@@ -439,6 +439,75 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Set mileage override password (users can set their own)
+  app.post("/api/users/:id/mileage-override-password", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Only allow users to set their own mileage override password
+      if (id !== req.user.id) {
+        return res.status(403).json({ message: "Can only set your own mileage override password" });
+      }
+      
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+      
+      if (password.length < 4) {
+        return res.status(400).json({ message: "Password must be at least 4 characters" });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
+      const success = await storage.setMileageOverridePassword(id, hashedPassword);
+      
+      if (!success) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ success: true, message: "Mileage override password set successfully" });
+    } catch (error) {
+      console.error("Error setting mileage override password:", error);
+      res.status(500).json({ message: "Failed to set mileage override password" });
+    }
+  });
+  
+  // Verify mileage override password
+  app.post("/api/users/:id/verify-mileage-override", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+      
+      const storedHash = await storage.getMileageOverridePasswordHash(id);
+      
+      if (!storedHash) {
+        return res.status(404).json({ message: "No mileage override password set for this user" });
+      }
+      
+      const isValid = await verifyPassword(password, storedHash);
+      
+      res.json({ valid: isValid });
+    } catch (error) {
+      console.error("Error verifying mileage override password:", error);
+      res.status(500).json({ message: "Failed to verify password" });
+    }
+  });
+  
   // Delete user (requires MANAGE_USERS permission)
   app.delete("/api/users/:id", requireAuth, hasPermission(UserPermission.MANAGE_USERS), async (req, res) => {
     try {
