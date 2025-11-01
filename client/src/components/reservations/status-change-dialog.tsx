@@ -108,6 +108,7 @@ interface StatusChangeDialogProps {
     fuelCardNumber?: string | null;
     fuelNotes?: string | null;
   };
+  pickupMileage?: number | null;
   onStatusChanged?: () => void;
 }
 
@@ -127,6 +128,7 @@ export function StatusChangeDialog({
   onStatusChanged,
   customer, // We'll add this to the props
   initialFuelData,
+  pickupMileage,
 }: StatusChangeDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -586,7 +588,7 @@ export function StatusChangeDialog({
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="Enter return mileage"
+                        placeholder={pickupMileage ? `Pickup: ${pickupMileage.toLocaleString()} km` : "Enter return mileage"}
                         {...field}
                         value={field.value || ""}
                       />
