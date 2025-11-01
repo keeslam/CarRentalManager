@@ -191,10 +191,18 @@ export function StatusChangeDialog({
   // Status change mutation
   const statusChangeMutation = useMutation({
     mutationFn: async (data: StatusChangeFormType) => {
-      // Prepare reservation update data with status and fuel tracking
+      // Prepare reservation update data with status, mileage, and fuel tracking
       const reservationUpdateData: any = { 
         status: data.status,
       };
+      
+      // Add mileage to reservation for historical tracking
+      if (data.status === "confirmed" && data.startMileage !== undefined && data.startMileage !== null) {
+        reservationUpdateData.pickupMileage = data.startMileage;
+      }
+      if (data.status === "completed" && data.departureMileage !== undefined && data.departureMileage !== null) {
+        reservationUpdateData.returnMileage = data.departureMileage;
+      }
       
       // Add fuel tracking fields if present
       if (data.fuelLevelPickup !== undefined && data.fuelLevelPickup !== null) {
@@ -244,14 +252,14 @@ export function StatusChangeDialog({
         let hasMileageUpdate = false;
         
         if (data.status === "confirmed" && data.startMileage) {
-          // Use departureMileage for the start mileage since schema doesn't have currentMileage
           vehicleData.departureMileage = data.startMileage;
+          vehicleData.currentMileage = data.startMileage; // Update current mileage
           hasMileageUpdate = true;
         }
         
         if (data.status === "completed" && data.departureMileage) {
-          // Use returnMileage for the completed status (which is stored in departureMileage field)
           vehicleData.returnMileage = data.departureMileage;
+          vehicleData.currentMileage = data.departureMileage; // Update current mileage
           hasMileageUpdate = true;
         }
         

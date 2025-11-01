@@ -1105,10 +1105,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Pickup Mileage</h4>
                       <p className="text-base">
-                        {currentActiveReservation?.pickupMileage != null 
-                          ? `${currentActiveReservation.pickupMileage.toLocaleString()} km`
-                          : vehicle.departureMileage != null
+                        {vehicle.departureMileage != null
                           ? `${Number(vehicle.departureMileage).toLocaleString()} km`
+                          : currentActiveReservation?.pickupMileage != null 
+                          ? `${currentActiveReservation.pickupMileage.toLocaleString()} km`
                           : "Not recorded"}
                       </p>
                     </div>
@@ -1116,10 +1116,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
                       <p className="text-base">
-                        {currentActiveReservation?.returnMileage != null 
-                          ? `${currentActiveReservation.returnMileage.toLocaleString()} km`
-                          : vehicle.returnMileage != null
+                        {vehicle.returnMileage != null
                           ? `${Number(vehicle.returnMileage).toLocaleString()} km`
+                          : currentActiveReservation?.returnMileage != null 
+                          ? `${currentActiveReservation.returnMileage.toLocaleString()} km`
                           : "Not recorded"}
                       </p>
                     </div>
