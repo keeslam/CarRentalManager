@@ -334,13 +334,24 @@ export function StatusChangeDialog({
           });
           
           if (!uploadResponse.ok) {
-            console.error('Failed to upload fuel receipt');
+            const errorText = await uploadResponse.text();
+            console.error('Failed to upload fuel receipt:', errorText);
+            toast({
+              title: "Warning",
+              description: "Failed to upload fuel receipt. Status updated successfully.",
+              variant: "destructive",
+            });
           } else {
             // Invalidate documents query
             queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
           }
         } catch (error) {
           console.error('Error uploading fuel receipt:', error);
+          toast({
+            title: "Warning",
+            description: "Error uploading fuel receipt. Status updated successfully.",
+            variant: "destructive",
+          });
         }
       }
       

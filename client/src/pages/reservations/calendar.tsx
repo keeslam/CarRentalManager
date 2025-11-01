@@ -213,12 +213,18 @@ export default function ReservationCalendarPage() {
     
     // If view dialog is open, update the selected reservation with fresh data
     if (viewDialogOpen && selectedReservation) {
-      const updatedReservations = queryClient.getQueryData(["/api/reservations/range"]) as any[];
-      if (updatedReservations) {
-        const updatedReservation = updatedReservations.find((r: any) => r.id === selectedReservation.id);
-        if (updatedReservation) {
-          console.log('✅ Updating selected reservation after damage check save:', updatedReservation);
-          setSelectedReservation(updatedReservation);
+      // Use getQueriesData to find all matching queries (handles date range params)
+      const queriesData = queryClient.getQueriesData({ queryKey: ["/api/reservations/range"] });
+      
+      // Find the updated reservation from any of the matching queries
+      for (const [, data] of queriesData) {
+        if (Array.isArray(data)) {
+          const updatedReservation = data.find((r: any) => r.id === selectedReservation.id);
+          if (updatedReservation) {
+            console.log('✅ Updating selected reservation after damage check save:', updatedReservation);
+            setSelectedReservation(updatedReservation);
+            break;
+          }
         }
       }
     }
