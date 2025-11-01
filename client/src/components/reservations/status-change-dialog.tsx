@@ -430,6 +430,40 @@ export function StatusChangeDialog({
   };
   
   function onSubmit(data: StatusChangeFormType) {
+    console.log("🔍 onSubmit called with data:", data);
+    console.log("🚗 Vehicle current mileage:", vehicle?.currentMileage);
+    console.log("🚗 Vehicle departure mileage:", vehicle?.departureMileage);
+    console.log("🚗 Vehicle return mileage:", vehicle?.returnMileage);
+    
+    // CHECK FOR MILEAGE DECREASE FIRST (before other validations)
+    // This is critical for security - must check before allowing submission
+    const currentVehicleMileage = vehicle?.currentMileage || vehicle?.departureMileage || vehicle?.returnMileage || 0;
+    
+    // Check pickup mileage decrease
+    if (data.startMileage !== undefined && data.startMileage !== null) {
+      console.log(`🔍 Checking pickup mileage: ${data.startMileage} vs current: ${currentVehicleMileage}`);
+      if (data.startMileage < currentVehicleMileage) {
+        console.log("⚠️ MILEAGE DECREASE DETECTED - showing password dialog");
+        setPendingFormData(data);
+        setShowPasswordDialog(true);
+        return; // BLOCK SUBMISSION
+      }
+    }
+    
+    // Check return mileage decrease (against pickup mileage from this reservation or vehicle mileage)
+    if (data.departureMileage !== undefined && data.departureMileage !== null) {
+      const baselineForReturn = data.startMileage || pickupMileage || currentVehicleMileage;
+      console.log(`🔍 Checking return mileage: ${data.departureMileage} vs baseline: ${baselineForReturn}`);
+      if (data.departureMileage < baselineForReturn) {
+        console.log("⚠️ RETURN MILEAGE DECREASE DETECTED - showing password dialog");
+        setPendingFormData(data);
+        setShowPasswordDialog(true);
+        return; // BLOCK SUBMISSION
+      }
+    }
+    
+    console.log("✅ No mileage decrease detected, proceeding with validations");
+    
     // Custom validation - check for start mileage >= return mileage when confirming
     if (data.status === "confirmed" && 
         data.startMileage !== undefined && 
@@ -453,7 +487,7 @@ export function StatusChangeDialog({
     }
     
     // If status is "completed" and there's a start mileage, ensure return mileage is >= start mileage
-    if (data.status === "confirmed" && 
+    if (data.status === "completed" && 
         data.startMileage !== undefined && 
         data.departureMileage !== undefined && 
         data.departureMileage < data.startMileage) {
@@ -464,18 +498,8 @@ export function StatusChangeDialog({
       return; // Don't submit
     }
     
-    // Check for mileage decrease (requires password override)
-    const currentMileage = vehicle?.currentMileage || vehicle?.departureMileage || 0;
-    const newMileage = data.startMileage;
-    
-    if (newMileage !== undefined && newMileage < currentMileage) {
-      // Mileage is decreasing, show password dialog
-      setPendingFormData(data);
-      setShowPasswordDialog(true);
-      return;
-    }
-    
-    // Passed validation, submit the data
+    console.log("✅ All validations passed, calling mutation");
+    // Passed all validations, submit the data
     statusChangeMutation.mutate(data);
   }
   
