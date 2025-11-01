@@ -1147,6 +1147,11 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   </div>
                   
                   <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">GPS Swapped</h4>
+                    <p className="text-base">{isTrueValue(vehicle.gpsSwapped) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">GPS IMEI</h4>
                     <p className="text-base">{vehicle.imei || "N/A"}</p>
                   </div>
