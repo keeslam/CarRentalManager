@@ -417,11 +417,11 @@ export function StatusChangeDialog({
                     <span className="text-muted-foreground mr-1">Vehicle:</span>
                     <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
                   </div>
-                  {/* Show Vehicle Mileage Information */}
-                  {vehicle.currentMileage !== undefined && vehicle.currentMileage !== null && (
+                  {/* Show Pickup Mileage from Reservation */}
+                  {pickupMileage !== undefined && pickupMileage !== null && (
                     <div className="flex items-center">
                       <span className="text-muted-foreground mr-1">At pickup:</span>
-                      <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                      <span className="font-medium">{pickupMileage.toLocaleString()} km</span>
                     </div>
                   )}
                 </div>
