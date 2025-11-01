@@ -963,15 +963,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Check if the request contains valid mileage fields
       const updateData: Record<string, any> = {};
       
-      // If currentMileage is provided, store it in the departureMileage field
-      // since there's no currentMileage field in the schema
+      // Update currentMileage (the vehicle's current odometer reading)
       if (req.body.currentMileage !== undefined) {
         const mileage = parseInt(req.body.currentMileage);
         if (!isNaN(mileage)) {
-          updateData.departureMileage = mileage;
+          updateData.currentMileage = mileage;
         }
       }
       
+      // Update departureMileage (when vehicle leaves/is picked up)
       if (req.body.departureMileage !== undefined) {
         const mileage = parseInt(req.body.departureMileage);
         if (!isNaN(mileage)) {
@@ -979,11 +979,13 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      // Add support for returnMileage used when completing a reservation
+      // Update returnMileage (when vehicle is returned)
       if (req.body.returnMileage !== undefined) {
         const mileage = parseInt(req.body.returnMileage);
         if (!isNaN(mileage)) {
           updateData.returnMileage = mileage;
+          // Also update currentMileage to match the return mileage
+          updateData.currentMileage = mileage;
         }
       }
       
@@ -2232,6 +2234,32 @@ export async function registerRoutes(app: Express): Promise<void> {
         status,
         updatedBy: user ? user.username : null
       };
+      
+      // Add pickup mileage when status is confirmed (picked up)
+      if (status === "confirmed" && req.body.startMileage !== undefined) {
+        const pickupMileage = parseInt(req.body.startMileage);
+        if (!isNaN(pickupMileage)) {
+          dataWithTracking.pickupMileage = pickupMileage;
+          
+          // Also update the vehicle's current mileage
+          if (existingReservation.vehicleId) {
+            try {
+              const vehicle = await storage.getVehicle(existingReservation.vehicleId);
+              if (vehicle) {
+                await storage.updateVehicle(existingReservation.vehicleId, {
+                  currentMileage: pickupMileage,
+                  updatedBy: user ? user.username : null,
+                  registeredToBy: vehicle.registeredToBy,
+                  companyBy: vehicle.companyBy
+                });
+              }
+            } catch (error) {
+              console.error("Error updating vehicle current mileage:", error);
+              // Continue with reservation update even if vehicle update fails
+            }
+          }
+        }
+      }
       
       // Add fuel tracking fields if present in request body
       if (req.body.fuelLevelPickup !== undefined) {
