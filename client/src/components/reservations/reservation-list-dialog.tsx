@@ -222,10 +222,8 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         
         switch (status) {
           case "confirmed":
-            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
-            break;
           case "active":
-            badgeClass = "bg-green-100 text-green-800 border-green-200";
+            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
             break;
           case "pending":
             badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
@@ -397,7 +395,6 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Booked</SelectItem>
                   <SelectItem value="confirmed">Picked up</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="completed">Returned</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>

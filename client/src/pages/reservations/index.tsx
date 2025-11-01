@@ -480,10 +480,8 @@ export default function ReservationsIndex() {
         
         switch (status.toLowerCase()) {
           case "confirmed":
-            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
-            break;
           case "active":
-            badgeClass = "bg-green-100 text-green-800 border-green-200";
+            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
             break;
           case "pending":
             badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
