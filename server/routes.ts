@@ -2308,8 +2308,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Add pickup mileage when status is confirmed (picked up) OR when updating mileage for confirmed reservation
       if (req.body.startMileage !== undefined) {
         const pickupMileage = parseInt(req.body.startMileage);
+        console.log('🔍 Status update - startMileage received:', req.body.startMileage, 'parsed to:', pickupMileage);
+        console.log('🔍 Current status:', status, 'Existing status:', existingReservation.status);
         if (!isNaN(pickupMileage) && (status === "confirmed" || existingReservation.status === "confirmed")) {
           dataWithTracking.pickupMileage = pickupMileage;
+          console.log('✅ Setting pickupMileage in dataWithTracking:', pickupMileage);
           
           // Also update the vehicle's current mileage and departureMileage
           if (existingReservation.vehicleId) {
@@ -2375,7 +2378,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         dataWithTracking.fuelNotes = req.body.fuelNotes;
       }
       
+      console.log('📦 Data being sent to updateReservation:', JSON.stringify(dataWithTracking, null, 2));
       const reservation = await storage.updateReservation(id, dataWithTracking);
+      console.log('📋 Reservation after update - pickupMileage:', reservation?.pickupMileage);
       
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
