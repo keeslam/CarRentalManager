@@ -2357,7 +2357,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Fetch related data to return enriched reservation
       const vehicle = reservation.vehicleId ? await storage.getVehicle(reservation.vehicleId) : null;
       const customer = reservation.customerId ? await storage.getCustomer(reservation.customerId) : null;
-      const driver = reservation.driverId ? await storage.getDriverById(reservation.driverId) : null;
+      const driver = reservation.driverId ? await storage.getDriver(reservation.driverId) : null;
       
       // Create enriched reservation object
       const enrichedReservation = {
