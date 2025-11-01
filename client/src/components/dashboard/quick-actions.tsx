@@ -41,6 +41,7 @@ import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
+import { FuelStatusUpdateDialog } from "@/components/vehicles/fuel-status-update-dialog";
 
 interface ActionIconProps {
   name: string;
@@ -386,6 +387,7 @@ export function QuickActions() {
   // State for fuel status update dialog
   const [fuelStatusDialogOpen, setFuelStatusDialogOpen] = useState(false);
   const [selectedFuelVehicle, setSelectedFuelVehicle] = useState<Vehicle | null>(null);
+  const [showFuelStatusUpdateDialog, setShowFuelStatusUpdateDialog] = useState(false);
   
   const { toast } = useToast();
   
@@ -2063,82 +2065,102 @@ export function QuickActions() {
             // For fuel status update dialog
             if (action.dialog === "fuel-status") {
               return (
-                <Dialog key={action.label} open={fuelStatusDialogOpen} onOpenChange={setFuelStatusDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
-                      size="sm"
-                    >
-                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
-                      {action.label}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Update Vehicle Fuel Status</DialogTitle>
-                      <DialogDescription>
-                        Select a vehicle to update its fuel level and record refill details.
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
-                        <label className="text-sm font-medium">
-                          Select Vehicle
-                        </label>
-                        
-                        {vehicles && vehicles.length > 0 ? (
-                          <VehicleSelector 
-                            vehicles={vehicles}
-                            value={selectedFuelVehicle ? selectedFuelVehicle.id.toString() : ""}
-                            onChange={(value) => {
-                              const vehicle = vehicles.find(v => v.id.toString() === value);
-                              setSelectedFuelVehicle(vehicle || null);
-                            }}
-                          />
-                        ) : (
-                          <div className="flex justify-center items-center h-full">
-                            <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                        )}
-                        
-                        {selectedFuelVehicle && (
-                          <div className="mt-2 p-3 bg-muted/30 border rounded-md">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium">{formatLicensePlate(selectedFuelVehicle.licensePlate)}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {selectedFuelVehicle.brand} {selectedFuelVehicle.model}
+                <React.Fragment key={action.label}>
+                  <Dialog open={fuelStatusDialogOpen} onOpenChange={setFuelStatusDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                        size="sm"
+                      >
+                        <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                        {action.label}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Update Vehicle Fuel Status</DialogTitle>
+                        <DialogDescription>
+                          Select a vehicle to update its fuel level and record refill details.
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <label className="text-sm font-medium">
+                            Select Vehicle
+                          </label>
+                          
+                          {vehicles && vehicles.length > 0 ? (
+                            <VehicleSelector 
+                              vehicles={vehicles}
+                              value={selectedFuelVehicle ? selectedFuelVehicle.id.toString() : ""}
+                              onChange={(value) => {
+                                const vehicle = vehicles.find(v => v.id.toString() === value);
+                                setSelectedFuelVehicle(vehicle || null);
+                              }}
+                            />
+                          ) : (
+                            <div className="flex justify-center items-center h-full">
+                              <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                          
+                          {selectedFuelVehicle && (
+                            <div className="mt-2 p-3 bg-muted/30 border rounded-md">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium">{formatLicensePlate(selectedFuelVehicle.licensePlate)}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {selectedFuelVehicle.brand} {selectedFuelVehicle.model}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <DialogFooter className="flex justify-between mt-2">
-                      <DialogClose asChild>
-                        <Button variant="outline" type="button">
-                          Cancel
-                        </Button>
-                      </DialogClose>
                       
-                      <DialogClose asChild>
+                      <DialogFooter className="flex justify-between mt-2">
+                        <DialogClose asChild>
+                          <Button variant="outline" type="button">
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                        
                         <Button 
                           type="button"
                           disabled={!selectedFuelVehicle}
                           onClick={() => {
                             if (selectedFuelVehicle) {
-                              window.location.href = `/vehicles/${selectedFuelVehicle.id}`;
+                              setFuelStatusDialogOpen(false);
+                              setShowFuelStatusUpdateDialog(true);
                             }
                           }}
                         >
-                          Go to Vehicle
+                          Continue
                         </Button>
-                      </DialogClose>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {selectedFuelVehicle && (
+                    <FuelStatusUpdateDialog
+                      vehicleId={selectedFuelVehicle.id}
+                      currentFuelLevel={selectedFuelVehicle.currentFuelLevel || undefined}
+                      open={showFuelStatusUpdateDialog}
+                      onOpenChange={(open) => {
+                        setShowFuelStatusUpdateDialog(open);
+                        if (!open) {
+                          setSelectedFuelVehicle(null);
+                        }
+                      }}
+                      onSuccess={() => {
+                        setShowFuelStatusUpdateDialog(false);
+                        setSelectedFuelVehicle(null);
+                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                      }}
+                    />
+                  )}
+                </React.Fragment>
               );
             }
             

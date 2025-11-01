@@ -28,20 +28,28 @@ interface FuelStatusUpdateDialogProps {
   currentFuelLevel?: string;
   children?: React.ReactNode;
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function FuelStatusUpdateDialog({ 
   vehicleId, 
   currentFuelLevel, 
   children,
-  onSuccess 
+  onSuccess,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange
 }: FuelStatusUpdateDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [fuelLevel, setFuelLevel] = useState<string>(currentFuelLevel || "");
   const [cost, setCost] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const { toast } = useToast();
+
+  // Use external open state if provided, otherwise use internal
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
 
   // Helper function to format fuel level for display
   const formatFuelLevel = (level?: string) => {
