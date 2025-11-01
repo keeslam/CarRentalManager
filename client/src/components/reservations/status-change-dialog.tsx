@@ -422,12 +422,6 @@ export function StatusChangeDialog({
                       <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
                     </div>
                   )}
-                  {vehicle.returnMileage !== undefined && vehicle.returnMileage !== null && (
-                    <div className="flex items-center">
-                      <span className="text-muted-foreground mr-1">Return:</span>
-                      <span className="font-medium">{vehicle.returnMileage.toLocaleString()} km</span>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
