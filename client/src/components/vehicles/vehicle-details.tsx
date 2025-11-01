@@ -58,6 +58,7 @@ import { z } from "zod";
 import { insertReservationSchema, insertReservationSchemaBase } from "@shared/schema";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { ApkInspectionDialog } from "@/components/vehicles/apk-inspection-dialog";
+import { FuelStatusUpdateDialog } from "@/components/vehicles/fuel-status-update-dialog";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 import { 
   Form, 
@@ -823,6 +824,15 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               />
             </DialogContent>
           </Dialog>
+
+          <FuelStatusUpdateDialog
+            vehicleId={vehicleId}
+            currentFuelLevel={vehicle.currentFuelLevel || undefined}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+              queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+            }}
+          />
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
