@@ -109,9 +109,20 @@ export default function ProfilePage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
+            <Link href="/profile/edit" className="w-full">
+              <Button variant="default" className="w-full">
+                Edit Profile
+              </Button>
+            </Link>
             <Link href="/profile/change-password" className="w-full">
               <Button variant="outline" className="w-full">
                 Change Password
+              </Button>
+            </Link>
+            <Link href="/profile/mileage-override-password" className="w-full">
+              <Button variant="outline" className="w-full" data-testid="button-mileage-override-password">
+                <Shield className="h-4 w-4 mr-2" />
+                Mileage Override Password
               </Button>
             </Link>
             {user.role === UserRole.ADMIN && (

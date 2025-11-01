@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
 
 import {
   Dialog,
@@ -131,9 +133,12 @@ export function StatusChangeDialog({
   pickupMileage,
 }: StatusChangeDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const [fuelReceiptFile, setFuelReceiptFile] = useState<File | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<StatusChangeFormType | null>(null);
   
   // Create defaultValues object to ensure stable reference
   const defaultValues = {
@@ -388,6 +393,42 @@ export function StatusChangeDialog({
     },
   });
   
+  // Function to verify mileage override password
+  const verifyMileageOverridePassword = async (password: string): Promise<boolean> => {
+    if (!user?.id) return false;
+    
+    try {
+      const response = await apiRequest("POST", `/api/users/${user.id}/verify-mileage-override`, {
+        password
+      });
+      
+      if (!response.ok) {
+        return false;
+      }
+      
+      const result = await response.json();
+      return result.valid === true;
+    } catch (error) {
+      console.error("Error verifying mileage override password:", error);
+      return false;
+    }
+  };
+  
+  // Handle password confirmation for mileage decrease
+  const handlePasswordConfirmed = async (password: string): Promise<boolean> => {
+    const isValid = await verifyMileageOverridePassword(password);
+    
+    if (isValid && pendingFormData) {
+      // Password is correct, proceed with the mutation
+      statusChangeMutation.mutate(pendingFormData);
+      setShowPasswordDialog(false);
+      setPendingFormData(null);
+      return true;
+    }
+    
+    return false;
+  };
+  
   function onSubmit(data: StatusChangeFormType) {
     // Custom validation - check for start mileage >= return mileage when confirming
     if (data.status === "confirmed" && 
@@ -412,7 +453,7 @@ export function StatusChangeDialog({
     }
     
     // If status is "completed" and there's a start mileage, ensure return mileage is >= start mileage
-    if (data.status === "completed" && 
+    if (data.status === "confirmed" && 
         data.startMileage !== undefined && 
         data.departureMileage !== undefined && 
         data.departureMileage < data.startMileage) {
@@ -421,6 +462,17 @@ export function StatusChangeDialog({
         message: "Return mileage must be greater than or equal to start mileage" 
       });
       return; // Don't submit
+    }
+    
+    // Check for mileage decrease (requires password override)
+    const currentMileage = vehicle?.currentMileage || vehicle?.departureMileage || 0;
+    const newMileage = data.startMileage;
+    
+    if (newMileage !== undefined && newMileage < currentMileage) {
+      // Mileage is decreasing, show password dialog
+      setPendingFormData(data);
+      setShowPasswordDialog(true);
+      return;
     }
     
     // Passed validation, submit the data
@@ -444,6 +496,7 @@ export function StatusChangeDialog({
   };
   
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange} key={`dialog-${reservationId}`}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -790,5 +843,17 @@ export function StatusChangeDialog({
         </Form>
       </DialogContent>
     </Dialog>
+    
+    {/* Mileage Override Password Dialog */}
+    {showPasswordDialog && pendingFormData && (
+      <MileageOverridePasswordDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+        onConfirm={handlePasswordConfirmed}
+        currentMileage={vehicle?.currentMileage || vehicle?.departureMileage || 0}
+        newMileage={pendingFormData.startMileage || 0}
+      />
+    )}
+    </>
   );
 }

@@ -36,6 +36,7 @@ import UserEdit from "@/pages/users/[id]/edit";
 import ProfilePage from "@/pages/profile";
 import ProfileEditPage from "@/pages/profile/edit";
 import ChangePasswordPage from "@/pages/profile/change-password";
+import MileageOverridePasswordPage from "@/pages/profile/mileage-override-password";
 import BackupPage from "@/pages/admin/backup";
 import MaintenanceCalendar from "@/pages/maintenance/calendar";
 import SettingsPage from "@/pages/settings/index";
@@ -136,6 +137,7 @@ function AppRoutes() {
               <ProtectedRoute path="/profile" component={ProfilePage} />
               <ProtectedRoute path="/profile/edit" component={ProfileEditPage} />
               <ProtectedRoute path="/profile/change-password" component={ChangePasswordPage} />
+              <ProtectedRoute path="/profile/mileage-override-password" component={MileageOverridePasswordPage} />
               <ProtectedRoute path="/admin/backup" component={BackupPage} />
               <ProtectedRoute path="/whatsapp/messaging" component={WhatsAppMessagingPage} />
               <ProtectedRoute path="/communications" component={CommunicationsPage} />
