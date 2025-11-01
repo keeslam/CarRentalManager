@@ -464,11 +464,22 @@ export default function ReservationCalendarPage() {
     );
   }, [allReservations]);
   
-  // Fetch completed rentals separately for the completed list
+  // Fetch completed rentals separately for the completed list with vehicle data
   const { data: completedRentals = [] } = useQuery<Reservation[]>({
-    queryKey: ['/api/reservations'],
-    select: (reservations: Reservation[]) => 
-      reservations.filter(r => r.status === 'completed' && r.type !== 'maintenance_block') // Only completed rentals, not maintenance
+    queryKey: ['/api/reservations', vehicles?.length],
+    select: (reservations: Reservation[]) => {
+      const completed = reservations.filter(r => r.status === 'completed' && r.type !== 'maintenance_block');
+      // Enrich with vehicle data for mileage display
+      return completed.map(rental => {
+        const vehicle = vehicles?.find(v => v.id === rental.vehicleId);
+        return {
+          ...rental,
+          // Use reservation's returnMileage if available, otherwise fall back to vehicle's returnMileage
+          displayReturnMileage: rental.returnMileage ?? vehicle?.returnMileage ?? null
+        };
+      });
+    },
+    enabled: !!vehicles
   });
 
   // Fetch documents for selected reservation
@@ -2440,8 +2451,8 @@ export default function ReservationCalendarPage() {
                               <div>
                                 <span className="text-gray-600">Return mileage:</span>
                                 <span className="ml-1 font-medium">
-                                  {rental.returnMileage !== null && rental.returnMileage !== undefined 
-                                    ? `${rental.returnMileage.toLocaleString()} km` 
+                                  {(rental as any).displayReturnMileage !== null && (rental as any).displayReturnMileage !== undefined 
+                                    ? `${(rental as any).displayReturnMileage.toLocaleString()} km` 
                                     : '—'}
                                 </span>
                               </div>
@@ -2473,6 +2484,21 @@ export default function ReservationCalendarPage() {
                             )}
                           </div>
                           <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                handleViewReservation(rental);
+                                setCompletedRentalsDialogOpen(false);
+                              }}
+                              data-testid={`button-view-${rental.id}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                              </svg>
+                              View
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
