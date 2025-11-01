@@ -680,15 +680,31 @@ export class MemStorage implements IStorage {
     // Get all vehicles
     const allVehicles = Array.from(this.vehicles.values());
     
-    // Get active reservations
-    const activeReservations = Array.from(this.reservations.values()).filter(r => 
-      r.status !== "cancelled" && 
-      r.startDate <= today && 
-      r.endDate >= today
-    );
+    // Get active reservations (including open-ended ones)
+    const activeReservations = Array.from(this.reservations.values()).filter(r => {
+      // Skip cancelled and completed reservations
+      if (r.status === "cancelled" || r.status === "completed") {
+        return false;
+      }
+      
+      // Skip maintenance blocks
+      if (r.type === "maintenance_block") {
+        return false;
+      }
+      
+      // Check if reservation has started
+      if (r.startDate > today) {
+        return false;
+      }
+      
+      // Include if:
+      // 1. No end date (open-ended/ongoing rental)
+      // 2. End date is today or in the future
+      return !r.endDate || r.endDate >= today;
+    });
     
     // Get IDs of vehicles with active reservations
-    const reservedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
+    const reservedVehicleIds = new Set(activeReservations.map(r => r.vehicleId).filter((id): id is number => id !== null));
     
     // Filter out reserved vehicles
     return allVehicles.filter(v => !reservedVehicleIds.has(v.id));
