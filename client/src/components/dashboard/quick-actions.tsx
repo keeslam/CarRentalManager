@@ -228,6 +228,26 @@ function ActionIcon({ name, className = "" }: ActionIconProps) {
           <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91" />
         </svg>
       );
+    case "fuel":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`lucide lucide-fuel ${className}`}
+        >
+          <line x1="3" y1="22" x2="15" y2="22" />
+          <line x1="4" y1="9" x2="14" y2="9" />
+          <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" />
+          <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -273,7 +293,12 @@ const quickActions: QuickAction[] = [
     icon: "receipt",
     primary: false,
   },
-
+  {
+    label: "Update Fuel Status",
+    dialog: "fuel-status",
+    icon: "fuel",
+    primary: false,
+  },
   {
     label: "Change Status by Vehicle",
     icon: "car",
@@ -358,6 +383,9 @@ export function QuickActions() {
   const [interactiveDamageCheckDialogOpen, setInteractiveDamageCheckDialogOpen] = useState(false);
   const [apkSearchQuery, setApkSearchQuery] = useState<string>("");
   
+  // State for fuel status update dialog
+  const [fuelStatusDialogOpen, setFuelStatusDialogOpen] = useState(false);
+  const [selectedFuelVehicle, setSelectedFuelVehicle] = useState<Vehicle | null>(null);
   
   const { toast } = useToast();
   
@@ -2026,6 +2054,88 @@ export function QuickActions() {
                         )}
                         Apply Changes
                       </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              );
+            }
+            
+            // For fuel status update dialog
+            if (action.dialog === "fuel-status") {
+              return (
+                <Dialog key={action.label} open={fuelStatusDialogOpen} onOpenChange={setFuelStatusDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-primary-50 text-primary-600 hover:bg-primary-100"
+                      size="sm"
+                    >
+                      <ActionIcon name={action.icon} className="mr-1 h-4 w-4" />
+                      {action.label}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Update Vehicle Fuel Status</DialogTitle>
+                      <DialogDescription>
+                        Select a vehicle to update its fuel level and record refill details.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <label className="text-sm font-medium">
+                          Select Vehicle
+                        </label>
+                        
+                        {vehicles && vehicles.length > 0 ? (
+                          <VehicleSelector 
+                            vehicles={vehicles}
+                            value={selectedFuelVehicle ? selectedFuelVehicle.id.toString() : ""}
+                            onChange={(value) => {
+                              const vehicle = vehicles.find(v => v.id.toString() === value);
+                              setSelectedFuelVehicle(vehicle || null);
+                            }}
+                          />
+                        ) : (
+                          <div className="flex justify-center items-center h-full">
+                            <RotateCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        
+                        {selectedFuelVehicle && (
+                          <div className="mt-2 p-3 bg-muted/30 border rounded-md">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium">{formatLicensePlate(selectedFuelVehicle.licensePlate)}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {selectedFuelVehicle.brand} {selectedFuelVehicle.model}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <DialogFooter className="flex justify-between mt-2">
+                      <DialogClose asChild>
+                        <Button variant="outline" type="button">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      
+                      <DialogClose asChild>
+                        <Button 
+                          type="button"
+                          disabled={!selectedFuelVehicle}
+                          onClick={() => {
+                            if (selectedFuelVehicle) {
+                              window.location.href = `/vehicles/${selectedFuelVehicle.id}`;
+                            }
+                          }}
+                        >
+                          Go to Vehicle
+                        </Button>
+                      </DialogClose>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
