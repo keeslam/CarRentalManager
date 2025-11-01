@@ -66,6 +66,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default(UserRole.USER),
   permissions: jsonb("permissions").$type<string[]>().default([]).notNull(),
   active: boolean("active").notNull().default(true),
+  mileageOverridePasswordHash: text("mileage_override_password_hash"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: text("created_by"),
@@ -80,9 +81,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
   role: true,
   permissions: true,
   active: true,
+  mileageOverridePasswordHash: true,
   createdBy: true,
   updatedBy: true,
 });
+
+export const updateUserSchema = createInsertSchema(users).pick({
+  fullName: true,
+  email: true,
+  role: true,
+  permissions: true,
+  active: true,
+  mileageOverridePasswordHash: true,
+  updatedBy: true,
+}).partial();
 
 // Vehicles table
 export const vehicles = pgTable("vehicles", {
