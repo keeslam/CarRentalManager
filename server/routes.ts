@@ -2354,10 +2354,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
+      // Fetch related data to return enriched reservation
+      const vehicle = reservation.vehicleId ? await storage.getVehicle(reservation.vehicleId) : null;
+      const customer = reservation.customerId ? await storage.getCustomer(reservation.customerId) : null;
+      const driver = reservation.driverId ? await storage.getDriverById(reservation.driverId) : null;
+      
+      // Create enriched reservation object
+      const enrichedReservation = {
+        ...reservation,
+        vehicle: vehicle || undefined,
+        customer: customer || undefined,
+        driver: driver || undefined
+      };
+      
       // Broadcast real-time update to all connected clients
       realtimeEvents.reservations.updated(reservation);
       
-      return res.status(200).json(reservation);
+      return res.status(200).json(enrichedReservation);
     } catch (error) {
       console.error('Error updating reservation status:', error);
       res.status(500).json({ 
