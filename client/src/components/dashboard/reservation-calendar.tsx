@@ -116,7 +116,7 @@ export function ReservationCalendar() {
   const startDate = format(dateRanges.days[0], "yyyy-MM-dd");
   const endDate = format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd");
   
-  const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
+  const { data: allReservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations/range", startDate, endDate],
     queryFn: async () => {
       const url = `/api/reservations/range?startDate=${startDate}&endDate=${endDate}`;
@@ -136,6 +136,16 @@ export function ReservationCalendar() {
       return response.json();
     }
   });
+  
+  // Filter out completed reservations from calendar view
+  const reservations = useMemo(() => {
+    if (!allReservations) return [];
+    // Only show pending, confirmed, active reservations OR maintenance blocks
+    return allReservations.filter(r => 
+      r.type === 'maintenance_block' || 
+      ['pending', 'confirmed', 'active'].includes(r.status || '')
+    );
+  }, [allReservations]);
   
   // Navigation functions
   const navigatePrevious = () => {
