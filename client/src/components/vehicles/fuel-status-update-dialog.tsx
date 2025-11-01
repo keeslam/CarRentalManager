@@ -43,6 +43,12 @@ export function FuelStatusUpdateDialog({
   const [receipt, setReceipt] = useState<File | null>(null);
   const { toast } = useToast();
 
+  // Helper function to format fuel level for display
+  const formatFuelLevel = (level?: string) => {
+    if (!level) return null;
+    return level.charAt(0).toUpperCase() + level.slice(1);
+  };
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       const formData = new FormData();
@@ -155,7 +161,11 @@ export function FuelStatusUpdateDialog({
             <Label htmlFor="fuelLevel">Fuel Level</Label>
             <Select value={fuelLevel} onValueChange={setFuelLevel}>
               <SelectTrigger id="fuelLevel" data-testid="select-fuel-level">
-                <SelectValue placeholder="Select fuel level" />
+                <SelectValue placeholder={
+                  currentFuelLevel 
+                    ? `Current: ${formatFuelLevel(currentFuelLevel)}` 
+                    : "Select fuel level"
+                } />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="empty">Empty</SelectItem>
