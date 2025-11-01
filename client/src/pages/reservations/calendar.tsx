@@ -2402,34 +2402,40 @@ export default function ReservationCalendarPage() {
                             </p>
                             
                             {/* Mileage and Fuel Information */}
-                            {(rental.pickupMileage || rental.returnMileage || rental.fuelLevelPickup || rental.fuelLevelReturn) && (
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
-                                {rental.pickupMileage !== null && rental.pickupMileage !== undefined && (
-                                  <div>
-                                    <span className="text-gray-600">Pickup mileage:</span>
-                                    <span className="ml-1 font-medium">{rental.pickupMileage.toLocaleString()} km</span>
-                                  </div>
-                                )}
-                                {rental.returnMileage !== null && rental.returnMileage !== undefined && (
-                                  <div>
-                                    <span className="text-gray-600">Return mileage:</span>
-                                    <span className="ml-1 font-medium">{rental.returnMileage.toLocaleString()} km</span>
-                                  </div>
-                                )}
-                                {rental.fuelLevelPickup && rental.fuelLevelPickup !== 'not_recorded' && (
-                                  <div>
-                                    <span className="text-gray-600">Fuel at pickup:</span>
-                                    <span className="ml-1 font-medium">{rental.fuelLevelPickup}</span>
-                                  </div>
-                                )}
-                                {rental.fuelLevelReturn && rental.fuelLevelReturn !== 'not_recorded' && (
-                                  <div>
-                                    <span className="text-gray-600">Fuel at return:</span>
-                                    <span className="ml-1 font-medium">{rental.fuelLevelReturn}</span>
-                                  </div>
-                                )}
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                              <div>
+                                <span className="text-gray-600">Pickup mileage:</span>
+                                <span className="ml-1 font-medium">
+                                  {rental.pickupMileage !== null && rental.pickupMileage !== undefined 
+                                    ? `${rental.pickupMileage.toLocaleString()} km` 
+                                    : '—'}
+                                </span>
                               </div>
-                            )}
+                              <div>
+                                <span className="text-gray-600">Return mileage:</span>
+                                <span className="ml-1 font-medium">
+                                  {rental.returnMileage !== null && rental.returnMileage !== undefined 
+                                    ? `${rental.returnMileage.toLocaleString()} km` 
+                                    : '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Fuel at pickup:</span>
+                                <span className="ml-1 font-medium">
+                                  {rental.fuelLevelPickup && rental.fuelLevelPickup !== 'not_recorded' 
+                                    ? rental.fuelLevelPickup 
+                                    : '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Fuel at return:</span>
+                                <span className="ml-1 font-medium">
+                                  {rental.fuelLevelReturn && rental.fuelLevelReturn !== 'not_recorded' 
+                                    ? rental.fuelLevelReturn 
+                                    : '—'}
+                                </span>
+                              </div>
+                            </div>
                             
                             {rental.notes && (
                               <p className="text-sm mt-2 text-gray-700">{rental.notes}</p>
