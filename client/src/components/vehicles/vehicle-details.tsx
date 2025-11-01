@@ -652,6 +652,31 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     }
   });
   
+  // Find the current active reservation (most recent confirmed or ongoing rental)
+  const currentActiveReservation = useMemo(() => {
+    if (!reservations || reservations.length === 0) return null;
+    
+    // Find the most recent reservation that's either confirmed (picked up) or completed
+    // Prioritize confirmed status, then completed (if very recent)
+    const activeRentals = reservations.filter((r: Reservation) => 
+      r.status === 'confirmed' || r.status === 'pending'
+    ).sort((a, b) => {
+      // Sort by start date descending (most recent first)
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+    
+    if (activeRentals.length > 0) return activeRentals[0];
+    
+    // If no confirmed/pending, check for very recently completed rentals
+    const recentCompleted = reservations.filter((r: Reservation) => 
+      r.status === 'completed'
+    ).sort((a, b) => {
+      return new Date(b.endDate || b.startDate).getTime() - new Date(a.endDate || a.startDate).getTime();
+    });
+    
+    return recentCompleted.length > 0 ? recentCompleted[0] : null;
+  }, [reservations]);
+  
   // Calculate days until APK expiration
   const daysUntilApk = vehicle?.apkDate ? getDaysUntil(vehicle.apkDate) : 0;
   const apkUrgencyClass = getUrgencyColorClass(daysUntilApk);
@@ -1071,6 +1096,42 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   </div>
                 </div>
               </div>
+
+              {/* Current Rental Mileage & Fuel Status */}
+              {currentActiveReservation && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold border-b pb-2 mb-4">Current Rental Status</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {currentActiveReservation.pickupMileage && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Pickup Mileage</h4>
+                        <p className="text-base">{currentActiveReservation.pickupMileage.toLocaleString()} km</p>
+                      </div>
+                    )}
+                    
+                    {currentActiveReservation.returnMileage && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Return Mileage</h4>
+                        <p className="text-base">{currentActiveReservation.returnMileage.toLocaleString()} km</p>
+                      </div>
+                    )}
+                    
+                    {currentActiveReservation.fuelLevelPickup && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Pickup</h4>
+                        <p className="text-base capitalize">{currentActiveReservation.fuelLevelPickup}</p>
+                      </div>
+                    )}
+                    
+                    {currentActiveReservation.fuelLevelReturn && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">Fuel Level at Return</h4>
+                        <p className="text-base capitalize">{currentActiveReservation.fuelLevelReturn}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="mb-6">
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4">Equipment & Features</h3>
