@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         // Always remove all special characters including dashes from license plates for folder names
         const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
         const baseDir = path.join(getUploadsDir(), sanitizedPlate);
-        const fuelReceiptsDir = path.join(baseDir, 'fuel-receipts');
+        const fuelReceiptsDir = path.join(baseDir, 'fuel_receipt');
         
         if (!fs.existsSync(baseDir)) {
           fs.mkdirSync(baseDir, { recursive: true });
@@ -1376,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Handle receipt upload
       if (req.file) {
         const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
-        const relativePath = path.join(sanitizedPlate, 'fuel-receipts', req.file.filename);
+        const relativePath = path.join(sanitizedPlate, 'fuel_receipt', req.file.filename);
         updateData.fuelRefillReceipt = `uploads/${relativePath}`;
         console.log(`Fuel receipt uploaded: ${updateData.fuelRefillReceipt}`);
       }
