@@ -134,7 +134,12 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
       if (!selectedVehicleId) return;
       
       try {
-        const response = await fetch(`/api/vehicles/${selectedVehicleId}/latest-data`, {
+        const url = new URL(`/api/vehicles/${selectedVehicleId}/latest-data`, window.location.origin);
+        if (checkType) {
+          url.searchParams.set('checkType', checkType);
+        }
+        
+        const response = await fetch(url.toString(), {
           credentials: 'include',
         });
         
@@ -158,7 +163,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     if (!editingCheckId && selectedVehicleId) {
       fetchLatestVehicleData();
     }
-  }, [selectedVehicleId, editingCheckId]);
+  }, [selectedVehicleId, editingCheckId, checkType]);
 
   // Sync editingCheckId when prop changes
   useEffect(() => {

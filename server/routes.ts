@@ -660,6 +660,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/vehicles/:id/latest-data", requireAuth, hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const checkType = req.query.checkType as string | undefined; // 'pickup' or 'return'
+      
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid vehicle ID" });
       }
@@ -680,29 +682,34 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // If there's an active reservation, get data from it and its damage checks
       if (currentReservation) {
-        // Get damage checks for the current reservation only
+        // Priority 1: Reservation fuel level fields (primary source of truth)
+        if (checkType === 'pickup' && currentReservation.fuelLevelPickup) {
+          latestFuelLevel = currentReservation.fuelLevelPickup;
+        } else if (checkType === 'return' && currentReservation.fuelLevelReturn) {
+          latestFuelLevel = currentReservation.fuelLevelReturn;
+        }
+        
+        // Priority 2: Latest damage check from current reservation (fallback)
+        if (!latestFuelLevel) {
+          const allDamageChecks = await storage.getAllInteractiveDamageChecks();
+          const currentReservationDamageChecks = allDamageChecks
+            .filter(dc => dc.vehicleId === id && dc.reservationId === currentReservation.id)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+          if (currentReservationDamageChecks.length > 0 && currentReservationDamageChecks[0].fuelLevel) {
+            latestFuelLevel = currentReservationDamageChecks[0].fuelLevel;
+          }
+        }
+        
+        // Get mileage from damage checks or reservation
         const allDamageChecks = await storage.getAllInteractiveDamageChecks();
         const currentReservationDamageChecks = allDamageChecks
           .filter(dc => dc.vehicleId === id && dc.reservationId === currentReservation.id)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-        // Priority 1: Latest damage check from current reservation
-        if (currentReservationDamageChecks.length > 0) {
-          if (currentReservationDamageChecks[0].fuelLevel) {
-            latestFuelLevel = currentReservationDamageChecks[0].fuelLevel;
-          }
-          if (currentReservationDamageChecks[0].mileage) {
-            latestMileage = currentReservationDamageChecks[0].mileage;
-          }
-        }
-        
-        // Priority 2: Current reservation fuel level (if no damage check data)
-        if (!latestFuelLevel && currentReservation.fuelLevelPickup) {
-          latestFuelLevel = currentReservation.fuelLevelPickup;
-        }
-        
-        // Priority 3: Current reservation pickup mileage (if no damage check data)
-        if (!latestMileage && currentReservation.pickupMileage) {
+          
+        if (currentReservationDamageChecks.length > 0 && currentReservationDamageChecks[0].mileage) {
+          latestMileage = currentReservationDamageChecks[0].mileage;
+        } else if (currentReservation.pickupMileage) {
           latestMileage = currentReservation.pickupMileage;
         }
       }
