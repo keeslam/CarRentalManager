@@ -995,6 +995,14 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         });
       }
 
+      // Invalidate all relevant caches to ensure fresh data everywhere
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', selectedVehicleId, 'latest-data'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] }),
+      ]);
+
       if (onClose) {
         onClose();
       } else {
