@@ -858,15 +858,27 @@ export class MemStorage implements IStorage {
   async getUpcomingReservations(): Promise<Reservation[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const reservations = Array.from(this.reservations.values())
-      .filter(r => 
-        r.startDate >= today && 
-        r.status !== "cancelled" && 
-        r.status !== "completed" &&
-        r.type !== "maintenance_block" // Don't show maintenance blocks in regular upcoming
-      )
+    const allReservations = Array.from(this.reservations.values());
+    console.log(`📋 Total reservations: ${allReservations.length}`);
+    console.log(`📋 Today's date: ${today}`);
+    
+    const reservations = allReservations
+      .filter(r => {
+        const include = r.startDate >= today && 
+          r.status !== "cancelled" && 
+          r.status !== "completed" &&
+          r.type !== "maintenance_block";
+        
+        if (r.startDate >= today) {
+          console.log(`📋 Reservation ${r.id}: startDate=${r.startDate}, status="${r.status}", type="${r.type}", include=${include}`);
+        }
+        
+        return include;
+      })
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
       .slice(0, 5); // Limit to 5 reservations
+    
+    console.log(`📋 Filtered ${reservations.length} upcoming reservations`);
     
     // Populate vehicle and customer data
     return reservations.map(reservation => ({
