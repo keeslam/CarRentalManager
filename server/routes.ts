@@ -163,6 +163,98 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
     },
   });
+
+  // Configure multer for fuel receipt uploads
+  const fuelReceiptStorage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+      try {
+        const vehicleId = parseInt(req.body.vehicleId || req.params.id);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (!vehicle) {
+          return cb(new Error("Vehicle not found"), '');
+        }
+        
+        // Always remove all special characters including dashes from license plates for folder names
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        const baseDir = path.join(getUploadsDir(), sanitizedPlate);
+        const fuelReceiptsDir = path.join(baseDir, 'fuel-receipts');
+        
+        if (!fs.existsSync(baseDir)) {
+          fs.mkdirSync(baseDir, { recursive: true });
+        }
+        if (!fs.existsSync(fuelReceiptsDir)) {
+          fs.mkdirSync(fuelReceiptsDir, { recursive: true });
+        }
+        
+        console.log(`Fuel receipt upload storage: ${fuelReceiptsDir}`);
+        cb(null, fuelReceiptsDir);
+      } catch (error) {
+        console.error("Error with fuel receipt upload:", error);
+        cb(error as any, '');
+      }
+    },
+    filename: async (req, file, cb) => {
+      try {
+        const timestamp = Date.now();
+        const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const extension = path.extname(file.originalname) || '.pdf';
+        
+        // Get vehicle license plate
+        const vehicleId = parseInt(req.body.vehicleId || req.params.id);
+        const vehicle = await storage.getVehicle(vehicleId);
+        
+        if (!vehicle) {
+          throw new Error("Vehicle not found");
+        }
+        
+        // Sanitize license plate for filename (remove spaces, etc.)
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Create filename with license plate and date
+        const fileName = `${sanitizedPlate}_fuel_receipt_${dateString}_${timestamp}${extension}`;
+        
+        console.log(`Generated fuel receipt filename: ${fileName}`);
+        cb(null, fileName);
+      } catch (error) {
+        console.error("Error creating filename for fuel receipt:", error);
+        // Fallback to simple timestamped name if there's an error
+        const timestamp = Date.now();
+        const dateString = new Date().toISOString().split('T')[0];
+        const extension = path.extname(file.originalname) || '.pdf';
+        const fallbackName = `fuel_receipt_${dateString}_${timestamp}${extension}`;
+        console.log(`Using fallback fuel receipt filename: ${fallbackName}`);
+        cb(null, fallbackName);
+      }
+    }
+  });
+  
+  const fuelReceiptUpload = multer({
+    storage: fuelReceiptStorage,
+    limits: {
+      fileSize: 25 * 1024 * 1024, // 25MB limit for PDFs and images
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only specific file types
+      const fileTypes = /jpeg|jpg|png|pdf/;
+      const fileExt = path.extname(file.originalname).toLowerCase();
+      const extname = fileTypes.test(fileExt);
+      
+      const allowedMimeTypes = [
+        'image/jpeg', 'image/jpg', 'image/png',
+        'application/pdf', 'application/x-pdf', 'text/pdf'
+      ];
+      
+      const isPDF = file.mimetype.includes('pdf') || fileExt === '.pdf';
+      const isAllowedMimetype = allowedMimeTypes.includes(file.mimetype);
+      
+      if (extname && (isAllowedMimetype || isPDF)) {
+        return cb(null, true);
+      } else {
+        cb(new Error(`Only .jpg, .jpeg, .png, and .pdf files are allowed.`) as any, false);
+      }
+    },
+  });
   
   // Set up authentication routes and middleware
   const { requireAuth } = setupAuth(app);
@@ -1229,6 +1321,78 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error in toggle-registration endpoint:", error);
       res.status(400).json({ message: "Error toggling registration status", error });
+    }
+  });
+
+  // Update fuel status (with optional receipt upload)
+  app.patch("/api/vehicles/:id/fuel-status", 
+    hasPermission(UserPermission.MANAGE_VEHICLES), 
+    fuelReceiptUpload.single('receipt'),
+    async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const vehicle = await storage.getVehicle(id);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      const { fuelLevel, cost, notes } = req.body;
+      
+      // Validate fuel level
+      const validFuelLevels = ['empty', '1/4', '1/2', '3/4', 'full'];
+      if (fuelLevel && !validFuelLevels.includes(fuelLevel)) {
+        return res.status(400).json({ 
+          message: "Invalid fuel level. Must be one of: empty, 1/4, 1/2, 3/4, full" 
+        });
+      }
+
+      // Build update data
+      const updateData: any = {
+        updatedBy: req.user ? (req.user as any).username : null,
+      };
+
+      if (fuelLevel) {
+        updateData.currentFuelLevel = fuelLevel;
+        updateData.fuelRefillDate = new Date();
+      }
+      
+      if (cost) {
+        updateData.fuelRefillCost = cost;
+      }
+      
+      if (notes) {
+        updateData.fuelRefillNotes = notes;
+      }
+      
+      // Handle receipt upload
+      if (req.file) {
+        const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+        const relativePath = path.join(sanitizedPlate, 'fuel-receipts', req.file.filename);
+        updateData.fuelRefillReceipt = `uploads/${relativePath}`;
+        console.log(`Fuel receipt uploaded: ${updateData.fuelRefillReceipt}`);
+      }
+
+      // Update vehicle
+      const updatedVehicle = await storage.updateVehicle(id, updateData);
+      
+      if (!updatedVehicle) {
+        return res.status(500).json({ message: "Failed to update vehicle fuel status" });
+      }
+
+      // Broadcast real-time update to all connected clients
+      realtimeEvents.vehicles.updated(updatedVehicle);
+
+      res.json(updatedVehicle);
+    } catch (error) {
+      console.error("Error updating fuel status:", error);
+      res.status(500).json({ 
+        message: "Failed to update fuel status", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
