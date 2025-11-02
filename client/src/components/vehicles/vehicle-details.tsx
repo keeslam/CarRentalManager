@@ -883,22 +883,22 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       </div>
       
       {/* Vehicle Info Cards */}
-      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
-        <Card>
+      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-6' : 'md:grid-cols-4'}`}>
+        <Card className={displayReservation ? 'md:col-span-1' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Vehicle Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{vehicle.vehicleType || "N/A"}</p>
+            <p className={`font-semibold ${displayReservation ? 'text-lg' : 'text-2xl'}`}>{vehicle.vehicleType || "N/A"}</p>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={displayReservation ? 'md:col-span-1' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Current Mileage</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold" data-testid="text-current-mileage">
+            <p className={`font-semibold ${displayReservation ? 'text-lg' : 'text-2xl'}`} data-testid="text-current-mileage">
               {vehicle.currentMileage != null 
                 ? `${Number(vehicle.currentMileage).toLocaleString()} km` 
                 : "N/A"}
@@ -906,13 +906,13 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={displayReservation ? 'md:col-span-1' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">APK Expiration</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <p className="text-2xl font-semibold">{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
+              <p className={`font-semibold ${displayReservation ? 'text-lg' : 'text-2xl'}`}>{vehicle.apkDate ? formatDate(vehicle.apkDate) : "N/A"}</p>
               {vehicle.apkDate && (
                 <Badge className={apkUrgencyClass}>
                   {daysUntilApk} days
@@ -922,13 +922,13 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={displayReservation ? 'md:col-span-1' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Warranty Expiration</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <p className="text-2xl font-semibold">{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
+              <p className={`font-semibold ${displayReservation ? 'text-lg' : 'text-2xl'}`}>{vehicle.warrantyEndDate ? formatDate(vehicle.warrantyEndDate) : "N/A"}</p>
               {vehicle.warrantyEndDate && (
                 <Badge className={warrantyUrgencyClass}>
                   {daysUntilWarranty} days
@@ -939,7 +939,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
         </Card>
         
         {activeReservation && (
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-blue-50 border-blue-200 md:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-blue-700">Current Renter</CardTitle>
             </CardHeader>
