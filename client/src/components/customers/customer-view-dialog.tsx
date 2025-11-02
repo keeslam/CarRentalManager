@@ -32,7 +32,23 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-6xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking on nested dialogs
+          const target = e.target as HTMLElement;
+          if (target.closest('[role="dialog"]')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          // Prevent closing when interacting with nested dialogs
+          const target = e.target as HTMLElement;
+          if (target.closest('[role="dialog"]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Customer Details</DialogTitle>
           <DialogDescription>
