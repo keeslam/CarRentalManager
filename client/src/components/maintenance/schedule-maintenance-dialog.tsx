@@ -547,6 +547,7 @@ export function ScheduleMaintenanceDialog({
         const response = await apiRequest("POST", "/api/reservations/maintenance-with-spare", {
           body: JSON.stringify({
             maintenanceId: data.maintenanceData.maintenanceId, // Use existing maintenance ID
+            maintenanceData: data.maintenanceData, // Include full maintenance data
             conflictingReservations: data.conflictingReservations.filter(r => 
               specificAssignments.some(sa => sa.reservationId === r.id)
             ),
