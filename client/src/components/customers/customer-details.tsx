@@ -879,7 +879,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                           if (!response.ok) {
                                             throw new Error('Failed to delete driver');
                                           }
-                                          await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/drivers`] });
+                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
                                           toast({
                                             title: "Driver deleted",
                                             description: "The driver has been successfully deleted.",
