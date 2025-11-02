@@ -974,7 +974,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
         )}
         
         {upcomingReservation && (
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-green-50 border-green-200 md:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-green-700">Upcoming Reservation</CardTitle>
             </CardHeader>
@@ -1011,7 +1011,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       
       {/* Tabs */}
       <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
