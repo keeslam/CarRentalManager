@@ -49,17 +49,6 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   const [viewDriverDialogOpen, setViewDriverDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   
-  // Find active reservation for selected driver (memoized)
-  const selectedDriverActiveReservation = useMemo(() => {
-    if (!selectedDriver || !reservations) return null;
-    return reservations.find(
-      (r) =>
-        r.driverId === selectedDriver.id &&
-        (r.status === 'confirmed' || r.status === 'pending' || r.status === 'active') &&
-        (!r.endDate || new Date(r.endDate) >= new Date())
-    ) || null;
-  }, [selectedDriver, reservations]);
-  
   // Filter state
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
@@ -85,6 +74,17 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   } = useQuery<Reservation[]>({
     queryKey: customerReservationsQueryKey
   });
+  
+  // Find active reservation for selected driver (memoized)
+  const selectedDriverActiveReservation = useMemo(() => {
+    if (!selectedDriver || !reservations) return null;
+    return reservations.find(
+      (r) =>
+        r.driverId === selectedDriver.id &&
+        (r.status === 'confirmed' || r.status === 'pending' || r.status === 'active') &&
+        (!r.endDate || new Date(r.endDate) >= new Date())
+    ) || null;
+  }, [selectedDriver, reservations]);
 
   // Fetch customer drivers with proper caching
   const { 
