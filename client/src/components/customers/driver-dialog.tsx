@@ -170,8 +170,9 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       return await response.json();
     },
     onSuccess: async (data: Driver) => {
-      await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}/drivers`] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+      // Force immediate refetch instead of just invalidating
+      await queryClient.refetchQueries({ queryKey: [`/api/customers/${customerId}/drivers`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/customers/${customerId}`] });
       
       toast({
         title: isEdit ? "Driver updated" : "Driver added",

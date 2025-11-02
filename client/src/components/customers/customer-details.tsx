@@ -142,9 +142,9 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         variant: "default"
       });
     },
-    onSettled: () => {
+    onSettled: async () => {
       // Always refetch after error or success to ensure we're in sync
-      queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
+      await queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
     },
   });
   
