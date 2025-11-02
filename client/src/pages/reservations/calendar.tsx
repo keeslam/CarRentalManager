@@ -2186,6 +2186,7 @@ export default function ReservationCalendarPage() {
               fuelNotes: selectedReservation.fuelNotes,
             }}
             pickupMileage={selectedReservation.pickupMileage ?? null}
+            returnMileage={selectedReservation.returnMileage ?? null}
             onStatusChanged={async () => {
               // Close the status dialog
               setStatusDialogOpen(false);

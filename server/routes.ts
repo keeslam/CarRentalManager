@@ -2504,6 +2504,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
+      // When reverting from "completed" to "confirmed" (or any other status), clear return data
+      if (existingReservation.status === "completed" && status !== "completed") {
+        console.log('🔄 Reverting from completed status - clearing return data');
+        dataWithTracking.returnMileage = null;
+        dataWithTracking.fuelLevelReturn = null;
+        dataWithTracking.fuelCost = null;
+        dataWithTracking.fuelCardNumber = null;
+        dataWithTracking.fuelNotes = null;
+        dataWithTracking.completionDate = null;
+        dataWithTracking.endDate = null;
+      }
+      
       // When marking as completed, set endDate to today (actual completion date)
       if (status === "completed") {
         // Set completion date to today

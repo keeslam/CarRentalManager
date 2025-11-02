@@ -154,6 +154,7 @@ interface StatusChangeDialogProps {
     fuelNotes?: string | null;
   };
   pickupMileage?: number | null;
+  returnMileage?: number | null;
   onStatusChanged?: () => void;
 }
 
@@ -175,6 +176,7 @@ export function StatusChangeDialog({
   customer, // We'll add this to the props
   initialFuelData,
   pickupMileage,
+  returnMileage,
 }: StatusChangeDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -188,16 +190,20 @@ export function StatusChangeDialog({
   const defaultValues = {
     status: initialStatus,
     completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
-    // Use departureMileage if available (it's set when confirming), otherwise use returnMileage
-    startMileage: vehicle?.departureMileage !== null && vehicle?.departureMileage !== undefined 
-      ? vehicle?.departureMileage 
-      : (vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined),
-    departureMileage: undefined,
+    // For startMileage: use reservation's pickupMileage if available, otherwise vehicle's current mileage
+    startMileage: pickupMileage !== null && pickupMileage !== undefined
+      ? pickupMileage
+      : (vehicle?.currentMileage !== null && vehicle?.currentMileage !== undefined ? vehicle?.currentMileage : undefined),
+    // For departureMileage: only set if we're currently "completed" and have returnMileage
+    departureMileage: (initialStatus === "completed" && returnMileage !== null && returnMileage !== undefined) 
+      ? returnMileage 
+      : undefined,
     fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
-    fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
-    fuelCost: initialFuelData?.fuelCost ?? undefined,
-    fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
-    fuelNotes: initialFuelData?.fuelNotes ?? undefined,
+    // Only show return fuel data if currently completed
+    fuelLevelReturn: initialStatus === "completed" ? (initialFuelData?.fuelLevelReturn ?? undefined) : undefined,
+    fuelCost: initialStatus === "completed" ? (initialFuelData?.fuelCost ?? undefined) : undefined,
+    fuelCardNumber: initialStatus === "completed" ? (initialFuelData?.fuelCardNumber ?? undefined) : undefined,
+    fuelNotes: initialStatus === "completed" ? (initialFuelData?.fuelNotes ?? undefined) : undefined,
   };
   
   // Form setup with vehicle return mileage as default for start mileage if available
@@ -213,16 +219,20 @@ export function StatusChangeDialog({
     form.reset({
       status: initialStatus,
       completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
-      // Use departureMileage if available (it's set when confirming), otherwise use returnMileage
-      startMileage: vehicle?.departureMileage !== null && vehicle?.departureMileage !== undefined 
-        ? vehicle?.departureMileage 
-        : (vehicle?.returnMileage !== null ? vehicle?.returnMileage : undefined),
-      departureMileage: undefined,
+      // For startMileage: use reservation's pickupMileage if available, otherwise vehicle's current mileage
+      startMileage: pickupMileage !== null && pickupMileage !== undefined
+        ? pickupMileage
+        : (vehicle?.currentMileage !== null && vehicle?.currentMileage !== undefined ? vehicle?.currentMileage : undefined),
+      // For departureMileage: only set if we're currently "completed" and have returnMileage
+      departureMileage: (initialStatus === "completed" && returnMileage !== null && returnMileage !== undefined) 
+        ? returnMileage 
+        : undefined,
       fuelLevelPickup: initialFuelData?.fuelLevelPickup ?? undefined,
-      fuelLevelReturn: initialFuelData?.fuelLevelReturn ?? undefined,
-      fuelCost: initialFuelData?.fuelCost ?? undefined,
-      fuelCardNumber: initialFuelData?.fuelCardNumber ?? undefined,
-      fuelNotes: initialFuelData?.fuelNotes ?? undefined,
+      // Only show return fuel data if currently completed
+      fuelLevelReturn: initialStatus === "completed" ? (initialFuelData?.fuelLevelReturn ?? undefined) : undefined,
+      fuelCost: initialStatus === "completed" ? (initialFuelData?.fuelCost ?? undefined) : undefined,
+      fuelCardNumber: initialStatus === "completed" ? (initialFuelData?.fuelCardNumber ?? undefined) : undefined,
+      fuelNotes: initialStatus === "completed" ? (initialFuelData?.fuelNotes ?? undefined) : undefined,
     });
     
     // Reset the current status
