@@ -14,11 +14,23 @@ import { CustomerDetails } from "./customer-details";
 interface CustomerViewDialogProps {
   customerId: number;
   children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CustomerViewDialog({ customerId, children }: CustomerViewDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CustomerViewDialog({ 
+  customerId, 
+  children, 
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange 
+}: CustomerViewDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const allowClose = useRef(false);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen;
 
   // Custom trigger or default "View" button
   const trigger = children || (
@@ -31,7 +43,11 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
   // Explicit close function that can only be called from within this component
   const handleClose = () => {
     allowClose.current = true;
-    setOpen(false);
+    if (isControlled && controlledOnOpenChange) {
+      controlledOnOpenChange(false);
+    } else {
+      setInternalOpen(false);
+    }
     // Reset the flag after a short delay
     setTimeout(() => {
       allowClose.current = false;
@@ -42,11 +58,19 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       // Always allow opening
-      setOpen(true);
+      if (isControlled && controlledOnOpenChange) {
+        controlledOnOpenChange(true);
+      } else {
+        setInternalOpen(true);
+      }
     } else {
-      // Only allow closing if explicitly allowed
-      if (allowClose.current) {
-        setOpen(false);
+      // Only allow closing if explicitly allowed or if controlled from outside
+      if (isControlled || allowClose.current) {
+        if (isControlled && controlledOnOpenChange) {
+          controlledOnOpenChange(false);
+        } else {
+          setInternalOpen(false);
+        }
       }
       // Otherwise, ignore the close request (from nested dialogs, etc.)
     }
@@ -54,9 +78,11 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent 
         className="max-w-6xl max-h-[90vh] overflow-y-auto"
         onPointerDownOutside={(e) => {

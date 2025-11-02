@@ -17,6 +17,7 @@ import { formatPhoneNumber } from "@/lib/format-utils";
 export default function CustomersIndex() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewDialogCustomerId, setViewDialogCustomerId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   
   const { data: customers, isLoading } = useQuery<Customer[]>({
@@ -79,11 +80,14 @@ export default function CustomersIndex() {
         
         return (
           <div className="flex justify-end gap-2">
-            <CustomerViewDialog customerId={customer.id}>
-              <Button variant="ghost" size="sm" data-testid={`button-view-customer-${customer.id}`}>
-                View
-              </Button>
-            </CustomerViewDialog>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              data-testid={`button-view-customer-${customer.id}`}
+              onClick={() => setViewDialogCustomerId(customer.id)}
+            >
+              View
+            </Button>
             <ReservationAddDialog initialCustomerId={customer.id.toString()}>
               <Button variant="outline" size="sm">
                 New Reservation
@@ -145,6 +149,17 @@ export default function CustomersIndex() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Customer View Dialog - Rendered outside table to prevent state loss */}
+      {viewDialogCustomerId && (
+        <CustomerViewDialog 
+          customerId={viewDialogCustomerId}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setViewDialogCustomerId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
