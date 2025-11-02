@@ -1977,6 +1977,23 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
+  async getDriverCountryUsageStats(): Promise<{ country: string; count: number }[]> {
+    const result = await db
+      .select({
+        country: drivers.licenseOrigin,
+        count: sql<number>`count(*)::int`
+      })
+      .from(drivers)
+      .where(sql`${drivers.licenseOrigin} IS NOT NULL AND ${drivers.licenseOrigin} != ''`)
+      .groupBy(drivers.licenseOrigin)
+      .orderBy(desc(sql`count(*)`));
+    
+    return result.map(row => ({
+      country: row.country || '',
+      count: row.count
+    }));
+  }
+
   // Saved Reports methods
   async getAllSavedReports(): Promise<SavedReport[]> {
     return await db.select().from(savedReports).orderBy(desc(savedReports.createdAt));

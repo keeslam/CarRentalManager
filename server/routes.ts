@@ -7355,6 +7355,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get country usage statistics for smart dropdown
+  app.get("/api/drivers/countries/usage", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
+    try {
+      const stats = await storage.getDriverCountryUsageStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting country usage stats:", error);
+      res.status(500).json({ error: "Failed to get country usage statistics" });
+    }
+  });
+
   // Delete a driver
   app.delete("/api/drivers/:id", hasPermission(UserPermission.MANAGE_CUSTOMERS), async (req, res) => {
     try {

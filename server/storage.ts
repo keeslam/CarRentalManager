@@ -139,6 +139,7 @@ export interface IStorage {
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(id: number, driverData: Partial<InsertDriver>): Promise<Driver | undefined>;
   deleteDriver(id: number): Promise<boolean>;
+  getDriverCountryUsageStats(): Promise<{ country: string; count: number }[]>;
   
   // Saved Reports methods
   getAllSavedReports(): Promise<any[]>;
