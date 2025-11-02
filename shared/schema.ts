@@ -318,6 +318,7 @@ export const reservations = pgTable("reservations", {
   driverId: integer("driver_id").references(() => drivers.id, { onDelete: "set null" }), // Link to specific driver (nullable for backward compatibility)
   startDate: text("start_date").notNull(),
   endDate: text("end_date"), // Allow null for open-ended rentals
+  completionDate: text("completion_date"), // Date when vehicle was actually returned (for backlog/future tracking)
   status: text("status").default("pending").notNull(),
   totalPrice: numeric("total_price"),
   notes: text("notes"),

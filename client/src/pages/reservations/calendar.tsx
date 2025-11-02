@@ -2136,6 +2136,7 @@ export default function ReservationCalendarPage() {
             onOpenChange={setStatusDialogOpen}
             reservationId={selectedReservation.id}
             initialStatus={selectedReservation.status || "pending"}
+            startDate={selectedReservation.startDate}
             vehicle={selectedReservation.vehicle ? {
               ...selectedReservation.vehicle,
               currentMileage: selectedReservation.vehicle.currentMileage ?? undefined,

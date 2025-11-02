@@ -37,11 +37,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 // Create the base schema first
 const baseStatusChangeSchema = z.object({
   status: z.string().min(1, { message: "Status is required" }),
+  completionDate: z.string().optional(), // Date when reservation was actually completed/returned
   startMileage: z.union([
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
@@ -60,8 +64,9 @@ const baseStatusChangeSchema = z.object({
   fuelNotes: z.string().nullish(),
 });
 
-// Create schema with custom validators
-const statusChangeSchema = baseStatusChangeSchema
+// Create a function that returns the schema with runtime validation
+// This allows us to validate against the reservation's startDate
+const createStatusChangeSchema = (reservationStartDate?: string) => baseStatusChangeSchema
   // First validation: return mileage >= start mileage
   .refine(
     (data) => {
@@ -76,7 +81,28 @@ const statusChangeSchema = baseStatusChangeSchema
       path: ["departureMileage"], // This will show the error under the departureMileage field
     }
   )
-  /* We'll add vehicle-specific validation at runtime */
+  // Second validation: completion date cannot be before start date
+  .refine(
+    (data) => {
+      // Only validate when status is completed and we have both dates
+      if (data.status === "completed" && data.completionDate && reservationStartDate) {
+        // Extract just the date portion (yyyy-MM-dd) from both strings to ignore time
+        const completionDateStr = data.completionDate.split('T')[0];
+        const startDateStr = reservationStartDate.split('T')[0];
+        
+        // Compare as date strings (yyyy-MM-dd format compares correctly lexicographically)
+        return completionDateStr >= startDateStr;
+      }
+      return true; // Skip validation if not relevant
+    },
+    {
+      message: "Completion date cannot be before the reservation start date",
+      path: ["completionDate"],
+    }
+  );
+
+// Create the default schema (without runtime validation)
+const statusChangeSchema = createStatusChangeSchema();
 
 type StatusChangeFormType = z.infer<typeof statusChangeSchema>;
 
@@ -85,6 +111,7 @@ interface StatusChangeDialogProps {
   onOpenChange: (open: boolean) => void;
   reservationId: number;
   initialStatus: string;
+  startDate?: string; // Reservation start date for validation
   vehicle?: {
     id: number;
     brand: string;
@@ -126,6 +153,7 @@ export function StatusChangeDialog({
   onOpenChange,
   reservationId,
   initialStatus,
+  startDate,
   vehicle,
   onStatusChanged,
   customer, // We'll add this to the props
@@ -143,6 +171,7 @@ export function StatusChangeDialog({
   // Create defaultValues object to ensure stable reference
   const defaultValues = {
     status: initialStatus,
+    completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
     // Use departureMileage if available (it's set when confirming), otherwise use returnMileage
     startMileage: vehicle?.departureMileage !== null && vehicle?.departureMileage !== undefined 
       ? vehicle?.departureMileage 
@@ -156,8 +185,9 @@ export function StatusChangeDialog({
   };
   
   // Form setup with vehicle return mileage as default for start mileage if available
+  // Use the schema with runtime validation for the reservation's startDate
   const form = useForm<StatusChangeFormType>({
-    resolver: zodResolver(statusChangeSchema),
+    resolver: zodResolver(createStatusChangeSchema(startDate)),
     defaultValues,
   });
   
@@ -166,6 +196,7 @@ export function StatusChangeDialog({
     // Reset the form with new default values
     form.reset({
       status: initialStatus,
+      completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
       // Use departureMileage if available (it's set when confirming), otherwise use returnMileage
       startMileage: vehicle?.departureMileage !== null && vehicle?.departureMileage !== undefined 
         ? vehicle?.departureMileage 
@@ -201,6 +232,11 @@ export function StatusChangeDialog({
       const reservationUpdateData: any = { 
         status: data.status,
       };
+      
+      // Add completion date for completed reservations
+      if (data.status === "completed" && data.completionDate) {
+        reservationUpdateData.completionDate = data.completionDate;
+      }
       
       // Add mileage to reservation for historical tracking
       if (data.startMileage !== undefined && data.startMileage !== null) {
@@ -510,7 +546,7 @@ export function StatusChangeDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange} key={`dialog-${reservationId}`}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update Reservation Status</DialogTitle>
           <DialogDescription>
@@ -623,6 +659,62 @@ export function StatusChangeDialog({
               )}
             />
             
+            {/* Completion Date field when status is completed */}
+            {currentStatus === "completed" && (
+              <FormField
+                control={form.control}
+                name="completionDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Completion Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full pl-3 text-left font-normal"
+                            data-testid="button-completion-date"
+                          >
+                            {field.value ? (
+                              format(new Date(field.value), "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : new Date()}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(format(date, "yyyy-MM-dd"));
+                            }
+                          }}
+                          disabled={(date) => {
+                            // Disable dates before the start date (compare only date portion, not time)
+                            if (startDate) {
+                              const startDateStr = startDate.split('T')[0];
+                              const checkDateStr = format(date, "yyyy-MM-dd");
+                              return checkDateStr < startDateStr;
+                            }
+                            return false;
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                      Date when the vehicle was actually returned. For backlog entries, select a past date. For future tracking, select a future date.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
             {/* Start Mileage field when status is confirmed */}
             {currentStatus === "confirmed" && vehicle && (
               <FormField
@@ -695,105 +787,109 @@ export function StatusChangeDialog({
               />
             )}
             
-            {/* Departure Mileage field when status is completed */}
+            {/* Completion fields organized in grid when status is completed */}
             {currentStatus === "completed" && vehicle && (
-              <FormField
-                control={form.control}
-                name="departureMileage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mileage when returned</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder={pickupMileage ? `Pickup: ${pickupMileage.toLocaleString()} km` : "Enter return mileage"}
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enter the vehicle's odometer reading when it was returned
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
-            {/* Fuel tracking fields when status is completed */}
-            {currentStatus === "completed" && (
               <>
-                {/* Show Pickup Fuel Level (read-only) */}
-                {initialFuelData?.fuelLevelPickup && initialFuelData.fuelLevelPickup !== "not_recorded" && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-blue-900">Fuel at Pickup</h4>
-                        <p className="text-xs text-blue-700 mt-0.5">Reference for comparison</p>
-                      </div>
-                      <Badge variant="outline" className="bg-white text-base font-semibold">
-                        {initialFuelData.fuelLevelPickup}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Fuel Level at Return */}
-                <FormField
-                  control={form.control}
-                  name="fuelLevelReturn"
-                  render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Fuel Level at Return</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || "not_recorded"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select fuel level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="not_recorded">Not Recorded</SelectItem>
-                            <SelectItem value="empty">Empty</SelectItem>
-                            <SelectItem value="1/4">1/4</SelectItem>
-                            <SelectItem value="1/2">1/2</SelectItem>
-                            <SelectItem value="3/4">3/4</SelectItem>
-                            <SelectItem value="full">Full</SelectItem>
-                          </SelectContent>
-                        </Select>
+                {/* Mileage and Fuel Reference Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Departure Mileage */}
+                  <FormField
+                    control={form.control}
+                    name="departureMileage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mileage when returned</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder={pickupMileage ? `Pickup: ${pickupMileage.toLocaleString()} km` : "Enter return mileage"}
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
                         <FormDescription>
-                          Record the fuel level when the vehicle was returned
+                          Enter the vehicle's odometer reading when it was returned
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
-                />
-                
-                {/* Fuel Cost */}
-                <FormField
-                  control={form.control}
-                  name="fuelCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fuel Cost (optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter fuel cost if applicable"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter any fuel costs charged to the customer
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                  />
+                  
+                  {/* Show Pickup Fuel Level (read-only) */}
+                  {initialFuelData?.fuelLevelPickup && initialFuelData.fuelLevelPickup !== "not_recorded" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-900">Fuel at Pickup</h4>
+                          <p className="text-xs text-blue-700 mt-0.5">Reference for comparison</p>
+                        </div>
+                        <Badge variant="outline" className="bg-white text-base font-semibold">
+                          {initialFuelData.fuelLevelPickup}
+                        </Badge>
+                      </div>
+                    </div>
                   )}
-                />
+                </div>
+                
+                {/* Fuel Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Fuel Level at Return */}
+                  <FormField
+                    control={form.control}
+                    name="fuelLevelReturn"
+                    render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Fuel Level at Return</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || "not_recorded"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select fuel level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="not_recorded">Not Recorded</SelectItem>
+                              <SelectItem value="empty">Empty</SelectItem>
+                              <SelectItem value="1/4">1/4</SelectItem>
+                              <SelectItem value="1/2">1/2</SelectItem>
+                              <SelectItem value="3/4">3/4</SelectItem>
+                              <SelectItem value="full">Full</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Record the fuel level when the vehicle was returned
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                  />
+                  
+                  {/* Fuel Cost */}
+                  <FormField
+                    control={form.control}
+                    name="fuelCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fuel Cost (optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Enter fuel cost if applicable"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enter any fuel costs charged to the customer
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 {/* Fuel Receipt Upload */}
                 <FormItem>
