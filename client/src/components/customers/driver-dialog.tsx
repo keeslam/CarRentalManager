@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { insertDriverSchema, Driver } from "@shared/schema";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { capitalizeName } from "@/lib/format-utils";
+import { COUNTRIES } from "@shared/countries";
+import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +64,41 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
   const { toast } = useToast();
   const isEdit = !!driver;
 
+  // Fetch country usage statistics
+  const { data: countryStats = [] } = useQuery<{ country: string; count: number }[]>({
+    queryKey: ['/api/drivers/countries/usage'],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Create sorted country options with smart ordering
+  const countryOptions = useMemo<ComboboxOption[]>(() => {
+    // Create a map of country usage counts
+    const usageMap = new Map(countryStats.map(stat => [stat.country, stat.count]));
+    
+    // Sort countries: most used first, then alphabetically
+    const sortedCountries = [...COUNTRIES].sort((a, b) => {
+      const usageA = usageMap.get(a) || 0;
+      const usageB = usageMap.get(b) || 0;
+      
+      // If usage counts differ, sort by usage (descending)
+      if (usageA !== usageB) {
+        return usageB - usageA;
+      }
+      
+      // If same usage, sort alphabetically
+      return a.localeCompare(b);
+    });
+    
+    return sortedCountries.map(country => {
+      const usageCount = usageMap.get(country);
+      return {
+        value: country,
+        label: country,
+        tags: usageCount ? [`${usageCount} driver${usageCount > 1 ? 's' : ''}`] : undefined,
+      };
+    });
+  }, [countryStats]);
+
   const form = useForm<DriverFormValues>({
     resolver: zodResolver(driverFormSchema),
     defaultValues: {
@@ -72,7 +109,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       phone: driver?.phone ?? "",
       driverLicenseNumber: driver?.driverLicenseNumber ?? "",
       licenseExpiry: driver?.licenseExpiry ?? "",
-      licenseOrigin: driver?.licenseOrigin ?? "",
+      licenseOrigin: driver?.licenseOrigin ?? "Netherlands",
       isPrimaryDriver: driver?.isPrimaryDriver ?? false,
       status: driver?.status ?? "active",
       notes: driver?.notes ?? "",
@@ -91,7 +128,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
         phone: driver?.phone ?? "",
         driverLicenseNumber: driver?.driverLicenseNumber ?? "",
         licenseExpiry: driver?.licenseExpiry ?? "",
-        licenseOrigin: driver?.licenseOrigin ?? "",
+        licenseOrigin: driver?.licenseOrigin ?? "Netherlands",
         isPrimaryDriver: driver?.isPrimaryDriver ?? false,
         status: driver?.status ?? "active",
         notes: driver?.notes ?? "",
@@ -298,7 +335,14 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                   <FormItem>
                     <FormLabel>License Origin (Country)</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="Netherlands" data-testid="input-license-origin" />
+                      <SearchableCombobox
+                        options={countryOptions}
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        placeholder="Select country..."
+                        searchPlaceholder="Search countries..."
+                        emptyMessage="No countries found"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
