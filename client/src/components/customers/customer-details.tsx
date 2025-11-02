@@ -96,7 +96,9 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
     data: drivers, 
     isLoading: isLoadingDrivers
   } = useQuery<Driver[]>({
-    queryKey: customerDriversQueryKey
+    queryKey: customerDriversQueryKey,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: 'always', // Always refetch when component mounts
   });
   
   // Mutation for deleting drivers with optimistic updates
