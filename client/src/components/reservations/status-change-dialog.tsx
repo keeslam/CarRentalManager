@@ -439,8 +439,9 @@ export function StatusChangeDialog({
     // This is critical for security - must check before allowing submission
     const currentVehicleMileage = vehicle?.currentMileage || vehicle?.departureMileage || vehicle?.returnMileage || 0;
     
-    // Check pickup mileage decrease
-    if (data.startMileage !== undefined && data.startMileage !== null) {
+    // Check pickup mileage decrease (but only when actually changing the pickup, not when completing)
+    // When completing, we're only adding return mileage, so skip this check
+    if (data.status !== "completed" && data.startMileage !== undefined && data.startMileage !== null) {
       console.log(`🔍 Checking pickup mileage: ${data.startMileage} vs current: ${currentVehicleMileage}`);
       if (data.startMileage < currentVehicleMileage) {
         console.log("⚠️ MILEAGE DECREASE DETECTED - showing password dialog");
