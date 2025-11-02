@@ -179,6 +179,9 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
         variant: "default"
       });
       
+      // Emit event to prevent parent dialog from closing
+      window.dispatchEvent(new CustomEvent('driver-dialog-closing'));
+      
       // Close the dialog
       setOpen(false);
       

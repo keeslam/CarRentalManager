@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +28,19 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
     </Button>
   );
 
+  // Listen for driver dialog closing event
+  useEffect(() => {
+    const handleDriverDialogClosing = () => {
+      // Prevent this dialog from closing for 300ms when a driver dialog closes
+      ignoreCloseUntil.current = Date.now() + 300;
+    };
+
+    window.addEventListener('driver-dialog-closing', handleDriverDialogClosing);
+    return () => {
+      window.removeEventListener('driver-dialog-closing', handleDriverDialogClosing);
+    };
+  }, []);
+
   // Handle dialog open/close state changes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -40,11 +53,6 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
     } else {
       setOpen(true);
     }
-  };
-
-  // Called by child components to prevent parent from closing when they close
-  const preventParentClose = () => {
-    ignoreCloseUntil.current = Date.now() + 300; // Ignore close requests for 300ms
   };
 
   return (
