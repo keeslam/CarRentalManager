@@ -72,6 +72,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       phone: driver?.phone ?? "",
       driverLicenseNumber: driver?.driverLicenseNumber ?? "",
       licenseExpiry: driver?.licenseExpiry ?? "",
+      licenseOrigin: driver?.licenseOrigin ?? "",
       isPrimaryDriver: driver?.isPrimaryDriver ?? false,
       status: driver?.status ?? "active",
       notes: driver?.notes ?? "",
@@ -90,6 +91,7 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
         phone: driver?.phone ?? "",
         driverLicenseNumber: driver?.driverLicenseNumber ?? "",
         licenseExpiry: driver?.licenseExpiry ?? "",
+        licenseOrigin: driver?.licenseOrigin ?? "",
         isPrimaryDriver: driver?.isPrimaryDriver ?? false,
         status: driver?.status ?? "active",
         notes: driver?.notes ?? "",
@@ -283,6 +285,20 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
                     <FormLabel>Driver License Number</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value ?? ""} placeholder="1234567890" data-testid="input-license-number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="licenseOrigin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>License Origin (Country)</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} placeholder="Netherlands" data-testid="input-license-origin" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -121,6 +121,15 @@ export function DriverViewDialog({ driver, activeReservation, open, onOpenChange
                 </div>
               )}
               
+              {driver.licenseOrigin && (
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm" data-testid="text-driver-license-origin">
+                    Origin: {driver.licenseOrigin}
+                  </span>
+                </div>
+              )}
+              
               {driver.licenseExpiry && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />

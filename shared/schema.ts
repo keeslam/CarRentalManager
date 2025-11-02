@@ -278,6 +278,7 @@ export const drivers = pgTable("drivers", {
   // Driver's license info
   driverLicenseNumber: text("driver_license_number"),
   licenseExpiry: text("license_expiry"),
+  licenseOrigin: text("license_origin"), // Country/region of license issuance
   licenseDocumentId: integer("license_document_id").references(() => documents.id, { onDelete: "set null" }), // FK to documents table for license copy
   licenseFilePath: text("license_file_path"), // Direct file path for license copy (simpler alternative)
   
