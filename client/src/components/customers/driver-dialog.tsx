@@ -179,14 +179,18 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
         variant: "default"
       });
       
+      // Close the dialog
       setOpen(false);
-      form.reset();
-      onSuccess?.(data.id);
       
-      // Restore scroll position after a brief delay to allow for DOM updates
+      // Reset form and call success callback after a brief delay
+      // This ensures the dialog is fully closed before any other actions
       setTimeout(() => {
+        form.reset();
+        onSuccess?.(data.id);
+        
+        // Restore scroll position
         window.scrollTo({ top: scrollPosition, behavior: 'instant' });
-      }, 100);
+      }, 50);
     },
     onError: (error: Error) => {
       toast({
