@@ -127,17 +127,6 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
       // Return a context with the previous value
       return { previousDrivers };
     },
-    onError: (err, driverId, context) => {
-      // Revert to previous value on error
-      if (context?.previousDrivers) {
-        queryClient.setQueryData(customerDriversQueryKey, context.previousDrivers);
-      }
-      toast({
-        title: "Error",
-        description: "Failed to delete driver",
-        variant: "destructive"
-      });
-    },
     onSuccess: async () => {
       // Manually trigger refetch
       await refetchDrivers();

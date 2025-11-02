@@ -1418,23 +1418,25 @@ export default function ReservationCalendarPage() {
                     {/* Show Mileage Information from Reservation */}
                     {(selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined) || 
                      (selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined) ? (
-                      <div className="mt-1.5 pt-1.5 border-t border-gray-200 space-y-1">
-                        {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
-                          <div>
-                            <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
-                            <div className="text-xs font-semibold text-gray-900">
-                              {selectedReservation.pickupMileage.toLocaleString()} km
+                      <div className="mt-1.5 pt-1.5 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
+                              <div className="text-xs font-semibold text-gray-900">
+                                {selectedReservation.pickupMileage.toLocaleString()} km
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined && (
-                          <div>
-                            <div className="text-[10px] text-gray-500 uppercase">Returned</div>
-                            <div className="text-xs font-semibold text-gray-900">
-                              {selectedReservation.returnMileage.toLocaleString()} km
+                          )}
+                          {selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined && (
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase">Returned</div>
+                              <div className="text-xs font-semibold text-gray-900">
+                                {selectedReservation.returnMileage.toLocaleString()} km
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     ) : null}
                   </div>
