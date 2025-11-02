@@ -959,20 +959,21 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                       onClick={async () => {
                                         const driverIdToDelete = driver.id;
                                         
-                                        // Optimistic update: immediately remove from UI
-                                        queryClient.setQueryData<Driver[]>(customerDriversQueryKey, (old) => {
-                                          if (!old) return [];
-                                          return old.filter(d => d.id !== driverIdToDelete);
-                                        });
-                                        
                                         try {
+                                          // Optimistic update: immediately remove from UI
+                                          queryClient.setQueryData<Driver[]>(customerDriversQueryKey, (old) => {
+                                            if (!old) return [];
+                                            return old.filter(d => d.id !== driverIdToDelete);
+                                          });
+                                          
+                                          // Delete from backend
                                           const response = await apiRequest('DELETE', `/api/drivers/${driverIdToDelete}`);
                                           if (!response.ok) {
                                             throw new Error('Failed to delete driver');
                                           }
                                           
-                                          // Refetch in background to ensure consistency
-                                          queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
+                                          // Invalidate to trigger refetch and ensure UI updates
+                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
                                           
                                           toast({
                                             title: "Driver deleted",
@@ -980,8 +981,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                             variant: "default"
                                           });
                                         } catch (error) {
-                                          // Revert optimistic update on error
-                                          queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
+                                          // Revert optimistic update on error by refetching
+                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
                                           toast({
                                             title: "Error",
                                             description: "Failed to delete driver",
