@@ -94,7 +94,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   // Fetch customer drivers with proper caching
   const { 
     data: drivers, 
-    isLoading: isLoadingDrivers
+    isLoading: isLoadingDrivers,
+    refetch: refetchDrivers
   } = useQuery<Driver[]>({
     queryKey: customerDriversQueryKey,
     staleTime: 0, // Always consider data stale
@@ -137,18 +138,25 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         variant: "destructive"
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Manually trigger refetch
+      await refetchDrivers();
+      
       toast({
         title: "Driver deleted",
         description: "The driver has been successfully deleted.",
         variant: "default"
       });
     },
-    onSettled: async () => {
-      // Always refetch after error or success to ensure we're in sync
-      await queryClient.invalidateQueries({ 
-        queryKey: customerDriversQueryKey,
-        refetchType: 'active'
+    onError: (err, driverId, context) => {
+      // Revert to previous value on error
+      if (context?.previousDrivers) {
+        queryClient.setQueryData(customerDriversQueryKey, context.previousDrivers);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete driver",
+        variant: "destructive"
       });
     },
   });
@@ -810,7 +818,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                   <CardTitle>Authorized Drivers</CardTitle>
                   <CardDescription>Manage drivers authorized to rent vehicles for this customer</CardDescription>
                 </div>
-                <DriverDialog customerId={customerId}>
+                <DriverDialog customerId={customerId} onSuccess={() => refetchDrivers()}>
                   <Button size="sm" data-testid="button-add-driver">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -984,7 +992,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                               >
                                 View
                               </Button>
-                              <DriverDialog customerId={customerId} driver={driver}>
+                              <DriverDialog customerId={customerId} driver={driver} onSuccess={() => refetchDrivers()}>
                                 <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800" data-testid={`button-edit-driver-${driver.id}`}>
                                   Edit
                                 </Button>

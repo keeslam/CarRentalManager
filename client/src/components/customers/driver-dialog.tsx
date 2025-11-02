@@ -170,16 +170,6 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       return await response.json();
     },
     onSuccess: async (data: Driver) => {
-      // Invalidate and refetch - this ensures active queries are immediately refetched
-      await queryClient.invalidateQueries({ 
-        queryKey: [`/api/customers/${customerId}/drivers`],
-        refetchType: 'active'
-      });
-      await queryClient.invalidateQueries({ 
-        queryKey: [`/api/customers/${customerId}`],
-        refetchType: 'active'
-      });
-      
       toast({
         title: isEdit ? "Driver updated" : "Driver added",
         description: `Driver has been successfully ${isEdit ? 'updated' : 'added'}.`,
@@ -189,15 +179,14 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       // Close the dialog
       setOpen(false);
       
-      // Reset form and call success callback after a brief delay
-      // This ensures the dialog is fully closed before any other actions
-      setTimeout(() => {
-        form.reset();
-        onSuccess?.(data.id);
-        
-        // Restore scroll position
-        window.scrollTo({ top: scrollPosition, behavior: 'instant' });
-      }, 50);
+      // Reset form and call success callback
+      form.reset();
+      
+      // Call the parent's onSuccess callback which triggers refetch
+      onSuccess?.(data.id);
+      
+      // Restore scroll position
+      window.scrollTo({ top: scrollPosition, behavior: 'instant' });
     },
     onError: (error: Error) => {
       toast({
