@@ -209,6 +209,10 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
   };
 
   const handleOpenChange = (newOpen: boolean) => {
+    // If dialog is closing, emit event to prevent parent dialog from closing
+    if (!newOpen && open) {
+      window.dispatchEvent(new CustomEvent('driver-dialog-will-close'));
+    }
     setOpen(newOpen);
   };
 

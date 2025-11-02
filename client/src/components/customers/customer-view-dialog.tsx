@@ -28,16 +28,18 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
     </Button>
   );
 
-  // Listen for driver dialog closing event
+  // Listen for driver dialog closing events
   useEffect(() => {
     const handleDriverDialogClosing = () => {
-      // Prevent this dialog from closing for 300ms when a driver dialog closes
-      ignoreCloseUntil.current = Date.now() + 300;
+      // Prevent this dialog from closing for 500ms when a driver dialog closes
+      ignoreCloseUntil.current = Date.now() + 500;
     };
 
     window.addEventListener('driver-dialog-closing', handleDriverDialogClosing);
+    window.addEventListener('driver-dialog-will-close', handleDriverDialogClosing);
     return () => {
       window.removeEventListener('driver-dialog-closing', handleDriverDialogClosing);
+      window.removeEventListener('driver-dialog-will-close', handleDriverDialogClosing);
     };
   }, []);
 
