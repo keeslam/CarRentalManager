@@ -144,7 +144,10 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
     },
     onSettled: async () => {
       // Always refetch after error or success to ensure we're in sync
-      await queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
+      await queryClient.invalidateQueries({ 
+        queryKey: customerDriversQueryKey,
+        refetchType: 'active'
+      });
     },
   });
   
