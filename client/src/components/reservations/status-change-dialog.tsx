@@ -99,6 +99,22 @@ const createStatusChangeSchema = (reservationStartDate?: string) => baseStatusCh
       message: "Completion date cannot be before the reservation start date",
       path: ["completionDate"],
     }
+  )
+  // Third validation: fuel level at pickup is required when confirming
+  .refine(
+    (data) => {
+      // When confirming pickup, fuel level must be selected
+      if (data.status === "confirmed") {
+        return data.fuelLevelPickup && 
+               data.fuelLevelPickup !== "" && 
+               data.fuelLevelPickup !== "not_recorded";
+      }
+      return true; // Skip validation if not relevant
+    },
+    {
+      message: "Please select the fuel level at pickup",
+      path: ["fuelLevelPickup"],
+    }
   );
 
 // Create the default schema (without runtime validation)
@@ -704,18 +720,17 @@ export function StatusChangeDialog({
                 name="fuelLevelPickup"
                 render={({ field }) => (
                   <FormItem>
-                      <FormLabel>Fuel Level at Pickup</FormLabel>
+                      <FormLabel>Fuel Level at Pickup <span className="text-red-500">*</span></FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || "not_recorded"}
+                        value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select fuel level" />
+                            <SelectValue placeholder="Select fuel level (required)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="not_recorded">Not Recorded</SelectItem>
                           <SelectItem value="empty">Empty</SelectItem>
                           <SelectItem value="1/4">1/4</SelectItem>
                           <SelectItem value="1/2">1/2</SelectItem>
@@ -724,7 +739,7 @@ export function StatusChangeDialog({
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Record the fuel level when the customer picked up the vehicle
+                        You must record the fuel level when the customer picked up the vehicle
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
