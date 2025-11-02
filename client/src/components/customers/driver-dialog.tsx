@@ -201,15 +201,29 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
     mutation.mutate(data);
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
       <DialogContent 
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          // Prevent accidental clicks outside from closing the dialog while editing
+          e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          // Prevent interactions outside from closing the dialog while editing
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          // Stop escape key from propagating to parent dialog
+          e.stopPropagation();
+        }}
       >
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Driver" : "Add Driver"}</DialogTitle>
