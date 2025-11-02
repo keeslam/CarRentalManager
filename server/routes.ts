@@ -2180,8 +2180,8 @@ export async function registerRoutes(app: Express): Promise<void> {
           overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
           overlapEnd = maintenanceEnd; // Spare vehicle for entire maintenance period
           
-          // Validate overlap for open-ended rentals too
-          if (overlapStart >= overlapEnd) {
+          // Validate overlap for open-ended rentals too (allow same-day overlaps)
+          if (overlapStart > overlapEnd) {
             throw new Error(`No overlap between maintenance and open-ended rental ${reservationId}: rental starts after maintenance ends`);
           }
         } else {
@@ -2195,7 +2195,8 @@ export async function registerRoutes(app: Express): Promise<void> {
           overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
           overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
           
-          if (overlapStart >= overlapEnd) {
+          // Allow same-day overlaps (overlapStart can equal overlapEnd)
+          if (overlapStart > overlapEnd) {
             throw new Error(`No overlap between maintenance and rental ${reservationId}`);
           }
         }
