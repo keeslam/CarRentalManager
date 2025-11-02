@@ -1,0 +1,250 @@
+import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Driver, Reservation } from "@shared/schema";
+import { formatDate, formatPhoneNumber } from "@/lib/format-utils";
+import { User, Mail, Phone, CreditCard, Calendar, Car, FileText, Globe } from "lucide-react";
+import { formatLicensePlate } from "@/lib/format-utils";
+
+interface DriverViewDialogProps {
+  driver: Driver | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialogProps) {
+  // Fetch all reservations to find active ones for this driver
+  const { data: allReservations } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+    enabled: open && !!driver,
+  });
+
+  // Find active reservation for this driver
+  const activeReservation = allReservations?.find(
+    (reservation) =>
+      reservation.driverId === driver?.id &&
+      (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'active') &&
+      (!reservation.endDate || new Date(reservation.endDate) >= new Date())
+  );
+
+  if (!driver) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Driver Details
+          </DialogTitle>
+          <DialogDescription>
+            Complete information for {driver.displayName}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Basic Information */}
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">{driver.displayName}</h3>
+                <div className="flex gap-2">
+                  {driver.isPrimaryDriver && (
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                      Primary Driver
+                    </Badge>
+                  )}
+                  <Badge
+                    className={
+                      driver.status === 'active'
+                        ? 'bg-green-100 text-green-800 border-green-200'
+                        : 'bg-gray-100 text-gray-800 border-gray-200'
+                    }
+                  >
+                    {driver.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              {(driver.firstName || driver.lastName) && (
+                <div className="text-sm text-muted-foreground">
+                  {driver.firstName} {driver.lastName}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Contact Information
+              </h4>
+              <Separator />
+              
+              {driver.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{driver.email}</span>
+                </div>
+              )}
+              
+              {driver.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{formatPhoneNumber(driver.phone)}</span>
+                </div>
+              )}
+              
+              {driver.preferredLanguage && (
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Preferred Language: {driver.preferredLanguage === 'nl' ? 'Dutch' : 'English'}
+                  </span>
+                </div>
+              )}
+              
+              {!driver.email && !driver.phone && (
+                <div className="text-sm text-muted-foreground">No contact information available</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Driver's License Information */}
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Driver's License
+              </h4>
+              <Separator />
+              
+              {driver.driverLicenseNumber && (
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{driver.driverLicenseNumber}</span>
+                </div>
+              )}
+              
+              {driver.licenseExpiry && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Expires: {formatDate(driver.licenseExpiry)}
+                    {new Date(driver.licenseExpiry) < new Date() && (
+                      <Badge className="ml-2 bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                    )}
+                  </span>
+                </div>
+              )}
+              
+              {driver.licenseFilePath && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">License Document</span>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <img
+                      src={`/${driver.licenseFilePath}`}
+                      alt="Driver's License"
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="p-4 text-center text-sm text-muted-foreground">
+                              <p>License document preview not available</p>
+                              <a href="/${driver.licenseFilePath}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">
+                                View document
+                              </a>
+                            </div>
+                          `;
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {!driver.driverLicenseNumber && !driver.licenseExpiry && !driver.licenseFilePath && (
+                <div className="text-sm text-muted-foreground">No license information available</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Current Vehicle/Reservation */}
+          {activeReservation && (
+            <Card>
+              <CardContent className="pt-6 space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Current Rental
+                </h4>
+                <Separator />
+                
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {activeReservation.vehicle && (
+                      <>
+                        {formatLicensePlate(activeReservation.vehicle.licensePlate)} - {activeReservation.vehicle.brand} {activeReservation.vehicle.model}
+                      </>
+                    )}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Start Date:</span>
+                    <div className="font-medium">{formatDate(activeReservation.startDate)}</div>
+                  </div>
+                  {activeReservation.endDate && (
+                    <div>
+                      <span className="text-muted-foreground">End Date:</span>
+                      <div className="font-medium">{formatDate(activeReservation.endDate)}</div>
+                    </div>
+                  )}
+                </div>
+                
+                <Badge
+                  className={
+                    activeReservation.status === 'confirmed'
+                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                      : activeReservation.status === 'active'
+                      ? 'bg-green-100 text-green-800 border-green-200'
+                      : 'bg-amber-100 text-amber-800 border-amber-200'
+                  }
+                >
+                  {activeReservation.status}
+                </Badge>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes */}
+          {driver.notes && (
+            <Card>
+              <CardContent className="pt-6 space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Notes
+                </h4>
+                <Separator />
+                <p className="text-sm whitespace-pre-wrap">{driver.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

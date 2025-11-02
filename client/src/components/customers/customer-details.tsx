@@ -12,7 +12,8 @@ import { ReservationViewDialog } from "@/components/reservations/reservation-vie
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 import { DriverDialog } from "./driver-dialog";
-import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus } from "@/lib/format-utils";
+import { DriverViewDialog } from "./driver-view-dialog";
+import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus, formatLicensePlate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation, Driver } from "@shared/schema";
 import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
@@ -43,6 +44,10 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editReservationId, setEditReservationId] = useState<number | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Driver view dialog state
+  const [viewDriverDialogOpen, setViewDriverDialogOpen] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   
   // Filter state
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -734,6 +739,9 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                           License
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Vehicle
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -783,6 +791,30 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {(() => {
+                                const activeReservation = reservations?.find(
+                                  (r) =>
+                                    r.driverId === driver.id &&
+                                    (r.status === 'confirmed' || r.status === 'pending' || r.status === 'active') &&
+                                    (!r.endDate || new Date(r.endDate) >= new Date())
+                                );
+                                return activeReservation?.vehicle ? (
+                                  <div>
+                                    <div className="font-medium" data-testid={`text-driver-vehicle-${driver.id}`}>
+                                      {formatLicensePlate(activeReservation.vehicle.licensePlate)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {activeReservation.vehicle.brand} {activeReservation.vehicle.model}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <Badge 
                               className={driver.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'}
                               data-testid={`badge-driver-status-${driver.id}`}
@@ -792,6 +824,18 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary-600 hover:text-primary-800"
+                                onClick={() => {
+                                  setSelectedDriver(driver);
+                                  setViewDriverDialogOpen(true);
+                                }}
+                                data-testid={`button-view-driver-${driver.id}`}
+                              >
+                                View
+                              </Button>
                               <DriverDialog customerId={customerId} driver={driver}>
                                 <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-800" data-testid={`button-edit-driver-${driver.id}`}>
                                   Edit
@@ -1147,6 +1191,13 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
           setIsEditDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: customerReservationsQueryKey });
         }}
+      />
+      
+      {/* Driver View Dialog */}
+      <DriverViewDialog
+        driver={selectedDriver}
+        open={viewDriverDialogOpen}
+        onOpenChange={setViewDriverDialogOpen}
       />
     </div>
   );
