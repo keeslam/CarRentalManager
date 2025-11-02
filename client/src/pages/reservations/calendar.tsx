@@ -2190,25 +2190,27 @@ export default function ReservationCalendarPage() {
             onStatusChanged={async () => {
               // Close the status dialog
               setStatusDialogOpen(false);
-              // Refetch the data to get the latest updates
-              await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
-              // If view dialog is still open, update the selected reservation with fresh data
+              
+              // If view dialog is still open, fetch the specific reservation to get fresh data
               if (viewDialogOpen && selectedReservation) {
-                // Use getQueriesData to find all matching queries (handles date range params)
-                const queriesData = queryClient.getQueriesData({ queryKey: ["/api/reservations/range"] });
-                
-                // Find the updated reservation from any of the matching queries
-                for (const [, data] of queriesData) {
-                  if (Array.isArray(data)) {
-                    const updatedReservation = data.find((r: any) => r.id === selectedReservation.id);
-                    if (updatedReservation) {
-                      console.log('✅ Updating selected reservation after status change:', updatedReservation);
-                      setSelectedReservation(updatedReservation);
-                      break; // Stop once we find the updated reservation
-                    }
+                try {
+                  // Fetch the updated reservation directly from the API
+                  const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
+                    credentials: 'include',
+                  });
+                  
+                  if (response.ok) {
+                    const updatedReservation = await response.json();
+                    console.log('✅ Fetched updated reservation after status change:', updatedReservation);
+                    setSelectedReservation(updatedReservation);
                   }
+                } catch (error) {
+                  console.error('Error fetching updated reservation:', error);
                 }
               }
+              
+              // Refetch the calendar data to update the list
+              await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
             }}
           />
         );
