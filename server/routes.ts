@@ -2504,6 +2504,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
+      // When marking as completed, set endDate to today (actual completion date)
+      if (status === "completed") {
+        // Set completion date to today
+        dataWithTracking.endDate = new Date().toISOString().split('T')[0];
+      }
+      
       // Add return mileage when completing reservation
       if (status === "completed" && req.body.departureMileage !== undefined) {
         const returnMileage = parseInt(req.body.departureMileage);
