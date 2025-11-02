@@ -1415,30 +1415,57 @@ export default function ReservationCalendarPage() {
                     <div className="text-xs text-gray-600">
                       {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
                     </div>
-                    {/* Show Mileage Information from Reservation */}
-                    {(selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined) || 
-                     (selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined) ? (
-                      <div className="mt-1.5 pt-1.5 border-t border-gray-200">
-                        <div className="grid grid-cols-2 gap-3">
-                          {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
-                            <div>
-                              <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
-                              <div className="text-xs font-semibold text-gray-900">
-                                {selectedReservation.pickupMileage.toLocaleString()} km
-                              </div>
+                    {/* Show Mileage Information */}
+                    {(() => {
+                      // For active reservations (confirmed/completed), show reservation mileage
+                      // For scheduled/pending, show vehicle's current mileage
+                      const isActive = selectedReservation.status === 'confirmed' || selectedReservation.status === 'completed';
+                      const hasReservationMileage = (selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined) || 
+                                                    (selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined);
+                      const vehicleCurrentMileage = selectedReservation.vehicle?.currentMileage;
+                      
+                      // Show mileage if: active reservation with mileage OR scheduled with vehicle mileage
+                      if ((isActive && hasReservationMileage) || (!isActive && vehicleCurrentMileage)) {
+                        return (
+                          <div className="mt-1.5 pt-1.5 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-3">
+                              {isActive ? (
+                                // Show reservation mileage for active reservations
+                                <>
+                                  {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
+                                    <div>
+                                      <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
+                                      <div className="text-xs font-semibold text-gray-900">
+                                        {selectedReservation.pickupMileage.toLocaleString()} km
+                                      </div>
+                                    </div>
+                                  )}
+                                  {selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined && (
+                                    <div>
+                                      <div className="text-[10px] text-gray-500 uppercase">Returned</div>
+                                      <div className="text-xs font-semibold text-gray-900">
+                                        {selectedReservation.returnMileage.toLocaleString()} km
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                // Show vehicle's current mileage for scheduled reservations
+                                vehicleCurrentMileage !== null && vehicleCurrentMileage !== undefined && (
+                                  <div>
+                                    <div className="text-[10px] text-gray-500 uppercase">Current</div>
+                                    <div className="text-xs font-semibold text-gray-900">
+                                      {vehicleCurrentMileage.toLocaleString()} km
+                                    </div>
+                                  </div>
+                                )
+                              )}
                             </div>
-                          )}
-                          {selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined && (
-                            <div>
-                              <div className="text-[10px] text-gray-500 uppercase">Returned</div>
-                              <div className="text-xs font-semibold text-gray-900">
-                                {selectedReservation.returnMileage.toLocaleString()} km
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 
