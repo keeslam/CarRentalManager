@@ -58,6 +58,7 @@ interface DriverDialogProps {
 export function DriverDialog({ customerId, driver, children, onSuccess }: DriverDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const { toast } = useToast();
   const isEdit = !!driver;
 
@@ -100,6 +101,9 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
 
   const mutation = useMutation({
     mutationFn: async (data: DriverFormValues) => {
+      // Save current scroll position before mutation
+      setScrollPosition(window.scrollY || document.documentElement.scrollTop);
+      
       const url = isEdit ? `/api/drivers/${driver.id}` : `/api/customers/${customerId}/drivers`;
       const method = isEdit ? 'PATCH' : 'POST';
       
@@ -139,6 +143,11 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
       setOpen(false);
       form.reset();
       onSuccess?.(data.id);
+      
+      // Restore scroll position after a brief delay to allow for DOM updates
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
