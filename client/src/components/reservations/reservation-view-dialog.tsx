@@ -313,7 +313,12 @@ export function ReservationViewDialog({
                           )}
                           {vehicle.departureMileage && (
                             <Badge variant="outline" className="bg-gray-50 text-gray-800 border-gray-200">
-                              Departure Mileage: {vehicle.departureMileage.toLocaleString()} km
+                              Pickup Mileage: {vehicle.departureMileage.toLocaleString()} km
+                            </Badge>
+                          )}
+                          {vehicle.returnMileage && (
+                            <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">
+                              Return Mileage: {vehicle.returnMileage.toLocaleString()} km
                             </Badge>
                           )}
                           {vehicle.maintenanceStatus && vehicle.maintenanceStatus !== 'ok' && (
