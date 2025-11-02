@@ -54,6 +54,11 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   const [dateTo, setDateTo] = useState<string>("");
   const [vehicleFilter, setVehicleFilter] = useState<string>("");
   
+  // Driver search and pagination state
+  const [driverSearch, setDriverSearch] = useState<string>("");
+  const [driverPage, setDriverPage] = useState(1);
+  const driversPerPage = 10;
+  
   // Define query keys for easier reference
   const customerQueryKey = [`/api/customers/${customerId}`];
   const customerReservationsQueryKey = [`/api/reservations/customer/${customerId}`];
@@ -93,6 +98,54 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   } = useQuery<Driver[]>({
     queryKey: customerDriversQueryKey
   });
+  
+  // Filter and paginate drivers
+  const { filteredDrivers, paginatedDrivers, totalPages, totalDrivers } = useMemo(() => {
+    if (!drivers) {
+      return { filteredDrivers: [], paginatedDrivers: [], totalPages: 0, totalDrivers: 0 };
+    }
+    
+    // Filter drivers by search query
+    const filtered = drivers.filter(driver => {
+      if (!driverSearch) return true;
+      
+      const searchLower = driverSearch.toLowerCase();
+      const displayName = driver.displayName?.toLowerCase() || '';
+      const firstName = driver.firstName?.toLowerCase() || '';
+      const lastName = driver.lastName?.toLowerCase() || '';
+      const email = driver.email?.toLowerCase() || '';
+      const phone = driver.phone?.toLowerCase() || '';
+      const license = driver.driverLicenseNumber?.toLowerCase() || '';
+      
+      return (
+        displayName.includes(searchLower) ||
+        firstName.includes(searchLower) ||
+        lastName.includes(searchLower) ||
+        email.includes(searchLower) ||
+        phone.includes(searchLower) ||
+        license.includes(searchLower)
+      );
+    });
+    
+    // Calculate pagination
+    const total = filtered.length;
+    const pages = Math.ceil(total / driversPerPage);
+    const startIndex = (driverPage - 1) * driversPerPage;
+    const endIndex = startIndex + driversPerPage;
+    const paginated = filtered.slice(startIndex, endIndex);
+    
+    return { 
+      filteredDrivers: filtered, 
+      paginatedDrivers: paginated, 
+      totalPages: pages,
+      totalDrivers: total
+    };
+  }, [drivers, driverSearch, driverPage, driversPerPage]);
+  
+  // Reset to page 1 when search changes
+  useMemo(() => {
+    setDriverPage(1);
+  }, [driverSearch]);
   
   // Calculate rental statistics and filter active/past rentals
   const { activeRentals, pastRentals, rentalStats } = useMemo(() => {
@@ -717,6 +770,24 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
               </div>
             </CardHeader>
             <CardContent>
+              {/* Driver Search Input */}
+              {drivers && drivers.length > 0 && (
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search drivers by name, email, phone, or license..."
+                    value={driverSearch}
+                    onChange={(e) => setDriverSearch(e.target.value)}
+                    className="max-w-md"
+                    data-testid="input-driver-search"
+                  />
+                  {driverSearch && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Showing {totalDrivers} of {drivers.length} driver{drivers.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               {isLoadingDrivers ? (
                 <div className="flex justify-center p-6">
                   <svg className="animate-spin h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -734,6 +805,18 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                   </svg>
                   <p className="text-gray-500 mb-4">No drivers added yet</p>
                   <p className="text-sm text-gray-400">Add a driver to get started</p>
+                </div>
+              ) : filteredDrivers.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-2">No drivers match your search</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDriverSearch("")}
+                    className="text-primary-600"
+                  >
+                    Clear search
+                  </Button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -761,7 +844,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {drivers?.map((driver) => (
+                      {paginatedDrivers?.map((driver) => (
                         <tr key={driver.id} data-testid={`row-driver-${driver.id}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -874,19 +957,31 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction 
                                       onClick={async () => {
+                                        const driverIdToDelete = driver.id;
+                                        
+                                        // Optimistic update: immediately remove from UI
+                                        queryClient.setQueryData<Driver[]>(customerDriversQueryKey, (old) => {
+                                          if (!old) return [];
+                                          return old.filter(d => d.id !== driverIdToDelete);
+                                        });
+                                        
                                         try {
-                                          const response = await apiRequest('DELETE', `/api/drivers/${driver.id}`);
+                                          const response = await apiRequest('DELETE', `/api/drivers/${driverIdToDelete}`);
                                           if (!response.ok) {
                                             throw new Error('Failed to delete driver');
                                           }
-                                          // Force immediate refetch instead of just invalidating
-                                          await queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
+                                          
+                                          // Refetch in background to ensure consistency
+                                          queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
+                                          
                                           toast({
                                             title: "Driver deleted",
                                             description: "The driver has been successfully deleted.",
                                             variant: "default"
                                           });
                                         } catch (error) {
+                                          // Revert optimistic update on error
+                                          queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
                                           toast({
                                             title: "Error",
                                             description: "Failed to delete driver",
@@ -907,6 +1002,35 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                       ))}
                     </tbody>
                   </table>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                      <div className="text-sm text-gray-500">
+                        Page {driverPage} of {totalPages} ({totalDrivers} driver{totalDrivers !== 1 ? 's' : ''})
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDriverPage(prev => Math.max(1, prev - 1))}
+                          disabled={driverPage === 1}
+                          data-testid="button-driver-prev-page"
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDriverPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={driverPage === totalPages}
+                          data-testid="button-driver-next-page"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
