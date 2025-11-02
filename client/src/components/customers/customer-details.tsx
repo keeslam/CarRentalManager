@@ -879,7 +879,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                           if (!response.ok) {
                                             throw new Error('Failed to delete driver');
                                           }
-                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
+                                          // Force immediate refetch instead of just invalidating
+                                          await queryClient.refetchQueries({ queryKey: customerDriversQueryKey });
                                           toast({
                                             title: "Driver deleted",
                                             description: "The driver has been successfully deleted.",
