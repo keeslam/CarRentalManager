@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -16,25 +15,12 @@ import { formatLicensePlate } from "@/lib/format-utils";
 
 interface DriverViewDialogProps {
   driver: Driver | null;
+  activeReservation: Reservation | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialogProps) {
-  // Fetch all reservations to find active ones for this driver
-  const { data: allReservations } = useQuery<Reservation[]>({
-    queryKey: ['/api/reservations'],
-    enabled: open && !!driver,
-  });
-
-  // Find active reservation for this driver
-  const activeReservation = allReservations?.find(
-    (reservation) =>
-      reservation.driverId === driver?.id &&
-      (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'active') &&
-      (!reservation.endDate || new Date(reservation.endDate) >= new Date())
-  );
-
+export function DriverViewDialog({ driver, activeReservation, open, onOpenChange }: DriverViewDialogProps) {
   if (!driver) return null;
 
   return (
@@ -55,10 +41,10 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
           <Card>
             <CardContent className="pt-6 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{driver.displayName}</h3>
+                <h3 className="font-semibold text-lg" data-testid="text-driver-display-name">{driver.displayName}</h3>
                 <div className="flex gap-2">
                   {driver.isPrimaryDriver && (
-                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200" data-testid="badge-primary-driver">
                       Primary Driver
                     </Badge>
                   )}
@@ -68,6 +54,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                         ? 'bg-green-100 text-green-800 border-green-200'
                         : 'bg-gray-100 text-gray-800 border-gray-200'
                     }
+                    data-testid="badge-driver-status-view"
                   >
                     {driver.status}
                   </Badge>
@@ -75,7 +62,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
               </div>
               
               {(driver.firstName || driver.lastName) && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground" data-testid="text-driver-full-name">
                   {driver.firstName} {driver.lastName}
                 </div>
               )}
@@ -93,21 +80,21 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
               {driver.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{driver.email}</span>
+                  <span className="text-sm" data-testid="text-driver-email-view">{driver.email}</span>
                 </div>
               )}
               
               {driver.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{formatPhoneNumber(driver.phone)}</span>
+                  <span className="text-sm" data-testid="text-driver-phone-view">{formatPhoneNumber(driver.phone)}</span>
                 </div>
               )}
               
               {driver.preferredLanguage && (
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
+                  <span className="text-sm" data-testid="text-driver-language">
                     Preferred Language: {driver.preferredLanguage === 'nl' ? 'Dutch' : 'English'}
                   </span>
                 </div>
@@ -130,17 +117,17 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
               {driver.driverLicenseNumber && (
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{driver.driverLicenseNumber}</span>
+                  <span className="text-sm font-medium" data-testid="text-driver-license-number-view">{driver.driverLicenseNumber}</span>
                 </div>
               )}
               
               {driver.licenseExpiry && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
+                  <span className="text-sm" data-testid="text-driver-license-expiry">
                     Expires: {formatDate(driver.licenseExpiry)}
                     {new Date(driver.licenseExpiry) < new Date() && (
-                      <Badge className="ml-2 bg-red-100 text-red-800 border-red-200">Expired</Badge>
+                      <Badge className="ml-2 bg-red-100 text-red-800 border-red-200" data-testid="badge-license-expired">Expired</Badge>
                     )}
                   </span>
                 </div>
@@ -157,6 +144,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                       src={`/${driver.licenseFilePath}`}
                       alt="Driver's License"
                       className="w-full h-auto"
+                      data-testid="img-driver-license-preview"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -185,7 +173,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
 
           {/* Current Vehicle/Reservation */}
           {activeReservation && (
-            <Card>
+            <Card data-testid="card-active-rental">
               <CardContent className="pt-6 space-y-3">
                 <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                   Current Rental
@@ -194,7 +182,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                 
                 <div className="flex items-center gap-2">
                   <Car className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium" data-testid="text-active-rental-vehicle">
                     {activeReservation.vehicle && (
                       <>
                         {formatLicensePlate(activeReservation.vehicle.licensePlate)} - {activeReservation.vehicle.brand} {activeReservation.vehicle.model}
@@ -206,12 +194,12 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">Start Date:</span>
-                    <div className="font-medium">{formatDate(activeReservation.startDate)}</div>
+                    <div className="font-medium" data-testid="text-active-rental-start">{formatDate(activeReservation.startDate)}</div>
                   </div>
                   {activeReservation.endDate && (
                     <div>
                       <span className="text-muted-foreground">End Date:</span>
-                      <div className="font-medium">{formatDate(activeReservation.endDate)}</div>
+                      <div className="font-medium" data-testid="text-active-rental-end">{formatDate(activeReservation.endDate)}</div>
                     </div>
                   )}
                 </div>
@@ -224,6 +212,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                       ? 'bg-green-100 text-green-800 border-green-200'
                       : 'bg-amber-100 text-amber-800 border-amber-200'
                   }
+                  data-testid="badge-active-rental-status"
                 >
                   {activeReservation.status}
                 </Badge>
@@ -239,7 +228,7 @@ export function DriverViewDialog({ driver, open, onOpenChange }: DriverViewDialo
                   Notes
                 </h4>
                 <Separator />
-                <p className="text-sm whitespace-pre-wrap">{driver.notes}</p>
+                <p className="text-sm whitespace-pre-wrap" data-testid="text-driver-notes">{driver.notes}</p>
               </CardContent>
             </Card>
           )}
