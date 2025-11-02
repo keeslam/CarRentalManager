@@ -99,6 +99,55 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
     queryKey: customerDriversQueryKey
   });
   
+  // Mutation for deleting drivers with optimistic updates
+  const deleteDriverMutation = useMutation({
+    mutationFn: async (driverId: number) => {
+      const response = await apiRequest('DELETE', `/api/drivers/${driverId}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete driver');
+      }
+      return driverId;
+    },
+    onMutate: async (driverId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: customerDriversQueryKey });
+      
+      // Snapshot the previous value
+      const previousDrivers = queryClient.getQueryData<Driver[]>(customerDriversQueryKey);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<Driver[]>(customerDriversQueryKey, (old) => {
+        if (!old) return [];
+        return old.filter(d => d.id !== driverId);
+      });
+      
+      // Return a context with the previous value
+      return { previousDrivers };
+    },
+    onError: (err, driverId, context) => {
+      // Revert to previous value on error
+      if (context?.previousDrivers) {
+        queryClient.setQueryData(customerDriversQueryKey, context.previousDrivers);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete driver",
+        variant: "destructive"
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Driver deleted",
+        description: "The driver has been successfully deleted.",
+        variant: "default"
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we're in sync
+      queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
+    },
+  });
+  
   // Filter and paginate drivers
   const { filteredDrivers, paginatedDrivers, totalPages, totalDrivers } = useMemo(() => {
     if (!drivers) {
@@ -956,39 +1005,8 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction 
-                                      onClick={async () => {
-                                        const driverIdToDelete = driver.id;
-                                        
-                                        try {
-                                          // Optimistic update: immediately remove from UI
-                                          queryClient.setQueryData<Driver[]>(customerDriversQueryKey, (old) => {
-                                            if (!old) return [];
-                                            return old.filter(d => d.id !== driverIdToDelete);
-                                          });
-                                          
-                                          // Delete from backend
-                                          const response = await apiRequest('DELETE', `/api/drivers/${driverIdToDelete}`);
-                                          if (!response.ok) {
-                                            throw new Error('Failed to delete driver');
-                                          }
-                                          
-                                          // Invalidate to trigger refetch and ensure UI updates
-                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
-                                          
-                                          toast({
-                                            title: "Driver deleted",
-                                            description: "The driver has been successfully deleted.",
-                                            variant: "default"
-                                          });
-                                        } catch (error) {
-                                          // Revert optimistic update on error by refetching
-                                          await queryClient.invalidateQueries({ queryKey: customerDriversQueryKey });
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to delete driver",
-                                            variant: "destructive"
-                                          });
-                                        }
+                                      onClick={() => {
+                                        deleteDriverMutation.mutate(driver.id);
                                       }}
                                       className="bg-red-600 hover:bg-red-700"
                                     >
