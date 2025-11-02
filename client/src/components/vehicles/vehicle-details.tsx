@@ -883,13 +883,26 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       </div>
       
       {/* Vehicle Info Cards */}
-      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+      <div className={`grid grid-cols-1 gap-4 ${displayReservation ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Vehicle Type</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">{vehicle.vehicleType || "N/A"}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Current Mileage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold" data-testid="text-current-mileage">
+              {vehicle.currentMileage != null 
+                ? `${Number(vehicle.currentMileage).toLocaleString()} km` 
+                : "N/A"}
+            </p>
           </CardContent>
         </Card>
         
