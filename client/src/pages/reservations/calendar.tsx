@@ -1540,7 +1540,7 @@ export default function ReservationCalendarPage() {
                       <p className="text-xs font-medium mt-0.5">{safeParseDateISO(selectedReservation.startDate) ? format(safeParseDateISO(selectedReservation.startDate)!, 'PP') : 'Invalid'}</p>
                     </div>
                     <div>
-                      <label className="text-[10px] font-medium text-gray-500 uppercase">End Date</label>
+                      <label className="text-[10px] font-medium text-gray-500 uppercase">Completion Date</label>
                       <p className="text-xs font-medium mt-0.5">{selectedReservation.endDate ? (safeParseDateISO(selectedReservation.endDate) ? format(safeParseDateISO(selectedReservation.endDate)!, 'PP') : 'Invalid') : 'Open-ended'}</p>
                     </div>
                     <div>
