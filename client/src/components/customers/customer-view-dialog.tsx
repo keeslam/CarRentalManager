@@ -18,7 +18,7 @@ interface CustomerViewDialogProps {
 
 export function CustomerViewDialog({ customerId, children }: CustomerViewDialogProps) {
   const [open, setOpen] = useState(false);
-  const ignoreCloseUntil = useRef<number>(0);
+  const allowClose = useRef(false);
 
   // Custom trigger or default "View" button
   const trigger = children || (
@@ -28,32 +28,27 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
     </Button>
   );
 
-  // Listen for driver dialog closing events
-  useEffect(() => {
-    const handleDriverDialogClosing = () => {
-      // Prevent this dialog from closing for 500ms when a driver dialog closes
-      ignoreCloseUntil.current = Date.now() + 500;
-    };
-
-    window.addEventListener('driver-dialog-closing', handleDriverDialogClosing);
-    window.addEventListener('driver-dialog-will-close', handleDriverDialogClosing);
-    return () => {
-      window.removeEventListener('driver-dialog-closing', handleDriverDialogClosing);
-      window.removeEventListener('driver-dialog-will-close', handleDriverDialogClosing);
-    };
-  }, []);
+  // Explicit close function that can only be called from within this component
+  const handleClose = () => {
+    allowClose.current = true;
+    setOpen(false);
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      allowClose.current = false;
+    }, 100);
+  };
 
   // Handle dialog open/close state changes
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Check if we should ignore this close request (e.g., from a child dialog closing)
-      if (Date.now() < ignoreCloseUntil.current) {
-        // Ignore this close request - it's from a child dialog
-        return;
-      }
-      setOpen(false);
-    } else {
+    if (newOpen) {
+      // Always allow opening
       setOpen(true);
+    } else {
+      // Only allow closing if explicitly allowed
+      if (allowClose.current) {
+        setOpen(false);
+      }
+      // Otherwise, ignore the close request (from nested dialogs, etc.)
     }
   };
 
@@ -93,7 +88,7 @@ export function CustomerViewDialog({ customerId, children }: CustomerViewDialogP
           <CustomerDetails 
             customerId={customerId} 
             inDialog={true}
-            onClose={() => setOpen(false)}
+            onClose={handleClose}
           />
         </div>
       </DialogContent>
