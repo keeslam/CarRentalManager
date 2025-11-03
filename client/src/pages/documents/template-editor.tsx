@@ -1296,8 +1296,10 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
 
         {currentTemplate && (
           <div className="space-y-6">
-            {/* Template Editor - Full Width */}
-            <Card>
+            {/* Template Editor and Field Properties - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <Card>
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
@@ -1608,24 +1610,26 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                     </div>
                   </div>
                 </CardContent>
-            </Card>
+                </Card>
+              </div>
 
-            {/* Field Properties - Full Width */}
-            <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {selectedFields.length === 0 ? 'No Selection' : 
-                     selectedFields.length === 1 ? 'Field Properties' : 
-                     `Batch Edit (${selectedFields.length})`}
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedFields.length === 0 ? 'Select fields to edit' :
-                     selectedFields.length === 1 ? 'Edit the selected field' :
-                     'Edit multiple fields together'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {selectedField ? (
+              {/* Field Properties - Sidebar */}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      {selectedFields.length === 0 ? 'No Selection' : 
+                       selectedFields.length === 1 ? 'Field Properties' : 
+                       `Batch Edit (${selectedFields.length})`}
+                    </CardTitle>
+                    <CardDescription>
+                      {selectedFields.length === 0 ? 'Select fields to edit' :
+                       selectedFields.length === 1 ? 'Edit the selected field' :
+                       'Edit multiple fields together'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedField ? (
                     <div className="space-y-4">
                       <div>
                         <Label>Field Name</Label>
@@ -1867,9 +1871,11 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                     <div className="text-center py-8 text-muted-foreground">
                       Select one or more fields to edit
                     </div>
-                  )}
-                </CardContent>
-            </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
 
             {/* 3-Column Grid: Position Presets | Field History | Preview Template */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
