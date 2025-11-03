@@ -1495,9 +1495,8 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                     )}
                     
                     <div 
-                      className="relative overflow-auto" 
+                      className="relative" 
                       style={{
-                        height: '70vh',
                         paddingLeft: showRulers ? '32px' : '16px',
                         paddingTop: showRulers ? '32px' : '16px',
                         paddingRight: '16px',
