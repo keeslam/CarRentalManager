@@ -1295,9 +1295,9 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
         </Card>
 
         {currentTemplate && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3">
-              <Card>
+          <div className="space-y-6">
+            {/* Template Editor - Full Width */}
+            <Card>
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
@@ -1608,11 +1608,10 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            </div>
+            </Card>
 
-            <div className="space-y-6">
-              <Card>
+            {/* Field Properties - Full Width */}
+            <Card>
                 <CardHeader>
                   <CardTitle>
                     {selectedFields.length === 0 ? 'No Selection' : 
@@ -1870,8 +1869,11 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+            </Card>
 
+            {/* 3-Column Grid: Position Presets | Field History | Preview Template */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Position Presets */}
               <Card>
                 <CardHeader>
                   <CardTitle>Position Presets</CardTitle>
@@ -1894,16 +1896,17 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                 </CardContent>
               </Card>
 
-              {fieldHistory.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <History className="h-4 w-4" />
-                      Field History
-                    </CardTitle>
-                    <CardDescription>Recently edited fields</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+              {/* Field History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Field History
+                  </CardTitle>
+                  <CardDescription>Recently edited fields</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {fieldHistory.length > 0 ? (
                     <div className="space-y-2">
                       {fieldHistory.slice(0, 5).map((field) => (
                         <Button
@@ -1917,10 +1920,15 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                         </Button>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No recent edits
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
+              {/* Preview Template */}
               <Card>
                 <CardHeader>
                   <CardTitle>Preview Template</CardTitle>
