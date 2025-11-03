@@ -1149,7 +1149,7 @@ export default function DocumentsIndex() {
               Create and manage contract templates with drag-and-drop field placement
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <PDFTemplateEditor onClose={() => setTemplateEditorDialogOpen(false)} />
           </div>
         </DialogContent>
