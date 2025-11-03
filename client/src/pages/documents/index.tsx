@@ -51,6 +51,7 @@ export default function DocumentsIndex() {
   const [currentPage, setCurrentPage] = useState(1);
   const [templateDeleteDialogOpen, setTemplateDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<any | null>(null);
+  const [templateEditorDialogOpen, setTemplateEditorDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -833,12 +834,10 @@ export default function DocumentsIndex() {
             <CardContent>
               <div className="mb-6">
                 <p className="mb-4">Open the dedicated template editor to create and manage contract templates.</p>
-                <Link href="/documents/template-editor">
-                  <Button>
-                    <FileEdit className="mr-2 h-4 w-4" />
-                    Open Template Editor
-                  </Button>
-                </Link>
+                <Button onClick={() => setTemplateEditorDialogOpen(true)} data-testid="button-open-template-editor">
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  Open Template Editor
+                </Button>
               </div>
               
               {isLoadingTemplates ? (
@@ -905,12 +904,15 @@ export default function DocumentsIndex() {
                           
                           <div className="mt-4 flex justify-between items-center gap-2">
                             <div className="flex gap-2">
-                              <Link href="/documents/template-editor">
-                                <Button variant="outline" size="sm" data-testid={`button-edit-template-${template.id}`}>
-                                  <FileEdit className="h-3 w-3 mr-1" />
-                                  Edit
-                                </Button>
-                              </Link>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setTemplateEditorDialogOpen(true)}
+                                data-testid={`button-edit-template-${template.id}`}
+                              >
+                                <FileEdit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
                               <a 
                                 href={`/api/pdf-templates/${template.id}/preview`}
                                 target="_blank"
@@ -1137,6 +1139,21 @@ export default function DocumentsIndex() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Template Editor Dialog */}
+      <Dialog open={templateEditorDialogOpen} onOpenChange={setTemplateEditorDialogOpen}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] max-h-[95vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
+            <DialogTitle>Contract Template Editor</DialogTitle>
+            <DialogDescription>
+              Create and manage contract templates with drag-and-drop field placement
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <PDFTemplateEditor onClose={() => setTemplateEditorDialogOpen(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

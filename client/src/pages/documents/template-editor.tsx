@@ -88,7 +88,11 @@ const DEFAULT_PRESETS: PositionPreset[] = [
   { name: 'Bottom Right', x: 495, y: 742 },
 ];
 
-const PDFTemplateEditor = () => {
+interface PDFTemplateEditorProps {
+  onClose?: () => void;
+}
+
+const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
@@ -1097,12 +1101,19 @@ const PDFTemplateEditor = () => {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center mb-6">
-          <Link href="/documents">
-            <Button variant="ghost" size="sm">
+          {onClose ? (
+            <Button variant="ghost" size="sm" onClick={onClose}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Documents
             </Button>
-          </Link>
+          ) : (
+            <Link href="/documents">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Documents
+              </Button>
+            </Link>
+          )}
         </div>
         
         <Card className="max-w-2xl mx-auto">
@@ -1144,12 +1155,19 @@ const PDFTemplateEditor = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/documents">
-            <Button variant="ghost" size="sm">
+          {onClose ? (
+            <Button variant="ghost" size="sm" onClick={onClose}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Documents
             </Button>
-          </Link>
+          ) : (
+            <Link href="/documents">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Documents
+              </Button>
+            </Link>
+          )}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <kbd className="px-2 py-1 rounded bg-muted">Ctrl+Z</kbd> Undo
             <kbd className="px-2 py-1 rounded bg-muted">Ctrl+Y</kbd> Redo
