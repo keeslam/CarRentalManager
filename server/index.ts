@@ -79,9 +79,9 @@ async function gracefulShutdown(signal: string) {
     // Close database connections
     try {
       console.log('🔄 Closing database connections...');
-      // Note: DatabaseStorage uses drizzle which manages connections automatically
-      // No explicit close method needed for connection pooling
-      console.log('✅ Database connections handled by connection pooling');
+      const { pool } = await import('./db');
+      await pool.end();
+      console.log('✅ Database connection pool closed');
     } catch (dbError) {
       console.error('⚠️ Error with database cleanup:', dbError);
     }
