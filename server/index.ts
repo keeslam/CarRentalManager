@@ -220,15 +220,20 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Health check
 app.get('/health', async (_req, res) => {
   try {
-    // Test database connection
+    // Test database connection and get pool stats
     const dbStatus = await testDatabaseConnection();
+    const { getPoolStats } = await import('./db');
+    const poolStats = await getPoolStats();
     
     res.json({
       status: dbStatus.connected ? 'OK' : 'ERROR',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
-      database: dbStatus,
+      database: {
+        ...dbStatus,
+        pool: poolStats
+      },
       envVars: {
         DATABASE_URL: !!process.env.DATABASE_URL,
         SESSION_SECRET: !!process.env.SESSION_SECRET,
