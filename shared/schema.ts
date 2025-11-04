@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -378,7 +378,15 @@ export const reservations = pgTable("reservations", {
   deletedAt: timestamp("deleted_at"),
   deletedBy: text("deleted_by"),
   deletedByUser: integer("deleted_by_user_id").references(() => users.id),
-});
+}, (table) => ({
+  vehicleIdIdx: index("reservations_vehicle_id_idx").on(table.vehicleId),
+  customerIdIdx: index("reservations_customer_id_idx").on(table.customerId),
+  statusIdx: index("reservations_status_idx").on(table.status),
+  startDateIdx: index("reservations_start_date_idx").on(table.startDate),
+  endDateIdx: index("reservations_end_date_idx").on(table.endDate),
+  deletedAtIdx: index("reservations_deleted_at_idx").on(table.deletedAt),
+  statusStartDateIdx: index("reservations_status_start_date_idx").on(table.status, table.startDate),
+}));
 
 // Base schema that can be extended by frontend forms
 export const insertReservationSchemaBase = createInsertSchema(reservations).omit({
@@ -550,7 +558,11 @@ export const expenses = pgTable("expenses", {
   updatedBy: text("updated_by"),
   createdByUser: integer("created_by_user_id").references(() => users.id),
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
-});
+}, (table) => ({
+  vehicleIdIdx: index("expenses_vehicle_id_idx").on(table.vehicleId),
+  createdAtIdx: index("expenses_created_at_idx").on(table.createdAt),
+  dateIdx: index("expenses_date_idx").on(table.date),
+}));
 
 export const insertExpenseSchema = createInsertSchema(expenses).omit({
   id: true,
@@ -584,7 +596,10 @@ export const documents = pgTable("documents", {
   updatedBy: text("updated_by"),
   createdByUser: integer("created_by_user_id").references(() => users.id),
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
-});
+}, (table) => ({
+  vehicleIdIdx: index("documents_vehicle_id_idx").on(table.vehicleId),
+  reservationIdIdx: index("documents_reservation_id_idx").on(table.reservationId),
+}));
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
