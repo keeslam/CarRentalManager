@@ -21,6 +21,7 @@ import {
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { IStorage } from "./storage";
 
 // Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
@@ -688,9 +689,15 @@ export class DatabaseStorage implements IStorage {
   async getUpcomingReservations(): Promise<Reservation[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const reservationsData = await db
-      .select()
+    const result = await db
+      .select({
+        reservation: reservations,
+        vehicle: vehicles,
+        customer: customers,
+      })
       .from(reservations)
+      .leftJoin(vehicles, eq(reservations.vehicleId, vehicles.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
       .where(
         and(
           sql`${reservations.startDate} >= ${today}`,
@@ -704,29 +711,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(reservations.startDate)
       .limit(5);
     
-    const result: Reservation[] = [];
-    
-    // Fetch vehicle and customer data for each reservation
-    for (const reservation of reservationsData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
-      const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
-      
-      result.push({
-        ...reservation,
-        vehicle,
-        customer
-      });
-    }
-    
-    return result;
+    return result.map(row => ({
+      ...row.reservation,
+      vehicle: row.vehicle,
+      customer: row.customer,
+    }));
   }
 
   async getUpcomingMaintenanceReservations(): Promise<Reservation[]> {
     const today = new Date().toISOString().split('T')[0];
     
-    const reservationsData = await db
-      .select()
+    const result = await db
+      .select({
+        reservation: reservations,
+        vehicle: vehicles,
+        customer: customers,
+      })
       .from(reservations)
+      .leftJoin(vehicles, eq(reservations.vehicleId, vehicles.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
       .where(
         and(
           sql`${reservations.startDate} >= ${today}`,
@@ -738,73 +741,51 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(reservations.startDate);
     
-    const result: Reservation[] = [];
-    
-    // Fetch vehicle and customer data for each reservation
-    for (const reservation of reservationsData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
-      const [customer] = reservation.customerId 
-        ? await db.select().from(customers).where(eq(customers.id, reservation.customerId))
-        : [undefined];
-      
-      result.push({
-        ...reservation,
-        vehicle,
-        customer
-      });
-    }
-    
-    return result;
+    return result.map(row => ({
+      ...row.reservation,
+      vehicle: row.vehicle,
+      customer: row.customer,
+    }));
   }
 
   async getReservationsByVehicle(vehicleId: number): Promise<Reservation[]> {
-    const reservationsData = await db
-      .select()
+    const result = await db
+      .select({
+        reservation: reservations,
+        vehicle: vehicles,
+        customer: customers,
+      })
       .from(reservations)
+      .leftJoin(vehicles, eq(reservations.vehicleId, vehicles.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
       .where(and(eq(reservations.vehicleId, vehicleId), isNull(reservations.deletedAt)))
       .orderBy(desc(reservations.startDate));
     
-    const result: Reservation[] = [];
-    
-    // Fetch vehicle and customer data for each reservation
-    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, vehicleId));
-    
-    for (const reservation of reservationsData) {
-      const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
-      
-      result.push({
-        ...reservation,
-        vehicle,
-        customer
-      });
-    }
-    
-    return result;
+    return result.map(row => ({
+      ...row.reservation,
+      vehicle: row.vehicle,
+      customer: row.customer,
+    }));
   }
 
   async getReservationsByCustomer(customerId: number): Promise<Reservation[]> {
-    const reservationsData = await db
-      .select()
+    const result = await db
+      .select({
+        reservation: reservations,
+        vehicle: vehicles,
+        customer: customers,
+      })
       .from(reservations)
+      .leftJoin(vehicles, eq(reservations.vehicleId, vehicles.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
       .where(and(eq(reservations.customerId, customerId), isNull(reservations.deletedAt)))
       .orderBy(desc(reservations.startDate));
     
-    const result: Reservation[] = [];
-    
-    // Fetch vehicle and customer data for each reservation
-    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
-    
-    for (const reservation of reservationsData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
-      
-      result.push({
-        ...reservation,
-        vehicle,
-        customer
-      });
-    }
-    
-    return result;
+    return result.map(row => ({
+      ...row.reservation,
+      vehicle: row.vehicle,
+      customer: row.customer,
+    }));
   }
 
   async checkReservationConflicts(
@@ -962,25 +943,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentExpenses(limit: number): Promise<Expense[]> {
-    const expensesData = await db
-      .select()
+    const result = await db
+      .select({
+        expense: expenses,
+        vehicle: vehicles,
+      })
       .from(expenses)
+      .leftJoin(vehicles, eq(expenses.vehicleId, vehicles.id))
       .orderBy(desc(expenses.createdAt))
       .limit(limit);
     
-    const result: Expense[] = [];
-    
-    // Fetch vehicle data for each expense
-    for (const expense of expensesData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, expense.vehicleId));
-      
-      result.push({
-        ...expense,
-        vehicle
-      });
-    }
-    
-    return result;
+    return result.map(row => ({
+      ...row.expense,
+      vehicle: row.vehicle,
+    }));
   }
   
   async deleteExpense(id: number): Promise<boolean> {
