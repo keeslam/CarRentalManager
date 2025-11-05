@@ -944,6 +944,28 @@ export function VehicleForm({
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="availableForRental"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200 col-span-2">
+                        <div className="space-y-0.5">
+                          <FormLabel className="font-semibold">Available for Rental</FormLabel>
+                          <FormDescription className="text-xs">
+                            Controls if this vehicle can be rented to customers
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-available-for-rental"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </TabsContent>
               
@@ -1323,28 +1345,6 @@ export function VehicleForm({
                           <Switch
                             checked={field.value as boolean}
                             onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="availableForRental"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200">
-                        <div className="space-y-0.5">
-                          <FormLabel className="font-semibold">Available for Rental</FormLabel>
-                          <FormDescription className="text-xs">
-                            Controls if this vehicle can be rented to customers
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-available-for-rental"
                           />
                         </FormControl>
                       </FormItem>
