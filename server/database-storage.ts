@@ -304,10 +304,19 @@ export class DatabaseStorage implements IStorage {
     const reservedIds = new Set(reservedVehicleIds.map(row => row.vehicleId));
     
     if (reservedIds.size === 0) {
-      return await db.select().from(vehicles);
+      // No reserved vehicles, return all vehicles that are available for rental
+      return await db
+        .select()
+        .from(vehicles)
+        .where(
+          or(
+            eq(vehicles.availableForRental, true),
+            isNull(vehicles.availableForRental) // Default to true if not set
+          )
+        );
     }
     
-    // When we have reserved vehicles, query for all those not in the reserved list
+    // When we have reserved vehicles, query for all those not in the reserved list AND available for rental
     const reservedIdsArray = Array.from(reservedIds);
     
     // Handle each vehicle separately with individual OR conditions to avoid array parameter issues
@@ -317,7 +326,15 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(vehicles)
-      .where(combinedCondition);
+      .where(
+        and(
+          combinedCondition,
+          or(
+            eq(vehicles.availableForRental, true),
+            isNull(vehicles.availableForRental) // Default to true if not set
+          )
+        )
+      );
   }
 
   async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
@@ -1692,7 +1709,8 @@ export class DatabaseStorage implements IStorage {
 
     return allVehicles.filter(vehicle => 
       !unavailableVehicleIds.has(vehicle.id) && 
-      vehicle.maintenanceStatus !== 'in_service'
+      vehicle.maintenanceStatus !== 'in_service' &&
+      (vehicle.availableForRental === true || vehicle.availableForRental === null) // Filter out vehicles not available for rental
     );
   }
 
