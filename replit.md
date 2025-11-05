@@ -68,6 +68,8 @@ Preferred communication style: Simple, everyday language.
 - **Email Templates**: Multi-language support for customer communications and smart template selection based on document types.
 - **Completed Rentals Management**: Calendar filtering to show only active rentals, with a separate dialog for viewing and managing completed rentals (revert/delete functionality).
 - **English-Only Interface**: Internal staff interface is English-only.
+- **Vehicle Availability Management**: Manual toggle control (`availableForRental` field) to mark vehicles as available or unavailable for rental. Displayed in vehicle table with "Not for Rental" badge when disabled.
+- **Automatic BV→Opnaam Registration Conversion**: When creating or editing a reservation with a BV-registered vehicle, the system automatically converts it to Opnaam (personal registration). This ensures legal compliance, as BV vehicles cannot be driven (no insurance/road tax). Conversion happens on both frontend and backend with user notification.
 
 ## External Dependencies
 
