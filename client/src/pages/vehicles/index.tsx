@@ -24,6 +24,7 @@ export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("default");
+  const [registrationFilter, setRegistrationFilter] = useState<string>("all");
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,23 +66,37 @@ export default function VehiclesIndex() {
   
   // Custom filtering logic that works regardless of length
   const filteredVehicles = vehicles?.filter(vehicle => {
-    // If search query is empty, return all vehicles
-    if (!debouncedSearchQuery || debouncedSearchQuery.trim() === '') return true;
+    // Apply search query filter
+    if (debouncedSearchQuery && debouncedSearchQuery.trim() !== '') {
+      // Convert search query to lowercase for case-insensitive matching
+      const searchLower = debouncedSearchQuery.toLowerCase().trim();
+      
+      // Convert license plate to a format without dashes for comparison
+      const formattedLicensePlate = vehicle.licensePlate?.replace(/-/g, '')?.toLowerCase() || '';
+      const formattedSearchQuery = searchLower.replace(/-/g, '');
+      
+      // Check if any of these fields contain the search string
+      const matchesSearch = (
+        formattedLicensePlate.includes(formattedSearchQuery) ||
+        (vehicle.brand?.toLowerCase().includes(searchLower) || false) ||
+        (vehicle.model?.toLowerCase().includes(searchLower) || false) ||
+        (vehicle.vehicleType?.toLowerCase().includes(searchLower) || false)
+      );
+      
+      if (!matchesSearch) return false;
+    }
     
-    // Convert search query to lowercase for case-insensitive matching
-    const searchLower = debouncedSearchQuery.toLowerCase().trim();
+    // Apply registration filter
+    if (registrationFilter !== "all") {
+      const isRegisteredToPerson = isTrueValue(vehicle.registeredTo);
+      const isRegisteredToCompany = isTrueValue(vehicle.company);
+      
+      if (registrationFilter === "opnaam" && !isRegisteredToPerson) return false;
+      if (registrationFilter === "bv" && !isRegisteredToCompany) return false;
+      if (registrationFilter === "unspecified" && (isRegisteredToPerson || isRegisteredToCompany)) return false;
+    }
     
-    // Convert license plate to a format without dashes for comparison
-    const formattedLicensePlate = vehicle.licensePlate?.replace(/-/g, '')?.toLowerCase() || '';
-    const formattedSearchQuery = searchLower.replace(/-/g, '');
-    
-    // Check if any of these fields contain the search string
-    return (
-      formattedLicensePlate.includes(formattedSearchQuery) ||
-      (vehicle.brand?.toLowerCase().includes(searchLower) || false) ||
-      (vehicle.model?.toLowerCase().includes(searchLower) || false) ||
-      (vehicle.vehicleType?.toLowerCase().includes(searchLower) || false)
-    );
+    return true;
   }).sort((a, b) => {
     // Apply sorting based on selected option
     switch (sortBy) {
@@ -368,6 +383,20 @@ export default function VehiclesIndex() {
                   <SelectItem value="apk-desc">APK Date (latest first)</SelectItem>
                   <SelectItem value="availability-asc">Availability (available first)</SelectItem>
                   <SelectItem value="availability-desc">Availability (reserved first)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center">
+              <label htmlFor="registrationFilter" className="mr-2 text-sm font-medium">Registration:</label>
+              <Select value={registrationFilter} onValueChange={setRegistrationFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="opnaam">Opnaam</SelectItem>
+                  <SelectItem value="bv">BV</SelectItem>
+                  <SelectItem value="unspecified">Not specified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
