@@ -68,7 +68,7 @@ export const formSchema = insertVehicleSchema.extend({
 });
 
 // Vehicle types
-const vehicleTypes = ["Sedan", "SUV", "Van", "Hatchback", "Coupe", "Truck", "Other"];
+const vehicleTypes = ["Sedan", "SUV", "Van", "Hatchback", "Coupe", "Truck", "Stationwagen", "Other"];
 
 // Fuel types
 const fuelTypes = ["Gasoline", "Diesel", "Electric", "Hybrid", "LPG", "CNG"];
@@ -913,6 +913,17 @@ export function VehicleForm({
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription className="text-xs">
+                          Or type custom vehicle type below
+                        </FormDescription>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Bestelwagen, Limousine" 
+                            value={handleFieldValue(field.value)}
+                            onChange={field.onChange}
+                            data-testid="input-vehicle-type-custom"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
