@@ -689,6 +689,43 @@ export function ReservationForm({
   const createReservationMutation = useMutation({
     mutationKey: ["/api/reservations"], // This enables automatic comprehensive cache invalidation
     mutationFn: async (data: z.infer<typeof formSchema>) => {
+      // Check if vehicle is BV and convert to Opnaam if needed
+      if (selectedVehicle && data.vehicleId) {
+        const isBV = selectedVehicle.company === "true" || selectedVehicle.company === true;
+        
+        if (isBV) {
+          // Convert BV → Opnaam (required for rental insurance/tax)
+          try {
+            const convertResponse = await fetch(`/api/vehicles/${data.vehicleId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                registeredTo: "true",  // Set to Opnaam
+                company: "false",      // Remove BV status
+                registeredToDate: new Date().toISOString().split('T')[0],
+              }),
+            });
+            
+            if (convertResponse.ok) {
+              toast({
+                title: "Vehicle Registration Updated",
+                description: "Vehicle automatically changed from BV to Opnaam (required for rental - insurance & road tax)",
+              });
+              
+              // Refresh vehicle data
+              await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+            }
+          } catch (error) {
+            console.error('Failed to convert vehicle from BV to Opnaam:', error);
+            toast({
+              title: "Warning",
+              description: "Could not update vehicle registration. Please manually change from BV to Opnaam.",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+      
       // Create FormData for file upload
       const formData = new FormData();
       
