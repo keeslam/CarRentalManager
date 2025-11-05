@@ -228,22 +228,25 @@ export default function VehiclesIndex() {
         const isOut = Boolean(vehicle.dateOut) && !vehicle.dateIn;
         const isAvailableForRental = vehicle.availableForRental !== false; // Default to true if not set
         
-        return (
-          <div className="flex flex-col gap-1">
-            <Badge 
-              className={isOut 
-                ? "bg-warning-50 text-warning-600" 
-                : "bg-success-50 text-success-600"
-              }
-            >
-              {isOut ? "Reserved" : "Available"}
+        // Priority: If not available for rental, show that as primary status
+        if (!isAvailableForRental) {
+          return (
+            <Badge className="bg-gray-200 text-gray-700 font-semibold">
+              Not for Rental
             </Badge>
-            {!isAvailableForRental && (
-              <Badge className="bg-gray-200 text-gray-700 text-xs">
-                Not for Rental
-              </Badge>
-            )}
-          </div>
+          );
+        }
+        
+        // Otherwise show reservation status
+        return (
+          <Badge 
+            className={isOut 
+              ? "bg-warning-50 text-warning-600" 
+              : "bg-success-50 text-success-600"
+            }
+          >
+            {isOut ? "Reserved" : "Available"}
+          </Badge>
         );
       },
     },
