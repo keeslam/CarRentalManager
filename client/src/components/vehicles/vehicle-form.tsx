@@ -933,23 +933,9 @@ export function VehicleForm({
                   
                   <FormField
                     control={form.control}
-                    name="chassisNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chassis Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="VIN/Chassis number" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
                     name="availableForRental"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200 col-span-2">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200">
                         <div className="space-y-0.5">
                           <FormLabel className="font-semibold">Available for Rental</FormLabel>
                           <FormDescription className="text-xs">
@@ -963,6 +949,20 @@ export function VehicleForm({
                             data-testid="switch-available-for-rental"
                           />
                         </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="chassisNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Chassis Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="VIN/Chassis number" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
