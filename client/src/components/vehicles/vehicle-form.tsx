@@ -219,6 +219,7 @@ export function VehicleForm({
     backupbeepers: Boolean(initialData.backupbeepers),
     spareTire: Boolean(initialData.spareTire),
     toolsAndJack: Boolean(initialData.toolsAndJack),
+    availableForRental: initialData.availableForRental !== undefined ? Boolean(initialData.availableForRental) : true,
     
     // For string-boolean fields, convert to actual boolean for UI
     registeredTo: initialData.registeredTo === "true" || initialData.registeredTo === true,
@@ -266,6 +267,7 @@ export function VehicleForm({
       backupbeepers: false,
       spareTire: false,
       toolsAndJack: false,
+      availableForRental: true,
       internalAppointments: "",
       departureMileage: "",
       returnMileage: "",
@@ -537,7 +539,7 @@ export function VehicleForm({
     
     // Separate normal boolean fields from string-boolean fields
     const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
-      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'spareTire', 'toolsAndJack', 'gps', 'adBlue'];
+      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'spareTire', 'toolsAndJack', 'gps', 'adBlue', 'availableForRental'];
     
     // These fields are stored as strings in the database despite being boolean in the UI
     const stringBooleanFields = ['registeredTo', 'company'];
@@ -1321,6 +1323,28 @@ export function VehicleForm({
                           <Switch
                             checked={field.value as boolean}
                             onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="availableForRental"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200">
+                        <div className="space-y-0.5">
+                          <FormLabel className="font-semibold">Available for Rental</FormLabel>
+                          <FormDescription className="text-xs">
+                            Controls if this vehicle can be rented to customers
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value as boolean}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-available-for-rental"
                           />
                         </FormControl>
                       </FormItem>
