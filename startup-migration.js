@@ -89,6 +89,7 @@ async function runMigrations() {
     await addColumnIfNotExists('vehicles', 'production_date', 'text');
     await addColumnIfNotExists('vehicles', 'imei', 'text');
     await addColumnIfNotExists('vehicles', 'updated_by', 'text');
+    await addColumnIfNotExists('vehicles', 'available_for_rental', 'boolean DEFAULT true NOT NULL');
     
     // Add missing columns to reservations table
     await addColumnIfNotExists('reservations', 'type', 'text DEFAULT \'standard\' NOT NULL');
