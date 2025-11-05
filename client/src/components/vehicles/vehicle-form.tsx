@@ -858,6 +858,7 @@ export function VehicleForm({
               
               <TabsContent value="general" className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Column 1 */}
                   <FormField
                     control={form.control}
                     name="brand"
@@ -876,6 +877,7 @@ export function VehicleForm({
                     )}
                   />
                   
+                  {/* Column 2 */}
                   <FormField
                     control={form.control}
                     name="model"
@@ -894,6 +896,7 @@ export function VehicleForm({
                     )}
                   />
                   
+                  {/* Column 1 - Vehicle Type Dropdown */}
                   <FormField
                     control={form.control}
                     name="vehicleType"
@@ -915,22 +918,12 @@ export function VehicleForm({
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription className="text-xs">
-                          Or type custom vehicle type below
-                        </FormDescription>
-                        <FormControl>
-                          <Input 
-                            placeholder="e.g., Bestelwagen, Limousine" 
-                            value={handleFieldValue(field.value)}
-                            onChange={field.onChange}
-                            data-testid="input-vehicle-type-custom"
-                          />
-                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
+                  {/* Column 2 - Chassis Number */}
                   <FormField
                     control={form.control}
                     name="chassisNumber"
@@ -945,11 +938,35 @@ export function VehicleForm({
                     )}
                   />
                   
+                  {/* Column 1 - Custom Vehicle Type Input */}
+                  <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Vehicle Type</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Bestelwagen, Limousine" 
+                            value={handleFieldValue(field.value)}
+                            onChange={field.onChange}
+                            data-testid="input-vehicle-type-custom"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Type custom vehicle type here
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Column 2 - Available for Rental */}
                   <FormField
                     control={form.control}
                     name="availableForRental"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200 col-span-2">
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200">
                         <div className="space-y-0.5">
                           <FormLabel className="font-semibold">Available for Rental</FormLabel>
                           <FormDescription className="text-xs">
