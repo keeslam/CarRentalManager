@@ -1117,6 +1117,31 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Registered To Date</h4>
                     <p className="text-base">{vehicle.registeredToDate ? formatDate(vehicle.registeredToDate) : "N/A"}</p>
                   </div>
+                  
+                  <div className="md:col-span-3">
+                    <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-1">Available for Rental</h4>
+                        <p className="text-base font-semibold">
+                          {vehicle.availableForRental ? (
+                            <span className="text-green-600">Available</span>
+                          ) : (
+                            <span className="text-red-600">Not Available</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Controls if this vehicle can be rented to customers
+                        </p>
+                      </div>
+                      <AvailabilityToggleDialog 
+                        vehicle={vehicle}
+                        onSuccess={() => {
+                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2907,4 +2932,99 @@ function DocumentIcon({ type }: { type: string }) {
       </svg>
     );
   }
+}
+
+function AvailabilityToggleDialog({ 
+  vehicle, 
+  onSuccess 
+}: { 
+  vehicle: Vehicle; 
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(vehicle.availableForRental);
+  const { toast } = useToast();
+  
+  const updateAvailabilityMutation = useMutation({
+    mutationFn: async (availableForRental: boolean) => {
+      return await apiRequest("PATCH", `/api/vehicles/${vehicle.id}`, {
+        availableForRental
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Vehicle is now ${isAvailable ? 'available' : 'unavailable'} for rental`
+      });
+      onSuccess();
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update availability",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSave = () => {
+    updateAvailabilityMutation.mutate(isAvailable);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm"
+          data-testid="button-change-availability"
+        >
+          <Edit className="h-4 w-4 mr-2" />
+          Change
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change Rental Availability</DialogTitle>
+          <DialogDescription>
+            Control whether this vehicle can be rented to customers
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="py-6">
+          <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="space-y-0.5">
+              <Label className="text-base font-semibold">Available for Rental</Label>
+              <p className="text-sm text-muted-foreground">
+                When disabled, this vehicle won't appear in rental searches
+              </p>
+            </div>
+            <Switch
+              checked={isAvailable}
+              onCheckedChange={setIsAvailable}
+              data-testid="switch-dialog-availability"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => setOpen(false)}
+            disabled={updateAvailabilityMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={updateAvailabilityMutation.isPending}
+            data-testid="button-save-availability"
+          >
+            {updateAvailabilityMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
