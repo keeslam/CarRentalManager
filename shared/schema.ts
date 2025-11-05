@@ -167,6 +167,9 @@ export const vehicles = pgTable("vehicles", {
   // Oil specification
   recommendedOil: text("recommended_oil"), // e.g., "5W-30", "10W-40", or custom specification
   
+  // Availability for rental (manual control)
+  availableForRental: boolean("available_for_rental").default(true).notNull(), // Can this vehicle be rented out?
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
