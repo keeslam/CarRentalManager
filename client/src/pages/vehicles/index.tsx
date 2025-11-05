@@ -375,7 +375,7 @@ export default function VehiclesIndex() {
               )}
             </div>
             <div className="flex items-center">
-              <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort/Filter:</label>
+              <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[240px]">
                   <SelectValue placeholder="Default" />
@@ -388,10 +388,9 @@ export default function VehiclesIndex() {
                   <SelectItem value="apk-desc">APK Date (latest first)</SelectItem>
                   <SelectItem value="availability-asc">Availability (available first)</SelectItem>
                   <SelectItem value="availability-desc">Availability (reserved first)</SelectItem>
-                  <Separator className="my-2" />
-                  <SelectItem value="filter-opnaam">Filter: Opnaam only</SelectItem>
-                  <SelectItem value="filter-bv">Filter: BV only</SelectItem>
-                  <SelectItem value="filter-unspecified">Filter: Not specified</SelectItem>
+                  <SelectItem value="filter-opnaam">Opnaam</SelectItem>
+                  <SelectItem value="filter-bv">BV</SelectItem>
+                  <SelectItem value="filter-unspecified">Not specified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
