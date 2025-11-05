@@ -12,6 +12,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
@@ -24,7 +25,6 @@ export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("default");
-  const [registrationFilter, setRegistrationFilter] = useState<string>("all");
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,18 +86,23 @@ export default function VehiclesIndex() {
       if (!matchesSearch) return false;
     }
     
-    // Apply registration filter
-    if (registrationFilter !== "all") {
+    // Apply registration filter based on sortBy value
+    if (sortBy === "filter-opnaam" || sortBy === "filter-bv" || sortBy === "filter-unspecified") {
       const isRegisteredToPerson = isTrueValue(vehicle.registeredTo);
       const isRegisteredToCompany = isTrueValue(vehicle.company);
       
-      if (registrationFilter === "opnaam" && !isRegisteredToPerson) return false;
-      if (registrationFilter === "bv" && !isRegisteredToCompany) return false;
-      if (registrationFilter === "unspecified" && (isRegisteredToPerson || isRegisteredToCompany)) return false;
+      if (sortBy === "filter-opnaam" && !isRegisteredToPerson) return false;
+      if (sortBy === "filter-bv" && !isRegisteredToCompany) return false;
+      if (sortBy === "filter-unspecified" && (isRegisteredToPerson || isRegisteredToCompany)) return false;
     }
     
     return true;
   }).sort((a, b) => {
+    // If sortBy is a filter option, use default sorting
+    if (sortBy.startsWith("filter-")) {
+      return a.id - b.id;
+    }
+    
     // Apply sorting based on selected option
     switch (sortBy) {
       case "apk-asc":
@@ -370,9 +375,9 @@ export default function VehiclesIndex() {
               )}
             </div>
             <div className="flex items-center">
-              <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
+              <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort/Filter:</label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="w-[240px]">
                   <SelectValue placeholder="Default" />
                 </SelectTrigger>
                 <SelectContent>
@@ -383,20 +388,10 @@ export default function VehiclesIndex() {
                   <SelectItem value="apk-desc">APK Date (latest first)</SelectItem>
                   <SelectItem value="availability-asc">Availability (available first)</SelectItem>
                   <SelectItem value="availability-desc">Availability (reserved first)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center">
-              <label htmlFor="registrationFilter" className="mr-2 text-sm font-medium">Registration:</label>
-              <Select value={registrationFilter} onValueChange={setRegistrationFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="opnaam">Opnaam</SelectItem>
-                  <SelectItem value="bv">BV</SelectItem>
-                  <SelectItem value="unspecified">Not specified</SelectItem>
+                  <Separator className="my-2" />
+                  <SelectItem value="filter-opnaam">Filter: Opnaam only</SelectItem>
+                  <SelectItem value="filter-bv">Filter: BV only</SelectItem>
+                  <SelectItem value="filter-unspecified">Filter: Not specified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
