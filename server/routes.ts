@@ -1990,6 +1990,26 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
+      // Auto-convert BV → Opnaam before creating reservation (legal requirement)
+      // BV vehicles cannot be driven (no insurance/road tax), Opnaam vehicles can
+      try {
+        const vehicle = await storage.getVehicle(reservationData.vehicleId);
+        if (vehicle && (vehicle.company === "true" || vehicle.company === true)) {
+          console.log(`🔄 Auto-converting vehicle ${vehicle.id} from BV to Opnaam (required for rental)`);
+          
+          await storage.updateVehicle(vehicle.id, {
+            registeredTo: "true",  // Set to Opnaam
+            company: "false",      // Remove BV status
+            registeredToDate: format(new Date(), 'yyyy-MM-dd'),
+          });
+          
+          console.log(`✅ Vehicle ${vehicle.id} converted from BV to Opnaam`);
+        }
+      } catch (error) {
+        console.error('Failed to convert vehicle from BV to Opnaam:', error);
+        // Don't fail the reservation, just log the error
+      }
+      
       const reservation = await storage.createReservation(dataWithTracking);
       
       // Broadcast real-time update to all connected clients
@@ -2392,6 +2412,29 @@ export async function registerRoutes(app: Express): Promise<void> {
           message: "Reservation conflicts with existing bookings",
           conflicts
         });
+      }
+      
+      // Auto-convert BV → Opnaam before updating reservation (legal requirement)
+      // Only convert if vehicle has changed to a BV vehicle
+      const existingReservation = await storage.getReservation(id);
+      if (existingReservation && reservationData.vehicleId !== existingReservation.vehicleId) {
+        try {
+          const vehicle = await storage.getVehicle(reservationData.vehicleId);
+          if (vehicle && (vehicle.company === "true" || vehicle.company === true)) {
+            console.log(`🔄 Auto-converting vehicle ${vehicle.id} from BV to Opnaam (required for rental)`);
+            
+            await storage.updateVehicle(vehicle.id, {
+              registeredTo: "true",  // Set to Opnaam
+              company: "false",      // Remove BV status
+              registeredToDate: format(new Date(), 'yyyy-MM-dd'),
+            });
+            
+            console.log(`✅ Vehicle ${vehicle.id} converted from BV to Opnaam`);
+          }
+        } catch (error) {
+          console.error('Failed to convert vehicle from BV to Opnaam:', error);
+          // Don't fail the reservation update, just log the error
+        }
       }
       
       // Add user tracking information for updates
