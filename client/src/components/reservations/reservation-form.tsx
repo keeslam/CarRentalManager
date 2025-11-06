@@ -155,6 +155,7 @@ interface ReservationFormProps {
   initialStartDate?: string;
   onSuccess?: (reservation: Reservation) => void;
   onCancel?: () => void;
+  onPreviewModeChange?: (inPreview: boolean) => void;
 }
 
 export function ReservationForm({ 
@@ -164,7 +165,8 @@ export function ReservationForm({
   initialCustomerId,
   initialStartDate,
   onSuccess,
-  onCancel
+  onCancel,
+  onPreviewModeChange
 }: ReservationFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -1208,6 +1210,12 @@ export function ReservationForm({
           setContractPreviewToken(token);
           setPreviewData(data);
           setIsPreviewMode(true);
+          
+          // Notify parent component about preview mode
+          if (onPreviewModeChange) {
+            onPreviewModeChange(true);
+          }
+          
           console.log('✅ Preview mode state set. Dialog should remain open.');
           
           // Auto-open the contract in a new tab

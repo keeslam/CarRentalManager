@@ -154,6 +154,7 @@ export default function ReservationCalendarPage() {
   // New reservation dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [isInPreviewMode, setIsInPreviewMode] = useState(false);
   
   // List view dialog
   const [listDialogOpen, setListDialogOpen] = useState(false);
@@ -2353,11 +2354,14 @@ export default function ReservationCalendarPage() {
       <Dialog 
         open={addDialogOpen} 
         onOpenChange={(open) => {
-          // Prevent dialog from closing unexpectedly
-          // Only close when user explicitly cancels or completes reservation
-          if (!open) {
-            console.log('⚠️ Dialog trying to close - preventing auto-close');
+          // Prevent dialog from closing when in preview mode
+          if (!open && isInPreviewMode) {
+            console.log('⚠️ Blocking dialog close - user is in preview mode');
             return;
+          }
+          // Allow closing when not in preview mode
+          if (!open) {
+            setIsInPreviewMode(false);
           }
           setAddDialogOpen(open);
         }}
@@ -2365,12 +2369,16 @@ export default function ReservationCalendarPage() {
         <DialogContent 
           className="max-w-4xl max-h-[90vh] overflow-y-auto" 
           onInteractOutside={(e) => {
-            console.log('🚫 Blocking outside click');
-            e.preventDefault();
+            if (isInPreviewMode) {
+              console.log('🚫 Blocking outside click - in preview mode');
+              e.preventDefault();
+            }
           }}
           onEscapeKeyDown={(e) => {
-            console.log('🚫 Blocking escape key');
-            e.preventDefault();
+            if (isInPreviewMode) {
+              console.log('🚫 Blocking escape key - in preview mode');
+              e.preventDefault();
+            }
           }}
         >
           <DialogHeader>
@@ -2384,6 +2392,7 @@ export default function ReservationCalendarPage() {
               initialStartDate={selectedDate || undefined}
               onCancel={() => {
                 // Close dialog on cancel
+                setIsInPreviewMode(false);
                 setAddDialogOpen(false);
                 setSelectedDate(null);
               }}
@@ -2391,11 +2400,16 @@ export default function ReservationCalendarPage() {
                 // Only close the dialog when reservation is fully created
                 // Don't close during preview phase
                 if (reservation && reservation.id) {
+                  setIsInPreviewMode(false);
                   setAddDialogOpen(false);
                   setSelectedDate(null);
                   // Refresh calendar data
                   queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
                 }
+              }}
+              onPreviewModeChange={(inPreview) => {
+                console.log('📊 Preview mode changed:', inPreview);
+                setIsInPreviewMode(inPreview);
               }}
             />
           </div>
