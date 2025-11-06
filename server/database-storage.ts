@@ -308,12 +308,7 @@ export class DatabaseStorage implements IStorage {
       return await db
         .select()
         .from(vehicles)
-        .where(
-          or(
-            eq(vehicles.availableForRental, true),
-            isNull(vehicles.availableForRental) // Default to true if not set
-          )
-        );
+        .where(eq(vehicles.availabilityStatus, 'available'));
     }
     
     // When we have reserved vehicles, query for all those not in the reserved list AND available for rental
@@ -329,10 +324,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           combinedCondition,
-          or(
-            eq(vehicles.availableForRental, true),
-            isNull(vehicles.availableForRental) // Default to true if not set
-          )
+          eq(vehicles.availabilityStatus, 'available')
         )
       );
   }
@@ -1710,7 +1702,7 @@ export class DatabaseStorage implements IStorage {
     return allVehicles.filter(vehicle => 
       !unavailableVehicleIds.has(vehicle.id) && 
       vehicle.maintenanceStatus !== 'in_service' &&
-      (vehicle.availableForRental === true || vehicle.availableForRental === null) // Filter out vehicles not available for rental
+      vehicle.availabilityStatus === 'available' // Only include vehicles marked as available
     );
   }
 
