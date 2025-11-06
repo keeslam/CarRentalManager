@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { PlusCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReservationAddDialogProps {
   initialVehicleId?: string;
@@ -25,6 +26,25 @@ export function ReservationAddDialog({
   children 
 }: ReservationAddDialogProps) {
   const [open, setOpen] = useState(false);
+  const [isInPreviewMode, setIsInPreviewMode] = useState(false);
+  const { toast } = useToast();
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && isInPreviewMode) {
+      toast({
+        title: "Preview in Progress",
+        description: "Please finalize the reservation or click 'Back to Edit' before closing.",
+        variant: "default",
+      });
+      return;
+    }
+    
+    setOpen(newOpen);
+    
+    if (!newOpen) {
+      setIsInPreviewMode(false);
+    }
+  };
 
   // Custom trigger or default "New Reservation" button
   const trigger = children || (
@@ -35,7 +55,7 @@ export function ReservationAddDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
@@ -51,8 +71,9 @@ export function ReservationAddDialog({
             initialVehicleId={initialVehicleId}
             initialCustomerId={initialCustomerId}
             initialStartDate={initialStartDate}
+            onPreviewModeChange={setIsInPreviewMode}
             onCancel={() => {
-              // Close dialog on cancel
+              setIsInPreviewMode(false);
               setOpen(false);
             }}
           />
