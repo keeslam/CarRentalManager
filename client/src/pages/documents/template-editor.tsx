@@ -1441,11 +1441,18 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                                   <SelectItem value="brand">Vehicle Brand</SelectItem>
                                   <SelectItem value="model">Vehicle Model</SelectItem>
                                   <SelectItem value="chassisNumber">Chassis Number</SelectItem>
+                                  <SelectItem value="vehicleType">Vehicle Type</SelectItem>
+                                  <SelectItem value="fuelType">Fuel Type</SelectItem>
+                                  <SelectItem value="currentMileage">Current Mileage</SelectItem>
+                                  <SelectItem value="currentFuelLevel">Current Fuel Level</SelectItem>
+                                  <SelectItem value="apkDate">APK Date</SelectItem>
                                   <SelectItem value="customerName">Customer Name</SelectItem>
                                   <SelectItem value="customerAddress">Customer Address</SelectItem>
                                   <SelectItem value="customerCity">Customer City</SelectItem>
                                   <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
                                   <SelectItem value="customerPhone">Customer Phone</SelectItem>
+                                  <SelectItem value="customerEmail">Customer Email</SelectItem>
+                                  <SelectItem value="companyName">Company Name</SelectItem>
                                   <SelectItem value="driverLicense">Driver License</SelectItem>
                                   <SelectItem value="driverName">Driver Name</SelectItem>
                                   <SelectItem value="driverFirstName">Driver First Name</SelectItem>
@@ -1458,6 +1465,10 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                                   <SelectItem value="endDate">End Date</SelectItem>
                                   <SelectItem value="duration">Duration</SelectItem>
                                   <SelectItem value="totalPrice">Total Price</SelectItem>
+                                  <SelectItem value="pickupMileage">Pickup Mileage</SelectItem>
+                                  <SelectItem value="returnMileage">Return Mileage</SelectItem>
+                                  <SelectItem value="fuelLevelPickup">Fuel Level at Pickup</SelectItem>
+                                  <SelectItem value="fuelLevelReturn">Fuel Level at Return</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1666,11 +1677,18 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                             <SelectItem value="brand">Vehicle Brand</SelectItem>
                             <SelectItem value="model">Vehicle Model</SelectItem>
                             <SelectItem value="chassisNumber">Chassis Number</SelectItem>
+                            <SelectItem value="vehicleType">Vehicle Type</SelectItem>
+                            <SelectItem value="fuelType">Fuel Type</SelectItem>
+                            <SelectItem value="currentMileage">Current Mileage</SelectItem>
+                            <SelectItem value="currentFuelLevel">Current Fuel Level</SelectItem>
+                            <SelectItem value="apkDate">APK Date</SelectItem>
                             <SelectItem value="customerName">Customer Name</SelectItem>
                             <SelectItem value="customerAddress">Customer Address</SelectItem>
                             <SelectItem value="customerCity">Customer City</SelectItem>
                             <SelectItem value="customerPostalCode">Customer Postal Code</SelectItem>
                             <SelectItem value="customerPhone">Customer Phone</SelectItem>
+                            <SelectItem value="customerEmail">Customer Email</SelectItem>
+                            <SelectItem value="companyName">Company Name</SelectItem>
                             <SelectItem value="driverLicense">Driver License</SelectItem>
                             <SelectItem value="driverName">Driver Name</SelectItem>
                             <SelectItem value="driverFirstName">Driver First Name</SelectItem>
@@ -1683,6 +1701,10 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                             <SelectItem value="endDate">End Date</SelectItem>
                             <SelectItem value="duration">Duration</SelectItem>
                             <SelectItem value="totalPrice">Total Price</SelectItem>
+                            <SelectItem value="pickupMileage">Pickup Mileage</SelectItem>
+                            <SelectItem value="returnMileage">Return Mileage</SelectItem>
+                            <SelectItem value="fuelLevelPickup">Fuel Level at Pickup</SelectItem>
+                            <SelectItem value="fuelLevelReturn">Fuel Level at Return</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
