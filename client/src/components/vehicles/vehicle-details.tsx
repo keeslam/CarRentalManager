@@ -1118,6 +1118,21 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <p className="text-base">{vehicle.registeredToDate ? formatDate(vehicle.registeredToDate) : "N/A"}</p>
                   </div>
                   
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Emissions Zone Access</h4>
+                    <p className="text-base">{isTrueValue(vehicle.euroZoneAccess) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Paid Permit Access</h4>
+                    <p className="text-base">{isTrueValue(vehicle.euroZonePaidPermitAccess) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Euro Zone End Date</h4>
+                    <p className="text-base">{vehicle.euroZoneEndDate ? formatDate(vehicle.euroZoneEndDate) : "N/A"}</p>
+                  </div>
+                  
                   <div className="md:col-span-3">
                     <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div>
