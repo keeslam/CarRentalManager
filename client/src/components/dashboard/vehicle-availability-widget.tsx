@@ -1,114 +1,102 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatLicensePlate } from "@/lib/format-utils";
-import { Link } from "wouter";
-import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
-import { Vehicle } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { Car, Wrench, Ban, Key } from "lucide-react";
+
+interface StatusBreakdown {
+  available: number;
+  needs_fixing: number;
+  not_for_rental: number;
+  rented: number;
+  total: number;
+}
 
 export function VehicleAvailabilityWidget() {
-  const [vehicleType, setVehicleType] = useState<string>("all");
-  const [brand, setBrand] = useState<string>("all");
-  
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles/available"],
+  const { data: breakdown, isLoading } = useQuery<StatusBreakdown>({
+    queryKey: ["/api/vehicles/status/breakdown"],
   });
-  
-  const filteredVehicles = vehicles?.filter(vehicle => {
-    return (
-      (vehicleType === "all" || vehicle.vehicleType === vehicleType) &&
-      (brand === "all" || vehicle.brand === brand)
-    );
-  });
-  
-  const vehicleTypes = vehicles ? [...new Set(vehicles.map(v => v.vehicleType))].filter(Boolean) : [];
-  const brands = vehicles ? [...new Set(vehicles.map(v => v.brand))].filter(Boolean) : [];
-  
+
+  const statusItems = [
+    {
+      label: "Available",
+      count: breakdown?.available || 0,
+      color: "bg-green-100 text-green-700 border-green-200",
+      icon: Car,
+      iconColor: "text-green-600"
+    },
+    {
+      label: "Rented",
+      count: breakdown?.rented || 0,
+      color: "bg-blue-100 text-blue-700 border-blue-200",
+      icon: Key,
+      iconColor: "text-blue-600"
+    },
+    {
+      label: "Needs Fixing",
+      count: breakdown?.needs_fixing || 0,
+      color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      icon: Wrench,
+      iconColor: "text-yellow-600"
+    },
+    {
+      label: "Not for Rental",
+      count: breakdown?.not_for_rental || 0,
+      color: "bg-gray-100 text-gray-700 border-gray-200",
+      icon: Ban,
+      iconColor: "text-gray-600"
+    }
+  ];
+
   return (
     <Card className="overflow-hidden h-full">
       <CardHeader className="bg-primary-600 py-3 px-4 flex-row justify-between items-center space-y-0">
-        <CardTitle className="text-base font-medium text-gray-900">Vehicle Availability</CardTitle>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-car text-gray-900">
-          <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
-          <circle cx="6.5" cy="16.5" r="2.5" />
-          <circle cx="16.5" cy="16.5" r="2.5" />
-        </svg>
+        <CardTitle className="text-base font-medium text-gray-900">Vehicle Status</CardTitle>
+        <Car className="w-5 h-5 text-gray-900" />
       </CardHeader>
       <CardContent className="p-4">
-        <div className="mb-3 flex justify-between items-center">
-          <div className="text-xl font-semibold">
-            {isLoading ? "-" : filteredVehicles?.length || 0}
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           </div>
-          <div className="flex space-x-2">
-            <Select value={vehicleType} onValueChange={setVehicleType}>
-              <SelectTrigger className="h-8 text-xs w-[100px]">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent side="top">
-                <SelectItem value="all">All</SelectItem>
-                {vehicleTypes.map(type => (
-                  <SelectItem key={type} value={type || ''}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={brand} onValueChange={setBrand}>
-              <SelectTrigger className="h-8 text-xs w-[100px]">
-                <SelectValue placeholder="Brand" />
-              </SelectTrigger>
-              <SelectContent side="top">
-                <SelectItem value="all">All</SelectItem>
-                {brands.map(b => (
-                  <SelectItem key={b} value={b}>{b}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="space-y-2 max-h-72 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center p-4">
-              <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-center border-b pb-3">
+              <div className="text-3xl font-bold text-gray-900">{breakdown?.total || 0}</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Total Vehicles</div>
             </div>
-          ) : filteredVehicles?.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No vehicles available</div>
-          ) : (
-            filteredVehicles?.map(vehicle => (
-              <div key={vehicle.id} className="flex items-center p-2 border rounded-md hover:bg-gray-50">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-md flex items-center justify-center text-primary-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-car">
-                    <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
-                    <circle cx="6.5" cy="16.5" r="2.5" />
-                    <circle cx="16.5" cy="16.5" r="2.5" />
-                  </svg>
-                </div>
-                <div className="ml-3 flex-grow">
-                  <div className="text-sm font-medium text-gray-900">{formatLicensePlate(vehicle.licensePlate)}</div>
-                  <div className="text-xs text-gray-500">{vehicle.brand} {vehicle.model}</div>
-                </div>
-                <div>
-                  <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
-                    <Button variant="ghost" size="icon" className="text-primary-600 hover:bg-primary-50 rounded">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar-plus">
-                        <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
-                        <line x1="16" x2="16" y1="2" y2="6" />
-                        <line x1="8" x2="8" y1="2" y2="6" />
-                        <line x1="3" x2="21" y1="10" y2="10" />
-                        <line x1="19" x2="19" y1="16" y2="22" />
-                        <line x1="16" x2="22" y1="19" y2="19" />
-                      </svg>
-                    </Button>
-                  </ReservationAddDialog>
-                </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {statusItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div 
+                    key={item.label} 
+                    className={`p-3 rounded-lg border ${item.color} transition-all hover:shadow-md`}
+                    data-testid={`status-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <Icon className={`w-4 h-4 ${item.iconColor}`} />
+                      <span className="text-xl font-bold">{item.count}</span>
+                    </div>
+                    <div className="text-xs font-medium">{item.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between text-xs text-gray-600">
+                <span>Ready to Rent</span>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  {breakdown?.available || 0}
+                </Badge>
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

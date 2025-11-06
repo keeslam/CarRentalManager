@@ -2047,6 +2047,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const reservation = await storage.createReservation(dataWithTracking);
       
+      // Sync vehicle availability status after creating reservation
+      await storage.syncVehicleAvailabilityWithReservations();
+      
       // Broadcast real-time update to all connected clients
       realtimeEvents.reservations.created(reservation);
       
@@ -2482,6 +2485,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
+      // Sync vehicle availability status after updating reservation
+      await storage.syncVehicleAvailabilityWithReservations();
+      
       // Broadcast real-time update to all connected clients
       realtimeEvents.reservations.updated(reservation);
       
@@ -2648,6 +2654,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
       }
+      
+      // Sync vehicle availability status after status update
+      await storage.syncVehicleAvailabilityWithReservations();
       
       // Fetch related data to return enriched reservation
       const vehicle = reservation.vehicleId ? await storage.getVehicle(reservation.vehicleId) : null;
@@ -2871,6 +2880,9 @@ export async function registerRoutes(app: Express): Promise<void> {
           damageCheckPath: getRelativePath(req.file.path)
         });
       }
+      
+      // Sync vehicle availability status after updating reservation
+      await storage.syncVehicleAvailabilityWithReservations();
       
       // Broadcast real-time update to all connected clients
       realtimeEvents.reservations.updated(reservation);
@@ -3476,6 +3488,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Delete the main reservation
       const updatedReservation = await storage.updateReservation(id, softDeleteData);
       if (updatedReservation) {
+        // Sync vehicle availability status after deleting reservation
+        await storage.syncVehicleAvailabilityWithReservations();
+        
         // Broadcast real-time update to all connected clients
         realtimeEvents.reservations.deleted({ id });
         
