@@ -118,22 +118,18 @@ export default function VehiclesIndex() {
         return new Date(b.apkDate).getTime() - new Date(a.apkDate).getTime();
       
       case "availability-asc":
-        // Sort by availability - use dateOut as an indicator
-        // A vehicle is considered "out" if it has a dateOut value but no dateIn
-        const aIsOut = Boolean(a.dateOut) && !a.dateIn;
-        const bIsOut = Boolean(b.dateOut) && !b.dateIn;
-        if (!aIsOut && bIsOut) return -1; // Available vehicles first
-        if (aIsOut && !bIsOut) return 1;
-        return 0;
+        // Sort by availability status - available vehicles first
+        const statusOrder = { 'available': 1, 'needs_fixing': 2, 'not_for_rental': 3, 'rented': 4 };
+        const aOrder = statusOrder[a.availabilityStatus as keyof typeof statusOrder] || 5;
+        const bOrder = statusOrder[b.availabilityStatus as keyof typeof statusOrder] || 5;
+        return aOrder - bOrder;
         
       case "availability-desc":
-        // Sort by availability - use dateOut as an indicator
-        // A vehicle is considered "out" if it has a dateOut value but no dateIn
-        const aIsOut2 = Boolean(a.dateOut) && !a.dateIn;
-        const bIsOut2 = Boolean(b.dateOut) && !b.dateIn;
-        if (!aIsOut2 && bIsOut2) return 1; // Put "out" vehicles first
-        if (aIsOut2 && !bIsOut2) return -1;
-        return 0;
+        // Sort by availability status - rented/reserved vehicles first
+        const statusOrderDesc = { 'rented': 1, 'not_for_rental': 2, 'needs_fixing': 3, 'available': 4 };
+        const aOrderDesc = statusOrderDesc[a.availabilityStatus as keyof typeof statusOrderDesc] || 5;
+        const bOrderDesc = statusOrderDesc[b.availabilityStatus as keyof typeof statusOrderDesc] || 5;
+        return aOrderDesc - bOrderDesc;
       
       case "brand":
         // Sort by brand name alphabetically
