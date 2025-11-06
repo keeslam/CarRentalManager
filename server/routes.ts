@@ -785,6 +785,38 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Get vehicle availability status breakdown
+  app.get("/api/vehicles/status/breakdown", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
+    try {
+      // Sync availability status with reservations first
+      await storage.syncVehicleAvailabilityWithReservations();
+      
+      const vehicles = await storage.getAllVehicles();
+      
+      // Count vehicles by status
+      const breakdown = {
+        available: 0,
+        needs_fixing: 0,
+        not_for_rental: 0,
+        rented: 0,
+        total: vehicles.length
+      };
+      
+      vehicles.forEach(vehicle => {
+        const status = vehicle.availabilityStatus || 'available';
+        if (status === 'available') breakdown.available++;
+        else if (status === 'needs_fixing') breakdown.needs_fixing++;
+        else if (status === 'not_for_rental') breakdown.not_for_rental++;
+        else if (status === 'rented') breakdown.rented++;
+      });
+      
+      res.json(breakdown);
+    } catch (error) {
+      console.error("Error fetching vehicle status breakdown:", error);
+      res.status(500).json({ message: "Failed to fetch vehicle status breakdown", error });
+    }
+  });
+
   // Get all vehicles with optional search
   app.get("/api/vehicles", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
     try {
@@ -792,6 +824,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+      
+      // Sync availability status with reservations before fetching
+      await storage.syncVehicleAvailabilityWithReservations();
       
       const searchQuery = req.query.search as string | undefined;
       const vehicles = await storage.getAllVehicles(searchQuery);

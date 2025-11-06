@@ -139,6 +139,65 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
   }
 
+  // Sync vehicle availability status with active reservations
+  async syncVehicleAvailabilityWithReservations(): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all vehicles with active reservations (not cancelled, not completed, covers today)
+    const activeReservations = await db
+      .select({ vehicleId: reservations.vehicleId })
+      .from(reservations)
+      .where(
+        and(
+          sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.status} != 'completed'`,
+          sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance
+          isNull(reservations.deletedAt),
+          sql`${reservations.vehicleId} IS NOT NULL`,
+          sql`${reservations.startDate} <= ${today}`,
+          or(
+            sql`${reservations.endDate} >= ${today}`,
+            isNull(reservations.endDate) // Include open-ended rentals
+          )
+        )
+      );
+    
+    const rentedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
+    
+    // Update vehicles with active reservations to "rented" status
+    if (rentedVehicleIds.size > 0) {
+      await db
+        .update(vehicles)
+        .set({ availabilityStatus: 'rented' })
+        .where(
+          and(
+            inArray(vehicles.id, Array.from(rentedVehicleIds)),
+            not(eq(vehicles.availabilityStatus, 'rented')) // Only update if not already rented
+          )
+        );
+    }
+    
+    // Reset vehicles that are no longer rented back to "available"
+    // Only reset vehicles that are currently marked as "rented" but have no active reservations
+    if (rentedVehicleIds.size > 0) {
+      await db
+        .update(vehicles)
+        .set({ availabilityStatus: 'available' })
+        .where(
+          and(
+            eq(vehicles.availabilityStatus, 'rented'),
+            notInArray(vehicles.id, Array.from(rentedVehicleIds))
+          )
+        );
+    } else {
+      // If no vehicles are currently rented, reset all vehicles with "rented" status
+      await db
+        .update(vehicles)
+        .set({ availabilityStatus: 'available' })
+        .where(eq(vehicles.availabilityStatus, 'rented'));
+    }
+  }
+
   async getVehicle(id: number): Promise<Vehicle | undefined> {
     const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, id));
     return vehicle || undefined;
