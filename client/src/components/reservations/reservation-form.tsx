@@ -691,7 +691,7 @@ export function ReservationForm({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       // Check if vehicle is BV and convert to Opnaam if needed
       if (selectedVehicle && data.vehicleId) {
-        const isBV = selectedVehicle.company === "true" || selectedVehicle.company === true;
+        const isBV = selectedVehicle.company === "true";
         
         if (isBV) {
           // Convert BV → Opnaam (required for rental insurance/tax)
@@ -2229,7 +2229,7 @@ export function ReservationForm({
                         <FormItem>
                           <FormLabel>Delivery Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Street address" {...field} data-testid="input-delivery-address" />
+                            <Input placeholder="Street address" {...field} value={field.value || ""} data-testid="input-delivery-address" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -2243,7 +2243,7 @@ export function ReservationForm({
                           <FormItem>
                             <FormLabel>City</FormLabel>
                             <FormControl>
-                              <Input placeholder="City" {...field} data-testid="input-delivery-city" />
+                              <Input placeholder="City" {...field} value={field.value || ""} data-testid="input-delivery-city" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -2256,7 +2256,7 @@ export function ReservationForm({
                           <FormItem>
                             <FormLabel>Postal Code</FormLabel>
                             <FormControl>
-                              <Input placeholder="1234 AB" {...field} data-testid="input-delivery-postal-code" />
+                              <Input placeholder="1234 AB" {...field} value={field.value || ""} data-testid="input-delivery-postal-code" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -2298,6 +2298,7 @@ export function ReservationForm({
                             <Textarea
                               placeholder="Special delivery instructions..."
                               {...field}
+                              value={field.value || ""}
                               data-testid="textarea-delivery-notes"
                             />
                           </FormControl>
