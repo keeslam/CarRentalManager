@@ -1299,7 +1299,7 @@ export function ReservationForm({
       createReservationMutation.mutate(submissionData);
     } else {
       // In create mode, go to preview
-      handlePreviewAndContract(data);
+      await handlePreviewAndContract(data);
     }
   };
   
