@@ -1580,34 +1580,6 @@ export function VehicleForm({
                   
                   <FormField
                     control={form.control}
-                    name="euroZone"
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Switch
-                              checked={!!field.value}
-                              onCheckedChange={(checked) => {
-                                field.onChange(checked ? 'Euro 6' : '');
-                              }}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Euro Zone
-                            </FormLabel>
-                            <FormDescription>
-                              Enable this if the vehicle has a Euro classification
-                            </FormDescription>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )
-                    }}
-                  />
-                  
-                  <FormField
-                    control={form.control}
                     name="euroZoneEndDate"
                     render={({ field }) => (
                       <FormItem>
