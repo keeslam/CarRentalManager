@@ -219,6 +219,8 @@ export function VehicleForm({
     backupbeepers: Boolean(initialData.backupbeepers),
     spareTire: Boolean(initialData.spareTire),
     toolsAndJack: Boolean(initialData.toolsAndJack),
+    euroZoneAccess: Boolean(initialData.euroZoneAccess),
+    euroZonePaidPermitAccess: Boolean(initialData.euroZonePaidPermitAccess),
     availabilityStatus: initialData.availabilityStatus || "available",
     
     // For string-boolean fields, convert to actual boolean for UI
@@ -267,6 +269,8 @@ export function VehicleForm({
       backupbeepers: false,
       spareTire: false,
       toolsAndJack: false,
+      euroZoneAccess: false,
+      euroZonePaidPermitAccess: false,
       availabilityStatus: "available",
       internalAppointments: "",
       departureMileage: "",
@@ -1619,6 +1623,53 @@ export function VehicleForm({
                     )}
                   />
                   
+                  <FormField
+                    control={form.control}
+                    name="euroZoneAccess"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Emissions Zone Access
+                          </FormLabel>
+                          <FormDescription>
+                            Vehicle can enter emissions zones (e.g., Amsterdam milieuzone)
+                          </FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="euroZonePaidPermitAccess"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Paid Permit Access
+                          </FormLabel>
+                          <FormDescription>
+                            Vehicle can enter emissions zones with a paid day permit
+                          </FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                 </div>
               </TabsContent>

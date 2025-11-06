@@ -116,6 +116,8 @@ export const vehicles = pgTable("vehicles", {
   adBlue: boolean("ad_blue"),
   euroZone: text("euro_zone"),
   euroZoneEndDate: text("euro_zone_end_date"),
+  euroZoneAccess: boolean("euro_zone_access"),
+  euroZonePaidPermitAccess: boolean("euro_zone_paid_permit_access"),
   internalAppointments: text("internal_appointments"),
   apkDate: text("apk_date"),
   company: text("company"),
