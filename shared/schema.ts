@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -168,8 +168,8 @@ export const vehicles = pgTable("vehicles", {
   lastServiceMileage: integer("last_service_mileage"),
   
   // Fuel level tracking (independent of reservations)
-  currentFuelLevel: text("current_fuel_level"), // 'empty' | '1/4' | '1/2' | '3/4' | 'full'
-  fuelRefillCost: numeric("fuel_refill_cost"), // Cost of last refill
+  currentFuelLevel: varchar("current_fuel_level"), // 'empty' | '1/4' | '1/2' | '3/4' | 'full'
+  fuelRefillCost: numeric("fuel_refill_cost", { precision: 10, scale: 2 }), // Cost of last refill
   fuelRefillReceipt: text("fuel_refill_receipt"), // Path to receipt image/PDF
   fuelRefillNotes: text("fuel_refill_notes"), // Notes about the refill
   fuelRefillDate: timestamp("fuel_refill_date"), // When the refill was done
@@ -1311,3 +1311,10 @@ export const insertActiveSessionSchema = createInsertSchema(activeSessions).omit
 
 export type ActiveSession = typeof activeSessions.$inferSelect;
 export type InsertActiveSession = z.infer<typeof insertActiveSessionSchema>;
+
+// Legacy Session table (connect-pg-simple sessions)
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
