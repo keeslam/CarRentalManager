@@ -2742,7 +2742,16 @@ export function ReservationForm({
                 {/* Submit button - Preview in create mode, Update in edit mode */}
                 {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
                   <Button 
-                    type="submit"
+                    type={editMode ? "submit" : "button"}
+                    onClick={editMode ? undefined : (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🎯 Preview button clicked - preventing form submission');
+                      form.handleSubmit(async (data) => {
+                        console.log('📋 Form data validated, calling handlePreviewAndContract');
+                        await handlePreviewAndContract(data);
+                      })();
+                    }}
                     disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
                   >
                     {createReservationMutation.isPending 
