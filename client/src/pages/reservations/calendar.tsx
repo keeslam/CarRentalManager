@@ -2350,8 +2350,15 @@ export default function ReservationCalendarPage() {
       </Dialog>
 
       {/* New Reservation Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog 
+        open={addDialogOpen} 
+        onOpenChange={(open) => {
+          // Only allow closing the dialog when explicitly requested
+          // This prevents accidental closing during preview generation
+          setAddDialogOpen(open);
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>New Reservation</DialogTitle>
             <DialogDescription>
@@ -2365,6 +2372,16 @@ export default function ReservationCalendarPage() {
                 // Close dialog on cancel
                 setAddDialogOpen(false);
                 setSelectedDate(null);
+              }}
+              onSuccess={(reservation) => {
+                // Only close the dialog when reservation is fully created
+                // Don't close during preview phase
+                if (reservation && reservation.id) {
+                  setAddDialogOpen(false);
+                  setSelectedDate(null);
+                  // Refresh calendar data
+                  queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+                }
               }}
             />
           </div>
