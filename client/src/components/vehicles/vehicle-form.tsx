@@ -219,7 +219,7 @@ export function VehicleForm({
     backupbeepers: Boolean(initialData.backupbeepers),
     spareTire: Boolean(initialData.spareTire),
     toolsAndJack: Boolean(initialData.toolsAndJack),
-    availableForRental: initialData.availableForRental !== undefined ? Boolean(initialData.availableForRental) : true,
+    availabilityStatus: initialData.availabilityStatus || "available",
     
     // For string-boolean fields, convert to actual boolean for UI
     registeredTo: initialData.registeredTo === "true" || initialData.registeredTo === true,
@@ -267,7 +267,7 @@ export function VehicleForm({
       backupbeepers: false,
       spareTire: false,
       toolsAndJack: false,
-      availableForRental: true,
+      availabilityStatus: "available",
       internalAppointments: "",
       departureMileage: "",
       returnMileage: "",
@@ -539,7 +539,7 @@ export function VehicleForm({
     
     // Separate normal boolean fields from string-boolean fields
     const booleanFields = ['winterTires', 'damageCheck', 'roadsideAssistance', 
-      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'spareTire', 'toolsAndJack', 'gps', 'adBlue', 'availableForRental'];
+      'spareKey', 'wokNotification', 'seatcovers', 'backupbeepers', 'spareTire', 'toolsAndJack', 'gps', 'adBlue'];
     
     // These fields are stored as strings in the database despite being boolean in the UI
     const stringBooleanFields = ['registeredTo', 'company'];
@@ -961,25 +961,33 @@ export function VehicleForm({
                     )}
                   />
                   
-                  {/* Column 2 - Available for Rental */}
+                  {/* Column 2 - Availability Status */}
                   <FormField
                     control={form.control}
-                    name="availableForRental"
+                    name="availabilityStatus"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 bg-blue-50 border-blue-200">
-                        <div className="space-y-0.5">
-                          <FormLabel className="font-semibold">Available for Rental</FormLabel>
-                          <FormDescription className="text-xs">
-                            Controls if this vehicle can be rented to customers
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-available-for-rental"
-                          />
-                        </FormControl>
+                      <FormItem>
+                        <FormLabel>Availability Status</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={handleFieldValue(field.value) || "available"}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-availability-status">
+                              <SelectValue placeholder="Select availability status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="needs_fixing">Needs Fixing</SelectItem>
+                            <SelectItem value="not_for_rental">Not for Rental</SelectItem>
+                            <SelectItem value="rented">Rented</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Track vehicle ownership and rental status
+                        </FormDescription>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />

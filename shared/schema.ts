@@ -13,6 +13,14 @@ export const UserRole = {
   MAINTENANCE: 'maintenance',
 } as const;
 
+// Vehicle Availability Status enum
+export const VehicleAvailabilityStatus = {
+  AVAILABLE: 'available',
+  NEEDS_FIXING: 'needs_fixing',
+  NOT_FOR_RENTAL: 'not_for_rental',
+  RENTED: 'rented',
+} as const;
+
 // Permissions
 export const UserPermission = {
   // User Management
@@ -167,8 +175,12 @@ export const vehicles = pgTable("vehicles", {
   // Oil specification
   recommendedOil: text("recommended_oil"), // e.g., "5W-30", "10W-40", or custom specification
   
-  // Availability for rental (manual control)
-  availableForRental: boolean("available_for_rental").default(true).notNull(), // Can this vehicle be rented out?
+  // Availability status (manual control with 4 states)
+  // 'available' - ready for rental
+  // 'needs_fixing' - in workshop or needs repairs
+  // 'not_for_rental' - owned but not being rented out
+  // 'rented' - currently rented
+  availabilityStatus: text("availability_status").default("available").notNull(),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

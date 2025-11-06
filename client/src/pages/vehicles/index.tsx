@@ -225,27 +225,39 @@ export default function VehiclesIndex() {
       header: "Status",
       cell: ({ row }) => {
         const vehicle = row.original;
-        const isOut = Boolean(vehicle.dateOut) && !vehicle.dateIn;
-        const isAvailableForRental = vehicle.availableForRental !== false; // Default to true if not set
+        const availabilityStatus = vehicle.availabilityStatus || 'available';
         
-        // Priority: If not available for rental, show that as primary status
-        if (!isAvailableForRental) {
+        // Display the 4-state availability status
+        if (availabilityStatus === 'available') {
+          return (
+            <Badge className="bg-green-100 text-green-800 font-semibold">
+              Available
+            </Badge>
+          );
+        } else if (availabilityStatus === 'needs_fixing') {
+          return (
+            <Badge className="bg-yellow-100 text-yellow-800 font-semibold">
+              Needs Fixing
+            </Badge>
+          );
+        } else if (availabilityStatus === 'not_for_rental') {
           return (
             <Badge className="bg-gray-200 text-gray-700 font-semibold">
               Not for Rental
             </Badge>
           );
+        } else if (availabilityStatus === 'rented') {
+          return (
+            <Badge className="bg-blue-100 text-blue-800 font-semibold">
+              Rented
+            </Badge>
+          );
         }
         
-        // Otherwise show reservation status
+        // Fallback
         return (
-          <Badge 
-            className={isOut 
-              ? "bg-warning-50 text-warning-600" 
-              : "bg-success-50 text-success-600"
-            }
-          >
-            {isOut ? "Reserved" : "Available"}
+          <Badge className="bg-gray-100 text-gray-600">
+            {availabilityStatus}
           </Badge>
         );
       },

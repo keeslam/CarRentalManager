@@ -1121,16 +1121,31 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   <div className="md:col-span-3">
                     <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-1">Available for Rental</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-1">Availability Status</h4>
                         <p className="text-base font-semibold">
-                          {vehicle.availableForRental ? (
-                            <span className="text-green-600">Available</span>
-                          ) : (
-                            <span className="text-red-600">Not Available</span>
+                          {vehicle.availabilityStatus === 'available' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Available
+                            </span>
+                          )}
+                          {vehicle.availabilityStatus === 'needs_fixing' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              Needs Fixing
+                            </span>
+                          )}
+                          {vehicle.availabilityStatus === 'not_for_rental' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              Not for Rental
+                            </span>
+                          )}
+                          {vehicle.availabilityStatus === 'rented' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Rented
+                            </span>
                           )}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Controls if this vehicle can be rented to customers
+                          Track vehicle ownership and rental status
                         </p>
                       </div>
                       <AvailabilityToggleDialog 
@@ -2942,19 +2957,25 @@ function AvailabilityToggleDialog({
   onSuccess: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(vehicle.availableForRental);
+  const [availabilityStatus, setAvailabilityStatus] = useState(vehicle.availabilityStatus || 'available');
   const { toast } = useToast();
   
   const updateAvailabilityMutation = useMutation({
-    mutationFn: async (availableForRental: boolean) => {
+    mutationFn: async (availabilityStatus: string) => {
       return await apiRequest("PATCH", `/api/vehicles/${vehicle.id}`, {
-        availableForRental
+        availabilityStatus
       });
     },
     onSuccess: () => {
+      const statusLabels: Record<string, string> = {
+        'available': 'Available',
+        'needs_fixing': 'Needs Fixing',
+        'not_for_rental': 'Not for Rental',
+        'rented': 'Rented'
+      };
       toast({
         title: "Success",
-        description: `Vehicle is now ${isAvailable ? 'available' : 'unavailable'} for rental`
+        description: `Vehicle status updated to ${statusLabels[availabilityStatus]}`
       });
       onSuccess();
       setOpen(false);
@@ -2969,7 +2990,7 @@ function AvailabilityToggleDialog({
   });
 
   const handleSave = () => {
-    updateAvailabilityMutation.mutate(isAvailable);
+    updateAvailabilityMutation.mutate(availabilityStatus);
   };
 
   return (
@@ -2986,25 +3007,29 @@ function AvailabilityToggleDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Rental Availability</DialogTitle>
+          <DialogTitle>Change Vehicle Availability</DialogTitle>
           <DialogDescription>
-            Control whether this vehicle can be rented to customers
+            Update the vehicle's ownership and rental status
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-6">
-          <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="space-y-0.5">
-              <Label className="text-base font-semibold">Available for Rental</Label>
-              <p className="text-sm text-muted-foreground">
-                When disabled, this vehicle won't appear in rental searches
-              </p>
-            </div>
-            <Switch
-              checked={isAvailable}
-              onCheckedChange={setIsAvailable}
-              data-testid="switch-dialog-availability"
-            />
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Availability Status</Label>
+            <Select value={availabilityStatus} onValueChange={setAvailabilityStatus}>
+              <SelectTrigger data-testid="select-dialog-availability">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="needs_fixing">Needs Fixing</SelectItem>
+                <SelectItem value="not_for_rental">Not for Rental</SelectItem>
+                <SelectItem value="rented">Rented</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Track vehicle ownership, repair status, and rental availability
+            </p>
           </div>
         </div>
 
