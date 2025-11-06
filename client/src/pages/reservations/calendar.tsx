@@ -2353,12 +2353,26 @@ export default function ReservationCalendarPage() {
       <Dialog 
         open={addDialogOpen} 
         onOpenChange={(open) => {
-          // Only allow closing the dialog when explicitly requested
-          // This prevents accidental closing during preview generation
+          // Prevent dialog from closing unexpectedly
+          // Only close when user explicitly cancels or completes reservation
+          if (!open) {
+            console.log('⚠️ Dialog trying to close - preventing auto-close');
+            return;
+          }
           setAddDialogOpen(open);
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent 
+          className="max-w-4xl max-h-[90vh] overflow-y-auto" 
+          onInteractOutside={(e) => {
+            console.log('🚫 Blocking outside click');
+            e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            console.log('🚫 Blocking escape key');
+            e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>New Reservation</DialogTitle>
             <DialogDescription>

@@ -1204,9 +1204,11 @@ export function ReservationForm({
         if (response.ok) {
           const { token } = await response.json();
           console.log('✅ Generated preview token for contract:', token);
+          console.log('📝 Setting preview mode state...');
           setContractPreviewToken(token);
           setPreviewData(data);
           setIsPreviewMode(true);
+          console.log('✅ Preview mode state set. Dialog should remain open.');
           
           // Auto-open the contract in a new tab
           window.open(`/api/contracts/preview/${token}`, '_blank');
@@ -1215,6 +1217,7 @@ export function ReservationForm({
             title: "Preview Generated",
             description: "Contract preview has been generated. Review it and click 'Finalize Reservation' to complete.",
           });
+          console.log('✅ Toast shown. Check if dialog is still open...');
         } else {
           toast({
             title: "Preview Failed",
