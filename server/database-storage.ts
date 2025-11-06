@@ -140,6 +140,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Sync vehicle availability status with active reservations
+  // This function ONLY manages the "available" ↔ "rented" transition
+  // It preserves manual statuses like "needs_fixing" and "not_for_rental"
   async syncVehicleAvailabilityWithReservations(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
     
@@ -164,7 +166,8 @@ export class DatabaseStorage implements IStorage {
     
     const rentedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
     
-    // Update vehicles with active reservations to "rented" status
+    // ONLY set "available" vehicles to "rented" when they have active reservations
+    // Never change "needs_fixing" or "not_for_rental" vehicles
     if (rentedVehicleIds.size > 0) {
       await db
         .update(vehicles)
@@ -172,13 +175,13 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             inArray(vehicles.id, Array.from(rentedVehicleIds)),
-            not(eq(vehicles.availabilityStatus, 'rented')) // Only update if not already rented
+            eq(vehicles.availabilityStatus, 'available') // ONLY update "available" vehicles
           )
         );
     }
     
-    // Reset vehicles that are no longer rented back to "available"
-    // Only reset vehicles that are currently marked as "rented" but have no active reservations
+    // Reset "rented" vehicles back to "available" when they no longer have active reservations
+    // This preserves the business rule: manual statuses are never overwritten
     if (rentedVehicleIds.size > 0) {
       await db
         .update(vehicles)
