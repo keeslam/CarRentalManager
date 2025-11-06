@@ -86,20 +86,14 @@ export function CustomerViewDialog({
       <DialogContent 
         className="max-w-6xl max-h-[90vh] overflow-y-auto"
         onPointerDownOutside={(e) => {
-          // Prevent closing when clicking on nested dialogs
           const target = e.target as HTMLElement;
-          const allDialogs = document.querySelectorAll('[role="dialog"]');
-          // If there are multiple dialogs, prevent closing the parent
-          if (allDialogs.length > 1) {
+          if (target.closest('[role="dialog"]') && target.closest('[role="dialog"]') !== e.currentTarget) {
             e.preventDefault();
           }
         }}
         onInteractOutside={(e) => {
-          // Prevent closing when interacting with nested dialogs
           const target = e.target as HTMLElement;
-          const allDialogs = document.querySelectorAll('[role="dialog"]');
-          // If there are multiple dialogs, prevent closing the parent
-          if (allDialogs.length > 1) {
+          if (target.closest('[role="dialog"]') && target.closest('[role="dialog"]') !== e.currentTarget) {
             e.preventDefault();
           }
         }}
