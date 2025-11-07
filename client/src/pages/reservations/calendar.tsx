@@ -157,7 +157,6 @@ export default function ReservationCalendarPage() {
   // New reservation dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [isInPreviewMode, setIsInPreviewMode] = useState(false);
   
   // List view dialog
   const [listDialogOpen, setListDialogOpen] = useState(false);
@@ -2228,12 +2227,13 @@ export default function ReservationCalendarPage() {
             pickupMileage={selectedReservation.pickupMileage ?? null}
             returnMileage={selectedReservation.returnMileage ?? null}
             onStatusChanged={async () => {
-              // Close the status dialog
-              setStatusDialogOpen(false);
+              console.log('🔄 onStatusChanged callback started');
               
               // Always fetch fresh reservation data and reopen view dialog
               if (selectedReservation) {
                 try {
+                  console.log('📡 Fetching updated reservation data for ID:', selectedReservation.id);
+                  
                   // Fetch the updated reservation directly from the API
                   const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
                     credentials: 'include',
@@ -2241,19 +2241,27 @@ export default function ReservationCalendarPage() {
                   
                   if (response.ok) {
                     const updatedReservation = await response.json();
-                    console.log('✅ Fetched updated reservation after status change:', updatedReservation);
+                    console.log('✅ Fetched updated reservation:', updatedReservation.status);
                     setSelectedReservation(updatedReservation);
                     
+                    console.log('🔄 Reopening view dialog');
                     // Reopen the view dialog to show updated reservation
                     setViewDialogOpen(true);
+                    console.log('✅ View dialog should be open now');
+                  } else {
+                    console.error('❌ Failed to fetch reservation:', response.status);
                   }
                 } catch (error) {
-                  console.error('Error fetching updated reservation:', error);
+                  console.error('❌ Error fetching updated reservation:', error);
                 }
+              } else {
+                console.warn('⚠️ No selectedReservation available');
               }
               
               // Refetch the calendar data to update the list
+              console.log('🔄 Refetching calendar data');
               await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+              console.log('✅ onStatusChanged callback completed');
             }}
           />
         );
@@ -2397,34 +2405,9 @@ export default function ReservationCalendarPage() {
       {/* New Reservation Dialog */}
       <Dialog 
         open={addDialogOpen} 
-        onOpenChange={(open) => {
-          // Prevent dialog from closing when in preview mode
-          if (!open && isInPreviewMode) {
-            console.log('⚠️ Blocking dialog close - user is in preview mode');
-            return;
-          }
-          // Allow closing when not in preview mode
-          if (!open) {
-            setIsInPreviewMode(false);
-          }
-          setAddDialogOpen(open);
-        }}
+        onOpenChange={setAddDialogOpen}
       >
-        <DialogContent 
-          className="max-w-4xl max-h-[90vh] overflow-y-auto" 
-          onInteractOutside={(e) => {
-            if (isInPreviewMode) {
-              console.log('🚫 Blocking outside click - in preview mode');
-              e.preventDefault();
-            }
-          }}
-          onEscapeKeyDown={(e) => {
-            if (isInPreviewMode) {
-              console.log('🚫 Blocking escape key - in preview mode');
-              e.preventDefault();
-            }
-          }}
-        >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Reservation</DialogTitle>
             <DialogDescription>
@@ -2436,24 +2419,17 @@ export default function ReservationCalendarPage() {
               initialStartDate={selectedDate || undefined}
               onCancel={() => {
                 // Close dialog on cancel
-                setIsInPreviewMode(false);
                 setAddDialogOpen(false);
                 setSelectedDate(null);
               }}
               onSuccess={(reservation) => {
-                // Only close the dialog when reservation is fully created
-                // Don't close during preview phase
+                // Close the dialog when reservation is fully created
                 if (reservation && reservation.id) {
-                  setIsInPreviewMode(false);
                   setAddDialogOpen(false);
                   setSelectedDate(null);
                   // Refresh calendar data
                   queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
                 }
-              }}
-              onPreviewModeChange={(inPreview) => {
-                console.log('📊 Preview mode changed:', inPreview);
-                setIsInPreviewMode(inPreview);
               }}
             />
           </div>

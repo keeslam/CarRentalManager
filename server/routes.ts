@@ -2518,7 +2518,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Validate that status is a string and is one of the expected values
       const { status } = req.body;
       if (!status || typeof status !== 'string' || 
-          !['pending', 'confirmed', 'cancelled', 'completed'].includes(status.toLowerCase())) {
+          !['booked', 'picked_up', 'returned', 'completed', 'cancelled'].includes(status.toLowerCase())) {
         return res.status(400).json({ message: "Invalid status value" });
       }
       
@@ -3246,6 +3246,8 @@ export async function registerRoutes(app: Express): Promise<void> {
             documentType: 'Contract (Unsigned)',
             fileName: fileName,
             filePath: relativePath,
+            fileSize: contractPdf.length,
+            contentType: 'application/pdf',
             uploadedBy: (req as any).user?.username || 'system'
           });
           

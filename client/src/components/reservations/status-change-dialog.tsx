@@ -155,7 +155,7 @@ interface StatusChangeDialogProps {
   };
   pickupMileage?: number | null;
   returnMileage?: number | null;
-  onStatusChanged?: () => void;
+  onStatusChanged?: () => void | Promise<void>;
 }
 
 // Function to format license plate for display - removes dashes
@@ -456,9 +456,9 @@ export function StatusChangeDialog({
       // Close the dialog
       onOpenChange(false);
       
-      // Call the callback if provided
+      // Call the callback if provided (await if it's async)
       if (onStatusChanged) {
-        onStatusChanged();
+        await onStatusChanged();
       }
     },
     onError: (error: Error) => {
