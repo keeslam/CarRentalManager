@@ -3131,6 +3131,98 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== PICKUP AND RETURN ROUTES ====================
+  
+  // Pickup a reservation (enter mileage/fuel, generate contract)
+  app.post("/api/reservations/:id/pickup", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.id);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const { pickupMileage, fuelLevelPickup, pickupDate, pickupNotes } = req.body;
+      
+      if (!pickupMileage || !fuelLevelPickup) {
+        return res.status(400).json({ 
+          message: "Pickup mileage and fuel level are required" 
+        });
+      }
+
+      const updatedReservation = await storage.pickupReservation(reservationId, {
+        pickupMileage: parseInt(pickupMileage),
+        fuelLevelPickup,
+        pickupDate,
+        pickupNotes
+      });
+
+      if (!updatedReservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      res.json(updatedReservation);
+    } catch (error) {
+      console.error("Error during reservation pickup:", error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('cannot be less than')) {
+          return res.status(409).json({ message: error.message });
+        }
+        if (error.message.includes('Cannot pickup')) {
+          return res.status(400).json({ message: error.message });
+        }
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Return a reservation (enter mileage/fuel, generate damage check)
+  app.post("/api/reservations/:id/return", hasPermission(UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
+    try {
+      const reservationId = parseInt(req.params.id);
+      if (isNaN(reservationId)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const { returnMileage, fuelLevelReturn, returnDate, returnNotes } = req.body;
+      
+      if (!returnMileage || !fuelLevelReturn) {
+        return res.status(400).json({ 
+          message: "Return mileage and fuel level are required" 
+        });
+      }
+
+      const updatedReservation = await storage.returnReservation(reservationId, {
+        returnMileage: parseInt(returnMileage),
+        fuelLevelReturn,
+        returnDate,
+        returnNotes
+      });
+
+      if (!updatedReservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      res.json(updatedReservation);
+    } catch (error) {
+      console.error("Error during reservation return:", error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('cannot be less than')) {
+          return res.status(409).json({ message: error.message });
+        }
+        if (error.message.includes('Cannot return')) {
+          return res.status(400).json({ message: error.message });
+        }
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ==================== PLACEHOLDER SPARE VEHICLE ROUTES ====================
   
   // Create a placeholder spare vehicle reservation

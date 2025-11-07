@@ -21,6 +21,14 @@ export const VehicleAvailabilityStatus = {
   RENTED: 'rented',
 } as const;
 
+// Reservation Status enum
+export const ReservationStatus = {
+  BOOKED: 'booked',           // Reservation created, waiting for pickup
+  PICKED_UP: 'picked_up',     // Vehicle handed over, contract generated
+  RETURNED: 'returned',       // Vehicle returned, damage check completed
+  COMPLETED: 'completed',     // Fully processed and closed
+} as const;
+
 // Permissions
 export const UserPermission = {
   // User Management
@@ -339,7 +347,7 @@ export const reservations = pgTable("reservations", {
   startDate: text("start_date").notNull(),
   endDate: text("end_date"), // Allow null for open-ended rentals
   completionDate: text("completion_date"), // Date when vehicle was actually returned (for backlog/future tracking)
-  status: text("status").default("pending").notNull(),
+  status: text("status").default("booked").notNull(), // 'booked', 'picked_up', 'returned', 'completed'
   totalPrice: numeric("total_price"),
   notes: text("notes"),
   damageCheckPath: text("damage_check_path"),

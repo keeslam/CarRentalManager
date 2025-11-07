@@ -919,6 +919,139 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async pickupReservation(
+    reservationId: number,
+    pickupData: {
+      pickupMileage: number;
+      fuelLevelPickup: string;
+      pickupDate?: string;
+      pickupNotes?: string;
+    }
+  ): Promise<Reservation | undefined> {
+    const reservation = await this.getReservation(reservationId);
+    if (!reservation) {
+      throw new Error('Reservation not found');
+    }
+
+    if (reservation.status !== 'booked') {
+      throw new Error(`Cannot pickup reservation with status: ${reservation.status}. Only 'booked' reservations can be picked up.`);
+    }
+
+    if (!reservation.vehicleId) {
+      throw new Error('Cannot pickup reservation without a vehicle');
+    }
+
+    const vehicle = await this.getVehicle(reservation.vehicleId);
+    if (!vehicle) {
+      throw new Error('Vehicle not found');
+    }
+
+    if (vehicle.currentMileage && pickupData.pickupMileage < vehicle.currentMileage) {
+      throw new Error(`Pickup mileage (${pickupData.pickupMileage}) cannot be less than vehicle's current mileage (${vehicle.currentMileage})`);
+    }
+
+    const pickupDate = pickupData.pickupDate || new Date().toISOString().split('T')[0];
+
+    const [updatedReservation] = await db
+      .update(reservations)
+      .set({
+        pickupMileage: pickupData.pickupMileage,
+        fuelLevelPickup: pickupData.fuelLevelPickup,
+        startDate: pickupDate,
+        status: 'picked_up',
+        notes: pickupData.pickupNotes 
+          ? `${reservation.notes || ''}\n[PICKUP ${pickupDate}] ${pickupData.pickupNotes}`.trim()
+          : reservation.notes,
+        updatedAt: new Date()
+      })
+      .where(eq(reservations.id, reservationId))
+      .returning();
+
+    const vehicleUpdate: any = {
+      currentMileage: pickupData.pickupMileage,
+      currentFuelLevel: pickupData.fuelLevelPickup,
+      updatedAt: new Date()
+    };
+
+    if (vehicle.availabilityStatus === 'available') {
+      vehicleUpdate.availabilityStatus = 'rented';
+    }
+
+    await db
+      .update(vehicles)
+      .set(vehicleUpdate)
+      .where(eq(vehicles.id, reservation.vehicleId));
+
+    return this.getReservation(reservationId);
+  }
+
+  async returnReservation(
+    reservationId: number,
+    returnData: {
+      returnMileage: number;
+      fuelLevelReturn: string;
+      returnDate?: string;
+      returnNotes?: string;
+    }
+  ): Promise<Reservation | undefined> {
+    const reservation = await this.getReservation(reservationId);
+    if (!reservation) {
+      throw new Error('Reservation not found');
+    }
+
+    if (reservation.status !== 'picked_up') {
+      throw new Error(`Cannot return reservation with status: ${reservation.status}. Only 'picked_up' reservations can be returned.`);
+    }
+
+    if (!reservation.vehicleId) {
+      throw new Error('Cannot return reservation without a vehicle');
+    }
+
+    const vehicle = await this.getVehicle(reservation.vehicleId);
+    if (!vehicle) {
+      throw new Error('Vehicle not found');
+    }
+
+    if (reservation.pickupMileage && returnData.returnMileage < reservation.pickupMileage) {
+      throw new Error(`Return mileage (${returnData.returnMileage}) cannot be less than pickup mileage (${reservation.pickupMileage})`);
+    }
+
+    const returnDate = returnData.returnDate || new Date().toISOString().split('T')[0];
+
+    const [updatedReservation] = await db
+      .update(reservations)
+      .set({
+        returnMileage: returnData.returnMileage,
+        fuelLevelReturn: returnData.fuelLevelReturn,
+        status: 'returned',
+        endDate: returnDate,
+        completionDate: returnDate,
+        notes: returnData.returnNotes 
+          ? `${reservation.notes || ''}\n[RETURN ${returnDate}] ${returnData.returnNotes}`.trim()
+          : reservation.notes,
+        updatedAt: new Date()
+      })
+      .where(eq(reservations.id, reservationId))
+      .returning();
+
+    const vehicleUpdate: any = {
+      currentMileage: returnData.returnMileage,
+      currentFuelLevel: returnData.fuelLevelReturn,
+      updatedAt: new Date()
+    };
+
+    if (vehicle.availabilityStatus === 'rented') {
+      vehicleUpdate.availabilityStatus = 'available';
+    }
+
+    await db
+      .update(vehicles)
+      .set(vehicleUpdate)
+      .where(eq(vehicles.id, reservation.vehicleId));
+
+    return this.getReservation(reservationId);
+  }
+
   // Expense methods
   async getAllExpenses(): Promise<Expense[]> {
     const expensesData = await db.select().from(expenses);

@@ -60,6 +60,18 @@ export interface IStorage {
   getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
   getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
   checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null, isMaintenanceBlock?: boolean): Promise<Reservation[]>;
+  pickupReservation(reservationId: number, pickupData: {
+    pickupMileage: number;
+    fuelLevelPickup: string;
+    pickupDate?: string;
+    pickupNotes?: string;
+  }): Promise<Reservation | undefined>;
+  returnReservation(reservationId: number, returnData: {
+    returnMileage: number;
+    fuelLevelReturn: string;
+    returnDate?: string;
+    returnNotes?: string;
+  }): Promise<Reservation | undefined>;
   
   // Spare vehicle management methods
   getAvailableVehiclesInRange(startDate: string, endDate: string, excludeVehicleId?: number): Promise<Vehicle[]>;
