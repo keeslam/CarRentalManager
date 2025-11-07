@@ -45,6 +45,7 @@ import { ReservationForm } from "@/components/reservations/reservation-form";
 import { ReservationListDialog } from "@/components/reservations/reservation-list-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
+import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
@@ -145,6 +146,8 @@ export default function ReservationCalendarPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
   // Day reservations dialog
@@ -2043,6 +2046,41 @@ export default function ReservationCalendarPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t">
+                {selectedReservation.status === 'booked' && (
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      setPickupDialogOpen(true);
+                    }}
+                    data-testid="button-start-pickup-calendar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Start Pickup
+                  </Button>
+                )}
+                
+                {selectedReservation.status === 'picked_up' && (
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      setReturnDialogOpen(true);
+                    }}
+                    data-testid="button-start-return-calendar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
+                      <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"></path>
+                      <path d="M12 3v6"></path>
+                    </svg>
+                    Start Return
+                  </Button>
+                )}
+                
                 <Button 
                   className="flex-1"
                   onClick={() => {
@@ -2052,7 +2090,7 @@ export default function ReservationCalendarPage() {
                   data-testid="button-edit-reservation-dialog"
                 >
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit Reservation
+                  Edit
                 </Button>
                 <Button 
                   variant="outline"
@@ -2062,7 +2100,7 @@ export default function ReservationCalendarPage() {
                   data-testid="button-change-status-dialog"
                 >
                   <ClipboardEdit className="mr-2 h-4 w-4" />
-                  Change Status
+                  Status
                 </Button>
                 <Button 
                   variant="destructive"
@@ -2073,7 +2111,6 @@ export default function ReservationCalendarPage() {
                   data-testid="button-delete-reservation-dialog"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
                 </Button>
                 <Button 
                   variant="outline"
@@ -2752,6 +2789,22 @@ export default function ReservationCalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Pickup/Return Dialogs */}
+      {selectedReservation && (
+        <>
+          <PickupDialog
+            open={pickupDialogOpen}
+            onOpenChange={setPickupDialogOpen}
+            reservation={selectedReservation}
+          />
+          <ReturnDialog
+            open={returnDialogOpen}
+            onOpenChange={setReturnDialogOpen}
+            reservation={selectedReservation}
+          />
+        </>
+      )}
     </div>
   );
 }
