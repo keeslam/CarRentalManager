@@ -302,12 +302,13 @@ export default function ReservationsIndex() {
   
   // Helper for status statistics
   const getStatusCounts = useMemo(() => {
-    if (!reservations) return { all: 0, confirmed: 0, pending: 0, cancelled: 0, completed: 0 };
+    if (!reservations) return { all: 0, booked: 0, picked_up: 0, returned: 0, cancelled: 0, completed: 0 };
     
     const counts = {
       all: reservations.length,
-      pending: 0,
-      confirmed: 0, 
+      booked: 0,
+      picked_up: 0,
+      returned: 0,
       cancelled: 0,
       completed: 0
     };
@@ -483,8 +484,6 @@ export default function ReservationsIndex() {
         
         switch (status.toLowerCase()) {
           case "booked":
-          case "confirmed":
-          case "active":
             badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
             break;
           case "picked_up":
@@ -493,15 +492,11 @@ export default function ReservationsIndex() {
           case "returned":
             badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
             break;
-          case "pending":
-          case "scheduled":
-            badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+          case "completed":
+            badgeClass = "bg-green-100 text-green-800 border-green-200";
             break;
           case "cancelled":
             badgeClass = "bg-red-100 text-red-800 border-red-200";
-            break;
-          case "completed":
-            badgeClass = "bg-green-100 text-green-800 border-green-200";
             break;
           default:
             badgeClass = "bg-gray-100 text-gray-800";
@@ -668,10 +663,11 @@ export default function ReservationsIndex() {
   // Status tabs config
   const statusTabs = [
     { id: "all", label: "All", count: getStatusCounts.all },
-    { id: "confirmed", label: "Vehicle picked up", count: getStatusCounts.confirmed },
-    { id: "pending", label: "Booked", count: getStatusCounts.pending },
+    { id: "booked", label: "Booked", count: getStatusCounts.booked },
+    { id: "picked_up", label: "Picked Up", count: getStatusCounts.picked_up },
+    { id: "returned", label: "Returned", count: getStatusCounts.returned },
+    { id: "completed", label: "Completed", count: getStatusCounts.completed },
     { id: "cancelled", label: "Cancelled", count: getStatusCounts.cancelled },
-    { id: "completed", label: "Vehicle returned", count: getStatusCounts.completed },
   ];
   
   // Date range tabs

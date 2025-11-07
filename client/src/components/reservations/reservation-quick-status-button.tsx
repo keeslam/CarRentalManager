@@ -42,7 +42,7 @@ export function ReservationQuickStatusButton({
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
         reservationId={id}
-        initialStatus={status || "pending"}
+        initialStatus={status || "booked"}
         vehicle={vehicle}
         customer={customer}
         initialFuelData={{

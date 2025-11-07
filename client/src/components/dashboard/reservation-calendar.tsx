@@ -140,10 +140,10 @@ export function ReservationCalendar() {
   // Filter out completed reservations from calendar view
   const reservations = useMemo(() => {
     if (!allReservations) return [];
-    // Only show pending, confirmed, active reservations OR maintenance blocks
+    // Only show booked, picked_up, returned reservations OR maintenance blocks
     return allReservations.filter(r => 
       r.type === 'maintenance_block' || 
-      ['pending', 'confirmed', 'active'].includes(r.status || '')
+      ['booked', 'picked_up', 'returned'].includes(r.status || '')
     );
   }, [allReservations]);
   
@@ -165,21 +165,25 @@ export function ReservationCalendar() {
     let bgColor, textColor;
     
     switch (status.toLowerCase()) {
-      case "confirmed":
+      case "booked":
+        bgColor = "bg-blue-100";
+        textColor = "text-blue-800";
+        break;
+      case "picked_up":
+        bgColor = "bg-orange-100";
+        textColor = "text-orange-800";
+        break;
+      case "returned":
+        bgColor = "bg-purple-100";
+        textColor = "text-purple-800";
+        break;
+      case "completed":
         bgColor = "bg-green-100";
         textColor = "text-green-800";
         break;
-      case "pending":
-        bgColor = "bg-amber-100";
-        textColor = "text-amber-800";
-        break;
       case "cancelled":
-        bgColor = "bg-gray-100";
-        textColor = "text-gray-500";
-        break;
-      case "completed":
-        bgColor = "bg-blue-100";
-        textColor = "text-blue-800";
+        bgColor = "bg-red-100";
+        textColor = "text-red-800";
         break;
       default:
         bgColor = "bg-gray-100";
@@ -384,9 +388,10 @@ export function ReservationCalendar() {
                                     <h4 className="font-medium">Reservation Details</h4>
                                     <Badge 
                                       className={`${
-                                        res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
-                                        res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
-                                        res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
+                                        res.status?.toLowerCase() === 'booked' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
+                                        res.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200' :
+                                        res.status?.toLowerCase() === 'returned' ? 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200' :
+                                        res.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' :
                                         res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
                                         'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
                                       }`}
@@ -583,9 +588,10 @@ export function ReservationCalendar() {
               <div>
                 <Badge 
                   className={`${
-                    selectedReservation.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 border-green-200' : 
-                    selectedReservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    selectedReservation.status?.toLowerCase() === 'booked' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
+                    selectedReservation.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                    selectedReservation.status?.toLowerCase() === 'returned' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
                     selectedReservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
                     'bg-gray-100 text-gray-800 border-gray-200'
                   }`}

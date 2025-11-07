@@ -161,7 +161,7 @@ export function MaintenanceViewDialog({
             driverId: rental.driverId,
             startDate: rental.startDate,
             endDate: rental.endDate || rental.startDate,
-            status: 'pending',
+            status: 'booked',
             totalPrice: 0,
           });
           return response.json();
@@ -186,7 +186,7 @@ export function MaintenanceViewDialog({
             driverId: rental.driverId,
             startDate: rental.startDate,
             endDate: rental.endDate || rental.startDate,
-            status: 'confirmed',
+            status: 'booked',
             totalPrice: 0,
           });
           return response.json();

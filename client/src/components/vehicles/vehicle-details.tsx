@@ -2939,12 +2939,16 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
 // Helper components
 function StatusBadge({ status }: { status: string }) {
   switch (status.toLowerCase()) {
-    case "confirmed":
-      return <Badge className="bg-success-50 text-success-600 hover:bg-success-100">{status}</Badge>;
-    case "pending":
-      return <Badge className="bg-warning-50 text-warning-600 hover:bg-warning-100">{status}</Badge>;
+    case "booked":
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">{status}</Badge>;
+    case "picked_up":
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200">{status}</Badge>;
+    case "returned":
+      return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">{status}</Badge>;
+    case "completed":
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{status}</Badge>;
     case "cancelled":
-      return <Badge className="bg-danger-50 text-danger-600 hover:bg-danger-100">{status}</Badge>;
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">{status}</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }

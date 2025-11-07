@@ -463,10 +463,10 @@ export default function ReservationCalendarPage() {
   // Filter out completed reservations from calendar view
   const reservations = useMemo(() => {
     if (!allReservations) return [];
-    // Only show pending, confirmed, active reservations OR maintenance blocks
+    // Only show booked, picked_up, returned reservations OR maintenance blocks
     return allReservations.filter(r => 
       r.type === 'maintenance_block' || 
-      ['pending', 'confirmed', 'active'].includes(r.status || '')
+      ['booked', 'picked_up', 'returned'].includes(r.status || '')
     );
   }, [allReservations]);
   
@@ -1118,9 +1118,10 @@ export default function ReservationCalendarPage() {
                                               (res.maintenanceStatus === 'scheduled' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                                                res.maintenanceStatus === 'in' ? 'bg-purple-100 text-purple-800 border-purple-200' : 
                                                'bg-green-100 text-green-800 border-green-200') :
-                                            res.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
-                                            res.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' :
-                                            res.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' :
+                                            res.status?.toLowerCase() === 'booked' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200' : 
+                                            res.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200' :
+                                            res.status?.toLowerCase() === 'returned' ? 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200' :
+                                            res.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' :
                                             res.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' :
                                             'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
                                           }`}
@@ -1363,9 +1364,10 @@ export default function ReservationCalendarPage() {
               <div className="flex gap-2 flex-wrap">
                 <Badge 
                   className={`${
-                    selectedReservation.status?.toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800 border-green-200' : 
-                    selectedReservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    selectedReservation.status?.toLowerCase() === 'booked' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
+                    selectedReservation.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                    selectedReservation.status?.toLowerCase() === 'returned' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                    selectedReservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
                     selectedReservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
                     'bg-gray-100 text-gray-800 border-gray-200'
                   }`}
@@ -1421,9 +1423,9 @@ export default function ReservationCalendarPage() {
                     </div>
                     {/* Show Mileage Information */}
                     {(() => {
-                      // For active reservations (confirmed/completed), show reservation mileage
-                      // For scheduled/pending, show vehicle's current mileage
-                      const isActive = selectedReservation.status === 'confirmed' || selectedReservation.status === 'completed';
+                      // For active reservations (picked_up/completed), show reservation mileage
+                      // For booked, show vehicle's current mileage
+                      const isActive = selectedReservation.status === 'picked_up' || selectedReservation.status === 'returned' || selectedReservation.status === 'completed';
                       const hasReservationMileage = (selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined) || 
                                                     (selectedReservation.returnMileage !== null && selectedReservation.returnMileage !== undefined);
                       const vehicleCurrentMileage = selectedReservation.vehicle?.currentMileage;
@@ -2200,7 +2202,7 @@ export default function ReservationCalendarPage() {
             open={statusDialogOpen}
             onOpenChange={setStatusDialogOpen}
             reservationId={selectedReservation.id}
-            initialStatus={selectedReservation.status || "pending"}
+            initialStatus={selectedReservation.status || "booked"}
             startDate={selectedReservation.startDate}
             vehicle={selectedReservation.vehicle ? {
               ...selectedReservation.vehicle,
@@ -2305,13 +2307,15 @@ export default function ReservationCalendarPage() {
                         <Badge 
                           className={`text-xs ${
                             reservation.type === 'replacement' 
-                              ? (reservation.status?.toLowerCase() === 'confirmed' ? 'bg-orange-100 text-orange-800 border-orange-200' : 
-                                 reservation.status?.toLowerCase() === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                              ? (reservation.status?.toLowerCase() === 'booked' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                                 reservation.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                 reservation.status?.toLowerCase() === 'returned' ? 'bg-orange-150 text-orange-850 border-orange-250' :
                                  reservation.status?.toLowerCase() === 'completed' ? 'bg-orange-200 text-orange-900 border-orange-300' :
                                  reservation.status?.toLowerCase() === 'cancelled' ? 'bg-orange-50 text-orange-400 border-orange-200' :
                                  'bg-orange-50 text-orange-600 border-orange-200')
-                              : (reservation.status?.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' : 
-                                 reservation.status?.toLowerCase() === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              : (reservation.status?.toLowerCase() === 'booked' ? 'bg-blue-100 text-blue-800' : 
+                                 reservation.status?.toLowerCase() === 'picked_up' ? 'bg-orange-100 text-orange-800' :
+                                 reservation.status?.toLowerCase() === 'returned' ? 'bg-purple-100 text-purple-800' :
                                  reservation.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
                                  reservation.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
                                  'bg-gray-100 text-gray-800')
@@ -2697,7 +2701,7 @@ export default function ReservationCalendarPage() {
                               onClick={async () => {
                                 try {
                                   await apiRequest('PATCH', `/api/reservations/${rental.id}`, {
-                                    status: 'confirmed',
+                                    status: 'picked_up',
                                     returnMileage: null,
                                     fuelLevelReturn: null,
                                     fuelCost: null,

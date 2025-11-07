@@ -20,9 +20,9 @@ export function QuickStatusChangeButton({ vehicleId }: QuickStatusChangeButtonPr
     queryKey: vehicleReservationsQueryKey,
   });
   
-  // Find active reservations (those with pending or confirmed status)
+  // Find active reservations (those with booked or picked_up status)
   const activeReservations = reservations?.filter(
-    (res) => res.status === "pending" || res.status === "confirmed"
+    (res) => res.status === "booked" || res.status === "picked_up"
   );
   
   // Sort by nearest start date
@@ -66,7 +66,7 @@ export function QuickStatusChangeButton({ vehicleId }: QuickStatusChangeButtonPr
           open={statusDialogOpen}
           onOpenChange={setStatusDialogOpen}
           reservationId={selectedReservation.id}
-          initialStatus={selectedReservation.status || "pending"}
+          initialStatus={selectedReservation.status || "booked"}
           vehicle={selectedReservation.vehicle}
           customer={selectedReservation.customer}
           initialFuelData={{

@@ -221,19 +221,20 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         let badgeClass = "";
         
         switch (status) {
-          case "confirmed":
-          case "active":
+          case "booked":
             badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
             break;
-          case "pending":
-          case "scheduled":
-            badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+          case "picked_up":
+            badgeClass = "bg-orange-100 text-orange-800 border-orange-200";
+            break;
+          case "returned":
+            badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
+            break;
+          case "completed":
+            badgeClass = "bg-green-100 text-green-800 border-green-200";
             break;
           case "cancelled":
             badgeClass = "bg-red-100 text-red-800 border-red-200";
-            break;
-          case "completed":
-            badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
             break;
           default:
             badgeClass = "bg-gray-100 text-gray-800";
@@ -392,9 +393,10 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending,scheduled">Scheduled</SelectItem>
-                  <SelectItem value="confirmed">Picked up</SelectItem>
-                  <SelectItem value="completed">Returned</SelectItem>
+                  <SelectItem value="booked">Booked</SelectItem>
+                  <SelectItem value="picked_up">Picked Up</SelectItem>
+                  <SelectItem value="returned">Returned</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
@@ -452,7 +454,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
         reservationId={selectedReservation?.id || 0}
-        initialStatus={selectedReservation?.status || "pending"}
+        initialStatus={selectedReservation?.status || "booked"}
         initialFuelData={selectedReservation ? {
           fuelLevelPickup: selectedReservation.fuelLevelPickup,
           fuelLevelReturn: selectedReservation.fuelLevelReturn,

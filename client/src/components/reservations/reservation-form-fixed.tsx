@@ -701,10 +701,11 @@ export function ReservationForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="booked">Booked</SelectItem>
+                          <SelectItem value="picked_up">Picked Up</SelectItem>
+                          <SelectItem value="returned">Returned</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

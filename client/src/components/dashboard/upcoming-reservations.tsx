@@ -21,14 +21,16 @@ function getDuration(startDate: string, endDate: string): string {
 // Function to get status badge style
 function getStatusBadge(status: string) {
   switch (status.toLowerCase()) {
-    case "confirmed":
+    case "booked":
       return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">{formatReservationStatus(status)}</Badge>;
-    case "pending":
-      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">{formatReservationStatus(status)}</Badge>;
+    case "picked_up":
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200">{formatReservationStatus(status)}</Badge>;
+    case "returned":
+      return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">{formatReservationStatus(status)}</Badge>;
+    case "completed":
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">{formatReservationStatus(status)}</Badge>;
     case "cancelled":
       return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">{formatReservationStatus(status)}</Badge>;
-    case "completed":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">{formatReservationStatus(status)}</Badge>;
     default:
       return <Badge variant="outline">{formatReservationStatus(status)}</Badge>;
   }
@@ -112,7 +114,7 @@ export function UpcomingReservations() {
                       <div className="text-xs text-gray-500">{getDuration(reservation.startDate || '', reservation.endDate || '')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(reservation.status || 'pending')}
+                      {getStatusBadge(reservation.status || 'booked')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {/* Status change button */}

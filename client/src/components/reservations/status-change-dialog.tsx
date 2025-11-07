@@ -100,11 +100,11 @@ const createStatusChangeSchema = (reservationStartDate?: string) => baseStatusCh
       path: ["completionDate"],
     }
   )
-  // Third validation: fuel level at pickup is required when confirming
+  // Third validation: fuel level at pickup is required when picking up
   .refine(
     (data) => {
-      // When confirming pickup, fuel level must be selected
-      if (data.status === "confirmed") {
+      // When picking up vehicle, fuel level must be selected
+      if (data.status === "picked_up") {
         return data.fuelLevelPickup && 
                data.fuelLevelPickup !== "" && 
                data.fuelLevelPickup !== "not_recorded";
@@ -293,7 +293,7 @@ export function StatusChangeDialog({
       
       // We only need to update the vehicle if we have mileage data
       if (
-        (data.status === "confirmed" && data.startMileage && vehicle?.id) ||
+        (data.status === "picked_up" && data.startMileage && vehicle?.id) ||
         (data.status === "completed" && data.departureMileage && vehicle?.id)
       ) {
         // First update the reservation status and fuel tracking
@@ -321,7 +321,7 @@ export function StatusChangeDialog({
         // We need to have at least one mileage field to update
         let hasMileageUpdate = false;
         
-        if (data.status === "confirmed" && data.startMileage) {
+        if (data.status === "picked_up" && data.startMileage) {
           vehicleData.departureMileage = data.startMileage;
           vehicleData.currentMileage = data.startMileage; // Update current mileage
           hasMileageUpdate = true;
@@ -501,11 +501,11 @@ export function StatusChangeDialog({
     // This is critical for security - must check before allowing submission
     const currentVehicleMileage = vehicle?.currentMileage || vehicle?.departureMileage || vehicle?.returnMileage || 0;
     
-    // Skip pickup mileage validation when confirming or completing
-    // - When confirming: we're recording pickup mileage for the FIRST time
+    // Skip pickup mileage validation when picking up or completing
+    // - When picking up: we're recording pickup mileage for the FIRST time
     // - When completing: we're only adding return mileage, not changing pickup
     // Password override is only needed when actually CHANGING an existing mileage value
-    if (data.status !== "confirmed" && data.status !== "completed" && data.startMileage !== undefined && data.startMileage !== null) {
+    if (data.status !== "picked_up" && data.status !== "completed" && data.startMileage !== undefined && data.startMileage !== null) {
       console.log(`🔍 Checking pickup mileage: ${data.startMileage} vs current: ${currentVehicleMileage}`);
       if (data.startMileage < currentVehicleMileage) {
         console.log("⚠️ MILEAGE DECREASE DETECTED - showing password dialog");
@@ -558,14 +558,16 @@ export function StatusChangeDialog({
   // Get badge class for status display
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
-      case "confirmed":
+      case "booked":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "pending":
-        return "bg-amber-100 text-amber-800 border-amber-200";
+      case "picked_up":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "returned":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "completed":
+        return "bg-green-100 text-green-800 border-green-200";
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200";
-      case "completed":
-        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -673,8 +675,8 @@ export function StatusChangeDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pending">Booked</SelectItem>
-                      <SelectItem value="confirmed">Vehicle picked up</SelectItem>
+                      <SelectItem value="booked">Booked</SelectItem>
+                      <SelectItem value="picked_up">Vehicle picked up</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                       <SelectItem value="completed">Vehicle returned</SelectItem>
                     </SelectContent>
@@ -688,8 +690,8 @@ export function StatusChangeDialog({
             />
             
             
-            {/* Start Mileage field when status is confirmed */}
-            {currentStatus === "confirmed" && vehicle && (
+            {/* Start Mileage field when status is picked_up */}
+            {currentStatus === "picked_up" && vehicle && (
               <FormField
                 control={form.control}
                 name="startMileage"
@@ -725,8 +727,8 @@ export function StatusChangeDialog({
               />
             )}
             
-            {/* Fuel Level at Pickup field when status is confirmed */}
-            {currentStatus === "confirmed" && (
+            {/* Fuel Level at Pickup field when status is picked_up */}
+            {currentStatus === "picked_up" && (
               <FormField
                 control={form.control}
                 name="fuelLevelPickup"
