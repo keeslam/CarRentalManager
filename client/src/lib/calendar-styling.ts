@@ -55,10 +55,19 @@ export function getCustomReservationStyle(
     } else {
       // Fallback to default status styling
       switch (status.toLowerCase()) {
+        case "booked":
         case "confirmed":
+        case "active":
           styleClasses = "bg-blue-100 text-blue-900 border-blue-400";
           break;
+        case "picked_up":
+          styleClasses = "bg-orange-100 text-orange-900 border-orange-400";
+          break;
+        case "returned":
+          styleClasses = "bg-purple-100 text-purple-900 border-purple-400";
+          break;
         case "pending":
+        case "scheduled":
           styleClasses = "bg-amber-100 text-amber-900 border-amber-400";
           break;
         case "completed":

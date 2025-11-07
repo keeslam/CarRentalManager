@@ -71,14 +71,20 @@ export function formatLicensePlate(licensePlate: string): string {
  */
 export function formatReservationStatus(status: string): string {
   switch (status.toLowerCase()) {
+    case 'booked':
+      return 'Booked';
+    case 'picked_up':
+      return 'Picked Up';
+    case 'returned':
+      return 'Returned';
+    case 'completed':
+      return 'Completed';
     case 'pending':
     case 'scheduled':
       return 'Scheduled';
     case 'confirmed':
     case 'active':
-      return 'Picked up';
-    case 'completed':
-      return 'Returned';
+      return 'Active';
     case 'cancelled':
       return 'Cancelled';
     default:

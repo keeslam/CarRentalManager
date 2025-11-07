@@ -26,6 +26,7 @@ import { UploadContractButton } from "@/components/documents/contract-upload-but
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
 import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
 import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
+import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 
 export default function ReservationDetails() {
   const { id } = useParams();
@@ -35,6 +36,8 @@ export default function ReservationDetails() {
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [isSpareDialogOpen, setIsSpareDialogOpen] = useState(false);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
+  const [isReturnRentalDialogOpen, setIsReturnRentalDialogOpen] = useState(false);
   const clientQuery = useQueryClient();
 
   // Fetch reservation details
@@ -114,14 +117,20 @@ export default function ReservationDetails() {
   // Get status badge style
   const getStatusStyle = (status: string) => {
     switch (status.toLowerCase()) {
+      case "booked":
       case "confirmed":
-        return "bg-green-100 text-green-800 border-green-200";
+      case "active":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "picked_up":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "returned":
+        return "bg-purple-100 text-purple-800 border-purple-200";
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200";
       case "completed":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-green-100 text-green-800 border-green-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -635,6 +644,39 @@ export default function ReservationDetails() {
             <div className="pt-4">
               <h3 className="text-sm font-medium text-gray-500 mb-3">Actions</h3>
               <div className="space-y-2">
+                {reservation.status === 'booked' && (
+                  <Button 
+                    variant="default" 
+                    className="w-full justify-start" 
+                    size="sm"
+                    onClick={() => setIsPickupDialogOpen(true)}
+                    data-testid="button-start-pickup"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Start Pickup & Generate Contract
+                  </Button>
+                )}
+                
+                {reservation.status === 'picked_up' && (
+                  <Button 
+                    variant="default" 
+                    className="w-full justify-start" 
+                    size="sm"
+                    onClick={() => setIsReturnRentalDialogOpen(true)}
+                    data-testid="button-start-return"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
+                      <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"></path>
+                      <path d="M12 3v6"></path>
+                    </svg>
+                    Start Return & Generate Damage Check
+                  </Button>
+                )}
+                
                 <Link href={`/expenses/new?vehicleId=${reservation.vehicleId}`}>
                   <Button variant="outline" className="w-full justify-start" size="sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
@@ -722,6 +764,22 @@ export default function ReservationDetails() {
           queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
         }}
       />
+
+      {/* Pickup/Return Dialogs */}
+      {reservation && (
+        <>
+          <PickupDialog
+            open={isPickupDialogOpen}
+            onOpenChange={setIsPickupDialogOpen}
+            reservation={reservation}
+          />
+          <ReturnDialog
+            open={isReturnRentalDialogOpen}
+            onOpenChange={setIsReturnRentalDialogOpen}
+            reservation={reservation}
+          />
+        </>
+      )}
     </div>
   );
 }

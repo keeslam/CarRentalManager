@@ -482,9 +482,16 @@ export default function ReservationsIndex() {
         let badgeClass = "";
         
         switch (status.toLowerCase()) {
+          case "booked":
           case "confirmed":
           case "active":
             badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
+            break;
+          case "picked_up":
+            badgeClass = "bg-orange-100 text-orange-800 border-orange-200";
+            break;
+          case "returned":
+            badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
             break;
           case "pending":
           case "scheduled":
@@ -494,7 +501,7 @@ export default function ReservationsIndex() {
             badgeClass = "bg-red-100 text-red-800 border-red-200";
             break;
           case "completed":
-            badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
+            badgeClass = "bg-green-100 text-green-800 border-green-200";
             break;
           default:
             badgeClass = "bg-gray-100 text-gray-800";
