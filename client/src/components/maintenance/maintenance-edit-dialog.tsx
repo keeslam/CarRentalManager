@@ -116,7 +116,7 @@ export function MaintenanceEditDialog({
     
     return vehicleReservations.find(r => {
       if (r.type !== 'standard') return false;
-      if (r.status !== 'confirmed' && r.status !== 'pending') return false;
+      if (r.status !== 'booked' && r.status !== 'picked_up') return false;
       
       const startDate = parseISO(r.startDate);
       

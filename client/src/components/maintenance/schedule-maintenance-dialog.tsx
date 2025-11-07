@@ -229,7 +229,8 @@ export function ScheduleMaintenanceDialog({
       // Find active rental for this vehicle on this date
       const activeRental = activeReservations.find(reservation =>
         reservation.vehicleId === vehicleIdNum &&
-        (reservation.type === 'rental' || reservation.status === 'confirmed' || reservation.status === 'pending') &&
+        reservation.type === 'standard' &&
+        (reservation.status === 'booked' || reservation.status === 'picked_up') &&
         dateInRange(watchedScheduledDate, reservation.startDate, reservation.endDate)
       );
       

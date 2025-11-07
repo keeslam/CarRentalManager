@@ -86,7 +86,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
     return reservations.find(
       (r) =>
         r.driverId === selectedDriver.id &&
-        (r.status === 'confirmed' || r.status === 'pending' || r.status === 'active') &&
+        (r.status === 'booked' || r.status === 'picked_up') &&
         (!r.endDate || new Date(r.endDate) >= new Date())
     ) || null;
   }, [selectedDriver, reservations]);
@@ -941,7 +941,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                                 const activeReservation = reservations?.find(
                                   (r) =>
                                     r.driverId === driver.id &&
-                                    (r.status === 'confirmed' || r.status === 'pending' || r.status === 'active') &&
+                                    (r.status === 'booked' || r.status === 'picked_up') &&
                                     (!r.endDate || new Date(r.endDate) >= new Date())
                                 );
                                 return activeReservation?.vehicle ? (
@@ -1364,14 +1364,16 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
 // Helper components
 function StatusBadge({ status }: { status: string }) {
   switch (status.toLowerCase()) {
-    case "confirmed":
+    case "booked":
       return <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">{formatReservationStatus(status)}</Badge>;
-    case "pending":
-      return <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200">{formatReservationStatus(status)}</Badge>;
+    case "picked_up":
+      return <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200">{formatReservationStatus(status)}</Badge>;
+    case "returned":
+      return <Badge className="bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200">{formatReservationStatus(status)}</Badge>;
+    case "completed":
+      return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200">{formatReservationStatus(status)}</Badge>;
     case "cancelled":
       return <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-200">{formatReservationStatus(status)}</Badge>;
-    case "completed":
-      return <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">{formatReservationStatus(status)}</Badge>;
     default:
       return <Badge variant="outline">{formatReservationStatus(status)}</Badge>;
   }

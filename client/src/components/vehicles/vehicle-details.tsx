@@ -657,10 +657,10 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const currentActiveReservation = useMemo(() => {
     if (!reservations || reservations.length === 0) return null;
     
-    // Find the most recent reservation that's either confirmed (picked up) or completed
-    // Prioritize confirmed status, then completed (if very recent)
+    // Find the most recent reservation that's either booked or picked up
+    // Prioritize picked_up status, then booked
     const activeRentals = reservations.filter((r: Reservation) => 
-      r.status === 'confirmed' || r.status === 'pending'
+      r.status === 'booked' || r.status === 'picked_up'
     ).sort((a, b) => {
       // Sort by start date descending (most recent first)
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();

@@ -74,7 +74,7 @@ export function VehicleReservationsStatusDialog({
     switch (activeTab) {
       case "upcoming":
         return reservationsWithDates.filter(res => 
-          (res.status === "pending" || res.status === "confirmed") &&
+          (res.status === "booked" || res.status === "picked_up") &&
           (res.startDateObj === null || res.startDateObj >= today)
         );
       case "past":
@@ -277,10 +277,11 @@ export function VehicleReservationsStatusDialog({
                                 <td className="px-4 py-3">
                                   <span className={`
                                     inline-block rounded-full px-2 py-1 text-xs border
-                                    ${reservation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
-                                    ${reservation.status === 'completed' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                    ${reservation.status === 'booked' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+                                    ${reservation.status === 'picked_up' ? 'bg-orange-100 text-orange-800 border-orange-200' : ''}
+                                    ${reservation.status === 'returned' ? 'bg-purple-100 text-purple-800 border-purple-200' : ''}
+                                    ${reservation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' : ''}
                                     ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-200' : ''}
-                                    ${reservation.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' : ''}
                                   `}>
                                     {formatReservationStatus(reservation.status || '')}
                                   </span>

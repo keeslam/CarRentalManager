@@ -195,7 +195,7 @@ export function ReservationForm({
   const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || "pending");
+  const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || "booked");
   const [departureMileage, setDepartureMileage] = useState<number | undefined>(
     initialData?.vehicle?.departureMileage || undefined
   );
@@ -352,7 +352,7 @@ export function ReservationForm({
       startDate: selectedStartDate,
       endDate: defaultEndDate,
       isOpenEnded: isOpenEnded,
-      status: "pending",
+      status: "booked",
       totalPrice: 0,
       notes: "",
       fuelLevelPickup: undefined,
@@ -2002,10 +2002,11 @@ export function ReservationForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pending">Booked</SelectItem>
-                          <SelectItem value="confirmed">Vehicle picked up</SelectItem>
+                          <SelectItem value="booked">Booked</SelectItem>
+                          <SelectItem value="picked_up">Picked Up</SelectItem>
+                          <SelectItem value="returned">Returned</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="completed">Vehicle returned</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -2016,8 +2017,8 @@ export function ReservationForm({
                   )}
                 />
                 
-                {/* Start Mileage and Fuel at Pickup - shown for all statuses */}
-                {(currentStatus === "confirmed" || currentStatus === "completed") && (
+                {/* Start Mileage and Fuel at Pickup - shown when picked up or later */}
+                {(currentStatus === "picked_up" || currentStatus === "returned" || currentStatus === "completed") && (
                   <div className="col-span-1">
                     <div className="flex flex-col space-y-1.5">
                       <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -2042,7 +2043,7 @@ export function ReservationForm({
                   </div>
                 )}
                 
-                {(currentStatus === "confirmed" || currentStatus === "completed") && (
+                {(currentStatus === "picked_up" || currentStatus === "returned" || currentStatus === "completed") && (
                   <FormField
                     control={form.control}
                     name="fuelLevelPickup"

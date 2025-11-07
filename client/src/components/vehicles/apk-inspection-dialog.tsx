@@ -79,7 +79,7 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
     enabled: open,
     select: (data) => data.filter(r => 
       r.type === 'standard' && 
-      (r.status === 'confirmed' || r.status === 'pending')
+      (r.status === 'booked' || r.status === 'picked_up')
     ),
   });
 

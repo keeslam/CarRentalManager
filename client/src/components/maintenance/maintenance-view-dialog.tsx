@@ -107,7 +107,7 @@ export function MaintenanceViewDialog({
   const overlappingRentals = reservation ? allReservations.filter((r: Reservation) => {
     if (r.id === reservation.id) return false;
     if (r.type !== 'standard') return false;
-    if (r.status !== 'confirmed' && r.status !== 'pending') return false;
+    if (r.status !== 'booked' && r.status !== 'picked_up') return false;
     if (r.vehicleId !== reservation.vehicleId) return false;
 
     const maintenanceStart = new Date(reservation.startDate);
