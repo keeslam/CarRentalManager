@@ -1879,7 +1879,7 @@ export function ReservationForm({
                           if (!reservationId) {
                             toast({
                               title: "Create reservation first",
-                              description: "Please complete the reservation details and click 'Preview & Generate Contract', then finalize to upload documents.",
+                              description: "Please save the reservation before uploading documents.",
                             });
                             return;
                           }
