@@ -52,7 +52,6 @@ import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye, Clipboard
 import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 import { DriverDialog } from "@/components/customers/driver-dialog";
-import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -2273,22 +2272,6 @@ export function ReservationForm({
         </div>
       </DialogContent>
     </Dialog>
-    
-    {/* Interactive Damage Check Dialog */}
-    {damageCheckDialogOpen && vehicleIdWatch && (
-      <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
-        if (!open) handleCloseDamageCheckDialog();
-      }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-0">
-          <InteractiveDamageCheckPage
-            onClose={handleCloseDamageCheckDialog}
-            editingCheckId={editingDamageCheckId}
-            initialVehicleId={vehicleIdWatch}
-            initialReservationId={activeReservationId || null}
-          />
-        </DialogContent>
-      </Dialog>
-    )}
     </>
   );
 }
