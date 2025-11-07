@@ -1133,6 +1133,21 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <p className="text-base">{vehicle.euroZoneEndDate ? formatDate(vehicle.euroZoneEndDate) : "N/A"}</p>
                   </div>
                   
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Move IZI</h4>
+                    <p className="text-base">{isTrueValue(vehicle.moveIziRegistered) ? "Yes" : "No"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Move IZI Registration Date</h4>
+                    <p className="text-base">{vehicle.moveIziRegistrationDate ? formatDate(vehicle.moveIziRegistrationDate) : "N/A"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Move IZI Expiration Date</h4>
+                    <p className="text-base">{vehicle.moveIziExpirationDate ? formatDate(vehicle.moveIziExpirationDate) : "N/A"}</p>
+                  </div>
+                  
                   <div className="md:col-span-3">
                     <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div>
