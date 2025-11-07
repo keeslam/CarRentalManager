@@ -1642,6 +1642,64 @@ export function VehicleForm({
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="moveIziRegistered"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Switch
+                            checked={!!field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Move IZI
+                          </FormLabel>
+                          <FormDescription>
+                            Vehicle is registered for the Move IZI toll system
+                          </FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="moveIziRegistrationDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Move IZI Registration Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormDescription>
+                          Date when the vehicle was registered for Move IZI
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="moveIziExpirationDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Move IZI Expiration Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={handleFieldValue(field.value)} />
+                        </FormControl>
+                        <FormDescription>
+                          Date when the Move IZI registration expires
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                 </div>
               </TabsContent>
