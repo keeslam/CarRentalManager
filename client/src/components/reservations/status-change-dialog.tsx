@@ -441,25 +441,31 @@ export function StatusChangeDialog({
       // Automatically generate contract and damage check when status changes to picked_up
       if (currentStatus === "picked_up") {
         try {
+          console.log('🔄 Generating contract and damage check for pickup...');
           // Generate contract first
           await generateContractMutation.mutateAsync();
           
           // Then generate damage check
           await generateDamageCheckMutation.mutateAsync();
+          
+          console.log('✅ Documents generated successfully');
         } catch (error) {
           // Document generation errors are already handled by mutation onError handlers
-          // Continue with closing the dialog
           console.error("Document generation failed:", error);
         }
       }
       
-      // Close the dialog
-      onOpenChange(false);
-      
-      // Call the callback if provided (await if it's async)
+      // Call the callback if provided (await if it's async) - do this BEFORE closing
+      // This ensures the view dialog reopens before the status dialog closes
       if (onStatusChanged) {
+        console.log('🔄 Calling onStatusChanged callback...');
         await onStatusChanged();
+        console.log('✅ onStatusChanged callback completed');
       }
+      
+      // Close the status dialog last, after everything else is done
+      console.log('🔄 Closing status dialog');
+      onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({
@@ -484,9 +490,12 @@ export function StatusChangeDialog({
       
       return response;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Invalidate documents query to show the new contract
-      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      
+      // Also invalidate the specific reservation to refresh all data
+      await queryClient.invalidateQueries({ queryKey: [`/api/reservations`, reservationId] });
       
       toast({
         title: "Contract Generated",
@@ -517,9 +526,12 @@ export function StatusChangeDialog({
       
       return response;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Invalidate documents query to show the new damage check
-      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      
+      // Also invalidate the specific reservation to refresh all data
+      await queryClient.invalidateQueries({ queryKey: [`/api/reservations`, reservationId] });
       
       toast({
         title: "Damage Check Generated",
