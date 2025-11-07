@@ -3243,7 +3243,8 @@ export async function registerRoutes(app: Express): Promise<void> {
           contractDocument = await storage.createDocument({
             vehicleId: updatedReservation.vehicleId,
             reservationId: updatedReservation.id,
-            documentType: 'Contract',
+            documentType: 'Contract (Unsigned)',
+            fileName: fileName,
             filePath: relativePath,
             uploadedBy: (req as any).user?.username || 'system'
           });

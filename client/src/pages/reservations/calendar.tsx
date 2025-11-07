@@ -2231,8 +2231,8 @@ export default function ReservationCalendarPage() {
               // Close the status dialog
               setStatusDialogOpen(false);
               
-              // If view dialog is still open, fetch the specific reservation to get fresh data
-              if (viewDialogOpen && selectedReservation) {
+              // Always fetch fresh reservation data and reopen view dialog
+              if (selectedReservation) {
                 try {
                   // Fetch the updated reservation directly from the API
                   const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
@@ -2243,6 +2243,9 @@ export default function ReservationCalendarPage() {
                     const updatedReservation = await response.json();
                     console.log('✅ Fetched updated reservation after status change:', updatedReservation);
                     setSelectedReservation(updatedReservation);
+                    
+                    // Reopen the view dialog to show updated reservation
+                    setViewDialogOpen(true);
                   }
                 } catch (error) {
                   console.error('Error fetching updated reservation:', error);
