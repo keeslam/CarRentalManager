@@ -838,6 +838,7 @@ export default function ReservationsIndex() {
           initialStatus={selectedReservation.status}
           vehicle={selectedReservation.vehicle ? {
             ...selectedReservation.vehicle,
+            currentMileage: selectedReservation.vehicle.currentMileage ?? undefined,
             departureMileage: selectedReservation.vehicle.departureMileage ?? undefined,
             returnMileage: selectedReservation.vehicle.returnMileage ?? undefined
           } : undefined}
