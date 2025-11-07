@@ -10,6 +10,7 @@ import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ export default function ReservationsIndex() {
   const [vehicleGrouping, setVehicleGrouping] = useState("none");
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // Get current date
@@ -545,12 +548,50 @@ export default function ReservationsIndex() {
         return (
           <div className="flex justify-end gap-2">
             <Link href={`/reservations/${reservation.id}`}>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" data-testid="button-view-reservation">
                 View
               </Button>
             </Link>
+            
+            {reservation.status === 'booked' && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setSelectedReservation(reservation);
+                  setPickupDialogOpen(true);
+                }}
+                data-testid={`button-start-pickup-${reservation.id}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Start Pickup
+              </Button>
+            )}
+            
+            {reservation.status === 'picked_up' && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setSelectedReservation(reservation);
+                  setReturnDialogOpen(true);
+                }}
+                data-testid={`button-start-return-${reservation.id}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
+                  <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"></path>
+                  <path d="M12 3v6"></path>
+                </svg>
+                Start Return
+              </Button>
+            )}
+            
             <Link href={`/documents/contract/${reservation.id}`}>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" data-testid="button-contract">
                 Contract
               </Button>
             </Link>
@@ -560,6 +601,7 @@ export default function ReservationsIndex() {
                   variant="ghost" 
                   size="sm" 
                   className="text-red-600 hover:text-red-800"
+                  data-testid={`button-delete-${reservation.id}`}
                 >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
@@ -822,6 +864,24 @@ export default function ReservationsIndex() {
               queryClient.setQueryData(["/api/reservations"], updatedReservations);
             }
           }}
+        />
+      )}
+
+      {/* Pickup Dialog */}
+      {selectedReservation && (
+        <PickupDialog
+          open={pickupDialogOpen}
+          onOpenChange={setPickupDialogOpen}
+          reservation={selectedReservation}
+        />
+      )}
+
+      {/* Return Dialog */}
+      {selectedReservation && (
+        <ReturnDialog
+          open={returnDialogOpen}
+          onOpenChange={setReturnDialogOpen}
+          reservation={selectedReservation}
         />
       )}
     </div>

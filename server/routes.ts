@@ -3141,16 +3141,60 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
-      const { pickupMileage, fuelLevelPickup, pickupDate, pickupNotes } = req.body;
+      const { pickupMileage, fuelLevelPickup, pickupDate, pickupNotes, templateId, allowMileageDecrease, overridePassword } = req.body;
       
-      if (!pickupMileage || !fuelLevelPickup) {
+      if (pickupMileage === undefined || pickupMileage === null || pickupMileage === '' || !fuelLevelPickup) {
         return res.status(400).json({ 
           message: "Pickup mileage and fuel level are required" 
         });
       }
 
+      const mileage = parseInt(pickupMileage);
+      if (isNaN(mileage) || mileage < 0) {
+        return res.status(400).json({ 
+          message: "Invalid mileage value" 
+        });
+      }
+
+      const reservation = await storage.getReservation(reservationId);
+      if (!reservation || !reservation.vehicle) {
+        return res.status(404).json({ message: "Reservation or vehicle not found" });
+      }
+
+      if (reservation.vehicle.currentMileage && mileage < reservation.vehicle.currentMileage) {
+        if (!allowMileageDecrease || !overridePassword) {
+          return res.status(400).json({ 
+            message: `Mileage decrease detected (${mileage} < ${reservation.vehicle.currentMileage}). Override authorization required.`,
+            requiresOverride: true
+          });
+        }
+
+        const user = (req as any).user;
+        if (!user) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const storedHash = await storage.getMileageOverridePasswordHash(user.id);
+        if (!storedHash) {
+          return res.status(403).json({ 
+            message: "No mileage override password set. Please set one in your profile first." 
+          });
+        }
+
+        const { verifyPassword } = await import('./utils/auth');
+        const isValidOverride = await verifyPassword(overridePassword, storedHash);
+        
+        if (!isValidOverride) {
+          return res.status(403).json({ 
+            message: "Invalid override password" 
+          });
+        }
+
+        console.log(`✅ Mileage override authorized for user ${user.username}: ${mileage} km (was ${reservation.vehicle.currentMileage} km)`);
+      }
+
       const updatedReservation = await storage.pickupReservation(reservationId, {
-        pickupMileage: parseInt(pickupMileage),
+        pickupMileage: mileage,
         fuelLevelPickup,
         pickupDate,
         pickupNotes
@@ -3160,7 +3204,60 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      res.json(updatedReservation);
+      let contractDocument = null;
+      try {
+        const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
+        
+        let template = null;
+        if (templateId) {
+          template = await storage.getPdfTemplate(parseInt(templateId));
+        }
+        
+        if (!template) {
+          const allTemplates = await storage.getAllPdfTemplates();
+          template = allTemplates.find(t => t.isDefault) || allTemplates[0];
+        }
+
+        if (template && updatedReservation.vehicle) {
+          console.log(`📝 Generating contract for reservation ${reservationId} using template ${template.id}`);
+          
+          const contractPdf = await generateRentalContractFromTemplate(updatedReservation, template);
+          
+          const sanitizedPlate = updatedReservation.vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+          const uploadsDir = getUploadsDir();
+          const contractsDir = path.join(uploadsDir, sanitizedPlate, 'contracts');
+          
+          if (!fs.existsSync(contractsDir)) {
+            fs.mkdirSync(contractsDir, { recursive: true });
+          }
+          
+          const timestamp = Date.now();
+          const dateString = pickupDate || new Date().toISOString().split('T')[0];
+          const fileName = `${sanitizedPlate}_contract_pickup_${dateString}_${timestamp}.pdf`;
+          const filePath = path.join(contractsDir, fileName);
+          const relativePath = path.relative(uploadsDir, filePath);
+          
+          fs.writeFileSync(filePath, contractPdf);
+          console.log(`✅ Contract saved to ${relativePath}`);
+          
+          contractDocument = await storage.createDocument({
+            vehicleId: updatedReservation.vehicleId,
+            reservationId: updatedReservation.id,
+            documentType: 'Contract',
+            filePath: relativePath,
+            uploadedBy: (req as any).user?.username || 'system'
+          });
+          
+          console.log(`✅ Contract document registered in database`);
+        }
+      } catch (pdfError) {
+        console.error("Error generating contract PDF:", pdfError);
+      }
+
+      res.json({
+        ...updatedReservation,
+        contractDocument
+      });
     } catch (error) {
       console.error("Error during reservation pickup:", error);
       
@@ -3188,14 +3285,21 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const { returnMileage, fuelLevelReturn, returnDate, returnNotes } = req.body;
       
-      if (!returnMileage || !fuelLevelReturn) {
+      if (returnMileage === undefined || returnMileage === null || returnMileage === '' || !fuelLevelReturn) {
         return res.status(400).json({ 
           message: "Return mileage and fuel level are required" 
         });
       }
 
+      const mileage = parseInt(returnMileage);
+      if (isNaN(mileage) || mileage < 0) {
+        return res.status(400).json({ 
+          message: "Invalid mileage value" 
+        });
+      }
+
       const updatedReservation = await storage.returnReservation(reservationId, {
-        returnMileage: parseInt(returnMileage),
+        returnMileage: mileage,
         fuelLevelReturn,
         returnDate,
         returnNotes
@@ -3205,7 +3309,106 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
-      res.json(updatedReservation);
+      let damageCheckDocument = null;
+      try {
+        if (!updatedReservation.vehicle || !updatedReservation.vehicleId) {
+          console.warn('No vehicle found for reservation, skipping damage check generation');
+        } else {
+          const vehicle = updatedReservation.vehicle;
+          
+          const allTemplates = await storage.getDamageCheckTemplatesByVehicle(
+            vehicle.brand,
+            vehicle.model,
+            vehicle.vehicleType || undefined
+          );
+          
+          let template = null;
+          
+          if (allTemplates.length > 0) {
+            if (vehicle.vehicleType) {
+              template = allTemplates.find(t => 
+                t.vehicleMake === vehicle.brand && 
+                t.vehicleModel === vehicle.model &&
+                t.vehicleType === vehicle.vehicleType
+              );
+            }
+            
+            if (!template) {
+              template = allTemplates.find(t => 
+                t.vehicleMake === vehicle.brand && 
+                t.vehicleModel === vehicle.model &&
+                !t.vehicleType
+              );
+            }
+            
+            if (!template && vehicle.vehicleType) {
+              template = allTemplates.find(t => 
+                t.vehicleMake === vehicle.brand && 
+                t.vehicleType === vehicle.vehicleType &&
+                !t.vehicleModel
+              );
+            }
+            
+            if (!template && vehicle.vehicleType) {
+              template = allTemplates.find(t => 
+                t.vehicleType === vehicle.vehicleType &&
+                !t.vehicleMake &&
+                !t.vehicleModel
+              );
+            }
+          }
+          
+          if (!template) {
+            template = await storage.getDefaultDamageCheckTemplate();
+          }
+
+          if (template) {
+            console.log(`📝 Generating damage check for reservation ${reservationId} using template ${template.id}`);
+            
+            const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
+            
+            const damageCheckPdf = await generateDamageCheckPDFWithTemplate(
+              updatedReservation,
+              template,
+              vehicle
+            );
+            
+            const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
+            const uploadsDir = getUploadsDir();
+            const damageCheckDir = path.join(uploadsDir, sanitizedPlate, 'damage-checks');
+            
+            if (!fs.existsSync(damageCheckDir)) {
+              fs.mkdirSync(damageCheckDir, { recursive: true });
+            }
+            
+            const timestamp = Date.now();
+            const dateString = returnDate || new Date().toISOString().split('T')[0];
+            const fileName = `${sanitizedPlate}_damage_check_return_${dateString}_${timestamp}.pdf`;
+            const filePath = path.join(damageCheckDir, fileName);
+            const relativePath = path.relative(uploadsDir, filePath);
+            
+            fs.writeFileSync(filePath, damageCheckPdf);
+            console.log(`✅ Damage check saved to ${relativePath}`);
+            
+            damageCheckDocument = await storage.createDocument({
+              vehicleId: updatedReservation.vehicleId,
+              reservationId: updatedReservation.id,
+              documentType: 'Damage Check',
+              filePath: relativePath,
+              uploadedBy: (req as any).user?.username || 'system'
+            });
+            
+            console.log(`✅ Damage check document registered in database`);
+          }
+        }
+      } catch (pdfError) {
+        console.error("Error generating damage check PDF:", pdfError);
+      }
+
+      res.json({
+        ...updatedReservation,
+        damageCheckDocument
+      });
     } catch (error) {
       console.error("Error during reservation return:", error);
       
