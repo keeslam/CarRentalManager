@@ -438,6 +438,21 @@ export function StatusChangeDialog({
       // Reset fuel receipt file
       setFuelReceiptFile(null);
       
+      // Automatically generate contract and damage check when status changes to picked_up
+      if (currentStatus === "picked_up") {
+        try {
+          // Generate contract first
+          await generateContractMutation.mutateAsync();
+          
+          // Then generate damage check
+          await generateDamageCheckMutation.mutateAsync();
+        } catch (error) {
+          // Document generation errors are already handled by mutation onError handlers
+          // Continue with closing the dialog
+          console.error("Document generation failed:", error);
+        }
+      }
+      
       // Close the dialog
       onOpenChange(false);
       
@@ -453,6 +468,72 @@ export function StatusChangeDialog({
         variant: "destructive",
       });
     },
+  });
+
+  // Contract generation mutation - triggered automatically on pickup
+  const generateContractMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/contracts/generate/${reservationId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate contract');
+      }
+      
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate documents query to show the new contract
+      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      
+      toast({
+        title: "Contract Generated",
+        description: "Rental contract has been generated successfully.",
+      });
+    },
+    onError: (error) => {
+      // Don't block the status change if contract generation fails
+      toast({
+        title: "Warning",
+        description: `Contract generation failed: ${error.message}. You can generate it manually later.`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Damage check generation mutation - triggered automatically on pickup
+  const generateDamageCheckMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/damage-checks/generate/${reservationId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate damage check');
+      }
+      
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate documents query to show the new damage check
+      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      
+      toast({
+        title: "Damage Check Generated",
+        description: "Damage check PDF has been generated successfully.",
+      });
+    },
+    onError: (error) => {
+      // Don't block the status change if damage check generation fails
+      toast({
+        title: "Warning",
+        description: `Damage check generation failed: ${error.message}. You can generate it manually later.`,
+        variant: "destructive",
+      });
+    }
   });
   
   // Function to verify mileage override password

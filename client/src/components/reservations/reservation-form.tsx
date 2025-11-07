@@ -155,7 +155,6 @@ interface ReservationFormProps {
   initialStartDate?: string;
   onSuccess?: (reservation: Reservation) => void;
   onCancel?: () => void;
-  onPreviewModeChange?: (inPreview: boolean) => void;
 }
 
 export function ReservationForm({ 
@@ -165,8 +164,7 @@ export function ReservationForm({
   initialCustomerId,
   initialStartDate,
   onSuccess,
-  onCancel,
-  onPreviewModeChange
+  onCancel
 }: ReservationFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -217,18 +215,12 @@ export function ReservationForm({
   const [createdReservationId, setCreatedReservationId] = useState<number | null>(
     editMode && initialData ? initialData.id : null
   );
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAllVehicles, setShowAllVehicles] = useState<boolean>(false);
-  const [contractPreviewToken, setContractPreviewToken] = useState<string | null>(null);
   
   // Document management states
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
-  
-  // Interactive damage check dialog states
-  const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
-  const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -271,14 +263,8 @@ export function ReservationForm({
   });
   
   // Fetch vehicles for select field
-  const { data: vehicles, isLoading: isLoadingVehicles, refetch: refetchVehicles } = useQuery<Vehicle[]>({
+  const { data: vehicles, isLoading: isLoadingVehicles, refetch: refetchVehicles} = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
-  });
-
-  
-  // Fetch PDF templates for contract generation
-  const { data: pdfTemplates = [] } = useQuery<any[]>({
-    queryKey: ["/api/pdf-templates"],
   });
   
   // Fetch documents for the reservation (in edit mode or after creation)
@@ -302,27 +288,6 @@ export function ReservationForm({
       refetchReservationDamageChecks();
     }
   }, [activeReservationId, refetchDocuments, refetchReservationDamageChecks]);
-
-  // Set default template when templates are loaded
-  useEffect(() => {
-    if (pdfTemplates && pdfTemplates.length > 0) {
-      // Only set if not already set OR if the current selectedTemplateId is invalid
-      const currentTemplateExists = selectedTemplateId !== null && 
-        pdfTemplates.some((t: any) => t.id === selectedTemplateId);
-      
-      if (!currentTemplateExists) {
-        const defaultTemplate = pdfTemplates.find((template: any) => template.isDefault);
-        if (defaultTemplate) {
-          console.log('Setting default template:', defaultTemplate.id);
-          setSelectedTemplateId(defaultTemplate.id);
-        } else {
-          // If no default, use the first template
-          console.log('Setting first template:', pdfTemplates[0].id);
-          setSelectedTemplateId(pdfTemplates[0].id);
-        }
-      }
-    }
-  }, [pdfTemplates, selectedTemplateId]);
   
   // Fetch selected vehicle details if vehicleId is provided
   const actualVehicleId = initialVehicleId || preSelectedVehicleId;
@@ -394,20 +359,6 @@ export function ReservationForm({
       }
     }
   }, [customerIdWatch, drivers, driverIdWatch, form]);
-
-  // Reset preview token when critical form fields change
-  // This prevents using stale preview data when user edits the form after previewing
-  useEffect(() => {
-    if (contractPreviewToken && !editMode && !createdReservationId) {
-      console.log('🔄 Form field changed, clearing preview token to prevent stale data');
-      setContractPreviewToken(null);
-      toast({
-        title: "Preview Invalidated",
-        description: "Form data changed. Please generate a new preview.",
-        variant: "default",
-      });
-    }
-  }, [vehicleIdWatch, customerIdWatch, selectedTemplateId, startDateWatch, endDateWatch]);
   
   // Flag to hide duplicate date fields in section 3 (dates are already handled in section 1)
   const SHOW_DUPLICATE_DATES = false;
@@ -734,9 +685,6 @@ export function ReservationForm({
       // Add all other form data
       Object.entries(data).forEach(([key, value]) => {
         if (key !== "damageCheckFile" && value !== undefined) {
-          if (key === "contractPreviewToken" && value) {
-            console.log('📎 Including contract preview token:', value);
-          }
           // Allow null values for driverId (nullable field)
           if (value === null) {
             formData.append(key, '');
@@ -875,443 +823,17 @@ export function ReservationForm({
     }
   });
 
-  // Generate contract preview mutation (stores token for later finalization)
-  const previewContractMutation = useMutation({
-    mutationFn: async () => {
-      const formData = form.getValues();
-      const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-      const response = await fetch(`/api/contracts/preview${templateParam}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          vehicleId: formData.vehicleId,
-          customerId: formData.customerId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          notes: formData.notes
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate contract preview');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data: { token: string, downloadUrl: string }) => {
-      console.log('✅ Preview generated, token:', data.token);
-      // Store token for reservation creation
-      setContractPreviewToken(data.token);
-      
-      // Open PDF in new tab for viewing
-      window.open(data.downloadUrl, '_blank');
-      
-      toast({
-        title: "Preview Generated",
-        description: "Contract preview opened in new tab. Create the reservation to save it.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to preview contract: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Generate versioned contract mutation (for edit mode with current form data)
-  const generateVersionedContractMutation = useMutation({
-    mutationFn: async ({ reservationId, useFormData }: { reservationId: number; useFormData: boolean }) => {
-      if (useFormData) {
-        // Generate from current form data and save with version
-        const formData = form.getValues();
-        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-        const response = await fetch(`/api/contracts/generate-versioned/${reservationId}${templateParam}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            vehicleId: formData.vehicleId,
-            customerId: formData.customerId,
-            driverId: formData.driverId,
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            notes: formData.notes
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to generate versioned contract');
-        }
-        
-        return { blob: await response.blob(), filename: `contract_${reservationId}_versioned.pdf` };
-      } else {
-        // Generate from saved reservation
-        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-        const response = await fetch(`/api/contracts/generate/${reservationId}${templateParam}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to generate contract');
-        }
-        
-        return { blob: await response.blob(), filename: `contract_${reservationId}.pdf` };
-      }
-    },
-    onSuccess: (data) => {
-      // Download the PDF
-      const url = URL.createObjectURL(data.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = data.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      // Refetch documents to show the new version
-      const reservationId = createdReservationId || initialData?.id;
-      if (reservationId) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/documents/reservation/${reservationId}`] 
-        });
-      }
-      
-      toast({
-        title: "Contract Generated",
-        description: "New contract version has been created and downloaded.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to generate contract: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Generate contract mutation
-  const generateContractMutation = useMutation({
-    mutationFn: async (reservationId?: number) => {
-      if (reservationId) {
-        // Generate from saved reservation
-        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-        const response = await fetch(`/api/contracts/generate/${reservationId}${templateParam}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to generate contract');
-        }
-        
-        return { blob: await response.blob(), filename: `contract_${reservationId}.pdf` };
-      } else {
-        // Generate from form data
-        const formData = form.getValues();
-        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-        const response = await fetch(`/api/contracts/preview${templateParam}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            vehicleId: formData.vehicleId,
-            customerId: formData.customerId,
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            notes: formData.notes
-          }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to generate contract');
-        }
-        
-        return { blob: await response.blob(), filename: 'contract_preview.pdf' };
-      }
-    },
-    onSuccess: ({ blob, filename }) => {
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Contract Generated",
-        description: "The contract has been generated and downloaded successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to generate contract: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Handle contract preview
-  const handleViewContract = () => {
-    previewContractMutation.mutate();
-  };
-
-  // Handle contract generation
-  const handleGenerateContract = () => {
-    console.log('handleGenerateContract called, createdReservationId:', createdReservationId);
-    console.log('editMode:', editMode);
-    console.log('initialData?.id:', initialData?.id);
-    
-    // In edit mode, use current form data to generate versioned contract
-    if (editMode && initialData?.id) {
-      console.log('Edit mode: Using current form data for versioned contract');
-      generateVersionedContractMutation.mutate({ 
-        reservationId: initialData.id, 
-        useFormData: true 
-      });
-    } else if (createdReservationId) {
-      console.log('Using saved reservation ID:', createdReservationId);
-      generateContractMutation.mutate(createdReservationId);
-    } else {
-      console.log('Using form data (preview mode)');
-      generateContractMutation.mutate(undefined);
-    }
-  };
-
-  // Generate damage check mutation
-  const generateDamageCheckMutation = useMutation({
-    mutationFn: async (reservationId: number) => {
-      const response = await fetch(`/api/damage-checks/generate/${reservationId}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate damage check');
-      }
-      
-      return { blob: await response.blob(), filename: `damage_check_${reservationId}.pdf` };
-    },
-    onSuccess: ({ blob, filename }) => {
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      // Refetch documents to show the new version
-      const reservationId = createdReservationId || initialData?.id;
-      if (reservationId) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/documents/reservation/${reservationId}`] 
-        });
-      }
-      
-      toast({
-        title: "Damage Check Generated",
-        description: "The damage check has been generated and downloaded successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to generate damage check: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Handle opening damage check dialog
-  const handleOpenDamageCheckDialog = (checkId?: number) => {
-    const reservationId = editMode ? initialData?.id : createdReservationId;
-    if (!reservationId) {
-      toast({
-        title: "Error",
-        description: "Please save the reservation first before creating a damage check.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Set editing check ID if provided, otherwise null for new check
-    setEditingDamageCheckId(checkId || null);
-    setDamageCheckDialogOpen(true);
-  };
-  
-  // Handle closing damage check dialog
-  const handleCloseDamageCheckDialog = () => {
-    setDamageCheckDialogOpen(false);
-    setEditingDamageCheckId(null);
-    // Refetch damage checks when dialog closes
-    refetchReservationDamageChecks();
-  };
-
-  // State for preview mode
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [previewData, setPreviewData] = useState<z.infer<typeof formSchema> | null>(null);
-
-  // Handle preview generation (first step)
-  const handlePreviewAndContract = async (data: z.infer<typeof formSchema>) => {
-    // Check for overlapping reservations (skip for open-ended rentals)
-    if (hasOverlap && !data.isOpenEnded) {
-      toast({
-        title: "Booking Conflict",
-        description: "This vehicle is already reserved for the selected dates. Please choose different dates or another vehicle.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Generate contract preview token
-    if (!editMode && selectedTemplateId && data.vehicleId && data.customerId) {
-      try {
-        const templateParam = selectedTemplateId ? `?templateId=${selectedTemplateId}` : '';
-        const response = await fetch(`/api/contracts/preview${templateParam}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            vehicleId: data.vehicleId,
-            customerId: data.customerId,
-            startDate: data.startDate,
-            endDate: data.endDate,
-            notes: data.notes
-          }),
-        });
-        
-        if (response.ok) {
-          const { token } = await response.json();
-          console.log('✅ Generated preview token for contract:', token);
-          console.log('📝 Setting preview mode state...');
-          setContractPreviewToken(token);
-          setPreviewData(data);
-          setIsPreviewMode(true);
-          
-          // Notify parent component about preview mode
-          if (onPreviewModeChange) {
-            onPreviewModeChange(true);
-          }
-          
-          console.log('✅ Preview mode state set. Dialog should remain open.');
-          
-          // Auto-open the contract in a new tab
-          window.open(`/api/contracts/preview/${token}`, '_blank');
-          
-          toast({
-            title: "Preview Generated",
-            description: "Contract preview has been generated. Review it and click 'Finalize Reservation' to complete.",
-          });
-          console.log('✅ Toast shown. Check if dialog is still open...');
-        } else {
-          toast({
-            title: "Preview Failed",
-            description: "Failed to generate contract preview. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Failed to generate contract preview:', error);
-        toast({
-          title: "Preview Failed",
-          description: "Failed to generate contract preview. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "Missing Information",
-        description: "Please select a vehicle, customer, and contract template.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle final reservation creation (second step)
-  const handleFinalizeReservation = async () => {
-    if (!previewData) return;
-    
-    const data = previewData;
-    
-    // Process data for open-ended rentals
+  // Handle reservation form submission
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    // Prepare submission data for both edit and create modes
     const submissionData = {
       ...data,
       endDate: data.isOpenEnded ? undefined : data.endDate,
-      contractPreviewToken: contractPreviewToken, // Include the preview token
+      status: editMode ? data.status : "booked", // New reservations start as "booked"
     };
-    
-    // Remove the isOpenEnded field as it's not part of the backend schema
     delete submissionData.isOpenEnded;
     
-    // Update vehicle mileage whenever mileage data is provided
-    if (vehicleIdWatch) {
-      const vehicleUpdateData: { id: number, departureMileage?: number, currentMileage?: number } = {
-        id: Number(vehicleIdWatch)
-      };
-      
-      // Update current mileage if start mileage is provided
-      if (submissionData.startMileage) {
-        vehicleUpdateData.currentMileage = Number(submissionData.startMileage);
-      }
-      
-      // Update departure mileage if departure mileage is provided  
-      if (submissionData.departureMileage) {
-        vehicleUpdateData.departureMileage = Number(submissionData.departureMileage);
-      }
-      
-      // Create the reservation with preview token
-      createReservationMutation.mutate(submissionData, {
-        onSuccess: (reservationResult) => {
-          // Then update the vehicle mileage if we have any mileage data
-          if (vehicleUpdateData.currentMileage !== undefined || vehicleUpdateData.departureMileage !== undefined) {
-            updateVehicleMutation.mutate(vehicleUpdateData);
-          }
-        }
-      });
-    } else {
-      // No vehicle ID, just create the reservation
-      createReservationMutation.mutate(submissionData);
-    }
-  };
-
-  // Handle reservation form submission (in edit mode only)
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (editMode) {
-      // In edit mode, directly update the reservation
-      const submissionData = {
-        ...data,
-        endDate: data.isOpenEnded ? undefined : data.endDate,
-      };
-      delete submissionData.isOpenEnded;
-      
-      createReservationMutation.mutate(submissionData);
-    } else {
-      // In create mode, go to preview
-      await handlePreviewAndContract(data);
-    }
+    createReservationMutation.mutate(submissionData);
   };
   
   return (
@@ -2542,17 +2064,29 @@ export function ReservationForm({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleOpenDamageCheckDialog(check.id)}
+                              onClick={async () => {
+                                // View the PDF if it exists
+                                try {
+                                  const response = await fetch(`/api/interactive-damage-checks/${check.id}/pdf`);
+                                  if (response.ok) {
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    window.open(url, '_blank');
+                                    window.URL.revokeObjectURL(url);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to view damage check:', error);
+                                }
+                              }}
                               className="flex items-center gap-2 pr-2"
                             >
-                              <ClipboardCheck className="h-4 w-4 text-orange-600" />
+                              <Eye className="h-4 w-4 text-orange-600" />
                               <div className="text-left">
                                 <div className="text-xs font-semibold">{check.checkType === 'pickup' ? 'Pickup' : 'Return'} Check</div>
                                 <div className="text-[10px] text-gray-500">
                                   {new Date(check.checkDate).toLocaleDateString()} • {check.mileage ? `${check.mileage} km` : 'No mileage'}
                                 </div>
                               </div>
-                              <Edit className="h-3 w-3 ml-1 text-gray-400" />
                             </Button>
                           </div>
                         ))}
@@ -2645,45 +2179,6 @@ export function ReservationForm({
             
             {/* Submit Button */}
             <div className="flex flex-col gap-4">
-              {/* Template Selector - Show at top when not in preview or created state */}
-              {!isPreviewMode && !createdReservationId && !editMode && selectedVehicle && selectedCustomer && (
-                <div className="flex items-center gap-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <label className="text-sm font-medium text-gray-700 min-w-fit">Contract Template:</label>
-                  <Select value={selectedTemplateId?.toString() || ""} onValueChange={(value) => setSelectedTemplateId(value ? parseInt(value) : null)}>
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Select a template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pdfTemplates.length === 0 ? (
-                        <SelectItem value="no-templates" disabled>
-                          No templates available - Create one in Documents
-                        </SelectItem>
-                      ) : (
-                        pdfTemplates.map((template: any) => (
-                          <SelectItem key={template.id} value={template.id.toString()}>
-                            {template.name} {template.isDefault && "(Default)"}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Preview Mode Banner */}
-              {isPreviewMode && !createdReservationId && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">Preview Generated</span>
-                  </div>
-                  <p className="text-sm text-green-700 mt-1">
-                    Review the contract that opened in a new tab. When ready, click "Finalize Reservation" to save.
-                  </p>
-                </div>
-              )}
 
               <div className="flex justify-end gap-4">
                 <Button
@@ -2700,148 +2195,17 @@ export function ReservationForm({
                   {createdReservationId ? "Close" : "Cancel"}
                 </Button>
                 
-                {/* Back to Edit button in preview mode */}
-                {isPreviewMode && !createdReservationId && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsPreviewMode(false);
-                      setPreviewData(null);
-                      setContractPreviewToken(null);
-                      toast({
-                        title: "Edit Mode",
-                        description: "You can now modify the reservation information.",
-                      });
-                    }}
-                    data-testid="button-back-to-edit"
-                  >
-                    Back to Edit
-                  </Button>
-                )}
-
-                {/* Finalize Reservation button in preview mode */}
-                {isPreviewMode && !createdReservationId && (
-                  <Button
-                    type="button"
-                    onClick={handleFinalizeReservation}
-                    disabled={createReservationMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
-                    data-testid="button-finalize-reservation"
-                  >
-                    {createReservationMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Finalizing...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Finalize Reservation
-                      </>
-                    )}
-                  </Button>
-                )}
-                
-                {/* Submit button - Preview in create mode, Update in edit mode */}
-                {((editMode && !isPreviewMode) || (!createdReservationId && !isPreviewMode)) && (
+                {/* Submit button - simplified for both edit and create modes */}
+                {!createdReservationId && (
                   <Button 
-                    type={editMode ? "submit" : "button"}
-                    onClick={editMode ? undefined : (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🎯 Preview button clicked - preventing form submission');
-                      form.handleSubmit(async (data) => {
-                        console.log('📋 Form data validated, calling handlePreviewAndContract');
-                        await handlePreviewAndContract(data);
-                      })();
-                    }}
-                    disabled={createReservationMutation.isPending || hasOverlap || (!editMode && !selectedTemplateId)}
+                    type="submit"
+                    disabled={createReservationMutation.isPending || hasOverlap}
+                    data-testid="button-submit-reservation"
                   >
                     {createReservationMutation.isPending 
                       ? "Saving..." 
-                      : editMode ? "Update Reservation" : (
-                        <>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Preview & Generate Contract
-                        </>
-                      )
+                      : editMode ? "Update Reservation" : "Create Reservation"
                     }
-                  </Button>
-                )}
-
-                {/* Generate new contract version button - only in edit mode */}
-                {editMode && initialData && selectedVehicle && selectedCustomer && !isPreviewMode && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGenerateContract}
-                    disabled={generateVersionedContractMutation.isPending || !selectedTemplateId}
-                    data-testid="button-generate-contract-version"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                  >
-                    {generateVersionedContractMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate New Contract Version
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {/* Generate contract button - only in created state or after updating in edit mode */}
-                {createdReservationId && selectedVehicle && selectedCustomer && !editMode && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleGenerateContract}
-                    disabled={generateContractMutation.isPending || !selectedTemplateId}
-                    data-testid="button-generate-contract"
-                  >
-                    {generateContractMutation.isPending ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate & Save Contract
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {/* Interactive damage check button - appears in edit mode or after creating/finalizing reservation */}
-                {(
-                  (editMode && initialData && selectedVehicle && !isPreviewMode) || 
-                  (createdReservationId && selectedVehicle && selectedCustomer)
-                ) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleOpenDamageCheckDialog()}
-                    data-testid="button-create-damage-check"
-                    className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                  >
-                    <ClipboardCheck className="mr-2 h-4 w-4" />
-                    Create Damage Check
                   </Button>
                 )}
               </div>
