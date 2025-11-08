@@ -343,8 +343,12 @@ export class DatabaseStorage implements IStorage {
 
   async getAvailableVehicles(): Promise<Vehicle[]> {
     const today = new Date().toISOString().split('T')[0];
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const threeDaysFromNowStr = threeDaysFromNow.toISOString().split('T')[0];
     
-    // Get all vehicles that don't have a non-cancelled, non-returned, non-completed, non-deleted reservation that includes today
+    // Get all vehicles that don't have a non-cancelled, non-returned, non-completed, non-deleted reservation 
+    // that either includes today OR starts within the next 3 days
     // Exclude maintenance blocks - rentals continue during maintenance (monthly payment)
     const reservedVehicleIds = await db
       .select({ vehicleId: reservations.vehicleId })
@@ -357,10 +361,21 @@ export class DatabaseStorage implements IStorage {
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`, // Exclude placeholder reservations
-          sql`${reservations.startDate} <= ${today}`,
+          // Vehicle is reserved if: starts today or earlier AND (ends today or later OR is open-ended)
+          // OR starts within next 3 days
           or(
-            sql`${reservations.endDate} >= ${today}`,
-            isNull(reservations.endDate) // Include open-ended rentals (monthly contracts)
+            and(
+              sql`${reservations.startDate} <= ${today}`,
+              or(
+                sql`${reservations.endDate} >= ${today}`,
+                isNull(reservations.endDate) // Include open-ended rentals
+              )
+            ),
+            // Also exclude vehicles with bookings starting within next 3 days
+            and(
+              sql`${reservations.startDate} > ${today}`,
+              sql`${reservations.startDate} <= ${threeDaysFromNowStr}`
+            )
           )
         )
       );
