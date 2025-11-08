@@ -233,6 +233,17 @@ export default function VehiclesIndex() {
         const vehicle = row.original;
         const availabilityStatus = vehicle.availabilityStatus || 'available';
         
+        // Check if this vehicle has a spare assigned to cover it
+        const vehicleReservations = reservations?.filter(r => r.vehicleId === vehicle.id && r.status !== 'cancelled' && r.status !== 'completed');
+        const hasSpareAssigned = vehicleReservations?.some(originalRes => 
+          reservations?.some(r => 
+            r.type === 'replacement' && 
+            r.replacementForReservationId === originalRes.id &&
+            r.status !== 'cancelled' &&
+            r.status !== 'completed'
+          )
+        );
+        
         // Display the 5-state availability status
         if (availabilityStatus === 'available') {
           return (
@@ -251,13 +262,13 @@ export default function VehiclesIndex() {
           
           return (
             <Badge className={hasSpareReservation ? "bg-orange-100 text-orange-800 font-semibold" : "bg-purple-100 text-purple-800 font-semibold"}>
-              {hasSpareReservation ? "Spare Vehicle" : "Scheduled"}
+              {hasSpareReservation ? "Spare Vehicle" : hasSpareAssigned ? "Scheduled (Spare Assigned)" : "Scheduled"}
             </Badge>
           );
         } else if (availabilityStatus === 'needs_fixing') {
           return (
             <Badge className="bg-yellow-100 text-yellow-800 font-semibold">
-              Needs Fixing
+              {hasSpareAssigned ? "Needs Fixing (Spare Assigned)" : "Needs Fixing"}
             </Badge>
           );
         } else if (availabilityStatus === 'not_for_rental') {
@@ -276,7 +287,7 @@ export default function VehiclesIndex() {
           
           return (
             <Badge className={hasActiveSpareReservation ? "bg-orange-100 text-orange-800 font-semibold" : "bg-blue-100 text-blue-800 font-semibold"}>
-              {hasActiveSpareReservation ? "Spare Vehicle (Active)" : "Rented"}
+              {hasActiveSpareReservation ? "Spare Vehicle (Active)" : hasSpareAssigned ? "Rented (Spare Assigned)" : "Rented"}
             </Badge>
           );
         }
