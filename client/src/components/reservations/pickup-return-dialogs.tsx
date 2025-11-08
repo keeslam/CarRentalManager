@@ -16,9 +16,10 @@ interface PickupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   reservation: Reservation;
+  onSuccess?: () => void | Promise<void>;
 }
 
-export function PickupDialog({ open, onOpenChange, reservation }: PickupDialogProps) {
+export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: PickupDialogProps) {
   const { toast } = useToast();
   const [pickupMileage, setPickupMileage] = useState(
     reservation.vehicle?.currentMileage?.toString() || ""
@@ -56,15 +57,23 @@ export function PickupDialog({ open, onOpenChange, reservation }: PickupDialogPr
     }) => {
       return await apiRequest("POST", `/api/reservations/${reservation.id}/pickup`, data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Pickup Completed",
         description: "Vehicle picked up successfully. Contract has been generated.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
       setOverridePassword("");
       setPendingMileage(null);
+      
+      // Call the success callback first (to reopen view dialog)
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
+      // Then close the pickup dialog
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -265,9 +274,10 @@ interface ReturnDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   reservation: Reservation;
+  onSuccess?: () => void | Promise<void>;
 }
 
-export function ReturnDialog({ open, onOpenChange, reservation }: ReturnDialogProps) {
+export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: ReturnDialogProps) {
   const { toast } = useToast();
   const [returnMileage, setReturnMileage] = useState(
     reservation.pickupMileage?.toString() || reservation.vehicle?.currentMileage?.toString() || ""
@@ -298,13 +308,21 @@ export function ReturnDialog({ open, onOpenChange, reservation }: ReturnDialogPr
     }) => {
       return await apiRequest("POST", `/api/reservations/${reservation.id}/return`, data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Return Completed",
         description: "Vehicle returned successfully. Damage check has been generated.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+      
+      // Call the success callback first (to reopen view dialog)
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
+      // Then close the return dialog
       onOpenChange(false);
     },
     onError: (error: any) => {

@@ -2780,11 +2780,53 @@ export default function ReservationCalendarPage() {
             open={pickupDialogOpen}
             onOpenChange={setPickupDialogOpen}
             reservation={selectedReservation}
+            onSuccess={async () => {
+              // Fetch updated reservation data
+              try {
+                const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
+                  credentials: 'include',
+                });
+                
+                if (response.ok) {
+                  const updatedReservation = await response.json();
+                  setSelectedReservation(updatedReservation);
+                  
+                  // Reopen the view dialog to show updated reservation
+                  setViewDialogOpen(true);
+                }
+              } catch (error) {
+                console.error('Error fetching updated reservation:', error);
+              }
+              
+              // Refetch calendar data
+              await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+            }}
           />
           <ReturnDialog
             open={returnDialogOpen}
             onOpenChange={setReturnDialogOpen}
             reservation={selectedReservation}
+            onSuccess={async () => {
+              // Fetch updated reservation data
+              try {
+                const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
+                  credentials: 'include',
+                });
+                
+                if (response.ok) {
+                  const updatedReservation = await response.json();
+                  setSelectedReservation(updatedReservation);
+                  
+                  // Reopen the view dialog to show updated reservation
+                  setViewDialogOpen(true);
+                }
+              } catch (error) {
+                console.error('Error fetching updated reservation:', error);
+              }
+              
+              // Refetch calendar data
+              await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+            }}
           />
         </>
       )}
