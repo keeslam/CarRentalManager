@@ -459,21 +459,26 @@ export default function ReservationCalendarPage() {
     ],
   });
   
-  // Filter out completed reservations from calendar view
+  // Filter out completed/returned reservations from calendar view
   const reservations = useMemo(() => {
     if (!allReservations) return [];
-    // Only show booked, picked_up, returned reservations OR maintenance blocks
+    // Only show booked and picked_up reservations OR maintenance blocks
+    // Returned and completed rentals appear in "View Completed" list
     return allReservations.filter(r => 
       r.type === 'maintenance_block' || 
-      ['booked', 'picked_up', 'returned'].includes(r.status || '')
+      ['booked', 'picked_up'].includes(r.status || '')
     );
   }, [allReservations]);
   
-  // Fetch completed rentals separately for the completed list with vehicle data
+  // Fetch completed/returned rentals separately for the completed list with vehicle data
   const { data: completedRentals = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations', vehicles?.length],
     select: (reservations: Reservation[]) => {
-      const completed = reservations.filter(r => r.status === 'completed' && r.type !== 'maintenance_block');
+      // Include both returned and completed statuses in the completed list
+      const completed = reservations.filter(r => 
+        (r.status === 'completed' || r.status === 'returned') && 
+        r.type !== 'maintenance_block'
+      );
       // Enrich with vehicle data for mileage display
       return completed.map(rental => {
         const vehicle = vehicles?.find(v => v.id === rental.vehicleId);
