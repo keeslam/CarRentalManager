@@ -449,6 +449,40 @@ export function ReservationForm({
     }
   }, [statusWatch]);
 
+  // Sync pickup/return data when initialData changes (e.g., after pickup dialog)
+  useEffect(() => {
+    if (initialData) {
+      // Update mileage states
+      if (initialData.startMileage !== undefined && initialData.startMileage !== startMileage) {
+        setStartMileage(initialData.startMileage);
+        form.setValue("startMileage", initialData.startMileage);
+      }
+      if (initialData.returnMileage !== undefined && initialData.returnMileage !== departureMileage) {
+        setDepartureMileage(initialData.returnMileage);
+      }
+      
+      // Update fuel level states
+      if (initialData.fuelLevelPickup !== undefined && initialData.fuelLevelPickup !== fuelLevelPickup) {
+        setFuelLevelPickup(initialData.fuelLevelPickup);
+        form.setValue("fuelLevelPickup", initialData.fuelLevelPickup);
+      }
+      if (initialData.fuelLevelReturn !== undefined && initialData.fuelLevelReturn !== fuelLevelReturn) {
+        setFuelLevelReturn(initialData.fuelLevelReturn);
+        form.setValue("fuelLevelReturn", initialData.fuelLevelReturn);
+      }
+      
+      // Update other fuel-related fields
+      if (initialData.fuelCost !== undefined && initialData.fuelCost !== fuelCost) {
+        setFuelCost(initialData.fuelCost);
+        form.setValue("fuelCost", initialData.fuelCost);
+      }
+      if (initialData.fuelCardNumber !== undefined && initialData.fuelCardNumber !== fuelCardNumber) {
+        setFuelCardNumber(initialData.fuelCardNumber);
+        form.setValue("fuelCardNumber", initialData.fuelCardNumber);
+      }
+    }
+  }, [initialData, form]);
+
   // Sync isOpenEnded state with form watch
   useEffect(() => {
     if (isOpenEndedWatch !== isOpenEnded) {
