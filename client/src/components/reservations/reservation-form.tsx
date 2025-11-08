@@ -1620,11 +1620,11 @@ export function ReservationForm({
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="not_recorded">Not recorded</SelectItem>
-                            <SelectItem value="empty">Empty</SelectItem>
+                            <SelectItem value="Empty">Empty</SelectItem>
                             <SelectItem value="1/4">1/4</SelectItem>
                             <SelectItem value="1/2">1/2</SelectItem>
                             <SelectItem value="3/4">3/4</SelectItem>
-                            <SelectItem value="full">Full</SelectItem>
+                            <SelectItem value="Full">Full</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription>
@@ -1683,11 +1683,11 @@ export function ReservationForm({
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="not_recorded">Not recorded</SelectItem>
-                            <SelectItem value="empty">Empty</SelectItem>
+                            <SelectItem value="Empty">Empty</SelectItem>
                             <SelectItem value="1/4">1/4</SelectItem>
                             <SelectItem value="1/2">1/2</SelectItem>
                             <SelectItem value="3/4">3/4</SelectItem>
-                            <SelectItem value="full">Full</SelectItem>
+                            <SelectItem value="Full">Full</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription>
