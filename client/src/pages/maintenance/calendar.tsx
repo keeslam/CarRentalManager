@@ -1623,125 +1623,176 @@ export default function MaintenanceCalendar() {
 
       {/* Maintenance Completion Dialog */}
       <Dialog open={warrantyDateDialogOpen} onOpenChange={setWarrantyDateDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Complete Maintenance</DialogTitle>
             <DialogDescription>
-              Review and update APK and warranty dates for this vehicle
+              Review and update vehicle information after completing maintenance
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Vehicle Information Section */}
+          {completingReservation && (() => {
+            const vehicle = vehicles?.find(v => v.id === completingReservation.vehicleId);
+            if (!vehicle) return null;
+            
+            const maintenanceType = completingReservation.notes?.split(':')[0] || 'Maintenance';
+            
+            return (
+              <div className="bg-muted/50 rounded-md p-4 mb-4 space-y-3">
+                <div className="space-y-2">
+                  <h3 className="font-medium text-sm">Vehicle Information</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">License:</span>
+                      <span className="font-medium">{displayLicensePlate(vehicle.licensePlate)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Vehicle:</span>
+                      <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Maintenance Type:</span>
+                      <span className="font-medium">{maintenanceType}</span>
+                    </div>
+                    {vehicle.currentMileage !== undefined && vehicle.currentMileage !== null && (
+                      <div className="flex items-center">
+                        <span className="text-muted-foreground mr-1">Last Known Mileage:</span>
+                        <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                      </div>
+                    )}
+                    {vehicle.apkDate && (
+                      <div className="flex items-center">
+                        <span className="text-muted-foreground mr-1">Current APK:</span>
+                        <span className="font-medium">{format(parseISO(vehicle.apkDate), 'MMM d, yyyy')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          
           <div className="space-y-4">
             {/* Row 1: Dates side by side */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
+              <h3 className="font-semibold text-base">Completion Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Completion Date</label>
+                  <Input
+                    type="date"
+                    value={completingReservation?.startDate ? format(parseISO(completingReservation.startDate), 'yyyy-MM-dd') : ''}
+                    onChange={(e) => {
+                      if (completingReservation) {
+                        setCompletingReservation({
+                          ...completingReservation,
+                          startDate: e.target.value
+                        });
+                      }
+                    }}
+                    className="mt-2 bg-white"
+                    data-testid="input-completion-date"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When was maintenance completed?
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">APK Date</label>
+                  <Input
+                    type="date"
+                    value={apkDateInput}
+                    onChange={(e) => setApkDateInput(e.target.value)}
+                    className="mt-2 bg-white"
+                    data-testid="input-apk-date"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    APK expiry date (if updated)
+                  </p>
+                </div>
+              </div>
+
+              {/* APK Form upload */}
               <div>
-                <label className="text-sm font-medium">Completion Date</label>
+                <label className="text-sm font-medium">APK Inspection Form (Optional)</label>
                 <Input
-                  type="date"
-                  value={completingReservation?.startDate ? format(parseISO(completingReservation.startDate), 'yyyy-MM-dd') : ''}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => {
-                    if (completingReservation) {
-                      setCompletingReservation({
-                        ...completingReservation,
-                        startDate: e.target.value
-                      });
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setApkFormFile(file);
                     }
                   }}
-                  className="mt-2"
-                  data-testid="input-completion-date"
+                  className="mt-2 bg-white"
+                  data-testid="input-apk-form"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  When was maintenance completed?
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">APK Date</label>
-                <Input
-                  type="date"
-                  value={apkDateInput}
-                  onChange={(e) => setApkDateInput(e.target.value)}
-                  className="mt-2"
-                  data-testid="input-apk-date"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  APK expiry date (if updated)
-                </p>
+                {apkFormFile && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Selected: {apkFormFile.name}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Row 2: APK Form full width */}
-            <div>
-              <label className="text-sm font-medium">APK Inspection Form (Optional)</label>
-              <Input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setApkFormFile(file);
+            {/* Service Details Section */}
+            <div className="border rounded-lg p-4 bg-blue-50 space-y-4">
+              <h3 className="font-semibold text-base">Service Details</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Service Category</label>
+                  <Select value={maintenanceCategory} onValueChange={setMaintenanceCategory}>
+                    <SelectTrigger className="mt-2 bg-white" data-testid="select-maintenance-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
+                      <SelectItem value="repair">Repair</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Maintenance or repair?
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Current Mileage (km)</label>
+                  <Input
+                    type="number"
+                    value={currentMileage}
+                    onChange={(e) => setCurrentMileage(e.target.value)}
+                    placeholder="Odometer reading"
+                    className="mt-2 bg-white"
+                    data-testid="input-current-mileage"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Current vehicle mileage
+                  </p>
+                </div>
+              </div>
+
+              {/* Maintenance Details full width */}
+              <div>
+                <label className="text-sm font-medium">Maintenance Details</label>
+                <Textarea
+                  value={maintenanceDetails}
+                  onChange={(e) => setMaintenanceDetails(e.target.value)}
+                  placeholder={
+                    maintenanceCategory === 'scheduled_maintenance'
+                      ? "Describe the maintenance performed (e.g., oil change, air filter, spark plugs, cabin filter)"
+                      : "Describe the repair performed (e.g., tire replacement, brake repair, battery, window fix, damage repair)"
                   }
-                }}
-                className="mt-2"
-                data-testid="input-apk-form"
-              />
-              {apkFormFile && (
-                <p className="text-xs text-green-600 mt-1">
-                  Selected: {apkFormFile.name}
-                </p>
-              )}
-            </div>
-
-            {/* Row 3: Category and Mileage side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Service Category</label>
-                <Select value={maintenanceCategory} onValueChange={setMaintenanceCategory}>
-                  <SelectTrigger className="mt-2" data-testid="select-maintenance-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scheduled_maintenance">Scheduled Maintenance</SelectItem>
-                    <SelectItem value="repair">Repair</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Maintenance or repair?
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Current Mileage (km)</label>
-                <Input
-                  type="number"
-                  value={currentMileage}
-                  onChange={(e) => setCurrentMileage(e.target.value)}
-                  placeholder="Odometer reading"
-                  className="mt-2"
-                  data-testid="input-current-mileage"
+                  className="mt-2 bg-white"
+                  rows={3}
+                  data-testid="textarea-maintenance-details"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Current vehicle mileage
+                  What work was done on the vehicle?
                 </p>
               </div>
             </div>
-
-            {/* Row 4: Maintenance Details full width */}
-            <div>
-              <label className="text-sm font-medium">Maintenance Details</label>
-              <Textarea
-                value={maintenanceDetails}
-                onChange={(e) => setMaintenanceDetails(e.target.value)}
-                placeholder={
-                  maintenanceCategory === 'scheduled_maintenance'
-                    ? "Describe the maintenance performed (e.g., oil change, air filter, spark plugs, cabin filter)"
-                    : "Describe the repair performed (e.g., tire replacement, brake repair, battery, window fix, damage repair)"
-                }
-                className="mt-2"
-                rows={3}
-                data-testid="textarea-maintenance-details"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                What work was done on the vehicle?
-              </p>
-            </div>
+            
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
