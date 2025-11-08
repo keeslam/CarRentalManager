@@ -366,7 +366,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Car className="h-5 w-5" />
@@ -379,7 +379,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
 
         <div className="space-y-4">
           {/* Vehicle Information */}
-          <div className="bg-muted/50 rounded-md p-3 space-y-2">
+          <div className="bg-muted/50 rounded-md p-3">
             <div className="space-y-1">
               <h3 className="font-medium text-sm">Vehicle Information</h3>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
@@ -406,7 +406,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
               <h3 className="font-semibold text-base">Completion Details</h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="returnDate">
                     Return Date
