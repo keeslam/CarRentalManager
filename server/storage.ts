@@ -1325,8 +1325,9 @@ export class MemStorage implements IStorage {
       }
 
       // Check for any overlapping reservations (standard, replacement, maintenance_block)
+      // Exclude completed and returned reservations as they don't block availability
       const hasConflicts = Array.from(this.reservations.values()).some(r => {
-        if (r.vehicleId !== vehicle.id || r.status === 'cancelled') {
+        if (r.vehicleId !== vehicle.id || r.status === 'cancelled' || r.status === 'completed' || r.status === 'returned') {
           return false;
         }
         
