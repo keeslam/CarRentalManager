@@ -2051,7 +2051,6 @@ export default function ReservationCalendarPage() {
                   <Button 
                     className="flex-1"
                     onClick={() => {
-                      setViewDialogOpen(false);
                       setPickupDialogOpen(true);
                     }}
                     data-testid="button-start-pickup-calendar"
@@ -2068,7 +2067,6 @@ export default function ReservationCalendarPage() {
                   <Button 
                     className="flex-1"
                     onClick={() => {
-                      setViewDialogOpen(false);
                       setReturnDialogOpen(true);
                     }}
                     data-testid="button-start-return-calendar"
@@ -2781,7 +2779,7 @@ export default function ReservationCalendarPage() {
             onOpenChange={setPickupDialogOpen}
             reservation={selectedReservation}
             onSuccess={async () => {
-              // Fetch updated reservation data
+              // Fetch updated reservation data and update the view dialog
               try {
                 const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
                   credentials: 'include',
@@ -2790,13 +2788,14 @@ export default function ReservationCalendarPage() {
                 if (response.ok) {
                   const updatedReservation = await response.json();
                   setSelectedReservation(updatedReservation);
-                  
-                  // Reopen the view dialog to show updated reservation
-                  setViewDialogOpen(true);
                 }
               } catch (error) {
                 console.error('Error fetching updated reservation:', error);
               }
+              
+              // Refetch documents and damage checks to show newly generated contract
+              await refetchDocuments();
+              await refetchDamageChecks();
               
               // Refetch calendar data
               await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
@@ -2807,7 +2806,7 @@ export default function ReservationCalendarPage() {
             onOpenChange={setReturnDialogOpen}
             reservation={selectedReservation}
             onSuccess={async () => {
-              // Fetch updated reservation data
+              // Fetch updated reservation data and update the view dialog
               try {
                 const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
                   credentials: 'include',
@@ -2816,13 +2815,14 @@ export default function ReservationCalendarPage() {
                 if (response.ok) {
                   const updatedReservation = await response.json();
                   setSelectedReservation(updatedReservation);
-                  
-                  // Reopen the view dialog to show updated reservation
-                  setViewDialogOpen(true);
                 }
               } catch (error) {
                 console.error('Error fetching updated reservation:', error);
               }
+              
+              // Refetch documents and damage checks to show newly generated damage check
+              await refetchDocuments();
+              await refetchDamageChecks();
               
               // Refetch calendar data
               await queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
