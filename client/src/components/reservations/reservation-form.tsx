@@ -197,7 +197,7 @@ export function ReservationForm({
     initialData?.vehicle?.departureMileage || undefined
   );
   const [startMileage, setStartMileage] = useState<number | undefined>(
-    initialData?.startMileage || undefined
+    initialData?.pickupMileage || undefined
   );
   const [fuelLevelPickup, setFuelLevelPickup] = useState<string | undefined>(
     initialData?.fuelLevelPickup || undefined
@@ -422,7 +422,7 @@ export function ReservationForm({
       if (selectedVehicle.currentMileage && !startMileage) {
         console.log(`🚗 Auto-populating pickup mileage with vehicle's current mileage: ${selectedVehicle.currentMileage}`);
         setStartMileage(selectedVehicle.currentMileage);
-        form.setValue("startMileage", selectedVehicle.currentMileage);
+        form.setValue("pickupMileage", selectedVehicle.currentMileage);
       }
     }
   }, [selectedVehicle, editMode, createdReservationId, startMileage, form]);
@@ -453,9 +453,9 @@ export function ReservationForm({
   useEffect(() => {
     if (initialData) {
       // Update mileage states
-      if (initialData.startMileage !== undefined && initialData.startMileage !== startMileage) {
-        setStartMileage(initialData.startMileage);
-        form.setValue("startMileage", initialData.startMileage);
+      if (initialData.pickupMileage !== undefined && initialData.pickupMileage !== startMileage) {
+        setStartMileage(initialData.pickupMileage);
+        form.setValue("pickupMileage", initialData.pickupMileage);
       }
       if (initialData.returnMileage !== undefined && initialData.returnMileage !== departureMileage) {
         setDepartureMileage(initialData.returnMileage);
@@ -1588,7 +1588,7 @@ export function ReservationForm({
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || undefined;
                           setStartMileage(value);
-                          form.setValue("startMileage", value as any);
+                          form.setValue("pickupMileage", value as any);
                         }}
                       />
                       <p className="text-[0.8rem] text-muted-foreground">
