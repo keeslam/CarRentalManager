@@ -1313,6 +1313,13 @@ export default function MaintenanceCalendar() {
                                       const currentApkDate = event.vehicle.apkDate || calculateNextApkDate(event.vehicle, new Date());
                                       setApkDateInput(currentApkDate);
                                       
+                                      // Pre-fill current mileage with vehicle's current mileage
+                                      if (event.vehicle.currentMileage) {
+                                        setCurrentMileage(event.vehicle.currentMileage.toString());
+                                      } else {
+                                        setCurrentMileage('');
+                                      }
+                                      
                                       setWarrantyDateDialogOpen(true);
                                     }
                                   } catch (error) {
