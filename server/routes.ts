@@ -3315,7 +3315,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Update vehicle availability to "available" after return
       if (updatedReservation.vehicleId) {
         await storage.updateVehicle(updatedReservation.vehicleId, {
-          availability: 'available',
+          availabilityStatus: 'available',
           currentMileage: mileage,
           currentFuelLevel: fuelLevelReturn
         });
