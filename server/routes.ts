@@ -3312,6 +3312,16 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
+      // Update vehicle availability to "available" after return
+      if (updatedReservation.vehicleId) {
+        await storage.updateVehicle(updatedReservation.vehicleId, {
+          availability: 'available',
+          currentMileage: mileage,
+          currentFuelLevel: fuelLevelReturn
+        });
+        console.log(`✅ Vehicle ${updatedReservation.vehicleId} set to available after return`);
+      }
+
       let damageCheckDocument = null;
       try {
         if (!updatedReservation.vehicle || !updatedReservation.vehicleId) {
