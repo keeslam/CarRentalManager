@@ -595,7 +595,12 @@ export class DatabaseStorage implements IStorage {
     
     // Fetch vehicle and customer data for each reservation
     for (const reservation of reservationsData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      // Handle null vehicleId for placeholder spare reservations
+      let vehicle = null;
+      if (reservation.vehicleId !== null) {
+        [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      }
+      
       const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
       
       result.push({
@@ -615,7 +620,12 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
     
-    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+    // Handle null vehicleId for placeholder spare reservations
+    let vehicle = null;
+    if (reservation.vehicleId !== null) {
+      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+    }
+    
     const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
     
     return {
@@ -637,7 +647,12 @@ export class DatabaseStorage implements IStorage {
     
     const [reservation] = await db.insert(reservations).values(dataToInsert).returning();
     
-    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+    // Handle null vehicleId for placeholder spare reservations
+    let vehicle = null;
+    if (reservation.vehicleId !== null) {
+      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+    }
+    
     const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
     
     return {
@@ -689,7 +704,12 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
     
-    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, updatedReservation.vehicleId));
+    // Handle null vehicleId for placeholder spare reservations
+    let vehicle = null;
+    if (updatedReservation.vehicleId !== null) {
+      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, updatedReservation.vehicleId));
+    }
+    
     const [customer] = await db.select().from(customers).where(eq(customers.id, updatedReservation.customerId));
     
     return {
@@ -722,7 +742,12 @@ export class DatabaseStorage implements IStorage {
     
     // Fetch vehicle, customer, and driver data for each reservation
     for (const reservation of reservationsData) {
-      const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      // Handle null vehicleId for placeholder spare reservations
+      let vehicle = null;
+      if (reservation.vehicleId !== null) {
+        [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      }
+      
       let customer = null;
       let driver = null;
       
