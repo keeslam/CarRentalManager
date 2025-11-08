@@ -2225,22 +2225,20 @@ export function ReservationForm({
                     }
                   }}
                 >
-                  {createdReservationId ? "Close" : "Cancel"}
+                  {createdReservationId || editMode ? "Close" : "Cancel"}
                 </Button>
                 
-                {/* Submit button - simplified for both edit and create modes */}
-                {!createdReservationId && (
-                  <Button 
-                    type="submit"
-                    disabled={createReservationMutation.isPending || hasOverlap}
-                    data-testid="button-submit-reservation"
-                  >
-                    {createReservationMutation.isPending 
-                      ? "Saving..." 
-                      : editMode ? "Update Reservation" : "Create Reservation"
-                    }
-                  </Button>
-                )}
+                {/* Submit button - show in edit mode or when creating */}
+                <Button 
+                  type="submit"
+                  disabled={createReservationMutation.isPending || hasOverlap}
+                  data-testid="button-submit-reservation"
+                >
+                  {createReservationMutation.isPending 
+                    ? "Saving..." 
+                    : editMode ? "Update Reservation" : "Create Reservation"
+                  }
+                </Button>
               </div>
             </div>
             
