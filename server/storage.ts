@@ -1324,6 +1324,11 @@ export class MemStorage implements IStorage {
         continue;
       }
 
+      // Exclude vehicles not meant for rental and those needing fixing
+      if (vehicle.availabilityStatus === 'not_for_rental' || vehicle.availabilityStatus === 'needs_fixing') {
+        continue;
+      }
+
       // Check for any overlapping reservations (standard, replacement, maintenance_block)
       // Exclude completed and returned reservations as they don't block availability
       const hasConflicts = Array.from(this.reservations.values()).some(r => {

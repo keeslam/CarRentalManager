@@ -1896,11 +1896,13 @@ export class DatabaseStorage implements IStorage {
       conflictingReservations.map(r => r.vehicleId).filter(id => id !== null)
     );
 
-    // Don't filter by availabilityStatus - that's just a snapshot of current status
-    // Availability should be determined solely by actual reservation conflicts in the date range
+    // Filter out vehicles that are not meant for rental and those in service
+    // Allow both 'available' and 'rented' vehicles as long as they don't have date conflicts
     return allVehicles.filter(vehicle => 
       !unavailableVehicleIds.has(vehicle.id) && 
-      vehicle.maintenanceStatus !== 'in_service'
+      vehicle.maintenanceStatus !== 'in_service' &&
+      vehicle.availabilityStatus !== 'not_for_rental' &&
+      vehicle.availabilityStatus !== 'needs_fixing'
     );
   }
 
