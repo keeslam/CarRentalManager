@@ -140,12 +140,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Sync vehicle availability status with active reservations
-  // This function ONLY manages the "available" ↔ "rented" transition
+  // This function manages automatic status transitions: "available" ↔ "scheduled" ↔ "rented"
   // It preserves manual statuses like "needs_fixing" and "not_for_rental"
   async syncVehicleAvailabilityWithReservations(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const thirtyDaysDate = thirtyDaysFromNow.toISOString().split('T')[0];
     
-    // Get all vehicles with active reservations (not cancelled, not returned, not completed, covers today)
+    // Get all vehicles with active reservations (currently rented - covers today)
     const activeReservations = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
@@ -167,8 +170,27 @@ export class DatabaseStorage implements IStorage {
     
     const rentedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
     
-    // ONLY set "available" vehicles to "rented" when they have active reservations
-    // Never change "needs_fixing" or "not_for_rental" vehicles
+    // Get all vehicles with upcoming reservations (within 30 days, not yet started)
+    const upcomingReservations = await db
+      .select({ vehicleId: reservations.vehicleId })
+      .from(reservations)
+      .where(
+        and(
+          sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.status} != 'returned'`,
+          sql`${reservations.status} != 'completed'`,
+          sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance
+          isNull(reservations.deletedAt),
+          sql`${reservations.vehicleId} IS NOT NULL`,
+          sql`${reservations.startDate} > ${today}`, // Starts in the future
+          sql`${reservations.startDate} <= ${thirtyDaysDate}` // Within 30 days
+        )
+      );
+    
+    const scheduledVehicleIds = new Set(upcomingReservations.map(r => r.vehicleId));
+    
+    // Priority 1: Set vehicles to "rented" if they have active reservations
+    // ONLY update "available" or "scheduled" vehicles
     if (rentedVehicleIds.size > 0) {
       await db
         .update(vehicles)
@@ -176,29 +198,57 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             inArray(vehicles.id, Array.from(rentedVehicleIds)),
-            eq(vehicles.availabilityStatus, 'available') // ONLY update "available" vehicles
+            or(
+              eq(vehicles.availabilityStatus, 'available'),
+              eq(vehicles.availabilityStatus, 'scheduled')
+            )
           )
         );
     }
     
-    // Reset "rented" vehicles back to "available" when they no longer have active reservations
+    // Priority 2: Set vehicles to "scheduled" if they have upcoming reservations (but not currently rented)
+    // ONLY update "available" vehicles
+    const scheduledNotRented = Array.from(scheduledVehicleIds).filter(id => !rentedVehicleIds.has(id));
+    if (scheduledNotRented.length > 0) {
+      await db
+        .update(vehicles)
+        .set({ availabilityStatus: 'scheduled' })
+        .where(
+          and(
+            inArray(vehicles.id, scheduledNotRented),
+            eq(vehicles.availabilityStatus, 'available')
+          )
+        );
+    }
+    
+    // Priority 3: Reset vehicles back to "available" when they have no active or upcoming reservations
     // This preserves the business rule: manual statuses are never overwritten
-    if (rentedVehicleIds.size > 0) {
+    const allReservedVehicleIds = new Set([...rentedVehicleIds, ...scheduledVehicleIds]);
+    
+    if (allReservedVehicleIds.size > 0) {
       await db
         .update(vehicles)
         .set({ availabilityStatus: 'available' })
         .where(
           and(
-            eq(vehicles.availabilityStatus, 'rented'),
-            notInArray(vehicles.id, Array.from(rentedVehicleIds))
+            or(
+              eq(vehicles.availabilityStatus, 'rented'),
+              eq(vehicles.availabilityStatus, 'scheduled')
+            ),
+            notInArray(vehicles.id, Array.from(allReservedVehicleIds))
           )
         );
     } else {
-      // If no vehicles are currently rented, reset all vehicles with "rented" status
+      // If no vehicles have reservations, reset all vehicles with "rented" or "scheduled" status
       await db
         .update(vehicles)
         .set({ availabilityStatus: 'available' })
-        .where(eq(vehicles.availabilityStatus, 'rented'));
+        .where(
+          or(
+            eq(vehicles.availabilityStatus, 'rented'),
+            eq(vehicles.availabilityStatus, 'scheduled')
+          )
+        );
     }
   }
 

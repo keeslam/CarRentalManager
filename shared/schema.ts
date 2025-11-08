@@ -188,11 +188,12 @@ export const vehicles = pgTable("vehicles", {
   // Oil specification
   recommendedOil: text("recommended_oil"), // e.g., "5W-30", "10W-40", or custom specification
   
-  // Availability status (manual control with 4 states)
-  // 'available' - ready for rental
+  // Availability status (manual control with 5 states)
+  // 'available' - ready for rental (no reservations)
+  // 'scheduled' - has a reservation within 30 days (auto-set by system)
   // 'needs_fixing' - in workshop or needs repairs
   // 'not_for_rental' - owned but not being rented out
-  // 'rented' - currently rented
+  // 'rented' - currently rented (auto-set by system)
   availabilityStatus: text("availability_status").default("available").notNull(),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),

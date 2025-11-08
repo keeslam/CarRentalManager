@@ -223,11 +223,17 @@ export default function VehiclesIndex() {
         const vehicle = row.original;
         const availabilityStatus = vehicle.availabilityStatus || 'available';
         
-        // Display the 4-state availability status
+        // Display the 5-state availability status
         if (availabilityStatus === 'available') {
           return (
             <Badge className="bg-green-100 text-green-800 font-semibold">
               Available
+            </Badge>
+          );
+        } else if (availabilityStatus === 'scheduled') {
+          return (
+            <Badge className="bg-purple-100 text-purple-800 font-semibold">
+              Scheduled
             </Badge>
           );
         } else if (availabilityStatus === 'needs_fixing') {
