@@ -462,10 +462,11 @@ export default function ReservationCalendarPage() {
   // Filter out completed/returned reservations from calendar view
   const reservations = useMemo(() => {
     if (!allReservations) return [];
-    // Only show booked and picked_up reservations OR maintenance blocks
+    // Only show booked and picked_up reservations OR maintenance blocks OR placeholder spares
     // Returned and completed rentals appear in "View Completed" list
     return allReservations.filter(r => 
       r.type === 'maintenance_block' || 
+      r.placeholderSpare === true ||
       ['booked', 'picked_up'].includes(r.status || '')
     );
   }, [allReservations]);
