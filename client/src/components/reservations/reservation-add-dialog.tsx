@@ -17,13 +17,15 @@ interface ReservationAddDialogProps {
   initialCustomerId?: string;
   initialStartDate?: string;
   children?: React.ReactNode;
+  onSuccess?: (reservation: any) => void;
 }
 
 export function ReservationAddDialog({ 
   initialVehicleId, 
   initialCustomerId, 
   initialStartDate,
-  children 
+  children,
+  onSuccess
 }: ReservationAddDialogProps) {
   const [open, setOpen] = useState(false);
   const [isInPreviewMode, setIsInPreviewMode] = useState(false);
@@ -72,6 +74,13 @@ export function ReservationAddDialog({
             initialCustomerId={initialCustomerId}
             initialStartDate={initialStartDate}
             onPreviewModeChange={setIsInPreviewMode}
+            onSuccess={(reservation) => {
+              setIsInPreviewMode(false);
+              setOpen(false);
+              if (onSuccess) {
+                onSuccess(reservation);
+              }
+            }}
             onCancel={() => {
               setIsInPreviewMode(false);
               setOpen(false);
