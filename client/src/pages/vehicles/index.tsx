@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ColumnDef } from "@tanstack/react-table";
-import { Vehicle } from "@shared/schema";
+import { Vehicle, Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
@@ -42,6 +42,11 @@ export default function VehiclesIndex() {
   
   const { data: vehicles, isLoading, refetch } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
+  });
+  
+  // Fetch reservations to check for spare vehicle assignments
+  const { data: reservations } = useQuery<Reservation[]>({
+    queryKey: ["/api/reservations"],
   });
   
   // Dialog handlers
@@ -236,9 +241,17 @@ export default function VehiclesIndex() {
             </Badge>
           );
         } else if (availabilityStatus === 'scheduled') {
+          // Check if this vehicle has a replacement (spare) reservation
+          const hasSpareReservation = reservations?.some(r => 
+            r.vehicleId === vehicle.id && 
+            r.type === 'replacement' && 
+            r.status !== 'cancelled' &&
+            r.status !== 'completed'
+          );
+          
           return (
-            <Badge className="bg-purple-100 text-purple-800 font-semibold">
-              Scheduled
+            <Badge className={hasSpareReservation ? "bg-orange-100 text-orange-800 font-semibold" : "bg-purple-100 text-purple-800 font-semibold"}>
+              {hasSpareReservation ? "Spare Vehicle" : "Scheduled"}
             </Badge>
           );
         } else if (availabilityStatus === 'needs_fixing') {
