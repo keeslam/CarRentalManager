@@ -897,8 +897,10 @@ export default function ReservationCalendarPage() {
                       const matchesDate = isPickupDay || isReturnDay;
                       
                       // Then check if the vehicle is in the filtered vehicles list
+                      // ALWAYS show TBD spare reservations (placeholderSpare === true) regardless of filters
                       const matchesFilter = vehicleFilters.search === "" && vehicleFilters.type === "all" && vehicleFilters.availability === "all" || 
-                                           filteredVehicles.some(v => v.id === res.vehicleId);
+                                           filteredVehicles.some(v => v.id === res.vehicleId) ||
+                                           res.placeholderSpare === true;
                                            
                       return matchesDate && matchesFilter;
                     }) || [];
