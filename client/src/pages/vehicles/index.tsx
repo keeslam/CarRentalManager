@@ -96,6 +96,11 @@ export default function VehiclesIndex() {
       if (sortBy === "filter-unspecified" && (isRegisteredToPerson || isRegisteredToCompany)) return false;
     }
     
+    // Apply availability status filter
+    if (sortBy === "filter-needs-fixing") {
+      if (vehicle.availabilityStatus !== 'needs_fixing') return false;
+    }
+    
     return true;
   }).sort((a, b) => {
     // If sortBy is a filter option, use default sorting
@@ -119,16 +124,16 @@ export default function VehiclesIndex() {
       
       case "availability-asc":
         // Sort by availability status - available vehicles first
-        const statusOrder = { 'available': 1, 'needs_fixing': 2, 'not_for_rental': 3, 'rented': 4 };
-        const aOrder = statusOrder[a.availabilityStatus as keyof typeof statusOrder] || 5;
-        const bOrder = statusOrder[b.availabilityStatus as keyof typeof statusOrder] || 5;
+        const statusOrder = { 'available': 1, 'scheduled': 2, 'needs_fixing': 3, 'not_for_rental': 4, 'rented': 5 };
+        const aOrder = statusOrder[a.availabilityStatus as keyof typeof statusOrder] || 6;
+        const bOrder = statusOrder[b.availabilityStatus as keyof typeof statusOrder] || 6;
         return aOrder - bOrder;
         
       case "availability-desc":
         // Sort by availability status - rented/reserved vehicles first
-        const statusOrderDesc = { 'rented': 1, 'not_for_rental': 2, 'needs_fixing': 3, 'available': 4 };
-        const aOrderDesc = statusOrderDesc[a.availabilityStatus as keyof typeof statusOrderDesc] || 5;
-        const bOrderDesc = statusOrderDesc[b.availabilityStatus as keyof typeof statusOrderDesc] || 5;
+        const statusOrderDesc = { 'rented': 1, 'scheduled': 2, 'not_for_rental': 3, 'needs_fixing': 4, 'available': 5 };
+        const aOrderDesc = statusOrderDesc[a.availabilityStatus as keyof typeof statusOrderDesc] || 6;
+        const bOrderDesc = statusOrderDesc[b.availabilityStatus as keyof typeof statusOrderDesc] || 6;
         return aOrderDesc - bOrderDesc;
       
       case "brand":
@@ -413,6 +418,7 @@ export default function VehiclesIndex() {
                   <SelectItem value="apk-desc">APK Date (latest first)</SelectItem>
                   <SelectItem value="availability-asc">Availability (available first)</SelectItem>
                   <SelectItem value="availability-desc">Availability (reserved first)</SelectItem>
+                  <SelectItem value="filter-needs-fixing">Needs Fixing</SelectItem>
                   <SelectItem value="filter-opnaam">Opnaam</SelectItem>
                   <SelectItem value="filter-bv">BV</SelectItem>
                   <SelectItem value="filter-unspecified">Not specified</SelectItem>
