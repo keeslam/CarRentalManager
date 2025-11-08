@@ -145,13 +145,14 @@ export class DatabaseStorage implements IStorage {
   async syncVehicleAvailabilityWithReservations(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get all vehicles with active reservations (not cancelled, not completed, covers today)
+    // Get all vehicles with active reservations (not cancelled, not returned, not completed, covers today)
     const activeReservations = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
       .where(
         and(
           sql`${reservations.status} != 'cancelled'`,
+          sql`${reservations.status} != 'returned'`,
           sql`${reservations.status} != 'completed'`,
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance
           isNull(reservations.deletedAt),
