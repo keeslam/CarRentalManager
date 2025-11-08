@@ -2425,13 +2425,9 @@ export default function ReservationCalendarPage() {
                 setSelectedDate(null);
               }}
               onSuccess={(reservation) => {
-                // Close the dialog when reservation is fully created
-                if (reservation && reservation.id) {
-                  setAddDialogOpen(false);
-                  setSelectedDate(null);
-                  // Refresh calendar data
-                  queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-                }
+                // Keep the dialog open after creating reservation
+                // Refresh calendar data
+                queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
               }}
             />
           </div>
