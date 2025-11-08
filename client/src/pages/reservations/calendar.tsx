@@ -1841,16 +1841,14 @@ export default function ReservationCalendarPage() {
                             onClick={() => {
                               const ext = doc.fileName.split('.').pop()?.toLowerCase();
                               const isPdf = doc.contentType?.includes('pdf') || ext === 'pdf';
-                              const isContract = doc.documentType?.startsWith('Contract');
                               
                               // Open PDFs directly in new tab (browsers often block PDF iframes)
                               if (isPdf) {
-                                // For contract documents, use the template generation endpoint
-                                if (isContract && doc.reservationId) {
-                                  window.open(`/api/contracts/generate/${doc.reservationId}`, '_blank');
-                                } else {
-                                  window.open(`/${doc.filePath}`, '_blank');
-                                }
+                                // Ensure the path has /uploads prefix if it doesn't already
+                                const viewPath = doc.filePath.startsWith('uploads/') 
+                                  ? `/${doc.filePath}` 
+                                  : `/uploads/${doc.filePath}`;
+                                window.open(viewPath, '_blank');
                               } else {
                                 // Show preview for images and other files
                                 setPreviewDocument(doc);
