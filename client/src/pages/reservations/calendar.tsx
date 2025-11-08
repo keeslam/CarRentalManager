@@ -2092,7 +2092,6 @@ export default function ReservationCalendarPage() {
                 <Button 
                   className="flex-1"
                   onClick={() => {
-                    setViewDialogOpen(false);
                     handleEditReservation(selectedReservation);
                   }}
                   data-testid="button-edit-reservation-dialog"
@@ -2175,17 +2174,31 @@ export default function ReservationCalendarPage() {
             <ReservationForm 
               editMode={true} 
               initialData={selectedReservation}
-              onSuccess={() => {
-                // Close the edit dialog and stay on calendar
+              onSuccess={async () => {
+                // Close the edit dialog
                 setEditDialogOpen(false);
-                setSelectedReservation(null);
                 // Refresh calendar data
-                queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+                await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+                
+                // Fetch fresh reservation data and reopen view dialog
+                try {
+                  const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
+                    credentials: 'include',
+                  });
+                  
+                  if (response.ok) {
+                    const updatedReservation = await response.json();
+                    setSelectedReservation(updatedReservation);
+                    setViewDialogOpen(true);
+                  }
+                } catch (error) {
+                  console.error('Error fetching updated reservation:', error);
+                }
               }}
               onCancel={() => {
-                // Close the edit dialog without saving
+                // Close the edit dialog and reopen view dialog
                 setEditDialogOpen(false);
-                setSelectedReservation(null);
+                setViewDialogOpen(true);
               }}
             />
           )}
