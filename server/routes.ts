@@ -1972,6 +1972,16 @@ export async function registerRoutes(app: Express): Promise<void> {
         bodyData.endDate = null;
       }
       
+      // Convert pickupMileage to number if present
+      if (bodyData.pickupMileage !== undefined && bodyData.pickupMileage !== null && bodyData.pickupMileage !== "") {
+        bodyData.pickupMileage = parseInt(bodyData.pickupMileage);
+      }
+      
+      // Convert returnMileage to number if present
+      if (bodyData.returnMileage !== undefined && bodyData.returnMileage !== null && bodyData.returnMileage !== "") {
+        bodyData.returnMileage = parseInt(bodyData.returnMileage);
+      }
+      
       const reservationData = insertReservationSchema.parse(bodyData);
       
       // Add user tracking information
