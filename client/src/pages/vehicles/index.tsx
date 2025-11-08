@@ -267,9 +267,16 @@ export default function VehiclesIndex() {
             </Badge>
           );
         } else if (availabilityStatus === 'rented') {
+          // Check if this vehicle is being used as a spare (replacement reservation that's picked up)
+          const hasActiveSpareReservation = reservations?.some(r => 
+            r.vehicleId === vehicle.id && 
+            r.type === 'replacement' && 
+            r.status === 'picked_up'
+          );
+          
           return (
-            <Badge className="bg-blue-100 text-blue-800 font-semibold">
-              Rented
+            <Badge className={hasActiveSpareReservation ? "bg-orange-100 text-orange-800 font-semibold" : "bg-blue-100 text-blue-800 font-semibold"}>
+              {hasActiveSpareReservation ? "Spare Vehicle (Active)" : "Rented"}
             </Badge>
           );
         }
