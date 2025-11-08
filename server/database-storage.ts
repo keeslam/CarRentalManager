@@ -1867,6 +1867,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get conflicting reservations in the date range (excluding soft-deleted and maintenance blocks)
     // Maintenance blocks don't conflict since rentals continue during maintenance (monthly payment)
+    // Also exclude returned and completed reservations as they don't block availability
     const conflictingReservations = await db
       .select()
       .from(reservations)
@@ -1874,6 +1875,7 @@ export class DatabaseStorage implements IStorage {
         and(
           not(eq(reservations.status, 'cancelled')),
           not(eq(reservations.status, 'completed')),
+          not(eq(reservations.status, 'returned')),
           not(eq(reservations.type, 'maintenance_block')), // Exclude maintenance - rentals continue
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`,
