@@ -1045,32 +1045,9 @@ export default function ReservationCalendarPage() {
                           )}
                         </div>
                         
-                        {/* Show grouped reservations by vehicle in month view */}
+                        {/* Show up to 5 reservations in month view */}
                         <div className="space-y-2">
-                          {(() => {
-                            // Group reservations by vehicle
-                            const groupedByVehicle = dayReservations.reduce((acc, res) => {
-                              const vehicleKey = res.vehicleId?.toString() || 'no-vehicle';
-                              if (!acc[vehicleKey]) {
-                                acc[vehicleKey] = [];
-                              }
-                              acc[vehicleKey].push(res);
-                              return acc;
-                            }, {} as Record<string, typeof dayReservations>);
-
-                            // Sort each group by start date (most recent first) and limit to 3
-                            Object.keys(groupedByVehicle).forEach(key => {
-                              groupedByVehicle[key] = groupedByVehicle[key]
-                                .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-                                .slice(0, 3);
-                            });
-
-                            // Flatten back to array and limit total to 5 vehicle groups
-                            const flattenedReservations = Object.values(groupedByVehicle)
-                              .slice(0, 5)
-                              .flat();
-
-                            const elements = flattenedReservations.map((res, index) => {
+                          {dayReservations.slice(0, 5).map(res => {
                             try {
                               const startDate = safeParseDateISO(res.startDate);
                               const endDate = safeParseDateISO(res.endDate);
@@ -1437,30 +1414,23 @@ export default function ReservationCalendarPage() {
                                 </div>
                               );
                             }
-                          });
-
-                          // Add "more" button if there are more than 5 reservations
-                          if (dayReservations.length > 5) {
-                            elements.push(
-                              <Button
-                                key="more-button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  console.log('More button clicked for day:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
-                                  openDayDialog(day);
-                                }}
-                                data-testid={`button-more-${safeFormat(day, 'yyyy-MM-dd', 'invalid-date')}`}
-                              >
-                                +{dayReservations.length - 5} more
-                              </Button>
-                            );
-                          }
-
-                          return elements;
-                          })()}
+                          })}
+                          
+                          {dayReservations.length > 5 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('More button clicked for day:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
+                                openDayDialog(day);
+                              }}
+                              data-testid={`button-more-${safeFormat(day, 'yyyy-MM-dd', 'invalid-date')}`}
+                            >
+                              +{dayReservations.length - 5} more
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );

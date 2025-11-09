@@ -321,7 +321,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
   const filteredReservations = useMemo(() => {
     if (!reservations) return [];
 
-    return reservations.filter((reservation) => {
+    const filtered = reservations.filter((reservation) => {
       // Exclude maintenance reservations from rental list
       if (reservation.type === 'maintenance_block') {
         return false;
@@ -368,6 +368,29 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
 
       return matchesSearch && matchesStatus && matchesVehicleType && matchesDateRange;
     });
+
+    // Group by vehicle and limit to 3 most recent per vehicle
+    const groupedByVehicle = filtered.reduce((acc, reservation) => {
+      const vehicleKey = reservation.vehicleId?.toString() || 'no-vehicle';
+      if (!acc[vehicleKey]) {
+        acc[vehicleKey] = [];
+      }
+      acc[vehicleKey].push(reservation);
+      return acc;
+    }, {} as Record<string, typeof filtered>);
+
+    // Sort each group by start date (most recent first) and limit to 3
+    const result: typeof filtered = [];
+    Object.keys(groupedByVehicle).forEach(key => {
+      const vehicleReservations = groupedByVehicle[key]
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      
+      // Take only the 3 most recent
+      result.push(...vehicleReservations.slice(0, 3));
+    });
+
+    // Sort the final result by start date
+    return result.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   }, [reservations, searchQuery, statusFilter, vehicleTypeFilter, dateRangeFilter, today]);
 
   return (
