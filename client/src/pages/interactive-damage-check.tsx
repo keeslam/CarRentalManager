@@ -40,9 +40,12 @@ interface InteractiveDamageCheckProps {
   initialReservationId?: number | null;
   compareWithCheckId?: number | null;
   initialCheckType?: 'pickup' | 'return';
+  initialMileage?: string;
+  initialFuelLevel?: string;
+  initialDate?: string;
 }
 
-export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId, initialReservationId, compareWithCheckId, initialCheckType }: InteractiveDamageCheckProps = {}) {
+export default function InteractiveDamageCheck({ onClose, editingCheckId: propEditingCheckId, initialVehicleId, initialReservationId, compareWithCheckId, initialCheckType, initialMileage, initialFuelLevel, initialDate }: InteractiveDamageCheckProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,8 +62,8 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [drawingPaths, setDrawingPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
   const [checkType, setCheckType] = useState<'pickup' | 'return'>(initialCheckType || 'pickup');
-  const [fuelLevel, setFuelLevel] = useState("");
-  const [mileage, setMileage] = useState("");
+  const [fuelLevel, setFuelLevel] = useState(initialFuelLevel || "");
+  const [mileage, setMileage] = useState(initialMileage || "");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   

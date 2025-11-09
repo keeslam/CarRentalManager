@@ -520,6 +520,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             editingCheckId={editingDamageCheckId}
             initialVehicleId={isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId}
             initialReservationId={reservation.id}
+            initialMileage={pickupMileage}
+            initialFuelLevel={fuelLevelPickup}
+            initialDate={pickupDate}
           />
         </DialogContent>
       </Dialog>
