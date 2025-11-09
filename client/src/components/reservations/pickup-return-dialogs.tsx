@@ -518,7 +518,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
               queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
             }}
             editingCheckId={editingDamageCheckId}
-            initialVehicleId={reservation.vehicleId}
+            initialVehicleId={isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId}
             initialReservationId={reservation.id}
           />
         </DialogContent>
