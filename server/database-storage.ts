@@ -23,6 +23,8 @@ import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { IStorage } from "./storage";
+import * as fs from "fs";
+import * as path from "path";
 
 // Helper function for NOT IN array since drizzle-orm doesn't have a direct equivalent
 function notInArray(column: any, values: any[]) {
@@ -2708,6 +2710,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInteractiveDamageCheck(id: number): Promise<boolean> {
+    // First, get the damage check to retrieve the PDF path
+    const [damageCheck] = await db.select().from(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
+    
+    if (!damageCheck) {
+      return false;
+    }
+    
+    // Delete the PDF file if it exists
+    if (damageCheck.pdfPath) {
+      try {
+        const pdfFullPath = path.join(process.cwd(), damageCheck.pdfPath);
+        if (fs.existsSync(pdfFullPath)) {
+          await fs.promises.unlink(pdfFullPath);
+          console.log(`🗑️ Deleted damage check PDF: ${damageCheck.pdfPath}`);
+        }
+      } catch (error) {
+        console.error("Error deleting damage check PDF file:", error);
+      }
+    }
+    
+    // Delete the database record
     const result = await db.delete(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
