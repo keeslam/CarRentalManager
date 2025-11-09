@@ -171,11 +171,11 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Section 1: Pickup Details */}
+            {/* Combined Pickup Details and Fuel Level */}
             <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
               <h3 className="font-semibold text-base">Pickup Details</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pickupDate">
                     Pickup Date
@@ -212,32 +212,27 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     Odometer reading at pickup
                   </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Section 2: Fuel Level */}
-            <div className="border rounded-lg p-4 bg-blue-50 space-y-4">
-              <h3 className="font-semibold text-base">Fuel Level</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="fuelLevelPickup">
-                  Fuel Level at Pickup
-                </Label>
-                <Select value={fuelLevelPickup} onValueChange={setFuelLevelPickup}>
-                  <SelectTrigger className="bg-white" data-testid="select-fuel-level-pickup">
-                    <SelectValue placeholder="Select fuel level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Full">Full</SelectItem>
-                    <SelectItem value="3/4">3/4</SelectItem>
-                    <SelectItem value="1/2">1/2</SelectItem>
-                    <SelectItem value="1/4">1/4</SelectItem>
-                    <SelectItem value="Empty">Empty</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Current fuel level in the tank
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="fuelLevelPickup">
+                    Fuel Level at Pickup
+                  </Label>
+                  <Select value={fuelLevelPickup} onValueChange={setFuelLevelPickup}>
+                    <SelectTrigger className="bg-white" data-testid="select-fuel-level-pickup">
+                      <SelectValue placeholder="Select fuel level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full">Full</SelectItem>
+                      <SelectItem value="3/4">3/4</SelectItem>
+                      <SelectItem value="1/2">1/2</SelectItem>
+                      <SelectItem value="1/4">1/4</SelectItem>
+                      <SelectItem value="Empty">Empty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Current fuel level in the tank
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -457,11 +452,11 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Section 1: Completion Details */}
+            {/* Combined Completion Details and Fuel Tracking */}
             <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
               <h3 className="font-semibold text-base">Completion Details</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="returnDate">
                     Return Date
@@ -498,47 +493,32 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                     Odometer reading at return
                   </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Section 2: Fuel Tracking */}
-            <div className="border rounded-lg p-4 bg-blue-50 space-y-4">
-              <h3 className="font-semibold text-base">Fuel Tracking</h3>
-              
-              {/* Show Pickup Fuel Level Reference */}
-              {reservation.fuelLevelPickup && (
-                <div className="bg-white border border-blue-200 rounded-md p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-900">Fuel at Pickup</h4>
-                      <p className="text-xs text-blue-700 mt-0.5">Reference for comparison</p>
-                    </div>
-                    <span className="text-base font-semibold text-blue-900">
-                      {reservation.fuelLevelPickup}
-                    </span>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fuelLevelReturn">
+                    Fuel Level at Return
+                  </Label>
+                  <Select value={fuelLevelReturn} onValueChange={setFuelLevelReturn}>
+                    <SelectTrigger className="bg-white" data-testid="select-fuel-level-return">
+                      <SelectValue placeholder="Select fuel level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full">Full</SelectItem>
+                      <SelectItem value="3/4">3/4</SelectItem>
+                      <SelectItem value="1/2">1/2</SelectItem>
+                      <SelectItem value="1/4">1/4</SelectItem>
+                      <SelectItem value="Empty">Empty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Current fuel level in the tank
+                    {reservation.fuelLevelPickup && (
+                      <span className="block text-blue-700 font-medium mt-0.5">
+                        At pickup: {reservation.fuelLevelPickup}
+                      </span>
+                    )}
+                  </p>
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="fuelLevelReturn">
-                  Fuel Level at Return
-                </Label>
-                <Select value={fuelLevelReturn} onValueChange={setFuelLevelReturn}>
-                  <SelectTrigger className="bg-white" data-testid="select-fuel-level-return">
-                    <SelectValue placeholder="Select fuel level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Full">Full</SelectItem>
-                    <SelectItem value="3/4">3/4</SelectItem>
-                    <SelectItem value="1/2">1/2</SelectItem>
-                    <SelectItem value="1/4">1/4</SelectItem>
-                    <SelectItem value="Empty">Empty</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Current fuel level in the tank
-                </p>
               </div>
             </div>
 
