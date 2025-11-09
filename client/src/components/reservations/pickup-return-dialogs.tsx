@@ -36,6 +36,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+  const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
@@ -280,7 +281,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              window.location.href = `/interactive-damage-check?id=${check.id}`;
+                              setEditingDamageCheckId(check.id);
+                              setDamageCheckDialogOpen(true);
                             }}
                             title="View/Edit damage check"
                           >
@@ -334,7 +336,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     type="button"
                     variant="outline"
                     className="w-full bg-white"
-                    onClick={() => setDamageCheckDialogOpen(true)}
+                    onClick={() => {
+                      setEditingDamageCheckId(null);
+                      setDamageCheckDialogOpen(true);
+                    }}
                     data-testid="button-open-pickup-damage-check"
                   >
                     <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -350,7 +355,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     type="button"
                     variant="outline"
                     className="w-full bg-white"
-                    onClick={() => setDamageCheckDialogOpen(true)}
+                    onClick={() => {
+                      setEditingDamageCheckId(null);
+                      setDamageCheckDialogOpen(true);
+                    }}
                     data-testid="button-open-pickup-damage-check"
                   >
                     <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -417,8 +425,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           <InteractiveDamageCheck
             onClose={() => {
               setDamageCheckDialogOpen(false);
+              setEditingDamageCheckId(null);
               queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
             }}
+            editingCheckId={editingDamageCheckId}
             initialVehicleId={reservation.vehicleId}
             initialReservationId={reservation.id}
           />
@@ -446,6 +456,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   );
   const [returnNotes, setReturnNotes] = useState("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+  const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
@@ -675,7 +686,8 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              window.location.href = `/interactive-damage-check?id=${check.id}`;
+                              setEditingDamageCheckId(check.id);
+                              setDamageCheckDialogOpen(true);
                             }}
                             title="View/Edit damage check"
                           >
@@ -729,7 +741,10 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                     type="button"
                     variant="outline"
                     className="w-full bg-white"
-                    onClick={() => setDamageCheckDialogOpen(true)}
+                    onClick={() => {
+                      setEditingDamageCheckId(null);
+                      setDamageCheckDialogOpen(true);
+                    }}
                     data-testid="button-open-return-damage-check"
                   >
                     <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -745,7 +760,10 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                     type="button"
                     variant="outline"
                     className="w-full bg-white"
-                    onClick={() => setDamageCheckDialogOpen(true)}
+                    onClick={() => {
+                      setEditingDamageCheckId(null);
+                      setDamageCheckDialogOpen(true);
+                    }}
                     data-testid="button-open-return-damage-check"
                   >
                     <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -804,8 +822,10 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           <InteractiveDamageCheck
             onClose={() => {
               setDamageCheckDialogOpen(false);
+              setEditingDamageCheckId(null);
               queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
             }}
+            editingCheckId={editingDamageCheckId}
             initialVehicleId={reservation.vehicleId}
             initialReservationId={reservation.id}
             initialCheckType="return"
