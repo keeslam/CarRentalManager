@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation } from "@shared/schema";
-import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2 } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 
@@ -274,17 +274,59 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                             <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
                           )}
                         </div>
-                        {check.pdfPath && (
+                        <div className="flex gap-2">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(check.pdfPath, '_blank')}
+                            onClick={() => {
+                              window.location.href = `/interactive-damage-check?id=${check.id}`;
+                            }}
+                            title="View/Edit damage check"
                           >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View PDF
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
                           </Button>
-                        )}
+                          {check.pdfPath && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(check.pdfPath, '_blank')}
+                              title="View PDF"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              PDF
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              if (confirm('Delete this damage check? This cannot be undone.')) {
+                                try {
+                                  await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
+                                  queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+                                  toast({
+                                    title: "Deleted",
+                                    description: "Damage check deleted successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "Failed to delete damage check",
+                                  });
+                                }
+                              }
+                            }}
+                            title="Delete damage check"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -627,17 +669,59 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                             <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
                           )}
                         </div>
-                        {check.pdfPath && (
+                        <div className="flex gap-2">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(check.pdfPath, '_blank')}
+                            onClick={() => {
+                              window.location.href = `/interactive-damage-check?id=${check.id}`;
+                            }}
+                            title="View/Edit damage check"
                           >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View PDF
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
                           </Button>
-                        )}
+                          {check.pdfPath && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(check.pdfPath, '_blank')}
+                              title="View PDF"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              PDF
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              if (confirm('Delete this damage check? This cannot be undone.')) {
+                                try {
+                                  await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
+                                  queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+                                  toast({
+                                    title: "Deleted",
+                                    description: "Damage check deleted successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "Failed to delete damage check",
+                                  });
+                                }
+                              }
+                            }}
+                            title="Delete damage check"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
