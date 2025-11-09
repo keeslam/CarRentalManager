@@ -184,6 +184,11 @@ export default function ReservationCalendarPage() {
   const [completedRentalsSearch, setCompletedRentalsSearch] = useState('');
   const [completedRentalsDateFilter, setCompletedRentalsDateFilter] = useState<'all' | '7days' | '30days' | '90days' | 'year'>('all');
   
+  // Drag and drop state
+  const [draggedReservation, setDraggedReservation] = useState<Reservation | null>(null);
+  const [dragStartDay, setDragStartDay] = useState<Date | null>(null);
+  const [dropTargetDate, setDropTargetDate] = useState<Date | null>(null);
+  
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
     console.log('handleViewReservation called with:', reservation);
@@ -286,6 +291,37 @@ export default function ReservationCalendarPage() {
     setViewDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedReservation(null);
+  };
+  
+  // Handle moving a reservation to a new date via drag and drop
+  const handleMoveReservation = async (reservationId: number, newStartDate: string, newEndDate: string | null) => {
+    try {
+      const response = await apiRequest('PATCH', `/api/reservations/${reservationId}`, {
+        startDate: newStartDate,
+        endDate: newEndDate
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to move reservation');
+      }
+      
+      // Refetch calendar data to show updated reservation
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      
+      toast({
+        title: "Success",
+        description: `Reservation moved to ${format(parseISO(newStartDate), 'MMM d, yyyy')}`,
+      });
+    } catch (error) {
+      console.error('Error moving reservation:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to move reservation",
+        variant: "destructive",
+      });
+    }
   };
   
   // Delete mutation with optimistic updates
@@ -911,10 +947,47 @@ export default function ReservationCalendarPage() {
                       return matchesDate && matchesFilter;
                     }) || [];
                     
+                    const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
+                    
                     return (
                       <div
                         key={dayIndex}
-                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
+                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} ${isDropTarget ? 'bg-green-100 ring-2 ring-green-500' : ''} relative group cursor-pointer transition-colors`}
+                        onDragOver={(e) => {
+                          if (draggedReservation && isCurrentMonth) {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            setDropTargetDate(day);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          setDropTargetDate(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          
+                          if (!draggedReservation || !dragStartDay) return;
+                          
+                          const oldStartDate = safeParseDateISO(draggedReservation.startDate);
+                          const oldEndDate = safeParseDateISO(draggedReservation.endDate);
+                          
+                          if (!oldStartDate) return;
+                          
+                          // Calculate the offset from the day where drag started to the drop day
+                          const daysDiff = differenceInDays(day, dragStartDay);
+                          
+                          // Calculate new dates by applying the offset to both start and end dates
+                          const newStartDate = format(addDays(oldStartDate, daysDiff), 'yyyy-MM-dd');
+                          const newEndDate = oldEndDate ? format(addDays(oldEndDate, daysDiff), 'yyyy-MM-dd') : null;
+                          
+                          // Update the reservation
+                          handleMoveReservation(draggedReservation.id, newStartDate, newEndDate);
+                          
+                          setDraggedReservation(null);
+                          setDragStartDay(null);
+                          setDropTargetDate(null);
+                        }}
                         onClick={(e) => {
                           if (isCurrentMonth) {
                             const allDayReservations = getReservationsForDate(day);
@@ -1008,7 +1081,26 @@ export default function ReservationCalendarPage() {
                               <HoverCard key={res.id} openDelay={300} closeDelay={200}>
                                 <HoverCardTrigger asChild>
                                   <div 
-                                    className={`px-2 py-1.5 text-sm truncate cursor-pointer group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay, res.type)}`}
+                                    draggable={res.status === 'booked' && res.type !== 'maintenance_block'}
+                                    onDragStart={(e) => {
+                                      // Only allow dragging booked reservations (not picked_up, returned, completed, or maintenance)
+                                      if (res.status !== 'booked' || res.type === 'maintenance_block') {
+                                        e.preventDefault();
+                                        return;
+                                      }
+                                      e.stopPropagation();
+                                      setDraggedReservation(res);
+                                      setDragStartDay(day);
+                                      // Set drag image and data
+                                      e.dataTransfer.effectAllowed = 'move';
+                                      e.dataTransfer.setData('text/plain', String(res.id));
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedReservation(null);
+                                      setDragStartDay(null);
+                                      setDropTargetDate(null);
+                                    }}
+                                    className={`px-2 py-1.5 text-sm truncate ${res.status === 'booked' && res.type !== 'maintenance_block' ? 'cursor-move' : 'cursor-pointer'} group/res relative ${getReservationStyle(res.status, isPickupDay, isReturnDay, res.type)}`}
                                     style={getReservationStyleObject(res.status, res.type)}
                                     onClick={(e) => {
                                       e.stopPropagation();
