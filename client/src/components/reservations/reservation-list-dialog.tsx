@@ -3,10 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTable } from "@/components/ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
 import { TabsFilter } from "@/components/ui/tabs-filter";
-import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
@@ -146,179 +143,8 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
     return types.sort();
   }, [vehicles]);
 
-  // Define table columns
-  const columns: ColumnDef<Reservation>[] = useMemo(() => [
-    {
-      accessorKey: "id",
-      header: "ID",
-      size: 80,
-      cell: ({ row }) => {
-        const reservation = row.original;
-        return (
-          <Link href={`/reservations/${reservation.id}`}>
-            <Button variant="link" className="p-0 h-auto text-blue-600 hover:text-blue-800" data-testid={`reservation-link-${reservation.id}`}>
-              #{reservation.id}
-            </Button>
-          </Link>
-        );
-      },
-    },
-    {
-      accessorKey: "vehicle",
-      header: "Vehicle",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        const vehicle = reservation.vehicle;
-        if (!vehicle) {
-          return <span className="text-gray-500">No vehicle</span>;
-        }
-        return (
-          <div className="flex flex-col">
-            <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
-            <span className="text-sm text-gray-500">{formatLicensePlate(vehicle.licensePlate)}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "customer",
-      header: "Customer",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        const customer = reservation.customer;
-        if (!customer) {
-          return <span className="text-gray-500">No customer</span>;
-        }
-        return (
-          <div className="flex flex-col">
-            <span className="font-medium">{customer.name}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "startDate",
-      header: "Start Date",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        return formatDate(reservation.startDate);
-      },
-    },
-    {
-      accessorKey: "endDate",
-      header: "End Date",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        return reservation.endDate ? formatDate(reservation.endDate) : "Open-ended";
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        const status = reservation.status.toLowerCase();
-        let badgeClass = "";
-        
-        switch (status) {
-          case "booked":
-            badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
-            break;
-          case "picked_up":
-            badgeClass = "bg-orange-100 text-orange-800 border-orange-200";
-            break;
-          case "returned":
-            badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
-            break;
-          case "completed":
-            badgeClass = "bg-green-100 text-green-800 border-green-200";
-            break;
-          case "cancelled":
-            badgeClass = "bg-red-100 text-red-800 border-red-200";
-            break;
-          default:
-            badgeClass = "bg-gray-100 text-gray-800";
-        }
-        
-        return (
-          <Badge className={badgeClass}>
-            {formatReservationStatus(reservation.status)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: "totalPrice",
-      header: "Price",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        return reservation.totalPrice ? formatCurrency(Number(reservation.totalPrice)) : "Not set";
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const reservation = row.original;
-        return (
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              data-testid={`view-reservation-${reservation.id}`}
-              onClick={() => {
-                setSelectedViewReservationId(reservation.id);
-                setViewDialogOpen(true);
-              }}
-            >
-              View
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              data-testid={`edit-reservation-${reservation.id}`}
-              onClick={() => {
-                setSelectedEditReservationId(reservation.id);
-                setEditDialogOpen(true);
-              }}
-            >
-              Edit
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" data-testid={`delete-reservation-${reservation.id}`}>
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete reservation #{reservation.id}.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteReservationMutation.mutate(reservation.id);
-                    }}
-                    disabled={deleteReservationMutation.isPending}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        );
-      },
-    },
-  ], [deleteReservationMutation]);
-
-  // Apply filters to reservations
-  const filteredReservations = useMemo(() => {
+  // Apply filters and create grouped structure
+  const groupedReservations = useMemo(() => {
     if (!reservations) return [];
 
     const filtered = reservations.filter((reservation) => {
@@ -369,7 +195,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
       return matchesSearch && matchesStatus && matchesVehicleType && matchesDateRange;
     });
 
-    // Group by vehicle and limit to 3 most recent per vehicle
+    // Group by vehicle
     const groupedByVehicle = filtered.reduce((acc, reservation) => {
       const vehicleKey = reservation.vehicleId?.toString() || 'no-vehicle';
       if (!acc[vehicleKey]) {
@@ -382,25 +208,19 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
       return acc;
     }, {} as Record<string, { vehicle: typeof filtered[0]['vehicle']; reservations: typeof filtered }>);
 
-    // Create flat result with visual grouping - show only 3 most recent per vehicle
-    const result: typeof filtered = [];
-    Object.values(groupedByVehicle)
+    // Sort groups by most recent reservation and return array of groups
+    return Object.values(groupedByVehicle)
+      .map(group => ({
+        vehicle: group.vehicle,
+        reservations: group.reservations
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()),
+        totalCount: group.reservations.length
+      }))
       .sort((a, b) => {
-        // Sort groups by the most recent reservation in each group
         const aLatest = Math.max(...a.reservations.map(r => new Date(r.startDate).getTime()));
         const bLatest = Math.max(...b.reservations.map(r => new Date(r.startDate).getTime()));
         return bLatest - aLatest;
-      })
-      .forEach(group => {
-        // Sort reservations within group and take only 3 most recent
-        const sorted = group.reservations
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-          .slice(0, 3);
-        
-        result.push(...sorted);
       });
-
-    return result;
   }, [reservations, searchQuery, statusFilter, vehicleTypeFilter, dateRangeFilter, today]);
 
   return (
@@ -466,21 +286,160 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
               </Select>
             </div>
 
-            {/* Data Table */}
+            {/* Grouped Reservations List */}
             <div className="border rounded-lg">
               {isLoadingReservations || isLoadingVehicles ? (
                 <div className="p-8 text-center text-gray-500">
                   Loading reservations...
                 </div>
-              ) : filteredReservations.length === 0 ? (
+              ) : groupedReservations.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   No reservations found matching your filters.
                 </div>
               ) : (
-                <DataTable
-                  columns={columns}
-                  data={filteredReservations}
-                />
+                <div className="divide-y">
+                  {groupedReservations.map((group, groupIndex) => (
+                    <div key={group.vehicle?.id || `no-vehicle-${groupIndex}`} className="p-4">
+                      {/* Vehicle Header */}
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-200 bg-blue-50 -mx-4 px-4 py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="font-bold text-lg">
+                            {group.vehicle ? (
+                              <>
+                                <span className="text-gray-700">{group.vehicle.brand} {group.vehicle.model}</span>
+                                <span className="ml-2 text-sm font-normal text-gray-600">
+                                  {formatLicensePlate(group.vehicle.licensePlate)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-500">No Vehicle Assigned</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {group.totalCount > 3 ? (
+                              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                Showing 3 of {group.totalCount} reservations
+                              </span>
+                            ) : (
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                {group.totalCount} {group.totalCount === 1 ? 'reservation' : 'reservations'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cascaded Reservation Rows - Show max 3 */}
+                      <div className="space-y-2">
+                        {group.reservations.slice(0, 3).map((reservation, index) => (
+                          <div
+                            key={reservation.id}
+                            className={`ml-4 pl-4 border-l-4 ${
+                              index === 0 ? 'border-blue-400' : 
+                              index === 1 ? 'border-blue-300' : 
+                              'border-blue-200'
+                            } bg-gray-50 p-3 rounded-r hover:bg-gray-100 transition-colors`}
+                            data-testid={`reservation-item-${reservation.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 grid grid-cols-5 gap-4">
+                                {/* ID */}
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">ID</div>
+                                  <Link href={`/reservations/${reservation.id}`}>
+                                    <Button 
+                                      variant="link" 
+                                      className="p-0 h-auto text-blue-600 hover:text-blue-800" 
+                                      data-testid={`reservation-link-${reservation.id}`}
+                                    >
+                                      #{reservation.id}
+                                    </Button>
+                                  </Link>
+                                </div>
+
+                                {/* Customer */}
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">Customer</div>
+                                  <div className="font-medium">
+                                    {reservation.customer?.name || "No customer"}
+                                  </div>
+                                </div>
+
+                                {/* Dates */}
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">Start Date</div>
+                                  <div>{formatDate(reservation.startDate)}</div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">End Date</div>
+                                  <div>{reservation.endDate ? formatDate(reservation.endDate) : "Open-ended"}</div>
+                                </div>
+
+                                {/* Status & Price */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <div className="text-xs text-gray-500 mb-1">Status</div>
+                                    <div>
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                        reservation.status === 'booked' ? 'bg-blue-100 text-blue-800' :
+                                        reservation.status === 'picked_up' ? 'bg-green-100 text-green-800' :
+                                        reservation.status === 'returned' ? 'bg-yellow-100 text-yellow-800' :
+                                        reservation.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                                        reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1).replace('_', ' ')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-1 ml-4">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedViewReservationId(reservation.id);
+                                    setViewDialogOpen(true);
+                                  }}
+                                  data-testid={`view-reservation-${reservation.id}`}
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedEditReservationId(reservation.id);
+                                    setEditDialogOpen(true);
+                                  }}
+                                  data-testid={`edit-reservation-${reservation.id}`}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete reservation #${reservation.id}?`)) {
+                                      deleteReservationMutation.mutate(reservation.id);
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  data-testid={`delete-reservation-${reservation.id}`}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
