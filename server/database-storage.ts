@@ -1051,7 +1051,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         pickupMileage: pickupData.pickupMileage,
         fuelLevelPickup: pickupData.fuelLevelPickup,
-        startDate: pickupDate,
+        actualPickupDate: pickupDate,
         status: 'picked_up',
         notes: pickupData.pickupNotes 
           ? `${reservation.notes || ''}\n[PICKUP ${pickupDate}] ${pickupData.pickupNotes}`.trim()
@@ -1117,6 +1117,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         returnMileage: returnData.returnMileage,
         fuelLevelReturn: returnData.fuelLevelReturn,
+        actualReturnDate: returnDate,
         status: 'returned',
         endDate: returnDate,
         completionDate: returnDate,

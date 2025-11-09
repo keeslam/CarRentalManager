@@ -2598,14 +2598,29 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      // When reverting from "completed" to "confirmed" (or any other status), clear return data
-      if (existingReservation.status === "completed" && status !== "completed") {
-        console.log('🔄 Reverting from completed status - clearing return data');
+      // When reverting from "picked_up" to "booked", clear pickup data
+      if (existingReservation.status === "picked_up" && status === "booked") {
+        console.log('🔄 Reverting from picked_up to booked - clearing pickup data');
+        dataWithTracking.actualPickupDate = null;
+        dataWithTracking.pickupMileage = null;
+        dataWithTracking.fuelLevelPickup = null;
+      }
+      
+      // When reverting from "returned" to "picked_up", clear return data
+      if (existingReservation.status === "returned" && status === "picked_up") {
+        console.log('🔄 Reverting from returned to picked_up - clearing return data');
+        dataWithTracking.actualReturnDate = null;
         dataWithTracking.returnMileage = null;
         dataWithTracking.fuelLevelReturn = null;
         dataWithTracking.fuelCost = null;
         dataWithTracking.fuelCardNumber = null;
         dataWithTracking.fuelNotes = null;
+        dataWithTracking.endDate = null;
+      }
+      
+      // When reverting from "completed" to any other status, clear completion data
+      if (existingReservation.status === "completed" && status !== "completed") {
+        console.log('🔄 Reverting from completed status - clearing completion data');
         dataWithTracking.completionDate = null;
         dataWithTracking.endDate = null;
       }

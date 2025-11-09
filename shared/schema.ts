@@ -345,8 +345,10 @@ export const reservations = pgTable("reservations", {
   vehicleId: integer("vehicle_id"), // Made nullable to support placeholder spare vehicles
   customerId: integer("customer_id"), // Allow null for maintenance blocks
   driverId: integer("driver_id").references(() => drivers.id, { onDelete: "set null" }), // Link to specific driver (nullable for backward compatibility)
-  startDate: text("start_date").notNull(),
+  startDate: text("start_date").notNull(), // Immutable booking/scheduled start date
   endDate: text("end_date"), // Allow null for open-ended rentals
+  actualPickupDate: text("actual_pickup_date"), // Date when vehicle was actually picked up
+  actualReturnDate: text("actual_return_date"), // Date when vehicle was actually returned
   completionDate: text("completion_date"), // Date when vehicle was actually returned (for backlog/future tracking)
   status: text("status").default("booked").notNull(), // 'booked', 'picked_up', 'returned', 'completed'
   totalPrice: numeric("total_price"),
