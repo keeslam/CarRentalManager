@@ -2710,7 +2710,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInteractiveDamageCheck(id: number): Promise<boolean> {
-    // First, get the damage check to retrieve the PDF path
+    // First, get the damage check to retrieve the PDF path and metadata
     const [damageCheck] = await db.select().from(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
     
     if (!damageCheck) {
@@ -2729,12 +2729,27 @@ export class DatabaseStorage implements IStorage {
         console.error("Error deleting damage check PDF file:", error);
       }
       
-      // Also delete the associated document record from the documents table
+      // Delete the associated document record from the documents table
+      // Match by reservationId and checkType to avoid path normalization issues
       try {
-        const [document] = await db.select().from(documents).where(eq(documents.filePath, damageCheck.pdfPath));
-        if (document) {
-          await db.delete(documents).where(eq(documents.id, document.id));
-          console.log(`🗑️ Deleted damage check document record: ID ${document.id}`);
+        const documentType = `Damage Check (${damageCheck.checkType === 'pickup' ? 'Pickup' : 'Return'})`;
+        const docs = await db.select().from(documents)
+          .where(
+            and(
+              eq(documents.reservationId, damageCheck.reservationId),
+              eq(documents.documentType, documentType)
+            )
+          );
+        
+        // Find the document that matches the filename pattern
+        const filename = `damage_check_${damageCheck.vehicleId}_${damageCheck.checkType}_`;
+        const matchingDoc = docs.find(doc => doc.fileName.startsWith(filename) && doc.fileName.includes(`_v${damageCheck.id}.pdf`));
+        
+        if (matchingDoc) {
+          await db.delete(documents).where(eq(documents.id, matchingDoc.id));
+          console.log(`🗑️ Deleted damage check document record: ID ${matchingDoc.id}`);
+        } else {
+          console.warn(`⚠️ No matching document found for damage check ${id}`);
         }
       } catch (error) {
         console.error("Error deleting damage check document record:", error);
