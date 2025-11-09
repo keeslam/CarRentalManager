@@ -237,9 +237,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                       <SelectValue placeholder="Choose a vehicle..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {vehicles?.filter(v => v.status === 'available').map((vehicle) => (
+                      {vehicles?.filter(v => v.status !== 'rented').map((vehicle) => (
                         <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
+                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} ({vehicle.status})
                         </SelectItem>
                       ))}
                     </SelectContent>
