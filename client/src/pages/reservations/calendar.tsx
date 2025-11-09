@@ -1433,24 +1433,34 @@ export default function ReservationCalendarPage() {
                   </h3>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                      {selectedReservation.placeholderSpare ? (
+                      {selectedReservation.placeholderSpare && !selectedReservation.vehicleId ? (
                         <>
                           <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs font-semibold">
                             TBD
                           </span>
                           <span className="text-sm font-medium text-orange-700">Spare Vehicle</span>
                         </>
-                      ) : (
+                      ) : selectedReservation.vehicle ? (
                         <>
                           <span className="bg-primary-100 text-primary-800 px-2 py-0.5 rounded text-xs font-semibold">
-                            {formatLicensePlate(selectedReservation.vehicle?.licensePlate || '')}
+                            {formatLicensePlate(selectedReservation.vehicle.licensePlate || '')}
                           </span>
-                          <span className="text-sm font-medium">{selectedReservation.vehicle?.brand} {selectedReservation.vehicle?.model}</span>
+                          <span className="text-sm font-medium">{selectedReservation.vehicle.brand} {selectedReservation.vehicle.model}</span>
+                          {selectedReservation.type === 'replacement' && (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px]" variant="outline">
+                              Assigned Spare
+                            </Badge>
+                          )}
                         </>
+                      ) : (
+                        <span className="text-sm text-gray-500">No vehicle assigned</span>
                       )}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {selectedReservation.vehicle?.vehicleType || 'Unknown type'} • {selectedReservation.vehicle?.fuel || 'Unknown fuel'}
+                      {selectedReservation.placeholderSpare && !selectedReservation.vehicleId 
+                        ? 'Awaiting assignment'
+                        : `${selectedReservation.vehicle?.vehicleType || 'Unknown type'} • ${selectedReservation.vehicle?.fuel || 'Unknown fuel'}`
+                      }
                     </div>
                     {/* Show Mileage Information */}
                     {(() => {
