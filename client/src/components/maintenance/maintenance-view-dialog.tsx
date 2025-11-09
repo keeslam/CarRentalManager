@@ -103,6 +103,12 @@ export function MaintenanceViewDialog({
     enabled: open,
   });
 
+  // Fetch all vehicles to display already-assigned spares
+  const { data: allVehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ['/api/vehicles'],
+    enabled: open,
+  });
+
   // Find overlapping rentals during this maintenance
   const overlappingRentals = reservation ? allReservations.filter((r: Reservation) => {
     if (r.id === reservation.id) return false;
@@ -500,7 +506,7 @@ export function MaintenanceViewDialog({
                   );
                   const spareVehicleId = replacementReservation?.vehicleId;
                   const assignedSpareVehicle = spareVehicleId 
-                    ? availableVehicles.find(v => v.id === spareVehicleId)
+                    ? allVehicles.find(v => v.id === spareVehicleId)
                     : null;
                   
                   return (
