@@ -322,6 +322,11 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
     if (!reservations) return [];
 
     return reservations.filter((reservation) => {
+      // Exclude maintenance reservations from rental list
+      if (reservation.type === 'maintenance_block') {
+        return false;
+      }
+
       // Search filter
       const searchTerm = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || 
