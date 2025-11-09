@@ -39,7 +39,14 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
-    queryKey: ['/api/interactive-damage-checks', { reservationId: reservation.id }],
+    queryKey: ['/api/interactive-damage-checks', 'reservation', reservation.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/interactive-damage-checks/reservation/${reservation.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && !!reservation.id,
   });
 
@@ -400,7 +407,14 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
-    queryKey: ['/api/interactive-damage-checks', { reservationId: reservation.id }],
+    queryKey: ['/api/interactive-damage-checks', 'reservation', reservation.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/interactive-damage-checks/reservation/${reservation.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && !!reservation.id,
   });
 
