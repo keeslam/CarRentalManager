@@ -46,6 +46,15 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     queryKey: ['/api/vehicles'],
     enabled: open && isTBDSpare,
   });
+  
+  // Debug: log vehicles and filtered vehicles
+  useEffect(() => {
+    if (open && isTBDSpare && vehicles) {
+      console.log('📦 All vehicles:', vehicles);
+      console.log('✅ Available vehicles:', vehicles.filter(v => v.status === 'available'));
+      console.log('🔍 Vehicle statuses:', vehicles.map(v => ({ id: v.id, license: v.licensePlate, status: v.status })));
+    }
+  }, [open, isTBDSpare, vehicles]);
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
