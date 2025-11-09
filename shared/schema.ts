@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index, varchar, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1185,12 +1185,20 @@ export const interactiveDamageChecks = pgTable("interactive_damage_checks", {
   // Tracking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+  createdBy: text("created_by"),
+  updatedBy: text("updated_by"),
+}, (table) => ({
+  // Enforce single damage check per reservation per type
+  reservationCheckTypeUnique: uniqueIndex('interactive_damage_checks_reservation_id_check_type_unique')
+    .on(table.reservationId, table.checkType),
+}));
 
 export const insertInteractiveDamageCheckSchema = createInsertSchema(interactiveDamageChecks).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
 });
 
 export type InteractiveDamageCheck = typeof interactiveDamageChecks.$inferSelect;
