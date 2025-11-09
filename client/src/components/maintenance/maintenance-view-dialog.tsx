@@ -165,7 +165,18 @@ export function MaintenanceViewDialog({
           });
           return response.json();
         } else {
-          // Create new placeholder replacement reservation
+          // Create new placeholder replacement reservation with maintenance period dates
+          // Calculate overlap between maintenance window and rental period
+          const maintenanceStart = reservation?.startDate;
+          const maintenanceEnd = reservation?.endDate || reservation?.startDate;
+          const rentalStart = rental.startDate;
+          const rentalEnd = rental.endDate;
+          
+          // For open-ended rentals, use entire maintenance period
+          const isOpenEnded = !rentalEnd || rentalEnd === null;
+          const overlapStart = (maintenanceStart && rentalStart > maintenanceStart) ? rentalStart : maintenanceStart;
+          const overlapEnd = isOpenEnded ? maintenanceEnd : (maintenanceEnd && rentalEnd && rentalEnd < maintenanceEnd ? rentalEnd : maintenanceEnd);
+          
           const response = await apiRequest('POST', '/api/reservations', {
             type: 'replacement',
             replacementForReservationId: rentalId,
@@ -173,8 +184,8 @@ export function MaintenanceViewDialog({
             placeholderSpare: true,
             customerId: rental.customerId,
             driverId: rental.driverId,
-            startDate: rental.startDate,
-            endDate: rental.endDate || rental.startDate,
+            startDate: overlapStart,
+            endDate: overlapEnd,
             status: 'booked',
             totalPrice: 0,
           });
