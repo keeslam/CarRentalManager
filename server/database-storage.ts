@@ -1842,7 +1842,7 @@ export class DatabaseStorage implements IStorage {
       customerId,
       startDate,
       endDate: endDate || null,
-      status: 'pending',
+      status: 'booked',
       type: 'replacement',
       replacementForReservationId: originalReservationId,
       placeholderSpare: true,
