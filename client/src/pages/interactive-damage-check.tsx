@@ -385,20 +385,16 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
   // Fetch existing damage checks for selected vehicle/reservation
   const { data: existingChecks = [] } = useQuery<any[]>({
-    queryKey: ['/api/interactive-damage-checks', 'vehicle', selectedVehicleId, selectedReservationId],
+    queryKey: ['/api/interactive-damage-checks', 'reservation', selectedReservationId],
     queryFn: async () => {
-      if (!selectedVehicleId) return [];
+      if (!selectedReservationId) return [];
       
-      let url = `/api/interactive-damage-checks?vehicleId=${selectedVehicleId}`;
-      if (selectedReservationId) {
-        url += `&reservationId=${selectedReservationId}`;
-      }
-      
+      const url = `/api/interactive-damage-checks/reservation/${selectedReservationId}`;
       const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: !!selectedVehicleId,
+    enabled: !!selectedReservationId,
   });
 
   // Fetch matching diagram when vehicle is selected
