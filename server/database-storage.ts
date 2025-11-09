@@ -2728,9 +2728,20 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         console.error("Error deleting damage check PDF file:", error);
       }
+      
+      // Also delete the associated document record from the documents table
+      try {
+        const [document] = await db.select().from(documents).where(eq(documents.filePath, damageCheck.pdfPath));
+        if (document) {
+          await db.delete(documents).where(eq(documents.id, document.id));
+          console.log(`🗑️ Deleted damage check document record: ID ${document.id}`);
+        }
+      } catch (error) {
+        console.error("Error deleting damage check document record:", error);
+      }
     }
     
-    // Delete the database record
+    // Delete the damage check record
     const result = await db.delete(interactiveDamageChecks).where(eq(interactiveDamageChecks.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
