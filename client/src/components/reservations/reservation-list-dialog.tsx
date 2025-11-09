@@ -8,6 +8,7 @@ import { StatusChangeDialog } from "@/components/reservations/status-change-dial
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
   const [vehicleGrouping, setVehicleGrouping] = useState("none");
+  const [expandedVehicles, setExpandedVehicles] = useState<Set<number>>(new Set());
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -61,6 +63,20 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
   
   // Get current date
   const today = new Date();
+  
+  // Toggle vehicle group expansion
+  const toggleVehicleExpansion = (vehicleId: number | undefined) => {
+    if (!vehicleId) return;
+    setExpandedVehicles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(vehicleId)) {
+        newSet.delete(vehicleId);
+      } else {
+        newSet.add(vehicleId);
+      }
+      return newSet;
+    });
+  };
   
   // Delete reservation mutation
   const deleteReservationMutation = useMutation({
@@ -298,39 +314,57 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                 </div>
               ) : (
                 <div className="divide-y">
-                  {groupedReservations.map((group, groupIndex) => (
-                    <div key={group.vehicle?.id || `no-vehicle-${groupIndex}`} className="p-4">
-                      {/* Vehicle Header */}
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-200 bg-blue-50 -mx-4 px-4 py-2">
-                        <div className="flex items-center gap-3">
-                          <div className="font-bold text-lg">
-                            {group.vehicle ? (
-                              <>
-                                <span className="text-gray-700">{group.vehicle.brand} {group.vehicle.model}</span>
-                                <span className="ml-2 text-sm font-normal text-gray-600">
-                                  {formatLicensePlate(group.vehicle.licensePlate)}
+                  {groupedReservations.map((group, groupIndex) => {
+                    const vehicleId = group.vehicle?.id;
+                    const isExpanded = vehicleId ? expandedVehicles.has(vehicleId) : false;
+                    
+                    return (
+                      <div key={vehicleId || `no-vehicle-${groupIndex}`} className="p-4">
+                        {/* Vehicle Header - Clickable */}
+                        <div 
+                          className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-200 bg-blue-50 -mx-4 px-4 py-2 cursor-pointer hover:bg-blue-100 transition-colors"
+                          onClick={() => toggleVehicleExpansion(vehicleId)}
+                          data-testid={`vehicle-group-header-${vehicleId}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Expand/Collapse Icon */}
+                            <div className="text-blue-600">
+                              {isExpanded ? (
+                                <ChevronDown className="w-5 h-5" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5" />
+                              )}
+                            </div>
+                            
+                            <div className="font-bold text-lg">
+                              {group.vehicle ? (
+                                <>
+                                  <span className="text-gray-700">{group.vehicle.brand} {group.vehicle.model}</span>
+                                  <span className="ml-2 text-sm font-normal text-gray-600">
+                                    {formatLicensePlate(group.vehicle.licensePlate)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-gray-500">No Vehicle Assigned</span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {group.totalCount > 3 ? (
+                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                  Showing 3 of {group.totalCount} reservations
                                 </span>
-                              </>
-                            ) : (
-                              <span className="text-gray-500">No Vehicle Assigned</span>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {group.totalCount > 3 ? (
-                              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                                Showing 3 of {group.totalCount} reservations
-                              </span>
-                            ) : (
-                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                {group.totalCount} {group.totalCount === 1 ? 'reservation' : 'reservations'}
-                              </span>
-                            )}
+                              ) : (
+                                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                  {group.totalCount} {group.totalCount === 1 ? 'reservation' : 'reservations'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Cascaded Reservation Rows - Show max 3 */}
-                      <div className="space-y-2">
+                        {/* Cascaded Reservation Rows - Show max 3 when expanded */}
+                        {isExpanded && (
+                          <div className="space-y-2">
                         {group.reservations.slice(0, 3).map((reservation, index) => (
                           <div
                             key={reservation.id}
@@ -436,9 +470,11 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                             </div>
                           </div>
                         ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
