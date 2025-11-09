@@ -1355,18 +1355,38 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
           {/* Comparison Mode Legend */}
           {showComparison && pickupCheckData && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-2">Comparison View Legend:</p>
-              <div className="flex gap-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-gray-400 border-2 border-gray-600"></div>
-                  <span className="text-gray-700">Existing damage from pickup check</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                  <span className="text-gray-700">New damage marked on return</span>
+            <div className="mb-4 space-y-3">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-900 mb-2">Comparison View Legend:</p>
+                <div className="flex gap-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-gray-400 border-2 border-gray-600"></div>
+                    <span className="text-gray-700">Existing damage from pickup check</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                    <span className="text-gray-700">New damage marked on return</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Pickup Damage Reference */}
+              {pickupCheckData.markers && pickupCheckData.markers.length > 0 && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-900 mb-2">Pickup Check Damage Points (Reference):</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
+                    {pickupCheckData.markers.map((marker: any, index: number) => (
+                      <div 
+                        key={index}
+                        className="p-2 rounded bg-white border border-green-300"
+                      >
+                        <span className="font-bold text-gray-600">#{index + 1}</span>
+                        <span className="text-gray-700"> - {marker.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
