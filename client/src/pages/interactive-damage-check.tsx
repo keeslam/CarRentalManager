@@ -1411,58 +1411,20 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             </div>
           )}
 
-          {/* Damage Type Legend */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-sm mb-2 text-blue-900">Damage Type Legend</h4>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-900">1</span>
-                <span className="text-blue-700">= Dent</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-900">2</span>
-                <span className="text-blue-700">= Scratch</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-900">3</span>
-                <span className="text-blue-700">= Crack</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-900">4</span>
-                <span className="text-blue-700">= Missing Part</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-900">5</span>
-                <span className="text-blue-700">= Other</span>
-              </div>
-            </div>
-          </div>
-
           {markers.length > 0 && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-sm mb-2">Damage Points ({markers.length})</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
-                {markers.map((marker, index) => {
-                  const damageTypeMap: Record<string, string> = {
-                    'dent': '1',
-                    'scratch': '2',
-                    'crack': '3',
-                    'missing': '4',
-                    'other': '5'
-                  };
-                  const typeNumber = damageTypeMap[marker.type] || '?';
-                  
-                  return (
-                    <div 
-                      key={marker.id}
-                      className={`p-2 rounded cursor-pointer ${selectedMarker?.id === marker.id ? 'bg-blue-100' : 'bg-white'}`}
-                      onClick={() => setSelectedMarker(marker)}
-                      data-testid={`marker-summary-${index}`}
-                    >
-                      <span className="font-medium">#{index + 1}</span> - Type {typeNumber} ({marker.type})
-                    </div>
-                  );
-                })}
+                {markers.map((marker, index) => (
+                  <div 
+                    key={marker.id}
+                    className={`p-2 rounded cursor-pointer ${selectedMarker?.id === marker.id ? 'bg-blue-100' : 'bg-white'}`}
+                    onClick={() => setSelectedMarker(marker)}
+                    data-testid={`marker-summary-${index}`}
+                  >
+                    <span className="font-medium">#{index + 1}</span> - {marker.type}
+                  </div>
+                ))}
               </div>
             </div>
           )}
