@@ -373,24 +373,34 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
     const groupedByVehicle = filtered.reduce((acc, reservation) => {
       const vehicleKey = reservation.vehicleId?.toString() || 'no-vehicle';
       if (!acc[vehicleKey]) {
-        acc[vehicleKey] = [];
+        acc[vehicleKey] = {
+          vehicle: reservation.vehicle,
+          reservations: []
+        };
       }
-      acc[vehicleKey].push(reservation);
+      acc[vehicleKey].reservations.push(reservation);
       return acc;
-    }, {} as Record<string, typeof filtered>);
+    }, {} as Record<string, { vehicle: typeof filtered[0]['vehicle']; reservations: typeof filtered }>);
 
-    // Sort each group by start date (most recent first) and limit to 3
+    // Create flat result with visual grouping - show only 3 most recent per vehicle
     const result: typeof filtered = [];
-    Object.keys(groupedByVehicle).forEach(key => {
-      const vehicleReservations = groupedByVehicle[key]
-        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-      
-      // Take only the 3 most recent
-      result.push(...vehicleReservations.slice(0, 3));
-    });
+    Object.values(groupedByVehicle)
+      .sort((a, b) => {
+        // Sort groups by the most recent reservation in each group
+        const aLatest = Math.max(...a.reservations.map(r => new Date(r.startDate).getTime()));
+        const bLatest = Math.max(...b.reservations.map(r => new Date(r.startDate).getTime()));
+        return bLatest - aLatest;
+      })
+      .forEach(group => {
+        // Sort reservations within group and take only 3 most recent
+        const sorted = group.reservations
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+          .slice(0, 3);
+        
+        result.push(...sorted);
+      });
 
-    // Sort the final result by start date
-    return result.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    return result;
   }, [reservations, searchQuery, statusFilter, vehicleTypeFilter, dateRangeFilter, today]);
 
   return (
