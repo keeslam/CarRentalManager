@@ -710,6 +710,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             }}
             initialVehicleId={reservation.vehicleId}
             initialReservationId={reservation.id}
+            compareWithCheckId={damageChecks?.find((check: any) => check.checkType === 'pickup')?.id || null}
           />
         </DialogContent>
       </Dialog>
