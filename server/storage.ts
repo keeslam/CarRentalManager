@@ -1876,11 +1876,11 @@ export class MemStorage implements IStorage {
     throw new Error('Not implemented in MemStorage');
   }
 
-  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck> {
+  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck, createdBy?: string): Promise<InteractiveDamageCheck> {
     throw new Error('Not implemented in MemStorage');
   }
 
-  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined> {
+  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>, updatedBy?: string): Promise<InteractiveDamageCheck | undefined> {
     throw new Error('Not implemented in MemStorage');
   }
 

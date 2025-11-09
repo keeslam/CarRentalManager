@@ -9254,7 +9254,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         completedBy: user ? user.username : null,
       };
       
-      const created = await storage.createInteractiveDamageCheck(checkData);
+      // Check for duplicate damage check (same reservation + check type)
+      if (checkData.reservationId && checkData.checkType) {
+        const existingChecks = await storage.getInteractiveDamageChecksByReservation(checkData.reservationId);
+        const duplicate = existingChecks.find(c => c.checkType === checkData.checkType);
+        if (duplicate) {
+          return res.status(409).json({ 
+            message: `A ${checkData.checkType} damage check already exists for this reservation. Please edit the existing one instead.`,
+            existingCheckId: duplicate.id
+          });
+        }
+      }
+      
+      const created = await storage.createInteractiveDamageCheck(checkData, user?.username);
       
       // Sync fuel level and mileage to reservation
       if (created.reservationId) {
@@ -9393,7 +9405,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         ...bodyData,
         checkDate: req.body.checkDate ? new Date(req.body.checkDate) : undefined,
       };
-      const updated = await storage.updateInteractiveDamageCheck(id, checkData);
+      const updated = await storage.updateInteractiveDamageCheck(id, checkData, user?.username);
       
       if (!updated) {
         return res.status(404).json({ message: "Damage check not found" });
