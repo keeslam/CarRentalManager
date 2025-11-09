@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation } from "@shared/schema";
-import { Car, Fuel, Calendar, FileText, ClipboardCheck } from "lucide-react";
+import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2 } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 
@@ -36,6 +36,14 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+
+  // Fetch existing damage checks for this reservation
+  const { data: damageChecks } = useQuery<any[]>({
+    queryKey: ['/api/interactive-damage-checks', { reservationId: reservation.id }],
+    enabled: open && !!reservation.id,
+  });
+
+  const pickupDamageChecks = damageChecks?.filter((check: any) => check.checkType === 'pickup') || [];
 
   useEffect(() => {
     if (open && reservation) {
@@ -239,19 +247,68 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             {/* Damage Check Section */}
             <div className="border rounded-lg p-4 bg-green-50 space-y-3">
               <h3 className="font-semibold text-base">Damage Check</h3>
-              <p className="text-sm text-muted-foreground">
-                Create an interactive damage check to document the vehicle's condition at pickup
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full bg-white"
-                onClick={() => setDamageCheckDialogOpen(true)}
-                data-testid="button-open-pickup-damage-check"
-              >
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Create Pickup Damage Check
-              </Button>
+              
+              {pickupDamageChecks.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-700 bg-white border border-green-200 rounded-md p-3">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="font-medium">
+                      {pickupDamageChecks.length} pickup damage check{pickupDamageChecks.length > 1 ? 's' : ''} created
+                    </span>
+                  </div>
+                  {pickupDamageChecks.map((check: any) => (
+                    <div key={check.id} className="bg-white border rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <p className="font-medium">
+                            {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {check.pdfPath && (
+                            <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
+                          )}
+                        </div>
+                        {check.pdfPath && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(check.pdfPath, '_blank')}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View PDF
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-white"
+                    onClick={() => setDamageCheckDialogOpen(true)}
+                    data-testid="button-open-pickup-damage-check"
+                  >
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Create Another Pickup Damage Check
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Create an interactive damage check to document the vehicle's condition at pickup
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-white"
+                    onClick={() => setDamageCheckDialogOpen(true)}
+                    data-testid="button-open-pickup-damage-check"
+                  >
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Create Pickup Damage Check
+                  </Button>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -309,7 +366,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Pickup</DialogTitle>
           <InteractiveDamageCheck
-            onClose={() => setDamageCheckDialogOpen(false)}
+            onClose={() => {
+              setDamageCheckDialogOpen(false);
+              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+            }}
             initialVehicleId={reservation.vehicleId}
             initialReservationId={reservation.id}
           />
@@ -337,6 +397,14 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   );
   const [returnNotes, setReturnNotes] = useState("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
+
+  // Fetch existing damage checks for this reservation
+  const { data: damageChecks } = useQuery<any[]>({
+    queryKey: ['/api/interactive-damage-checks', { reservationId: reservation.id }],
+    enabled: open && !!reservation.id,
+  });
+
+  const returnDamageChecks = damageChecks?.filter((check: any) => check.checkType === 'return') || [];
 
   useEffect(() => {
     if (open && reservation) {
@@ -525,19 +593,68 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             {/* Damage Check Section */}
             <div className="border rounded-lg p-4 bg-green-50 space-y-3">
               <h3 className="font-semibold text-base">Damage Check</h3>
-              <p className="text-sm text-muted-foreground">
-                Create an interactive damage check to document the vehicle's condition at return
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full bg-white"
-                onClick={() => setDamageCheckDialogOpen(true)}
-                data-testid="button-open-return-damage-check"
-              >
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Create Return Damage Check
-              </Button>
+              
+              {returnDamageChecks.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-700 bg-white border border-green-200 rounded-md p-3">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="font-medium">
+                      {returnDamageChecks.length} return damage check{returnDamageChecks.length > 1 ? 's' : ''} created
+                    </span>
+                  </div>
+                  {returnDamageChecks.map((check: any) => (
+                    <div key={check.id} className="bg-white border rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <p className="font-medium">
+                            {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {check.pdfPath && (
+                            <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
+                          )}
+                        </div>
+                        {check.pdfPath && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(check.pdfPath, '_blank')}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View PDF
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-white"
+                    onClick={() => setDamageCheckDialogOpen(true)}
+                    data-testid="button-open-return-damage-check"
+                  >
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Create Another Return Damage Check
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Create an interactive damage check to document the vehicle's condition at return
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-white"
+                    onClick={() => setDamageCheckDialogOpen(true)}
+                    data-testid="button-open-return-damage-check"
+                  >
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Create Return Damage Check
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Notes Section */}
@@ -587,7 +704,10 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
         <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Return</DialogTitle>
           <InteractiveDamageCheck
-            onClose={() => setDamageCheckDialogOpen(false)}
+            onClose={() => {
+              setDamageCheckDialogOpen(false);
+              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+            }}
             initialVehicleId={reservation.vehicleId}
             initialReservationId={reservation.id}
           />
