@@ -2682,15 +2682,20 @@ export class DatabaseStorage implements IStorage {
     return checks;
   }
 
-  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck> {
-    const [newCheck] = await db.insert(interactiveDamageChecks).values(check).returning();
+  async createInteractiveDamageCheck(check: InsertInteractiveDamageCheck, createdBy?: string): Promise<InteractiveDamageCheck> {
+    const [newCheck] = await db.insert(interactiveDamageChecks).values({
+      ...check,
+      createdBy,
+      updatedBy: createdBy,
+    }).returning();
     return newCheck;
   }
 
-  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined> {
+  async updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>, updatedBy?: string): Promise<InteractiveDamageCheck | undefined> {
     const updateData = {
       ...checkData,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      updatedBy,
     };
     
     const [updatedCheck] = await db

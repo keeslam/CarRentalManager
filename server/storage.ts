@@ -191,8 +191,8 @@ export interface IStorage {
   getInteractiveDamageChecksByVehicle(vehicleId: number): Promise<InteractiveDamageCheck[]>;
   getInteractiveDamageChecksByReservation(reservationId: number): Promise<InteractiveDamageCheck[]>;
   getRecentDamageChecksByVehicleAndCustomer(vehicleId: number, customerId: number, limit?: number): Promise<InteractiveDamageCheck[]>;
-  createInteractiveDamageCheck(check: InsertInteractiveDamageCheck): Promise<InteractiveDamageCheck>;
-  updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>): Promise<InteractiveDamageCheck | undefined>;
+  createInteractiveDamageCheck(check: InsertInteractiveDamageCheck, createdBy?: string): Promise<InteractiveDamageCheck>;
+  updateInteractiveDamageCheck(id: number, checkData: Partial<InsertInteractiveDamageCheck>, updatedBy?: string): Promise<InteractiveDamageCheck | undefined>;
   deleteInteractiveDamageCheck(id: number): Promise<boolean>;
   
   // Damage Check PDF Template methods (for PDF layout customization)
