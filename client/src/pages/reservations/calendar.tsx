@@ -892,7 +892,8 @@ export default function ReservationCalendarPage() {
                       if (res.type === 'maintenance_block') return false;
                       
                       // Exclude returned and completed rentals - only show active rentals on calendar
-                      if (res.status === 'returned' || res.status === 'completed') return false;
+                      // EXCEPTION: Always show TBD spare placeholders to indicate spare vehicle requirements
+                      if (!res.placeholderSpare && (res.status === 'returned' || res.status === 'completed')) return false;
                       
                       // Check if this day is a pickup or return day (only if endDate is valid)
                       const isPickupDay = isSameDay(day, startDate);
