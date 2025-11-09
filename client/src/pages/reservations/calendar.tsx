@@ -1113,10 +1113,10 @@ export default function ReservationCalendarPage() {
                                       <div className="flex justify-between items-center">
                                         <div className="truncate flex items-center">
                                           <span 
-                                            className={`px-1.5 py-0.5 rounded text-xs font-semibold mr-1 ${res.placeholderSpare ? 'bg-orange-100 text-orange-800' : 'bg-primary-100 text-primary-800'}`}
-                                            style={res.placeholderSpare ? getCustomTBDStyle() : {}}
+                                            className={`px-1.5 py-0.5 rounded text-xs font-semibold mr-1 ${res.placeholderSpare && !res.vehicleId ? 'bg-orange-100 text-orange-800' : 'bg-primary-100 text-primary-800'}`}
+                                            style={res.placeholderSpare && !res.vehicleId ? getCustomTBDStyle() : {}}
                                           >
-                                            {res.placeholderSpare ? 'TBD' : formatLicensePlate(res.vehicle?.licensePlate || '')}
+                                            {res.placeholderSpare && !res.vehicleId ? 'TBD' : formatLicensePlate(res.vehicle?.licensePlate || '')}
                                           </span>
                                           {overlappingMaintenance && (
                                             <span 
@@ -1259,7 +1259,7 @@ export default function ReservationCalendarPage() {
                                     <div className="px-3 py-1 flex items-start space-x-2">
                                       <Car className="h-4 w-4 text-gray-500 mt-0.5" />
                                       <div>
-                                        {res.placeholderSpare ? (
+                                        {res.placeholderSpare && !res.vehicleId ? (
                                           <>
                                             <div className="font-medium text-sm text-orange-700">TBD Spare Vehicle</div>
                                             <div className="text-xs text-gray-600">
