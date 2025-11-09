@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation } from "@shared/schema";
-import { Car, Fuel, Calendar, FileText } from "lucide-react";
+import { Car, Fuel, Calendar, FileText, ClipboardCheck } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
+import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 
 interface PickupDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
+  const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && reservation) {
@@ -217,8 +219,26 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
               />
             </div>
 
+            {/* Damage Check Section */}
+            <div className="border rounded-lg p-4 bg-green-50 space-y-3">
+              <h3 className="font-semibold text-base">Damage Check</h3>
+              <p className="text-sm text-muted-foreground">
+                Create an interactive damage check to document the vehicle's condition at pickup
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-white"
+                onClick={() => setDamageCheckDialogOpen(true)}
+                data-testid="button-open-pickup-damage-check"
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Create Pickup Damage Check
+              </Button>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="pickupNotes">Notes (Optional)</Label>
+              <Label htmlFor="pickupNotes">Additional Notes (Optional)</Label>
               <Textarea
                 id="pickupNotes"
                 value={pickupNotes}
@@ -266,6 +286,18 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         currentMileage={reservation.vehicle?.currentMileage || 0}
         newMileage={pendingMileage || 0}
       />
+
+      {/* Damage Check Dialog */}
+      <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
+        <DialogContent className="max-w-[95vw] h-[95vh] overflow-hidden p-0">
+          <DialogTitle className="sr-only">Interactive Damage Check - Pickup</DialogTitle>
+          <InteractiveDamageCheck
+            onClose={() => setDamageCheckDialogOpen(false)}
+            initialVehicleId={reservation.vehicleId}
+            initialReservationId={reservation.id}
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
@@ -287,6 +319,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
     new Date().toISOString().split('T')[0]
   );
   const [returnNotes, setReturnNotes] = useState("");
+  const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && reservation) {
@@ -487,9 +520,27 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
               </div>
             </div>
 
+            {/* Damage Check Section */}
+            <div className="border rounded-lg p-4 bg-green-50 space-y-3">
+              <h3 className="font-semibold text-base">Damage Check</h3>
+              <p className="text-sm text-muted-foreground">
+                Create an interactive damage check to document the vehicle's condition at return
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-white"
+                onClick={() => setDamageCheckDialogOpen(true)}
+                data-testid="button-open-return-damage-check"
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Create Return Damage Check
+              </Button>
+            </div>
+
             {/* Notes Section */}
             <div className="space-y-2">
-              <Label htmlFor="returnNotes">Notes (Optional)</Label>
+              <Label htmlFor="returnNotes">Additional Notes (Optional)</Label>
               <Textarea
                 id="returnNotes"
                 value={returnNotes}
@@ -528,6 +579,18 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           </form>
         </div>
       </DialogContent>
+
+      {/* Damage Check Dialog */}
+      <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
+        <DialogContent className="max-w-[95vw] h-[95vh] overflow-hidden p-0">
+          <DialogTitle className="sr-only">Interactive Damage Check - Return</DialogTitle>
+          <InteractiveDamageCheck
+            onClose={() => setDamageCheckDialogOpen(false)}
+            initialVehicleId={reservation.vehicleId}
+            initialReservationId={reservation.id}
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
