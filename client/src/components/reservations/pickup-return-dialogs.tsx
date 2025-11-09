@@ -258,93 +258,88 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
               
               {pickupDamageChecks.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-green-700 bg-white border border-green-200 rounded-md p-3">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="font-medium">
-                      {pickupDamageChecks.length} pickup damage check{pickupDamageChecks.length > 1 ? 's' : ''} created
-                    </span>
-                  </div>
-                  {pickupDamageChecks.map((check: any) => (
-                    <div key={check.id} className="bg-white border rounded-md p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm">
-                          <p className="font-medium">
-                            {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {check.pdfPath && (
-                            <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingDamageCheckId(check.id);
-                              setDamageCheckDialogOpen(true);
-                            }}
-                            title="View/Edit damage check"
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          {check.pdfPath && (
+                  {(() => {
+                    const check = pickupDamageChecks[0]; // Only one check per type
+                    return (
+                      <div className="bg-white border rounded-md p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm flex-1">
+                            <p className="font-medium">
+                              Created {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {check.createdBy && (
+                              <p className="text-xs text-muted-foreground">by {check.createdBy}</p>
+                            )}
+                            {check.updatedBy && check.updatedBy !== check.createdBy && (
+                              <p className="text-xs text-muted-foreground">
+                                Last edited by {check.updatedBy}
+                              </p>
+                            )}
+                            {check.pdfPath && (
+                              <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                PDF generated
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(check.pdfPath, '_blank')}
-                              title="View PDF"
+                              onClick={() => {
+                                setEditingDamageCheckId(check.id);
+                                setDamageCheckDialogOpen(true);
+                              }}
+                              title="View/Edit damage check"
                             >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              PDF
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
                             </Button>
-                          )}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              if (confirm('Delete this damage check? This cannot be undone.')) {
-                                try {
-                                  await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
-                                  queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
-                                  toast({
-                                    title: "Deleted",
-                                    description: "Damage check deleted successfully",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "Failed to delete damage check",
-                                  });
+                            {check.pdfPath && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(check.pdfPath, '_blank')}
+                                title="View PDF"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                PDF
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                if (confirm('Delete this pickup damage check? This cannot be undone.')) {
+                                  try {
+                                    await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
+                                    queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+                                    toast({
+                                      title: "Deleted",
+                                      description: "Pickup damage check deleted successfully",
+                                    });
+                                  } catch (error) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Error",
+                                      description: "Failed to delete damage check",
+                                    });
+                                  }
                                 }
-                              }
-                            }}
-                            title="Delete damage check"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                              }}
+                              title="Delete damage check"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-white"
-                    onClick={() => {
-                      setEditingDamageCheckId(null);
-                      setDamageCheckDialogOpen(true);
-                    }}
-                    data-testid="button-open-pickup-damage-check"
-                  >
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Create Another Pickup Damage Check
-                  </Button>
+                    );
+                  })()}
                 </div>
               ) : (
                 <>
@@ -663,93 +658,88 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
               
               {returnDamageChecks.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-green-700 bg-white border border-green-200 rounded-md p-3">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="font-medium">
-                      {returnDamageChecks.length} return damage check{returnDamageChecks.length > 1 ? 's' : ''} created
-                    </span>
-                  </div>
-                  {returnDamageChecks.map((check: any) => (
-                    <div key={check.id} className="bg-white border rounded-md p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm">
-                          <p className="font-medium">
-                            {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {check.pdfPath && (
-                            <p className="text-xs text-muted-foreground mt-0.5">PDF generated</p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingDamageCheckId(check.id);
-                              setDamageCheckDialogOpen(true);
-                            }}
-                            title="View/Edit damage check"
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          {check.pdfPath && (
+                  {(() => {
+                    const check = returnDamageChecks[0]; // Only one check per type
+                    return (
+                      <div className="bg-white border rounded-md p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm flex-1">
+                            <p className="font-medium">
+                              Created {new Date(check.createdAt).toLocaleDateString()} at {new Date(check.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {check.createdBy && (
+                              <p className="text-xs text-muted-foreground">by {check.createdBy}</p>
+                            )}
+                            {check.updatedBy && check.updatedBy !== check.createdBy && (
+                              <p className="text-xs text-muted-foreground">
+                                Last edited by {check.updatedBy}
+                              </p>
+                            )}
+                            {check.pdfPath && (
+                              <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                PDF generated
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(check.pdfPath, '_blank')}
-                              title="View PDF"
+                              onClick={() => {
+                                setEditingDamageCheckId(check.id);
+                                setDamageCheckDialogOpen(true);
+                              }}
+                              title="View/Edit damage check"
                             >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              PDF
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
                             </Button>
-                          )}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              if (confirm('Delete this damage check? This cannot be undone.')) {
-                                try {
-                                  await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
-                                  queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
-                                  toast({
-                                    title: "Deleted",
-                                    description: "Damage check deleted successfully",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "Failed to delete damage check",
-                                  });
+                            {check.pdfPath && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(check.pdfPath, '_blank')}
+                                title="View PDF"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                PDF
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                if (confirm('Delete this return damage check? This cannot be undone.')) {
+                                  try {
+                                    await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
+                                    queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+                                    toast({
+                                      title: "Deleted",
+                                      description: "Return damage check deleted successfully",
+                                    });
+                                  } catch (error) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Error",
+                                      description: "Failed to delete damage check",
+                                    });
+                                  }
                                 }
-                              }
-                            }}
-                            title="Delete damage check"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                              }}
+                              title="Delete damage check"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-white"
-                    onClick={() => {
-                      setEditingDamageCheckId(null);
-                      setDamageCheckDialogOpen(true);
-                    }}
-                    data-testid="button-open-return-damage-check"
-                  >
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Create Another Return Damage Check
-                  </Button>
+                    );
+                  })()}
                 </div>
               ) : (
                 <>
