@@ -43,18 +43,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   // Fetch available vehicles for TBD spare selection
   const { data: vehicles } = useQuery<any[]>({
-    queryKey: ['/api/vehicles'],
+    queryKey: ['/api/vehicles/available'],
     enabled: open && isTBDSpare,
   });
-  
-  // Debug: log vehicles and filtered vehicles
-  useEffect(() => {
-    if (open && isTBDSpare && vehicles) {
-      console.log('📦 All vehicles:', vehicles);
-      console.log('✅ Available vehicles:', vehicles.filter(v => v.status === 'available'));
-      console.log('🔍 Vehicle statuses:', vehicles.map(v => ({ id: v.id, license: v.licensePlate, status: v.status })));
-    }
-  }, [open, isTBDSpare, vehicles]);
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
@@ -243,7 +234,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                 <div className="space-y-2">
                   <Label htmlFor="vehicle-select">Select Vehicle</Label>
                   <VehicleSelector
-                    vehicles={vehicles?.filter(v => v.status === 'available') || []}
+                    vehicles={vehicles || []}
                     value={selectedVehicleId?.toString() || ""}
                     onChange={(value) => setSelectedVehicleId(parseInt(value))}
                     placeholder="Choose an available vehicle..."
