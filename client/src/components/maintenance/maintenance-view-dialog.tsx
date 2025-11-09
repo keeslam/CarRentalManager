@@ -144,10 +144,24 @@ export function MaintenanceViewDialog({
       } else if (placeholder) {
         // Create or update TBD placeholder spare
         if (replacementReservationId) {
-          // Update existing to placeholder
+          // Update existing to placeholder with maintenance period dates
+          // Calculate overlap between maintenance window and rental period
+          const maintenanceStart = reservation?.startDate;
+          const maintenanceEnd = reservation?.endDate || reservation?.startDate;
+          const rentalStart = rental.startDate;
+          const rentalEnd = rental.endDate;
+          
+          // For open-ended rentals, use entire maintenance period
+          const isOpenEnded = !rentalEnd || rentalEnd === null;
+          const overlapStart = (maintenanceStart && rentalStart > maintenanceStart) ? rentalStart : maintenanceStart;
+          const overlapEnd = isOpenEnded ? maintenanceEnd : (maintenanceEnd && rentalEnd && rentalEnd < maintenanceEnd ? rentalEnd : maintenanceEnd);
+          
           const response = await apiRequest('PATCH', `/api/reservations/${replacementReservationId}`, {
             vehicleId: null,
             placeholderSpare: true,
+            startDate: overlapStart,
+            endDate: overlapEnd,
+            status: 'booked', // Reset to booked if it was returned/completed
           });
           return response.json();
         } else {
