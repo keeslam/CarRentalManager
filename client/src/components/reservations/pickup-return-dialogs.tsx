@@ -22,6 +22,8 @@ interface PickupDialogProps {
 
 export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: PickupDialogProps) {
   const { toast } = useToast();
+  const isTBDSpare = reservation.placeholderSpare && !reservation.vehicleId;
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [pickupMileage, setPickupMileage] = useState(
     reservation.vehicle?.currentMileage?.toString() || ""
   );
@@ -38,6 +40,12 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
 
+  // Fetch available vehicles for TBD spare selection
+  const { data: vehicles } = useQuery<any[]>({
+    queryKey: ['/api/vehicles'],
+    enabled: open && isTBDSpare,
+  });
+
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
     queryKey: ['/api/interactive-damage-checks', 'reservation', reservation.id],
@@ -52,17 +60,29 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   });
 
   const pickupDamageChecks = damageChecks?.filter((check: any) => check.checkType === 'pickup') || [];
+  
+  // Get selected vehicle data
+  const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId);
 
   useEffect(() => {
     if (open && reservation) {
-      setPickupMileage(reservation.vehicle?.currentMileage?.toString() || "");
-      setFuelLevelPickup(reservation.vehicle?.currentFuelLevel || "Full");
+      setSelectedVehicleId(null);
+      setPickupMileage(reservation.vehicle?.currentMileage?.toString() || selectedVehicle?.currentMileage?.toString() || "");
+      setFuelLevelPickup(reservation.vehicle?.currentFuelLevel || selectedVehicle?.currentFuelLevel || "Full");
       setPickupDate(new Date().toISOString().split('T')[0]);
       setPickupNotes("");
       setOverridePassword("");
       setPendingMileage(null);
     }
   }, [open, reservation]);
+  
+  // Update mileage and fuel when vehicle is selected for TBD spare
+  useEffect(() => {
+    if (isTBDSpare && selectedVehicle) {
+      setPickupMileage(selectedVehicle.currentMileage?.toString() || "");
+      setFuelLevelPickup(selectedVehicle.currentFuelLevel || "Full");
+    }
+  }, [selectedVehicleId, selectedVehicle, isTBDSpare]);
 
   const pickupMutation = useMutation({
     mutationFn: async (data: {
@@ -130,8 +150,18 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if TBD spare and no vehicle selected
+    if (isTBDSpare && !selectedVehicleId) {
+      toast({
+        variant: "destructive",
+        title: "Vehicle Required",
+        description: "Please select a vehicle for this spare reservation.",
+      });
+      return;
+    }
     
     const mileage = parseInt(pickupMileage);
     if (isNaN(mileage) || mileage < 0) {
@@ -141,6 +171,30 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         description: "Please enter a valid mileage value.",
       });
       return;
+    }
+
+    // If TBD spare, assign vehicle first
+    if (isTBDSpare && selectedVehicleId) {
+      try {
+        const assignResponse = await apiRequest('PATCH', `/api/reservations/${reservation.id}`, {
+          vehicleId: selectedVehicleId
+        });
+        
+        if (!assignResponse.ok) {
+          throw new Error('Failed to assign vehicle');
+        }
+        
+        // Invalidate queries to refresh data
+        await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Assignment Failed",
+          description: "Failed to assign vehicle to reservation.",
+        });
+        return;
+      }
     }
 
     pickupMutation.mutate({
@@ -165,26 +219,65 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Vehicle Information */}
-          <div className="bg-muted/50 rounded-md p-3">
-            <div className="space-y-1">
-              <h3 className="font-medium text-sm">Vehicle Information</h3>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                <div className="flex items-center">
-                  <span className="text-muted-foreground mr-1">License:</span>
-                  <span className="font-medium">{reservation.vehicle?.licensePlate}</span>
+          {/* TBD Spare Vehicle Selection */}
+          {isTBDSpare ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Car className="h-5 w-5 text-yellow-700" />
+                  <h3 className="font-medium text-yellow-900">TBD Spare Vehicle - Select Vehicle</h3>
                 </div>
-                <div className="flex items-center">
-                  <span className="text-muted-foreground mr-1">Vehicle:</span>
-                  <span className="font-medium">{reservation.vehicle?.brand} {reservation.vehicle?.model}</span>
+                <p className="text-sm text-yellow-800">
+                  This is a placeholder spare reservation. Please select the actual vehicle for pickup.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle-select">Select Vehicle</Label>
+                  <Select value={selectedVehicleId?.toString() || ""} onValueChange={(value) => setSelectedVehicleId(parseInt(value))}>
+                    <SelectTrigger className="bg-white" data-testid="select-spare-vehicle">
+                      <SelectValue placeholder="Choose a vehicle..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehicles?.filter(v => v.status === 'available').map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center">
-                  <span className="text-muted-foreground mr-1">Customer:</span>
-                  <span className="font-medium">{reservation.customer?.name}</span>
+                {selectedVehicle && (
+                  <div className="bg-white rounded p-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>Current Mileage: {selectedVehicle.currentMileage?.toLocaleString() || 'N/A'} km</span>
+                      <span>•</span>
+                      <span>Fuel: {selectedVehicle.currentFuelLevel || 'N/A'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Vehicle Information */
+            <div className="bg-muted/50 rounded-md p-3">
+              <div className="space-y-1">
+                <h3 className="font-medium text-sm">Vehicle Information</h3>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground mr-1">License:</span>
+                    <span className="font-medium">{reservation.vehicle?.licensePlate}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground mr-1">Vehicle:</span>
+                    <span className="font-medium">{reservation.vehicle?.brand} {reservation.vehicle?.model}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground mr-1">Customer:</span>
+                    <span className="font-medium">{reservation.customer?.name}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Combined Pickup Details and Fuel Level */}
@@ -219,7 +312,13 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     type="number"
                     value={pickupMileage}
                     onChange={(e) => setPickupMileage(e.target.value)}
-                    placeholder={reservation.vehicle?.currentMileage ? `Current: ${reservation.vehicle.currentMileage.toLocaleString()} km` : "Enter pickup mileage"}
+                    placeholder={
+                      isTBDSpare && selectedVehicle
+                        ? `Current: ${selectedVehicle.currentMileage?.toLocaleString() || 0} km`
+                        : reservation.vehicle?.currentMileage 
+                        ? `Current: ${reservation.vehicle.currentMileage.toLocaleString()} km` 
+                        : "Enter pickup mileage"
+                    }
                     required
                     className="bg-white"
                     data-testid="input-pickup-mileage"
