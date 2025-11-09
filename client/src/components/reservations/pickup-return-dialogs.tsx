@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation } from "@shared/schema";
@@ -232,18 +233,12 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="vehicle-select">Select Vehicle</Label>
-                  <Select value={selectedVehicleId?.toString() || ""} onValueChange={(value) => setSelectedVehicleId(parseInt(value))}>
-                    <SelectTrigger className="bg-white" data-testid="select-spare-vehicle">
-                      <SelectValue placeholder="Choose a vehicle..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicles?.filter(v => v.status !== 'rented').map((vehicle) => (
-                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                          {vehicle.licensePlate} - {vehicle.brand} {vehicle.model} ({vehicle.status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <VehicleSelector
+                    vehicles={vehicles?.filter(v => v.status === 'available') || []}
+                    value={selectedVehicleId?.toString() || ""}
+                    onChange={(value) => setSelectedVehicleId(parseInt(value))}
+                    placeholder="Choose an available vehicle..."
+                  />
                 </div>
                 {selectedVehicle && (
                   <div className="bg-white rounded p-2 text-sm">
