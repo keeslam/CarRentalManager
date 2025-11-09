@@ -137,7 +137,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Car className="h-5 w-5" />
@@ -148,50 +148,84 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-            <div>
-              <p className="text-sm font-medium">Vehicle</p>
-              <p className="text-sm text-muted-foreground">
-                {reservation.vehicle?.brand} {reservation.vehicle?.model}
-              </p>
-              <p className="text-xs text-muted-foreground">{reservation.vehicle?.licensePlate}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Customer</p>
-              <p className="text-sm text-muted-foreground">{reservation.customer?.name}</p>
+        <div className="space-y-4">
+          {/* Vehicle Information */}
+          <div className="bg-muted/50 rounded-md p-3">
+            <div className="space-y-1">
+              <h3 className="font-medium text-sm">Vehicle Information</h3>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-1">License:</span>
+                  <span className="font-medium">{reservation.vehicle?.licensePlate}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-1">Vehicle:</span>
+                  <span className="font-medium">{reservation.vehicle?.brand} {reservation.vehicle?.model}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-1">Customer:</span>
+                  <span className="font-medium">{reservation.customer?.name}</span>
+                </div>
+              </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="pickupMileage" className="flex items-center gap-2">
-                  <Car className="h-4 w-4" />
-                  Pickup Mileage (km)
-                </Label>
-                <Input
-                  id="pickupMileage"
-                  type="number"
-                  value={pickupMileage}
-                  onChange={(e) => setPickupMileage(e.target.value)}
-                  placeholder="Enter current mileage"
-                  required
-                  data-testid="input-pickup-mileage"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Current: {reservation.vehicle?.currentMileage || "Unknown"} km
-                </p>
-              </div>
+            {/* Section 1: Pickup Details */}
+            <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
+              <h3 className="font-semibold text-base">Pickup Details</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pickupDate">
+                    Pickup Date
+                  </Label>
+                  <Input
+                    id="pickupDate"
+                    type="date"
+                    value={pickupDate}
+                    onChange={(e) => setPickupDate(e.target.value)}
+                    required
+                    className="bg-white"
+                    data-testid="input-pickup-date"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    When the vehicle is being picked up
+                  </p>
+                </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="pickupMileage">
+                    Mileage at pickup
+                  </Label>
+                  <Input
+                    id="pickupMileage"
+                    type="number"
+                    value={pickupMileage}
+                    onChange={(e) => setPickupMileage(e.target.value)}
+                    placeholder={reservation.vehicle?.currentMileage ? `Current: ${reservation.vehicle.currentMileage.toLocaleString()} km` : "Enter pickup mileage"}
+                    required
+                    className="bg-white"
+                    data-testid="input-pickup-mileage"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Odometer reading at pickup
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Fuel Level */}
+            <div className="border rounded-lg p-4 bg-blue-50 space-y-4">
+              <h3 className="font-semibold text-base">Fuel Level</h3>
+              
               <div className="space-y-2">
-                <Label htmlFor="fuelLevelPickup" className="flex items-center gap-2">
-                  <Fuel className="h-4 w-4" />
+                <Label htmlFor="fuelLevelPickup">
                   Fuel Level at Pickup
                 </Label>
                 <Select value={fuelLevelPickup} onValueChange={setFuelLevelPickup}>
-                  <SelectTrigger data-testid="select-fuel-level-pickup">
-                    <SelectValue />
+                  <SelectTrigger className="bg-white" data-testid="select-fuel-level-pickup">
+                    <SelectValue placeholder="Select fuel level" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Full">Full</SelectItem>
@@ -201,22 +235,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     <SelectItem value="Empty">Empty</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Current fuel level in the tank
+                </p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="pickupDate" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Pickup Date
-              </Label>
-              <Input
-                id="pickupDate"
-                type="date"
-                value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
-                required
-                data-testid="input-pickup-date"
-              />
             </div>
 
             {/* Damage Check Section */}
@@ -289,7 +311,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
       {/* Damage Check Dialog */}
       <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
-        <DialogContent className="max-w-[95vw] h-[95vh] overflow-hidden p-0">
+        <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Pickup</DialogTitle>
           <InteractiveDamageCheck
             onClose={() => setDamageCheckDialogOpen(false)}
@@ -582,7 +604,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
 
       {/* Damage Check Dialog */}
       <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
-        <DialogContent className="max-w-[95vw] h-[95vh] overflow-hidden p-0">
+        <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Return</DialogTitle>
           <InteractiveDamageCheck
             onClose={() => setDamageCheckDialogOpen(false)}
