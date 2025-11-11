@@ -1,7 +1,23 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { invokeSessionExpired } from "./session-expiry";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Handle session expiration (401)
+    if (res.status === 401) {
+      // Try to parse response to check for expiry flag
+      try {
+        const data = await res.clone().json();
+        if (data.expired || data.message === "Session expired due to inactivity") {
+          // Session expired - trigger logout
+          await invokeSessionExpired();
+        }
+      } catch (e) {
+        // If we can't parse JSON, still invoke expiry for any 401
+        await invokeSessionExpired();
+      }
+    }
+    
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }

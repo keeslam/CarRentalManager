@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { registerSessionExpiredHandler, unregisterSessionExpiredHandler } from "@/lib/session-expiry";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -108,9 +109,17 @@ function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
-      if (!res.ok) {
-        throw new Error("Logout failed");
+      try {
+        const res = await apiRequest("POST", "/api/logout");
+        // Treat 401 as success since session is already gone
+        if (!res.ok && res.status !== 401) {
+          throw new Error("Logout failed");
+        }
+      } catch (error: any) {
+        // If 401, session already expired - treat as success
+        if (error.message && !error.message.includes("401")) {
+          throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -128,13 +137,36 @@ function AuthProvider({ children }: { children: ReactNode }) {
       window.location.href = "/auth";
     },
     onError: (error: Error) => {
+      // Even on error, force local logout for safety
+      queryClient.setQueryData(["/api/user"], null);
+      queryClient.clear();
+      
       toast({
         title: "Logout failed",
         description: error.message,
         variant: "destructive",
       });
+      
+      // Still redirect to auth page
+      window.location.href = "/auth";
     },
   });
+
+  // Register session expiry handler on mount
+  useEffect(() => {
+    const handleSessionExpired = async () => {
+      // Only logout if not already logged out
+      if (user) {
+        await logoutMutation.mutateAsync();
+      }
+    };
+    
+    registerSessionExpiredHandler(handleSessionExpired);
+    
+    return () => {
+      unregisterSessionExpiredHandler();
+    };
+  }, [logoutMutation, user]);
 
   return (
     <AuthContext.Provider
