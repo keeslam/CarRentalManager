@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,175 +8,157 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
-const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+const INACTIVITY_WARNING = 14 * 60 * 1000; // 14 minutes - show warning 1 minute before timeout
+const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // Send heartbeat every 2 minutes during activity
 
 interface InactivityPromptProps {
-  onReauthenticate: (password: string) => Promise<boolean>;
   onLogout: () => void;
-  username: string;
 }
 
-export function InactivityPrompt({ onReauthenticate, onLogout, username }: InactivityPromptProps) {
-  const [isInactive, setIsInactive] = useState(false);
-  const [password, setPassword] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+export function InactivityPrompt({ onLogout }: InactivityPromptProps) {
+  const [showWarning, setShowWarning] = useState(false);
+  const [countdown, setCountdown] = useState(60);
   const { toast } = useToast();
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Send heartbeat to keep session alive
+  const sendHeartbeat = useCallback(async () => {
+    try {
+      await apiRequest('POST', '/api/session/heartbeat', {});
+    } catch (error) {
+      // If heartbeat fails with 401, session has expired
+      console.log('Heartbeat failed - session likely expired');
+    }
+  }, []);
   
   const resetTimer = useCallback(() => {
-    // Only reset if not already inactive
-    if (!isInactive) {
-      // Clear existing timeout
-      if (window.inactivityTimeout) {
-        clearTimeout(window.inactivityTimeout);
-      }
-      
-      // Set new timeout
-      window.inactivityTimeout = setTimeout(() => {
-        setIsInactive(true);
-        console.log('⏰ User inactive for 15 minutes - prompting for re-authentication');
-      }, INACTIVITY_TIMEOUT);
+    // Clear existing timers
+    if (warningTimeoutRef.current) {
+      clearTimeout(warningTimeoutRef.current);
     }
-  }, [isInactive]);
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    
+    // Hide warning if showing
+    setShowWarning(false);
+    setCountdown(60);
+    
+    // Set new warning timer (show warning at 14 minutes)
+    warningTimeoutRef.current = setTimeout(() => {
+      setShowWarning(true);
+      setCountdown(60);
+      
+      // Start countdown
+      let secondsLeft = 60;
+      countdownIntervalRef.current = setInterval(() => {
+        secondsLeft--;
+        setCountdown(secondsLeft);
+        
+        if (secondsLeft <= 0) {
+          // Time's up - logout
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+          }
+          toast({
+            title: "Session Expired",
+            description: "You've been logged out due to inactivity",
+            variant: "destructive",
+          });
+          onLogout();
+        }
+      }, 1000);
+    }, INACTIVITY_WARNING);
+  }, [onLogout, toast]);
   
+  // Handle user activity
   useEffect(() => {
-    // Activity events to track
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     
-    // Add event listeners
+    const handleActivity = () => {
+      if (!showWarning) {
+        resetTimer();
+      }
+    };
+    
     events.forEach(event => {
-      document.addEventListener(event, resetTimer, true);
+      document.addEventListener(event, handleActivity, true);
     });
     
     // Start initial timer
     resetTimer();
     
+    // Start heartbeat interval
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    
     // Cleanup
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, resetTimer, true);
+        document.removeEventListener(event, handleActivity, true);
       });
-      if (window.inactivityTimeout) {
-        clearTimeout(window.inactivityTimeout);
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+      }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
     };
-  }, [resetTimer]);
+  }, [resetTimer, sendHeartbeat, showWarning]);
   
-  const handleReauthenticate = async () => {
-    if (!password) {
-      toast({
-        title: "Password Required",
-        description: "Please enter your password to continue",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsVerifying(true);
-    try {
-      const success = await onReauthenticate(password);
-      
-      if (success) {
-        setIsInactive(false);
-        setPassword('');
-        resetTimer();
-        toast({
-          title: "Re-authenticated",
-          description: "You can now continue working",
-        });
-      } else {
-        toast({
-          title: "Authentication Failed",
-          description: "Incorrect password. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to verify password. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsVerifying(false);
-    }
+  const handleStayLoggedIn = () => {
+    // User wants to stay logged in - send heartbeat and reset timer
+    sendHeartbeat();
+    resetTimer();
   };
   
-  const handleLogout = () => {
+  const handleLogoutNow = () => {
     onLogout();
   };
   
   return (
-    <Dialog open={isInactive} onOpenChange={() => {}}>
+    <Dialog open={showWarning} onOpenChange={() => {}}>
       <DialogContent 
         className="sm:max-w-md" 
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Session Inactive</DialogTitle>
+          <DialogTitle>Session Expiring Soon</DialogTitle>
           <DialogDescription>
-            You've been inactive for 15 minutes. Please re-enter your password to continue working.
+            You've been inactive for 14 minutes. Your session will expire in {countdown} seconds due to inactivity.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              value={username}
-              disabled
-              className="bg-gray-100"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isVerifying) {
-                  handleReauthenticate();
-                }
-              }}
-              placeholder="Enter your password"
-              autoFocus
-              data-testid="input-reauth-password"
-            />
-          </div>
+        <div className="py-4 text-center">
+          <p className="text-lg font-semibold">
+            {countdown} second{countdown !== 1 ? 's' : ''} remaining
+          </p>
         </div>
         
         <DialogFooter className="flex gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            onClick={handleLogout}
-            disabled={isVerifying}
-            data-testid="button-logout"
+            onClick={handleLogoutNow}
+            data-testid="button-logout-now"
           >
-            Logout
+            Logout Now
           </Button>
           <Button 
-            onClick={handleReauthenticate}
-            disabled={isVerifying || !password}
-            data-testid="button-reauthenticate"
+            onClick={handleStayLoggedIn}
+            data-testid="button-stay-logged-in"
           >
-            {isVerifying ? "Verifying..." : "Continue"}
+            Stay Logged In
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
-
-// Extend Window interface to include our timeout
-declare global {
-  interface Window {
-    inactivityTimeout?: NodeJS.Timeout;
-  }
 }

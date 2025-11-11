@@ -61,15 +61,6 @@ import { apiRequest } from "@/lib/queryClient";
 function AppRoutes() {
   const { user, logoutMutation } = useAuth();
 
-  const handleReauthenticate = async (password: string): Promise<boolean> => {
-    try {
-      await apiRequest('POST', '/api/reauthenticate', { password });
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
-
   const handleLogout = () => {
     logoutMutation.mutate();
   };
@@ -79,9 +70,7 @@ function AppRoutes() {
       {/* Inactivity prompt - only show for authenticated users */}
       {user && (
         <InactivityPrompt 
-          onReauthenticate={handleReauthenticate}
           onLogout={handleLogout}
-          username={user.username}
         />
       )}
       

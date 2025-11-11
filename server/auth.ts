@@ -25,6 +25,7 @@ declare global {
 }
 
 
+
 const scryptAsync = promisify(scrypt);
 
 export async function hashPassword(password: string) {
@@ -76,9 +77,10 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || generateSessionSecret(),
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Reset session maxAge on every request
     store: createSessionStore(useDatabase),
     cookie: {
-      // No maxAge = session cookie (expires when browser closes)
+      maxAge: 15 * 60 * 1000, // 15 minutes inactivity timeout
       secure: process.env.SECURE_COOKIES === 'true', // Only use secure cookies when explicitly set (requires HTTPS)
       httpOnly: true, // Prevent XSS attacks
       sameSite: 'lax' // CSRF protection while allowing normal navigation
@@ -326,6 +328,13 @@ export function setupAuth(app: Express) {
     // Return user without password
     const { password, ...userWithoutPassword } = req.user as User;
     res.json(userWithoutPassword);
+  });
+
+  // Heartbeat endpoint to keep session alive during user activity
+  app.post("/api/session/heartbeat", requireAuth, (req: Request, res: Response) => {
+    // Session is automatically touched by express-session with rolling=true
+    // This endpoint just needs to exist so client can make requests to refresh the session
+    res.status(200).json({ message: "Session refreshed" });
   });
 
   // Re-authenticate endpoint (verify password without creating new session)
