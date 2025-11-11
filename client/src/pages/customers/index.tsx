@@ -143,8 +143,6 @@ export default function CustomersIndex() {
             <DataTable
               columns={columns}
               data={filteredCustomers || []}
-              searchColumn="name"
-              searchPlaceholder="Filter by name..."
             />
           )}
         </CardContent>
