@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useTranslation } from 'react-i18next';
@@ -11,34 +11,209 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColumnDef } from "@tanstack/react-table";
-import { Customer } from "@shared/schema";
+import { Customer, Reservation, Driver } from "@shared/schema";
 import { formatPhoneNumber } from "@/lib/format-utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, Filter } from "lucide-react";
+import { subDays } from "date-fns";
+
+type EnrichedCustomer = Customer & {
+  reservationCount: number;
+  lastReservationDate: Date | null;
+  hasActiveRentals: boolean;
+  driverCount: number;
+  isRecent: boolean;
+  isComplete: boolean;
+};
 
 export default function CustomersIndex() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewDialogCustomerId, setViewDialogCustomerId] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState("name-asc");
+  const [filters, setFilters] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   
   const { data: customers, isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
 
+  const { data: reservations } = useQuery<Reservation[]>({
+    queryKey: ["/api/reservations"],
+  });
+
+  const { data: drivers } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+  });
+
   const handleCustomerAdded = () => {
     // Refresh the customers list when a new customer is added
     queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
   };
-  
-  // Filter customers based on search query
-  const filteredCustomers = customers?.filter(customer => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      customer.name.toLowerCase().includes(searchLower) ||
-      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
-      (customer.phone && customer.phone.toLowerCase().includes(searchLower)) ||
-      (customer.city && customer.city.toLowerCase().includes(searchLower))
-    );
-  });
+
+  // Create enriched customer data with computed fields
+  const enrichedCustomers = useMemo<EnrichedCustomer[]>(() => {
+    if (!customers) return [];
+
+    const thirtyDaysAgo = subDays(new Date(), 30);
+
+    return customers.map(customer => {
+      // Get reservations for this customer
+      const customerReservations = reservations?.filter(r => r.customerId === customer.id) || [];
+      
+      // Count reservations
+      const reservationCount = customerReservations.length;
+      
+      // Find most recent reservation date
+      const lastReservationDate = customerReservations.length > 0
+        ? new Date(Math.max(...customerReservations.map(r => new Date(r.createdAt).getTime())))
+        : null;
+      
+      // Check if has active rentals (status 'picked_up')
+      const hasActiveRentals = customerReservations.some(r => r.status === 'picked_up');
+      
+      // Count drivers for this customer
+      const driverCount = drivers?.filter(d => d.customerId === customer.id).length || 0;
+      
+      // Check if created in last 30 days
+      const isRecent = customer.createdAt ? new Date(customer.createdAt) > thirtyDaysAgo : false;
+      
+      // Check if profile is complete (has email AND phone AND address)
+      const isComplete = !!(customer.email && customer.phone && customer.address);
+
+      return {
+        ...customer,
+        reservationCount,
+        lastReservationDate,
+        hasActiveRentals,
+        driverCount,
+        isRecent,
+        isComplete,
+      };
+    });
+  }, [customers, reservations, drivers]);
+
+  // Apply sorting
+  const sortedCustomers = useMemo(() => {
+    const sorted = [...enrichedCustomers];
+
+    switch (sortBy) {
+      case "name-asc":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name-desc":
+        sorted.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "newest":
+        sorted.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case "oldest":
+        sorted.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateA - dateB;
+        });
+        break;
+      case "most-rentals":
+        sorted.sort((a, b) => b.reservationCount - a.reservationCount);
+        break;
+      case "recent-activity":
+        sorted.sort((a, b) => {
+          const dateA = a.lastReservationDate?.getTime() || 0;
+          const dateB = b.lastReservationDate?.getTime() || 0;
+          return dateB - dateA;
+        });
+        break;
+      case "active-rentals":
+        sorted.sort((a, b) => {
+          if (a.hasActiveRentals && !b.hasActiveRentals) return -1;
+          if (!a.hasActiveRentals && b.hasActiveRentals) return 1;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+    }
+
+    return sorted;
+  }, [enrichedCustomers, sortBy]);
+
+  // Apply filters (AND combined)
+  const filteredCustomers = useMemo(() => {
+    let filtered = sortedCustomers;
+
+    // Apply search query
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(customer =>
+        customer.name.toLowerCase().includes(searchLower) ||
+        (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+        (customer.phone && customer.phone.toLowerCase().includes(searchLower)) ||
+        (customer.city && customer.city.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply filters
+    if (filters.has("recent-customers")) {
+      filtered = filtered.filter(c => c.isRecent);
+    }
+    if (filters.has("frequent-customers")) {
+      filtered = filtered.filter(c => c.reservationCount >= 3);
+    }
+    if (filters.has("complete-profile")) {
+      filtered = filtered.filter(c => c.isComplete);
+    }
+    if (filters.has("incomplete-profile")) {
+      filtered = filtered.filter(c => !c.isComplete);
+    }
+    if (filters.has("active-rentals")) {
+      filtered = filtered.filter(c => c.hasActiveRentals);
+    }
+    if (filters.has("has-drivers")) {
+      filtered = filtered.filter(c => c.driverCount > 0);
+    }
+    if (filters.has("business")) {
+      filtered = filtered.filter(c => c.customerType === "business");
+    }
+    if (filters.has("individual")) {
+      filtered = filtered.filter(c => c.customerType === "individual");
+    }
+
+    return filtered;
+  }, [sortedCustomers, searchQuery, filters]);
+
+  // Toggle filter
+  const toggleFilter = (filterKey: string) => {
+    const newFilters = new Set(filters);
+    if (newFilters.has(filterKey)) {
+      newFilters.delete(filterKey);
+    } else {
+      newFilters.add(filterKey);
+    }
+    setFilters(newFilters);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters(new Set());
+  };
+
+  // Filter options
+  const filterOptions = [
+    { key: "recent-customers", label: "Recent Customers (30 days)" },
+    { key: "frequent-customers", label: "Frequent Customers (3+ reservations)" },
+    { key: "complete-profile", label: "Complete Profile" },
+    { key: "incomplete-profile", label: "Incomplete Profile" },
+    { key: "active-rentals", label: "Active Rentals" },
+    { key: "has-drivers", label: "Has Drivers" },
+    { key: "business", label: "Business" },
+    { key: "individual", label: "Individual" },
+  ];
   
   // Define table columns
   const columns: ColumnDef<Customer>[] = [
@@ -123,28 +298,120 @@ export default function CustomersIndex() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <Input
-              placeholder={t('Search Customers')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+          <div className="space-y-4">
+            {/* Search, Sort, and Filter Controls */}
+            <div className="flex flex-wrap gap-4 items-center">
+              <Input
+                placeholder={t('Search Customers')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+                data-testid="input-search-customers"
+              />
+              
+              {/* Sort Dropdown */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[200px]" data-testid="select-sort-customers">
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="most-rentals">Most Rentals</SelectItem>
+                  <SelectItem value="recent-activity">Recent Activity</SelectItem>
+                  <SelectItem value="active-rentals">Active Rentals</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Filter Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" data-testid="button-filter-customers">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filters {filters.size > 0 && `(${filters.size})`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="start">
+                  <div className="space-y-4">
+                    <div className="font-semibold">Filter Customers</div>
+                    <div className="space-y-2">
+                      {filterOptions.map((option) => (
+                        <div key={option.key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={option.key}
+                            checked={filters.has(option.key)}
+                            onCheckedChange={() => toggleFilter(option.key)}
+                            data-testid={`checkbox-filter-${option.key}`}
+                          />
+                          <label
+                            htmlFor={option.key}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {option.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Clear Filters Button - Only show when filters are active */}
+              {filters.size > 0 && (
+                <Button 
+                  variant="ghost" 
+                  onClick={clearFilters}
+                  data-testid="button-clear-filters"
+                >
+                  Clear Filters
+                  <X className="h-4 w-4 ml-2" />
+                </Button>
+              )}
             </div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={filteredCustomers || []}
-            />
-          )}
+            
+            {/* Active Filter Badges */}
+            {filters.size > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {Array.from(filters).map((filterKey) => {
+                  const filterOption = filterOptions.find(opt => opt.key === filterKey);
+                  return (
+                    <Badge 
+                      key={filterKey} 
+                      variant="secondary" 
+                      className="px-3 py-1"
+                      data-testid={`badge-filter-${filterKey}`}
+                    >
+                      {filterOption?.label}
+                      <button
+                        onClick={() => toggleFilter(filterKey)}
+                        className="ml-2 hover:text-destructive"
+                        data-testid={`button-remove-filter-${filterKey}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Data Table */}
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredCustomers || []}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
       
