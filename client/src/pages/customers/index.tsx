@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { X, Filter } from "lucide-react";
+import { X, Filter, ArrowUpDown } from "lucide-react";
 import { subDays } from "date-fns";
 
 type EnrichedCustomer = Customer & {
@@ -215,11 +215,22 @@ export default function CustomersIndex() {
     { key: "individual", label: "Individual" },
   ];
   
-  // Define table columns
+  // Define table columns with sortable headers
   const columns: ColumnDef<Customer>[] = [
     {
       accessorKey: "name",
-      header: "Name",
+      header: () => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSortBy(sortBy === "name-asc" ? "name-desc" : "name-asc")}
+          data-testid="header-sort-name"
+          className="-ml-3"
+        >
+          Name
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("name")}</div>
       ),
