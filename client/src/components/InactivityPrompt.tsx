@@ -51,6 +51,7 @@ export function InactivityPrompt({ onLogout }: InactivityPromptProps) {
     
     // Set new warning timer (show warning at 14 minutes)
     warningTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ Showing inactivity warning after 14 minutes');
       setShowWarning(true);
       setCountdown(60);
       
@@ -65,6 +66,7 @@ export function InactivityPrompt({ onLogout }: InactivityPromptProps) {
           if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
           }
+          console.log('⏰ Session expired - logging out');
           toast({
             title: "Session Expired",
             description: "You've been logged out due to inactivity",
@@ -91,6 +93,7 @@ export function InactivityPrompt({ onLogout }: InactivityPromptProps) {
     });
     
     // Start initial timer
+    console.log('⏰ Starting inactivity timer (14 minutes until warning)');
     resetTimer();
     
     // Start heartbeat interval
@@ -111,7 +114,7 @@ export function InactivityPrompt({ onLogout }: InactivityPromptProps) {
         clearInterval(heartbeatIntervalRef.current);
       }
     };
-  }, [resetTimer, sendHeartbeat, showWarning]);
+  }, [resetTimer, sendHeartbeat]);
   
   const handleStayLoggedIn = () => {
     // User wants to stay logged in - send heartbeat and reset timer
