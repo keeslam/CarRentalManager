@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
-const INACTIVITY_WARNING = 14 * 60 * 1000; // 14 minutes - show warning 1 minute before timeout
+const INACTIVITY_WARNING = 30 * 1000; // 30 seconds - TEST MODE (normally 14 minutes)
 const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // Send heartbeat every 2 minutes during activity
 
 interface InactivityPromptProps {
