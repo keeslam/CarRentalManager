@@ -28,6 +28,18 @@ const db = drizzle(pool);
 
 async function addColumnIfNotExists(tableName, columnName, columnDefinition) {
   try {
+    // First check if table exists
+    const tableCheck = await db.execute(sql`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public' AND tablename = ${tableName}
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.log(`⚠️ Table ${tableName} does not exist, skipping column ${columnName}`);
+      return;
+    }
+    
     // Check if column exists
     const result = await db.execute(sql`
       SELECT column_name 
@@ -81,7 +93,51 @@ async function runMigrations() {
   try {
     console.log('🔍 Checking database schema...');
     
-    // Add missing columns to vehicles table
+    // Check if core tables exist - if not, database needs initialization
+    const coreTables = ['users', 'vehicles', 'customers', 'reservations'];
+    const missingTables = [];
+    
+    for (const tableName of coreTables) {
+      const result = await db.execute(sql`
+        SELECT tablename 
+        FROM pg_tables 
+        WHERE schemaname = 'public' AND tablename = ${tableName}
+      `);
+      
+      if (result.rows.length === 0) {
+        missingTables.push(tableName);
+      }
+    }
+    
+    if (missingTables.length > 0) {
+      console.error('❌ Missing core tables:', missingTables.join(', '));
+      console.error('');
+      console.error('🚨 DATABASE NOT INITIALIZED!');
+      console.error('');
+      console.error('Your database is missing required tables. This migration script is designed');
+      console.error('to UPDATE existing databases, not create new ones.');
+      console.error('');
+      console.error('To initialize a new database, run this ONCE:');
+      console.error('  npm run db:push');
+      console.error('');
+      console.error('After initialization, this migration script will handle safe updates.');
+      console.error('');
+      process.exit(1);
+    }
+    
+    console.log('✅ All core tables present');
+    
+    // Create settings table if it doesn't exist (safe to create even on existing DB)
+    await createTableIfNotExists(
+      'settings',
+      `CREATE TABLE settings (
+        id SERIAL PRIMARY KEY,
+        contract_number_start INTEGER DEFAULT 1 NOT NULL
+      )`,
+      `INSERT INTO settings (contract_number_start) VALUES (1)`
+    );
+    
+    // Add missing columns to vehicles table (only if vehicles table exists)
     await addColumnIfNotExists('vehicles', 'maintenance_status', 'text DEFAULT \'ok\' NOT NULL');
     await addColumnIfNotExists('vehicles', 'maintenance_note', 'text');
     await addColumnIfNotExists('vehicles', 'company_by', 'text');
