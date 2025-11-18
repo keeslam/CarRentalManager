@@ -70,6 +70,7 @@ const formSchema = insertReservationSchemaBase.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   isOpenEnded: z.boolean().optional(),
+  contractNumber: z.string().optional(),
   deliveryRequired: z.boolean().optional(),
   deliveryAddress: z.string().nullish(),
   deliveryCity: z.string().nullish(),
@@ -858,15 +859,64 @@ export function ReservationForm({
 
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    // Prepare submission data for both edit and create modes
-    const submissionData = {
-      ...data,
-      endDate: data.isOpenEnded ? undefined : data.endDate,
-      status: editMode ? data.status : "booked", // New reservations start as "booked"
-    };
-    delete submissionData.isOpenEnded;
-    
-    createReservationMutation.mutate(submissionData);
+    try {
+      // Handle contract number auto-generation if not provided
+      let contractNumber = data.contractNumber;
+      
+      if (!contractNumber || contractNumber.trim() === "") {
+        // Auto-generate contract number
+        const response = await fetch("/api/settings/next-contract-number");
+        if (response.ok) {
+          const { contractNumber: nextNumber } = await response.json();
+          contractNumber = nextNumber;
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to generate contract number",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Validate uniqueness if manually entered (and not in edit mode with same contract number)
+        if (!editMode || (initialData && contractNumber !== initialData.contractNumber)) {
+          const checkResponse = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(contractNumber)}`);
+          if (checkResponse.ok) {
+            const { exists } = await checkResponse.json();
+            if (exists) {
+              toast({
+                title: "Duplicate Contract Number",
+                description: "This contract number already exists. Please choose a different one.",
+                variant: "destructive",
+              });
+              form.setError("contractNumber", {
+                type: "manual",
+                message: "This contract number already exists",
+              });
+              return;
+            }
+          }
+        }
+      }
+      
+      // Prepare submission data for both edit and create modes
+      const submissionData = {
+        ...data,
+        contractNumber,
+        endDate: data.isOpenEnded ? undefined : data.endDate,
+        status: editMode ? data.status : "booked", // New reservations start as "booked"
+      };
+      delete submissionData.isOpenEnded;
+      
+      createReservationMutation.mutate(submissionData);
+    } catch (error) {
+      console.error("Error in onSubmit:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while processing your request",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -1515,7 +1565,7 @@ export function ReservationForm({
               {/* Date Summary - Read-only display of dates selected above */}
               <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                 <div className="text-sm font-medium text-muted-foreground">Rental Period (selected above):</div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Start Date:</span> {startDateWatch || 'Not selected'}
                   </div>
@@ -1530,6 +1580,11 @@ export function ReservationForm({
                       </span>
                     )}
                   </div>
+                  {(editMode && initialData?.contractNumber) && (
+                    <div>
+                      <span className="font-medium">Contract Number:</span> {initialData.contractNumber}
+                    </div>
+                  )}
                 </div>
               </div>
               <Separator />
@@ -1539,6 +1594,28 @@ export function ReservationForm({
             <div className="space-y-6">
               <div className="text-lg font-medium">3. Reservation Details</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Contract Number */}
+                <FormField
+                  control={form.control}
+                  name="contractNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Contract Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Leave empty for auto-generation"
+                          data-testid="input-contract-number"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter a contract number or leave empty to auto-generate
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 {/* Status - Made more prominent */}
                 <FormField
                   control={form.control}

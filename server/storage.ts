@@ -9,6 +9,7 @@ import {
   templateBackgrounds, type TemplateBackground, type InsertTemplateBackground,
   customNotifications, type CustomNotification, type InsertCustomNotification,
   appSettings, type AppSettings, type InsertAppSettings,
+  settings, type Settings, type InsertSettings, type UpdateSettings,
   drivers, type Driver, type InsertDriver,
   savedReports, type SavedReport, type InsertSavedReport,
   damageCheckTemplates, type DamageCheckTemplate, type InsertDamageCheckTemplate,
@@ -141,6 +142,12 @@ export interface IStorage {
   createAppSetting(setting: InsertAppSettings): Promise<AppSettings>;
   updateAppSetting(id: number, settingData: Partial<InsertAppSettings>): Promise<AppSettings | undefined>;
   deleteAppSetting(id: number): Promise<boolean>;
+  
+  // Settings methods (contract numbers, etc.)
+  getSettings(): Promise<Settings | undefined>;
+  updateSettings(settingData: UpdateSettings): Promise<Settings | undefined>;
+  getNextContractNumber(): Promise<string>;
+  checkContractNumberExists(contractNumber: string): Promise<boolean>;
   
   // Driver methods
   getAllDrivers(): Promise<Driver[]>;

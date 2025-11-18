@@ -354,6 +354,7 @@ export const reservations = pgTable("reservations", {
   totalPrice: numeric("total_price"),
   notes: text("notes"),
   damageCheckPath: text("damage_check_path"),
+  contractNumber: text("contract_number").notNull().unique(),
   
   // Spare vehicle management
   type: text("type").default("standard").notNull(), // 'standard' | 'replacement' | 'maintenance_block'
@@ -1333,6 +1334,30 @@ export const insertActiveSessionSchema = createInsertSchema(activeSessions).omit
 
 export type ActiveSession = typeof activeSessions.$inferSelect;
 export type InsertActiveSession = z.infer<typeof insertActiveSessionSchema>;
+
+// Settings table - System-wide configuration
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  contractNumberStart: integer("contract_number_start").notNull().default(1),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: text("updated_by"),
+  updatedByUser: integer("updated_by_user_id").references(() => users.id),
+});
+
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+  updatedByUser: true,
+});
+
+export const updateSettingsSchema = createInsertSchema(settings).pick({
+  contractNumberStart: true,
+  updatedBy: true,
+}).partial();
+
+export type Settings = typeof settings.$inferSelect;
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
 
 // Legacy Session table (connect-pg-simple sessions)
 export const session = pgTable("session", {

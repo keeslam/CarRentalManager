@@ -799,7 +799,7 @@ export function prepareContractData(reservation: Reservation) {
     : reservation.totalPrice;
   
   return {
-    contractNumber: `C-${reservation.id}-${format(new Date(), 'yyyyMMdd')}`,
+    contractNumber: reservation.contractNumber || `C-${reservation.id}-${format(new Date(), 'yyyyMMdd')}`,
     contractDate: format(new Date(), 'MMMM d, yyyy'),
     licensePlate: formatLicensePlate(vehicle.licensePlate),
     brand: vehicle.brand,

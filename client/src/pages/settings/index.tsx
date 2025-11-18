@@ -925,6 +925,22 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Contract Number Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Contract Number Settings
+              </CardTitle>
+              <CardDescription>
+                Configure the starting number for auto-generated contract numbers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <ContractNumberSettings />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Document Emails Tab */}
@@ -1778,6 +1794,134 @@ export default function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Contract Number Settings Component
+function ContractNumberSettings() {
+  const { toast } = useToast();
+  const [contractNumberStart, setContractNumberStart] = useState("");
+  const [nextContractNumber, setNextContractNumber] = useState("");
+
+  // Fetch settings
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["/api/settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/settings");
+      if (!response.ok) throw new Error("Failed to fetch settings");
+      return response.json();
+    },
+  });
+
+  // Fetch next contract number
+  const { data: nextNumber } = useQuery({
+    queryKey: ["/api/settings/next-contract-number"],
+    queryFn: async () => {
+      const response = await fetch("/api/settings/next-contract-number");
+      if (!response.ok) throw new Error("Failed to fetch next contract number");
+      return response.json();
+    },
+  });
+
+  // Update settings mutation
+  const updateSettings = useMutation({
+    mutationFn: async (data: { contractNumberStart: number }) => {
+      return apiRequest("PUT", "/api/settings", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Settings Updated",
+        description: "Contract number start value has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update settings. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error updating settings:", error);
+    },
+  });
+
+  const queryClient = useQueryClient();
+
+  // Set initial values when data loads
+  useEffect(() => {
+    if (settings) {
+      setContractNumberStart(String(settings.contractNumberStart || 1));
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    if (nextNumber) {
+      setNextContractNumber(nextNumber.contractNumber || "");
+    }
+  }, [nextNumber]);
+
+  const handleSave = () => {
+    const startNum = parseInt(contractNumberStart);
+    if (isNaN(startNum) || startNum < 1) {
+      toast({
+        title: "Invalid Value",
+        description: "Please enter a valid number greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateSettings.mutate({ contractNumberStart: startNum });
+  };
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="contractNumberStart">Starting Contract Number</Label>
+          <Input
+            id="contractNumberStart"
+            type="number"
+            min="1"
+            value={contractNumberStart}
+            onChange={(e) => setContractNumberStart(e.target.value)}
+            placeholder="1"
+            data-testid="input-contract-number-start"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            This will be the base for auto-generated contract numbers
+          </p>
+        </div>
+        <div>
+          <Label>Next Contract Number</Label>
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center">
+            <span className="font-medium">{nextContractNumber || "Loading..."}</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            This will be assigned to the next new reservation
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>Note:</strong> Contract numbers are generated sequentially. The system will always use the highest existing contract number + 1, regardless of the starting number set here.
+        </p>
+      </div>
+
+      <Button
+        onClick={handleSave}
+        disabled={updateSettings.isPending}
+        className="w-full md:w-auto"
+        data-testid="button-save-contract-settings"
+      >
+        {updateSettings.isPending ? "Saving..." : "Save Contract Number Settings"}
+      </Button>
     </div>
   );
 }

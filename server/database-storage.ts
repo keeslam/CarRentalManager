@@ -10,6 +10,7 @@ import {
   customNotifications, type CustomNotification, type InsertCustomNotification,
   backupSettings, type BackupSettings, type InsertBackupSettings,
   appSettings, type AppSettings, type InsertAppSettings,
+  settings, type Settings, type UpdateSettings,
   drivers, type Driver, type InsertDriver,
   savedReports, type SavedReport, type InsertSavedReport,
   whatsappMessages, type WhatsappMessage, type InsertWhatsappMessage,
@@ -2203,6 +2204,69 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
+  // Settings methods (contract numbers, etc.)
+  async getSettings(): Promise<Settings | undefined> {
+    const [settingsRecord] = await db.select().from(settings).limit(1);
+    return settingsRecord || undefined;
+  }
+
+  async updateSettings(settingData: UpdateSettings): Promise<Settings | undefined> {
+    const updateData = {
+      ...settingData,
+      updatedAt: new Date()
+    };
+    
+    // First, try to get existing settings
+    const existingSettings = await this.getSettings();
+    
+    if (existingSettings) {
+      // Update existing record
+      const [updatedSettings] = await db
+        .update(settings)
+        .set(updateData)
+        .where(eq(settings.id, existingSettings.id))
+        .returning();
+      return updatedSettings || undefined;
+    } else {
+      // Create new record if none exists
+      const [newSettings] = await db
+        .insert(settings)
+        .values({ contractNumberStart: settingData.contractNumberStart || 1 })
+        .returning();
+      return newSettings;
+    }
+  }
+
+  async getNextContractNumber(): Promise<string> {
+    // Get current settings
+    const settingsRecord = await this.getSettings();
+    const startNumber = settingsRecord?.contractNumberStart || 1;
+    
+    // Find the highest contract number
+    const allReservations = await db.select({ contractNumber: reservations.contractNumber })
+      .from(reservations)
+      .where(sql`${reservations.contractNumber} ~ '^[0-9]+$'`); // Only numeric contract numbers
+    
+    let maxNumber = startNumber - 1;
+    
+    for (const res of allReservations) {
+      const num = parseInt(res.contractNumber || '0', 10);
+      if (!isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+    
+    return String(maxNumber + 1);
+  }
+
+  async checkContractNumberExists(contractNumber: string): Promise<boolean> {
+    const [existing] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.contractNumber, contractNumber))
+      .limit(1);
+    return !!existing;
+  }
 
   // Driver methods
   async getAllDrivers(): Promise<Driver[]> {
