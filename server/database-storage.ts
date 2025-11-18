@@ -171,7 +171,12 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    const rentedVehicleIds = new Set(activeReservations.map(r => r.vehicleId));
+    // Filter out null vehicle IDs to prevent SQL query issues (e.g., from placeholder reservations)
+    const rentedVehicleIds = new Set(
+      activeReservations
+        .map(r => r.vehicleId)
+        .filter((id): id is number => id !== null && id !== undefined)
+    );
     
     // Get all vehicles with upcoming reservations (within 30 days, not yet started)
     const upcomingReservations = await db
@@ -190,7 +195,12 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    const scheduledVehicleIds = new Set(upcomingReservations.map(r => r.vehicleId));
+    // Filter out null vehicle IDs to prevent SQL query issues
+    const scheduledVehicleIds = new Set(
+      upcomingReservations
+        .map(r => r.vehicleId)
+        .filter((id): id is number => id !== null && id !== undefined)
+    );
     
     // Priority 1: Set vehicles to "rented" if they have active reservations
     // ONLY update "available" or "scheduled" vehicles
