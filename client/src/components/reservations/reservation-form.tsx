@@ -451,10 +451,6 @@ export function ReservationForm({
   
   // Check for reservation conflicts
   const [hasOverlap, setHasOverlap] = useState(false);
-  const [showContractNumberDialog, setShowContractNumberDialog] = useState(false);
-  const [pendingFormData, setPendingFormData] = useState<z.infer<typeof formSchema> | null>(null);
-  const [showHighNumberWarning, setShowHighNumberWarning] = useState(false);
-  const [highNumberWarningData, setHighNumberWarningData] = useState<{ enteredNumber: string; highestNumber: string } | null>(null);
   
   // Watch for status changes
   useEffect(() => {
@@ -871,54 +867,13 @@ export function ReservationForm({
     }
   });
 
-  // Process the actual submission after contract number is confirmed/generated
-  const processSubmission = async (data: z.infer<typeof formSchema>, contractNumber: string, skipHighNumberCheck = false) => {
+  // Process the actual submission
+  const processSubmission = async (data: z.infer<typeof formSchema>) => {
     try {
-      // Validate uniqueness if manually entered (and not in edit mode with same contract number)
-      if (contractNumber && (!editMode || (initialData && contractNumber !== initialData.contractNumber))) {
-        const checkResponse = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(contractNumber)}`);
-        if (checkResponse.ok) {
-          const { exists } = await checkResponse.json();
-          if (exists) {
-            toast({
-              title: "Duplicate Contract Number",
-              description: "This contract number already exists. Please choose a different one.",
-              variant: "destructive",
-            });
-            form.setError("contractNumber", {
-              type: "manual",
-              message: "This contract number already exists",
-            });
-            return;
-          }
-        }
-        
-        // Check if manually entered number is higher than current highest (only for new entries, not edits)
-        if (!skipHighNumberCheck && !editMode) {
-          const nextNumberResponse = await fetch("/api/settings/next-contract-number");
-          if (nextNumberResponse.ok) {
-            const { contractNumber: nextNumber } = await nextNumberResponse.json();
-            const enteredNum = parseInt(contractNumber, 10);
-            const highestNum = parseInt(nextNumber, 10) - 1; // Subtract 1 to get current highest
-            
-            if (!isNaN(enteredNum) && !isNaN(highestNum) && enteredNum > highestNum) {
-              // Show warning that they're entering a higher number
-              setPendingFormData(data);
-              setHighNumberWarningData({
-                enteredNumber: contractNumber,
-                highestNumber: String(highestNum)
-              });
-              setShowHighNumberWarning(true);
-              return; // Stop here and wait for confirmation
-            }
-          }
-        }
-      }
-      
       // Prepare submission data for both edit and create modes
       const submissionData = {
         ...data,
-        contractNumber,
+        contractNumber: data.contractNumber || null, // Contract number is optional until pickup
         endDate: data.isOpenEnded ? undefined : data.endDate,
         status: editMode ? data.status : "booked", // New reservations start as "booked"
       };
@@ -938,16 +893,9 @@ export function ReservationForm({
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      // Check if contract number is missing
-      if (!data.contractNumber || data.contractNumber.trim() === "") {
-        // Show confirmation dialog first
-        setPendingFormData(data);
-        setShowContractNumberDialog(true);
-        return;
-      }
-      
-      // If contract number is provided, proceed with submission
-      await processSubmission(data, data.contractNumber);
+      // Contract number is optional when creating reservation
+      // It will be assigned/validated during pickup
+      await processSubmission(data);
     } catch (error) {
       console.error("Error in onSubmit:", error);
       toast({
@@ -956,70 +904,6 @@ export function ReservationForm({
         variant: "destructive",
       });
     }
-  };
-  
-  // Handle auto-generation after confirmation
-  const handleAutoGenerateConfirm = async () => {
-    if (!pendingFormData) return;
-    
-    try {
-      // Auto-generate contract number
-      const response = await fetch("/api/settings/next-contract-number");
-      if (response.ok) {
-        const { contractNumber } = await response.json();
-        setShowContractNumberDialog(false);
-        await processSubmission(pendingFormData, contractNumber);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to generate contract number",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error generating contract number:", error);
-      toast({
-        title: "Error",
-        description: "An error occurred while generating contract number",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Handle manual entry after declining auto-generation
-  const handleManualEntry = () => {
-    setShowContractNumberDialog(false);
-    // Focus on the contract number field and scroll it into view after dialog closes
-    setTimeout(() => {
-      form.setFocus("contractNumber");
-      // Scroll the contract number field into view
-      const contractNumberField = document.querySelector('[name="contractNumber"]');
-      if (contractNumberField) {
-        contractNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  };
-  
-  // Handle confirmation of high contract number
-  const handleHighNumberConfirm = async () => {
-    if (!pendingFormData || !highNumberWarningData) return;
-    
-    setShowHighNumberWarning(false);
-    // Process with skipHighNumberCheck = true to avoid loop
-    await processSubmission(pendingFormData, highNumberWarningData.enteredNumber, true);
-  };
-  
-  // Handle cancellation of high contract number
-  const handleHighNumberCancel = () => {
-    setShowHighNumberWarning(false);
-    // Focus back on contract number field so user can change it
-    setTimeout(() => {
-      form.setFocus("contractNumber");
-      const contractNumberField = document.querySelector('[name="contractNumber"]');
-      if (contractNumberField) {
-        contractNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
   };
   
   return (
@@ -2486,66 +2370,6 @@ export function ReservationForm({
         </div>
       </DialogContent>
     </Dialog>
-    
-    {/* Contract Number Auto-Generation Confirmation Dialog */}
-    <AlertDialog open={showContractNumberDialog} onOpenChange={setShowContractNumberDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Contract Number Missing</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div>
-              <p>You haven't entered a contract number. Would you like to:</p>
-              <ul className="list-disc pl-6 mt-2 space-y-1">
-                <li><strong>Auto-generate</strong> a new contract number</li>
-                <li><strong>Enter manually</strong> if you have an existing contract number from another system</li>
-              </ul>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleManualEntry} data-testid="button-manual-contract-entry">
-            Enter Manually
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={handleAutoGenerateConfirm} data-testid="button-auto-generate-contract">
-            Auto-Generate
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    
-    {/* High Contract Number Warning Dialog */}
-    <AlertDialog open={showHighNumberWarning} onOpenChange={setShowHighNumberWarning}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>High Contract Number Warning</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div>
-              <p className="mb-3">
-                You're entering contract number <strong className="text-foreground">{highNumberWarningData?.enteredNumber}</strong>, which is higher than the current highest contract number (<strong className="text-foreground">{highNumberWarningData?.highestNumber}</strong>).
-              </p>
-              <p className="mb-2">
-                This means:
-              </p>
-              <ul className="list-disc pl-6 space-y-1">
-                <li>Future auto-generated numbers will start from <strong className="text-foreground">{highNumberWarningData?.enteredNumber ? String(parseInt(highNumberWarningData.enteredNumber, 10) + 1) : ''}</strong></li>
-                <li>You're "jumping ahead" in the sequence</li>
-              </ul>
-              <p className="mt-3 text-sm">
-                Do you want to continue with this number?
-              </p>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleHighNumberCancel} data-testid="button-cancel-high-number">
-            Change Number
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={handleHighNumberConfirm} data-testid="button-confirm-high-number">
-            Continue
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }

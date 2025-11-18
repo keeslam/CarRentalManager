@@ -46,6 +46,7 @@ import { format } from "date-fns";
 const baseStatusChangeSchema = z.object({
   status: z.string().min(1, { message: "Status is required" }),
   completionDate: z.string().optional(), // Date when reservation was actually completed/returned
+  contractNumber: z.string().optional(), // Contract number - required at pickup
   startMileage: z.union([
     z.number().min(1, "Please enter a valid mileage"),
     z.string().transform(val => parseInt(val) || undefined),
@@ -65,8 +66,8 @@ const baseStatusChangeSchema = z.object({
 });
 
 // Create a function that returns the schema with runtime validation
-// This allows us to validate against the reservation's startDate
-const createStatusChangeSchema = (reservationStartDate?: string) => baseStatusChangeSchema
+// This allows us to validate against the reservation's startDate and initialStatus
+const createStatusChangeSchema = (reservationStartDate?: string, initialStatus?: string) => baseStatusChangeSchema
   // First validation: return mileage >= start mileage
   .refine(
     (data) => {
@@ -115,6 +116,20 @@ const createStatusChangeSchema = (reservationStartDate?: string) => baseStatusCh
       message: "Please select the fuel level at pickup",
       path: ["fuelLevelPickup"],
     }
+  )
+  // Fourth validation: contract number is required when TRANSITIONING to picked_up
+  .refine(
+    (data) => {
+      // Only require contract number when transitioning TO picked_up (not when already picked_up)
+      if (data.status === "picked_up" && initialStatus !== "picked_up") {
+        return data.contractNumber && data.contractNumber.trim() !== "";
+      }
+      return true; // Skip validation if not transitioning or already picked up
+    },
+    {
+      message: "Contract number is required when picking up the vehicle",
+      path: ["contractNumber"],
+    }
   );
 
 // Create the default schema (without runtime validation)
@@ -128,6 +143,7 @@ interface StatusChangeDialogProps {
   reservationId: number;
   initialStatus: string;
   startDate?: string; // Reservation start date for validation
+  contractNumber?: string | null; // Existing contract number
   vehicle?: {
     id: number;
     brand: string;
@@ -171,6 +187,7 @@ export function StatusChangeDialog({
   reservationId,
   initialStatus,
   startDate,
+  contractNumber,
   vehicle,
   onStatusChanged,
   customer, // We'll add this to the props
@@ -186,10 +203,16 @@ export function StatusChangeDialog({
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<StatusChangeFormType | null>(null);
   
+  // Contract number dialog states
+  const [showContractNumberDialog, setShowContractNumberDialog] = useState(false);
+  const [showHighNumberWarning, setShowHighNumberWarning] = useState(false);
+  const [highNumberWarningData, setHighNumberWarningData] = useState<{ enteredNumber: string; highestNumber: string } | null>(null);
+  
   // Create defaultValues object to ensure stable reference
   const defaultValues = {
     status: initialStatus,
     completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
+    contractNumber: contractNumber ?? undefined,
     // For startMileage: use reservation's pickupMileage if available, otherwise vehicle's current mileage
     startMileage: pickupMileage !== null && pickupMileage !== undefined
       ? pickupMileage
@@ -207,9 +230,9 @@ export function StatusChangeDialog({
   };
   
   // Form setup with vehicle return mileage as default for start mileage if available
-  // Use the schema with runtime validation for the reservation's startDate
+  // Use the schema with runtime validation for the reservation's startDate and initialStatus
   const form = useForm<StatusChangeFormType>({
-    resolver: zodResolver(createStatusChangeSchema(startDate)),
+    resolver: zodResolver(createStatusChangeSchema(startDate, initialStatus)),
     defaultValues,
   });
   
@@ -219,6 +242,7 @@ export function StatusChangeDialog({
     form.reset({
       status: initialStatus,
       completionDate: format(new Date(), "yyyy-MM-dd"), // Default to today
+      contractNumber: contractNumber ?? undefined,
       // For startMileage: use reservation's pickupMileage if available, otherwise vehicle's current mileage
       startMileage: pickupMileage !== null && pickupMileage !== undefined
         ? pickupMileage
@@ -272,6 +296,11 @@ export function StatusChangeDialog({
       if (data.departureMileage !== undefined && data.departureMileage !== null) {
         reservationUpdateData.returnMileage = data.departureMileage;
         reservationUpdateData.departureMileage = data.departureMileage; // Also send as departureMileage for backend processing
+      }
+      
+      // Always include contract number to prevent data loss
+      if (data.contractNumber) {
+        reservationUpdateData.contractNumber = data.contractNumber;
       }
       
       // Add fuel tracking fields if present
@@ -782,6 +811,31 @@ export function StatusChangeDialog({
               )}
             />
             
+            {/* Contract Number field when status is picked_up */}
+            {currentStatus === "picked_up" && (
+              <FormField
+                control={form.control}
+                name="contractNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contract Number *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Enter contract number"
+                        {...field}
+                        value={field.value ?? ""}
+                        data-testid="input-contract-number"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter the contract number for this rental. This is required when picking up the vehicle.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             {/* Start Mileage field when status is picked_up */}
             {currentStatus === "picked_up" && vehicle && (
