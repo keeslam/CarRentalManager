@@ -189,10 +189,6 @@ export default function ReservationCalendarPage() {
   const [dragStartDay, setDragStartDay] = useState<Date | null>(null);
   const [dropTargetDate, setDropTargetDate] = useState<Date | null>(null);
   
-  // Contract number editing state
-  const [editingContractNumber, setEditingContractNumber] = useState(false);
-  const [contractNumberValue, setContractNumberValue] = useState('');
-  
   // Dialog handlers
   const handleViewReservation = (reservation: Reservation) => {
     console.log('handleViewReservation called with:', reservation);
@@ -1469,8 +1465,6 @@ export default function ReservationCalendarPage() {
           setViewDialogOpen(open);
           if (!open) {
             setSelectedReservation(null);
-            setEditingContractNumber(false);
-            setContractNumberValue('');
           }
         }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1521,99 +1515,17 @@ export default function ReservationCalendarPage() {
                 )}
               </div>
 
-              {/* Contract Number Display/Edit */}
-              <div className="bg-indigo-50 border border-indigo-200 rounded-md p-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1">
+              {/* Contract Number Display */}
+              {selectedReservation.contractNumber && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-md p-2.5">
+                  <div className="flex items-center gap-2">
                     <label className="text-[10px] font-medium text-indigo-700 uppercase">Contract Number</label>
-                    {!editingContractNumber ? (
-                      <>
-                        <span className="text-sm font-semibold text-indigo-900" data-testid="text-contract-number">
-                          {selectedReservation.contractNumber || 'Not set'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingContractNumber(true);
-                            setContractNumberValue(selectedReservation.contractNumber || '');
-                          }}
-                          className="h-6 px-2 text-[10px]"
-                          data-testid="button-edit-contract-number"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={contractNumberValue}
-                          onChange={(e) => setContractNumberValue(e.target.value)}
-                          className="h-7 w-32 text-xs"
-                          placeholder="Enter number"
-                          data-testid="input-contract-number-edit"
-                        />
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={async () => {
-                            if (!contractNumberValue.trim()) {
-                              toast({
-                                title: "Error",
-                                description: "Contract number cannot be empty",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
-
-                            try {
-                              await apiRequest(`/api/reservations/${selectedReservation.id}`, 'PATCH', {
-                                contractNumber: contractNumberValue,
-                              });
-
-                              toast({
-                                title: "Success",
-                                description: "Contract number updated",
-                              });
-
-                              queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-                              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-                              
-                              setSelectedReservation({
-                                ...selectedReservation,
-                                contractNumber: contractNumberValue,
-                              });
-                              setEditingContractNumber(false);
-                            } catch (error: any) {
-                              toast({
-                                title: "Error",
-                                description: error.message || "Failed to update contract number",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          className="h-7 text-[10px]"
-                          data-testid="button-save-contract-number"
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingContractNumber(false);
-                            setContractNumberValue('');
-                          }}
-                          className="h-7 text-[10px]"
-                          data-testid="button-cancel-contract-number"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
+                    <span className="text-sm font-semibold text-indigo-900" data-testid="text-contract-number">
+                      {selectedReservation.contractNumber}
+                    </span>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Vehicle & Customer in 2 columns */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
