@@ -7489,6 +7489,29 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get next available contract number (must come before :id route)
+  app.get("/api/settings/next-contract-number", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const nextNumber = await storage.getNextContractNumber();
+      res.json({ contractNumber: nextNumber });
+    } catch (error) {
+      console.error("Error generating next contract number:", error);
+      res.status(500).json({ message: "Error generating contract number" });
+    }
+  });
+
+  // Check if contract number exists (must come before :id route)
+  app.get("/api/settings/check-contract-number/:contractNumber", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { contractNumber } = req.params;
+      const exists = await storage.checkContractNumberExists(contractNumber);
+      res.json({ exists });
+    } catch (error) {
+      console.error("Error checking contract number:", error);
+      res.status(500).json({ message: "Error checking contract number" });
+    }
+  });
+
   app.get("/api/settings/:id", hasPermission(UserPermission.MANAGE_BACKUPS), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -8034,29 +8057,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error updating settings:", error);
       res.status(500).json({ message: "Error updating settings" });
-    }
-  });
-
-  // Get next available contract number
-  app.get("/api/settings/next-contract-number", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const nextNumber = await storage.getNextContractNumber();
-      res.json({ contractNumber: nextNumber });
-    } catch (error) {
-      console.error("Error generating next contract number:", error);
-      res.status(500).json({ message: "Error generating contract number" });
-    }
-  });
-
-  // Check if contract number exists
-  app.get("/api/settings/check-contract-number/:contractNumber", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const { contractNumber } = req.params;
-      const exists = await storage.checkContractNumberExists(contractNumber);
-      res.json({ exists });
-    } catch (error) {
-      console.error("Error checking contract number:", error);
-      res.status(500).json({ message: "Error checking contract number" });
     }
   });
 
