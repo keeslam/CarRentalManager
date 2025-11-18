@@ -2438,12 +2438,14 @@ export function ReservationForm({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Contract Number Missing</AlertDialogTitle>
-          <AlertDialogDescription>
-            You haven't entered a contract number. Would you like to:
-            <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li><strong>Auto-generate</strong> a new contract number</li>
-              <li><strong>Enter manually</strong> if you have an existing contract number from another system</li>
-            </ul>
+          <AlertDialogDescription asChild>
+            <div>
+              <p>You haven't entered a contract number. Would you like to:</p>
+              <ul className="list-disc pl-6 mt-2 space-y-1">
+                <li><strong>Auto-generate</strong> a new contract number</li>
+                <li><strong>Enter manually</strong> if you have an existing contract number from another system</li>
+              </ul>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
