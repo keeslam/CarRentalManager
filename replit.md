@@ -27,8 +27,14 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Design
 - **Primary Database**: PostgreSQL (Neon serverless)
-- **Schema Management**: Drizzle Kit
-- **Core Tables**: users, vehicles, customers, reservations, expenses, documents, pdf_templates, custom_notifications, damage_check_templates, saved_reports, whatsapp_messages, drivers
+- **Schema Management**: Safe migration system using `startup-migration.js`
+- **Migration Safety**: 
+  - **NEVER use `npm run db:push` in production** - it drops and recreates tables, causing complete data loss
+  - Use `startup-migration.js` for safe schema changes - it runs automatically on deployment via `nixpacks.toml`
+  - Safe migrations use `ALTER TABLE` to add columns without data loss
+  - All deployments backfill data intelligently and add constraints safely
+  - Deployment fails on any integrity issues (preventing unsafe states)
+- **Core Tables**: users, vehicles, customers, reservations, expenses, documents, pdf_templates, custom_notifications, damage_check_templates, saved_reports, whatsapp_messages, drivers, settings
 - **Relationships**: Foreign keys link reservations to vehicles/customers, expenses to vehicles, documents to vehicles. Multiple drivers per customer.
 
 ### Authentication & Authorization
@@ -70,6 +76,8 @@ Preferred communication style: Simple, everyday language.
 - **English-Only Interface**: Internal staff interface is English-only.
 - **Four-Tier Vehicle Availability System**: Comprehensive status tracking with four states: `available` (ready for rental), `needs_fixing` (in workshop/repairs), `not_for_rental` (owned but not rented), and `rented` (currently rented). Status is displayed throughout the system with color-coded badges (green for available, yellow for needs fixing, gray for not for rental, blue for rented). This allows clear tracking of vehicle ownership, operational status, and rental availability.
 - **Automatic BV→Opnaam Registration Conversion**: When creating or editing a reservation with a BV-registered vehicle, the system automatically converts it to Opnaam (personal registration). This ensures legal compliance, as BV vehicles cannot be driven (no insurance/road tax). Conversion happens on both frontend and backend with user notification.
+- **Contract Number Management**: Automatic contract number generation with configurable starting number in Settings. Server-side generation ensures uniqueness with database-level UNIQUE and NOT NULL constraints. Contract numbers are displayed in reservation forms, view dialogs, and integrated into PDF generation as {{contractNumber}} variable.
+- **Safe Deployment System**: Production deployments run `startup-migration.js` automatically (configured in `nixpacks.toml`) to safely add new columns and backfill data without data loss. The system prevents unsafe deployments by failing if duplicates are detected or constraints cannot be added.
 
 ## External Dependencies
 
