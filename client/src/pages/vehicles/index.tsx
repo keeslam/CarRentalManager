@@ -19,7 +19,7 @@ import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,8 +27,6 @@ export default function VehiclesIndex() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const vehiclesPerPage = 10; // Show 10 vehicles per page
   const queryClient = useQueryClient();
   
   // Debounce search query to prevent excessive filtering on every keystroke
@@ -60,14 +58,6 @@ export default function VehiclesIndex() {
     // Refresh the vehicles list after any dialog operation
     queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
   };
-  
-  // Pagination functions
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-  
-  const goToFirstPage = () => setCurrentPage(1);
-  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
-  const goToNextPage = (totalPages: number) => setCurrentPage(prev => Math.min(prev + 1, totalPages));
-  const goToLastPage = (totalPages: number) => setCurrentPage(totalPages);
   
   // Custom filtering logic that works regardless of length
   const filteredVehicles = vehicles?.filter(vehicle => {
@@ -466,104 +456,10 @@ export default function VehiclesIndex() {
               </svg>
             </div>
           ) : (
-            <>
-              {/* Calculate current data slice */}
-              {(() => {
-                if (!filteredVehicles) return null;
-                
-                const indexOfLastVehicle = currentPage * vehiclesPerPage;
-                const indexOfFirstVehicle = indexOfLastVehicle - vehiclesPerPage;
-                const currentVehicles = filteredVehicles.slice(indexOfFirstVehicle, indexOfLastVehicle);
-                const totalPages = Math.ceil(filteredVehicles.length / vehiclesPerPage);
-                
-                return (
-                  <>
-                    <DataTable
-                      columns={columns}
-                      data={currentVehicles}
-                      // Remove the DataTable's built-in search since we're using our own search input
-                    />
-                    
-                    {/* Pagination controls */}
-                    {filteredVehicles.length > 0 && (
-                      <div className="mt-4 flex justify-between items-center">
-                        <div className="text-sm text-gray-600">
-                          Showing {indexOfFirstVehicle + 1} to {Math.min(indexOfLastVehicle, filteredVehicles.length)} of {filteredVehicles.length} vehicles
-                        </div>
-                        
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => goToFirstPage()}
-                            disabled={currentPage === 1}
-                            className="h-8 w-8 p-0"
-                          >
-                            <ChevronsLeft className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => goToPreviousPage()}
-                            disabled={currentPage === 1}
-                            className="h-8 w-8 p-0"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          
-                          {/* Page number buttons */}
-                          {Array.from({ length: Math.min(totalPages, 5) }).map((_, index) => {
-                            let pageNumber: number;
-                            
-                            // Logic to show the current page in the middle when possible
-                            if (totalPages <= 5) {
-                              pageNumber = index + 1;
-                            } else if (currentPage <= 3) {
-                              pageNumber = index + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNumber = totalPages - 4 + index;
-                            } else {
-                              pageNumber = currentPage - 2 + index;
-                            }
-                            
-                            return (
-                              <Button 
-                                key={pageNumber}
-                                variant={currentPage === pageNumber ? "default" : "outline"} 
-                                size="sm"
-                                onClick={() => paginate(pageNumber)}
-                                className="h-8 w-8 p-0"
-                              >
-                                {pageNumber}
-                              </Button>
-                            );
-                          })}
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => goToNextPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                            className="h-8 w-8 p-0"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => goToLastPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                            className="h-8 w-8 p-0"
-                          >
-                            <ChevronsRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </>
+            <DataTable
+              columns={columns}
+              data={filteredVehicles || []}
+            />
           )}
         </CardContent>
       </Card>
