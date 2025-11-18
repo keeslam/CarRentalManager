@@ -96,6 +96,7 @@ async function runMigrations() {
     await addColumnIfNotExists('reservations', 'replacement_for_reservation_id', 'integer');
     await addColumnIfNotExists('reservations', 'placeholder_spare', 'boolean DEFAULT false NOT NULL');
     await addColumnIfNotExists('reservations', 'spare_vehicle_status', 'text DEFAULT \'assigned\'');
+    await addColumnIfNotExists('reservations', 'contract_number', 'text NOT NULL DEFAULT \'\'');
     
     // Add missing columns to customers table
     await addColumnIfNotExists('customers', 'created_by_user_id', 'integer');
