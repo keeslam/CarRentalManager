@@ -966,9 +966,14 @@ export function ReservationForm({
   // Handle manual entry after declining auto-generation
   const handleManualEntry = () => {
     setShowContractNumberDialog(false);
-    // Focus on the contract number field after dialog closes
+    // Focus on the contract number field and scroll it into view after dialog closes
     setTimeout(() => {
       form.setFocus("contractNumber");
+      // Scroll the contract number field into view
+      const contractNumberField = document.querySelector('[name="contractNumber"]');
+      if (contractNumberField) {
+        contractNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }, 100);
   };
   
