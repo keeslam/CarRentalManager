@@ -2242,17 +2242,19 @@ export class DatabaseStorage implements IStorage {
     const settingsRecord = await this.getSettings();
     const startNumber = settingsRecord?.contractNumberStart || 1;
     
-    // Find the highest contract number
+    // Find the highest contract number by checking all reservations
     const allReservations = await db.select({ contractNumber: reservations.contractNumber })
-      .from(reservations)
-      .where(sql`${reservations.contractNumber} ~ '^[0-9]+$'`); // Only numeric contract numbers
+      .from(reservations);
     
     let maxNumber = startNumber - 1;
     
+    // Filter and find the highest numeric contract number
     for (const res of allReservations) {
-      const num = parseInt(res.contractNumber || '0', 10);
-      if (!isNaN(num) && num > maxNumber) {
-        maxNumber = num;
+      if (res.contractNumber) {
+        const num = parseInt(res.contractNumber, 10);
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num;
+        }
       }
     }
     
