@@ -43,6 +43,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
@@ -441,6 +451,8 @@ export function ReservationForm({
   
   // Check for reservation conflicts
   const [hasOverlap, setHasOverlap] = useState(false);
+  const [showContractNumberDialog, setShowContractNumberDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<z.infer<typeof formSchema> | null>(null);
   
   // Watch for status changes
   useEffect(() => {
@@ -857,44 +869,25 @@ export function ReservationForm({
     }
   });
 
-  // Handle reservation form submission
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  // Process the actual submission after contract number is confirmed/generated
+  const processSubmission = async (data: z.infer<typeof formSchema>, contractNumber: string) => {
     try {
-      // Handle contract number auto-generation if not provided
-      let contractNumber = data.contractNumber;
-      
-      if (!contractNumber || contractNumber.trim() === "") {
-        // Auto-generate contract number
-        const response = await fetch("/api/settings/next-contract-number");
-        if (response.ok) {
-          const { contractNumber: nextNumber } = await response.json();
-          contractNumber = nextNumber;
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to generate contract number",
-            variant: "destructive",
-          });
-          return;
-        }
-      } else {
-        // Validate uniqueness if manually entered (and not in edit mode with same contract number)
-        if (!editMode || (initialData && contractNumber !== initialData.contractNumber)) {
-          const checkResponse = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(contractNumber)}`);
-          if (checkResponse.ok) {
-            const { exists } = await checkResponse.json();
-            if (exists) {
-              toast({
-                title: "Duplicate Contract Number",
-                description: "This contract number already exists. Please choose a different one.",
-                variant: "destructive",
-              });
-              form.setError("contractNumber", {
-                type: "manual",
-                message: "This contract number already exists",
-              });
-              return;
-            }
+      // Validate uniqueness if manually entered (and not in edit mode with same contract number)
+      if (contractNumber && (!editMode || (initialData && contractNumber !== initialData.contractNumber))) {
+        const checkResponse = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(contractNumber)}`);
+        if (checkResponse.ok) {
+          const { exists } = await checkResponse.json();
+          if (exists) {
+            toast({
+              title: "Duplicate Contract Number",
+              description: "This contract number already exists. Please choose a different one.",
+              variant: "destructive",
+            });
+            form.setError("contractNumber", {
+              type: "manual",
+              message: "This contract number already exists",
+            });
+            return;
           }
         }
       }
@@ -910,6 +903,29 @@ export function ReservationForm({
       
       createReservationMutation.mutate(submissionData);
     } catch (error) {
+      console.error("Error in processSubmission:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while processing your request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle reservation form submission
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      // Check if contract number is missing
+      if (!data.contractNumber || data.contractNumber.trim() === "") {
+        // Show confirmation dialog first
+        setPendingFormData(data);
+        setShowContractNumberDialog(true);
+        return;
+      }
+      
+      // If contract number is provided, proceed with submission
+      await processSubmission(data, data.contractNumber);
+    } catch (error) {
       console.error("Error in onSubmit:", error);
       toast({
         title: "Error",
@@ -917,6 +933,41 @@ export function ReservationForm({
         variant: "destructive",
       });
     }
+  };
+  
+  // Handle auto-generation after confirmation
+  const handleAutoGenerateConfirm = async () => {
+    if (!pendingFormData) return;
+    
+    try {
+      // Auto-generate contract number
+      const response = await fetch("/api/settings/next-contract-number");
+      if (response.ok) {
+        const { contractNumber } = await response.json();
+        setShowContractNumberDialog(false);
+        await processSubmission(pendingFormData, contractNumber);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate contract number",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating contract number:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while generating contract number",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle manual entry after declining auto-generation
+  const handleManualEntry = () => {
+    setShowContractNumberDialog(false);
+    // Focus on the contract number field
+    form.setFocus("contractNumber");
   };
   
   return (
@@ -2381,6 +2432,30 @@ export function ReservationForm({
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Contract Number Auto-Generation Confirmation Dialog */}
+    <AlertDialog open={showContractNumberDialog} onOpenChange={setShowContractNumberDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Contract Number Missing</AlertDialogTitle>
+          <AlertDialogDescription>
+            You haven't entered a contract number. Would you like to:
+            <ul className="list-disc pl-6 mt-2 space-y-1">
+              <li><strong>Auto-generate</strong> a new contract number</li>
+              <li><strong>Enter manually</strong> if you have an existing contract number from another system</li>
+            </ul>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleManualEntry} data-testid="button-manual-contract-entry">
+            Enter Manually
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={handleAutoGenerateConfirm} data-testid="button-auto-generate-contract">
+            Auto-Generate
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
