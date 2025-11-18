@@ -966,8 +966,10 @@ export function ReservationForm({
   // Handle manual entry after declining auto-generation
   const handleManualEntry = () => {
     setShowContractNumberDialog(false);
-    // Focus on the contract number field
-    form.setFocus("contractNumber");
+    // Focus on the contract number field after dialog closes
+    setTimeout(() => {
+      form.setFocus("contractNumber");
+    }, 100);
   };
   
   return (
