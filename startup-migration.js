@@ -96,7 +96,143 @@ async function runMigrations() {
     await addColumnIfNotExists('reservations', 'replacement_for_reservation_id', 'integer');
     await addColumnIfNotExists('reservations', 'placeholder_spare', 'boolean DEFAULT false NOT NULL');
     await addColumnIfNotExists('reservations', 'spare_vehicle_status', 'text DEFAULT \'assigned\'');
-    await addColumnIfNotExists('reservations', 'contract_number', 'text NOT NULL DEFAULT \'\'');
+    await addColumnIfNotExists('reservations', 'contract_number', 'text');
+    
+    // Backfill unique contract numbers for existing reservations
+    console.log('🔄 Backfilling contract numbers for existing reservations...');
+    
+    // Find all reservations with missing contract numbers
+    const reservationsResult = await db.execute(sql`
+      SELECT id FROM reservations 
+      WHERE contract_number IS NULL OR contract_number = ''
+      ORDER BY id
+    `);
+    
+    if (reservationsResult.rows.length > 0) {
+      console.log(`📝 Found ${reservationsResult.rows.length} reservations without contract numbers`);
+      
+      // Get all existing contract numbers to avoid collisions
+      const existingNumbersResult = await db.execute(sql`
+        SELECT contract_number FROM reservations 
+        WHERE contract_number IS NOT NULL AND contract_number != ''
+      `);
+      
+      // Parse all existing numeric contract numbers
+      const existingNumbers = new Set();
+      for (const row of existingNumbersResult.rows) {
+        const num = parseInt(row.contract_number, 10);
+        if (!isNaN(num)) {
+          existingNumbers.add(num);
+        }
+      }
+      
+      // Get the starting number from settings
+      const settingsResult = await db.execute(sql`SELECT contract_number_start FROM settings LIMIT 1`);
+      let contractNumberStart = 1;
+      
+      if (settingsResult.rows.length > 0 && settingsResult.rows[0].contract_number_start) {
+        contractNumberStart = settingsResult.rows[0].contract_number_start;
+      }
+      
+      // Find the maximum existing number
+      let nextNumber = contractNumberStart;
+      if (existingNumbers.size > 0) {
+        const maxExisting = Math.max(...Array.from(existingNumbers));
+        nextNumber = Math.max(contractNumberStart, maxExisting + 1);
+      }
+      
+      console.log(`📝 Starting backfill from contract number: ${nextNumber}`);
+      
+      // Backfill each reservation with a unique contract number
+      for (let i = 0; i < reservationsResult.rows.length; i++) {
+        const reservationId = reservationsResult.rows[i].id;
+        
+        // Find next available number
+        while (existingNumbers.has(nextNumber)) {
+          nextNumber++;
+        }
+        
+        const contractNumber = String(nextNumber).padStart(4, '0');
+        
+        await db.execute(sql`
+          UPDATE reservations 
+          SET contract_number = ${contractNumber}
+          WHERE id = ${reservationId}
+        `);
+        
+        existingNumbers.add(nextNumber);
+        nextNumber++;
+      }
+      
+      console.log(`✅ Backfilled ${reservationsResult.rows.length} contract numbers`);
+    } else {
+      console.log('✅ All reservations already have contract numbers');
+    }
+    
+    // Check for duplicate contract numbers before adding constraint
+    const duplicateCheck = await db.execute(sql`
+      SELECT contract_number, COUNT(*) as count
+      FROM reservations
+      WHERE contract_number IS NOT NULL
+      GROUP BY contract_number
+      HAVING COUNT(*) > 1
+    `);
+    
+    if (duplicateCheck.rows.length > 0) {
+      console.error('❌ Found duplicate contract numbers:', duplicateCheck.rows);
+      throw new Error(`Cannot add unique constraint: Found ${duplicateCheck.rows.length} duplicate contract numbers. Please resolve duplicates manually.`);
+    }
+    
+    // Add unique constraint if it doesn't exist (this is now a critical operation)
+    const constraintCheck = await db.execute(sql`
+      SELECT constraint_name 
+      FROM information_schema.table_constraints 
+      WHERE table_name = 'reservations' 
+      AND constraint_name = 'reservations_contract_number_unique'
+    `);
+    
+    if (constraintCheck.rows.length === 0) {
+      console.log('📝 Adding unique constraint to contract_number...');
+      try {
+        await db.execute(sql`
+          ALTER TABLE reservations 
+          ADD CONSTRAINT reservations_contract_number_unique 
+          UNIQUE (contract_number)
+        `);
+        console.log('✅ Added unique constraint to contract_number');
+      } catch (error) {
+        console.error('❌ CRITICAL: Failed to add unique constraint on contract_number:', error.message);
+        throw error; // Fail deployment if constraint cannot be added
+      }
+    } else {
+      console.log('✅ Unique constraint already exists on contract_number');
+    }
+    
+    // Make contract_number NOT NULL to prevent future null insertions
+    console.log('🔄 Checking if contract_number needs NOT NULL constraint...');
+    const columnInfo = await db.execute(sql`
+      SELECT is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'reservations' 
+      AND column_name = 'contract_number'
+    `);
+    
+    if (columnInfo.rows.length > 0 && columnInfo.rows[0].is_nullable === 'YES') {
+      console.log('📝 Setting contract_number to NOT NULL...');
+      try {
+        await db.execute(sql`
+          ALTER TABLE reservations 
+          ALTER COLUMN contract_number SET NOT NULL
+        `);
+        console.log('✅ Set contract_number to NOT NULL');
+      } catch (error) {
+        console.error('❌ CRITICAL: Failed to set contract_number to NOT NULL:', error.message);
+        console.error('This likely means there are still NULL values in the contract_number column.');
+        throw error; // Fail deployment if NOT NULL cannot be added
+      }
+    } else {
+      console.log('✅ contract_number is already NOT NULL');
+    }
     
     // Add missing columns to customers table
     await addColumnIfNotExists('customers', 'created_by_user_id', 'integer');
