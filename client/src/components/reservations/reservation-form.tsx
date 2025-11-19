@@ -80,6 +80,8 @@ const formSchema = insertReservationSchemaBase.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   isOpenEnded: z.boolean().optional(),
+  // Contract number is assigned during pickup, not during reservation creation
+  contractNumber: z.string().optional(),
   deliveryRequired: z.boolean().optional(),
   deliveryAddress: z.string().nullish(),
   deliveryCity: z.string().nullish(),
