@@ -36,6 +36,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   );
   const [pickupNotes, setPickupNotes] = useState("");
   const [contractNumber, setContractNumber] = useState("");
+  const [isDuplicateContract, setIsDuplicateContract] = useState(false);
+  const [isHighContractNumber, setIsHighContractNumber] = useState(false);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
@@ -66,6 +68,26 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   // Get selected vehicle data
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId);
 
+  // Auto-generate contract number when dialog opens
+  useEffect(() => {
+    async function loadContractNumber() {
+      if (open && reservation && !reservation.contractNumber) {
+        try {
+          const response = await fetch('/api/reservations/next-contract-number', {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setContractNumber(data.nextContractNumber);
+          }
+        } catch (error) {
+          console.error('Failed to fetch next contract number:', error);
+        }
+      }
+    }
+    loadContractNumber();
+  }, [open, reservation]);
+
   useEffect(() => {
     if (open && reservation) {
       setSelectedVehicleId(null);
@@ -74,11 +96,50 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       setPickupDate(new Date().toISOString().split('T')[0]);
       setPickupNotes("");
       setContractNumber(reservation.contractNumber || "");
+      setIsDuplicateContract(false);
+      setIsHighContractNumber(false);
       setOverridePassword("");
       setPendingMileage(null);
     }
   }, [open, reservation]);
   
+  // Check for duplicate contract numbers and high numbers
+  useEffect(() => {
+    async function checkContractNumber() {
+      if (!contractNumber || contractNumber.trim() === "") {
+        setIsDuplicateContract(false);
+        setIsHighContractNumber(false);
+        return;
+      }
+
+      const trimmedNumber = contractNumber.trim();
+      
+      // Check for duplicates
+      try {
+        const response = await fetch(`/api/reservations/check-contract-number?number=${encodeURIComponent(trimmedNumber)}&excludeId=${reservation.id}`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setIsDuplicateContract(data.exists);
+        }
+      } catch (error) {
+        console.error('Failed to check contract number:', error);
+      }
+
+      // Check if number is unusually high
+      const numValue = parseInt(trimmedNumber, 10);
+      if (!isNaN(numValue) && numValue > 9999) {
+        setIsHighContractNumber(true);
+      } else {
+        setIsHighContractNumber(false);
+      }
+    }
+
+    const debounceTimer = setTimeout(checkContractNumber, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [contractNumber, reservation.id]);
+
   // Update mileage and fuel when vehicle is selected for TBD spare
   useEffect(() => {
     if (isTBDSpare && selectedVehicle) {
@@ -164,6 +225,16 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         variant: "destructive",
         title: "Contract Number Required",
         description: "Please enter a contract number before completing pickup.",
+      });
+      return;
+    }
+
+    // Check for duplicate contract number
+    if (isDuplicateContract) {
+      toast({
+        variant: "destructive",
+        title: "Duplicate Contract Number",
+        description: "This contract number already exists. Please use a different number.",
       });
       return;
     }
@@ -304,14 +375,26 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                     type="text"
                     value={contractNumber}
                     onChange={(e) => setContractNumber(e.target.value)}
-                    placeholder="Enter contract number"
+                    placeholder="Auto-generated (editable)"
                     required
-                    className="bg-white"
+                    className={`bg-white ${isDuplicateContract ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     data-testid="input-contract-number"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Unique contract identifier
-                  </p>
+                  {isDuplicateContract && (
+                    <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                      ⚠️ This contract number already exists!
+                    </p>
+                  )}
+                  {isHighContractNumber && !isDuplicateContract && (
+                    <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                      ⚠️ Unusually high number - please verify
+                    </p>
+                  )}
+                  {!isDuplicateContract && !isHighContractNumber && (
+                    <p className="text-xs text-muted-foreground">
+                      Auto-generated, you can edit if needed
+                    </p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
