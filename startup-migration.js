@@ -154,13 +154,15 @@ async function runMigrations() {
     await addColumnIfNotExists('reservations', 'spare_vehicle_status', 'text DEFAULT \'assigned\'');
     await addColumnIfNotExists('reservations', 'contract_number', 'text');
     
-    // Backfill unique contract numbers for existing reservations
-    console.log('🔄 Backfilling contract numbers for existing reservations...');
+    // Backfill unique contract numbers for picked up/returned/completed reservations only
+    console.log('🔄 Backfilling contract numbers for picked-up reservations...');
     
-    // Find all reservations with missing contract numbers
+    // Only backfill for reservations that have been picked up (have actual status progression)
     const reservationsResult = await db.execute(sql`
       SELECT id FROM reservations 
-      WHERE contract_number IS NULL OR contract_number = ''
+      WHERE (contract_number IS NULL OR contract_number = '')
+      AND status IN ('picked_up', 'returned', 'completed')
+      AND deleted_at IS NULL
       ORDER BY id
     `);
     
@@ -264,8 +266,10 @@ async function runMigrations() {
       console.log('✅ Unique constraint already exists on contract_number');
     }
     
-    // Make contract_number NOT NULL to prevent future null insertions
-    console.log('🔄 Checking if contract_number needs NOT NULL constraint...');
+    // IMPORTANT: contract_number should remain NULLABLE
+    // Contract numbers are assigned during pickup, not during reservation creation
+    // Remove NOT NULL constraint if it exists
+    console.log('🔄 Ensuring contract_number is nullable (assigned during pickup)...');
     const columnInfo = await db.execute(sql`
       SELECT is_nullable 
       FROM information_schema.columns 
@@ -273,21 +277,20 @@ async function runMigrations() {
       AND column_name = 'contract_number'
     `);
     
-    if (columnInfo.rows.length > 0 && columnInfo.rows[0].is_nullable === 'YES') {
-      console.log('📝 Setting contract_number to NOT NULL...');
+    if (columnInfo.rows.length > 0 && columnInfo.rows[0].is_nullable === 'NO') {
+      console.log('📝 Removing NOT NULL constraint from contract_number...');
       try {
         await db.execute(sql`
           ALTER TABLE reservations 
-          ALTER COLUMN contract_number SET NOT NULL
+          ALTER COLUMN contract_number DROP NOT NULL
         `);
-        console.log('✅ Set contract_number to NOT NULL');
+        console.log('✅ Removed NOT NULL constraint from contract_number');
       } catch (error) {
-        console.error('❌ CRITICAL: Failed to set contract_number to NOT NULL:', error.message);
-        console.error('This likely means there are still NULL values in the contract_number column.');
-        throw error; // Fail deployment if NOT NULL cannot be added
+        console.error('❌ Failed to remove NOT NULL constraint from contract_number:', error.message);
+        throw error;
       }
     } else {
-      console.log('✅ contract_number is already NOT NULL');
+      console.log('✅ contract_number is already nullable');
     }
     
     // Add missing columns to customers table
