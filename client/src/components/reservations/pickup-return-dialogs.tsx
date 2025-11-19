@@ -35,6 +35,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     new Date().toISOString().split('T')[0]
   );
   const [pickupNotes, setPickupNotes] = useState("");
+  const [contractNumber, setContractNumber] = useState("");
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
@@ -72,6 +73,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       setFuelLevelPickup(reservation.vehicle?.currentFuelLevel || selectedVehicle?.currentFuelLevel || "Full");
       setPickupDate(new Date().toISOString().split('T')[0]);
       setPickupNotes("");
+      setContractNumber(reservation.contractNumber || "");
       setOverridePassword("");
       setPendingMileage(null);
     }
@@ -87,6 +89,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   const pickupMutation = useMutation({
     mutationFn: async (data: {
+      contractNumber: string;
       pickupMileage: number;
       fuelLevelPickup: string;
       pickupDate: string;
@@ -136,6 +139,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       if (pendingMileage === null) return false;
       
       pickupMutation.mutate({
+        contractNumber: contractNumber.trim(),
         pickupMileage: pendingMileage,
         fuelLevelPickup,
         pickupDate,
@@ -153,6 +157,16 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate contract number
+    if (!contractNumber || contractNumber.trim() === "") {
+      toast({
+        variant: "destructive",
+        title: "Contract Number Required",
+        description: "Please enter a contract number before completing pickup.",
+      });
+      return;
+    }
     
     // Check if TBD spare and no vehicle selected
     if (isTBDSpare && !selectedVehicleId) {
@@ -199,6 +213,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     }
 
     pickupMutation.mutate({
+      contractNumber: contractNumber.trim(),
       pickupMileage: mileage,
       fuelLevelPickup,
       pickupDate,
@@ -279,7 +294,26 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             <div className="border rounded-lg p-4 bg-slate-50 space-y-4">
               <h3 className="font-semibold text-base">Pickup Details</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contractNumber">
+                    Contract Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="contractNumber"
+                    type="text"
+                    value={contractNumber}
+                    onChange={(e) => setContractNumber(e.target.value)}
+                    placeholder="Enter contract number"
+                    required
+                    className="bg-white"
+                    data-testid="input-contract-number"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Unique contract identifier
+                  </p>
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="pickupDate">
                     Pickup Date
