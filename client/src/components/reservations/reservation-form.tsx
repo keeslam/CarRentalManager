@@ -893,6 +893,7 @@ export function ReservationForm({
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
+      console.log("✅ Form submitted successfully, data:", data);
       // Contract number is optional when creating reservation
       // It will be assigned/validated during pickup
       await processSubmission(data);
@@ -905,6 +906,14 @@ export function ReservationForm({
       });
     }
   };
+  
+  // Log form errors when they change
+  useEffect(() => {
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      console.error("❌ Form validation errors:", errors);
+    }
+  }, [form.formState.errors]);
   
   return (
     <>
