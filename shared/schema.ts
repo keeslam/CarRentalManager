@@ -455,6 +455,7 @@ export const insertReservationSchemaBase = createInsertSchema(reservations).omit
   maintenanceStatus: z.string().optional().or(z.null()), // Allow null
   maintenanceCategory: z.string().optional().or(z.null()), // Allow null
   spareAssignmentDecision: z.string().optional().or(z.null()), // Allow null
+  contractNumber: z.string().optional().or(z.null()), // Contract number is assigned during pickup, not creation
 });
 
 // Fully validated schema with business rules for server-side use
