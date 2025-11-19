@@ -80,7 +80,6 @@ const formSchema = insertReservationSchemaBase.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   isOpenEnded: z.boolean().optional(),
-  contractNumber: z.string().optional(),
   deliveryRequired: z.boolean().optional(),
   deliveryAddress: z.string().nullish(),
   deliveryCity: z.string().nullish(),
@@ -873,7 +872,7 @@ export function ReservationForm({
       // Prepare submission data for both edit and create modes
       const submissionData = {
         ...data,
-        contractNumber: data.contractNumber || null, // Contract number is optional until pickup
+        contractNumber: null, // Contract number is assigned during pickup in status-change-dialog
         endDate: data.isOpenEnded ? undefined : data.endDate,
         status: editMode ? data.status : "booked", // New reservations start as "booked"
       };
@@ -1567,11 +1566,6 @@ export function ReservationForm({
                       </span>
                     )}
                   </div>
-                  {(editMode && initialData?.contractNumber) && (
-                    <div>
-                      <span className="font-medium">Contract Number:</span> {initialData.contractNumber}
-                    </div>
-                  )}
                 </div>
               </div>
               <Separator />
@@ -1581,28 +1575,6 @@ export function ReservationForm({
             <div className="space-y-6">
               <div className="text-lg font-medium">3. Reservation Details</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Contract Number */}
-                <FormField
-                  control={form.control}
-                  name="contractNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-medium">Contract Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Leave empty for auto-generation"
-                          data-testid="input-contract-number"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter a contract number or leave empty to auto-generate
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
                 {/* Status - Made more prominent */}
                 <FormField
                   control={form.control}
