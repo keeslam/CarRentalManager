@@ -870,13 +870,14 @@ export function ReservationForm({
   const processSubmission = async (data: z.infer<typeof formSchema>) => {
     try {
       // Prepare submission data for both edit and create modes
-      const submissionData = {
+      const submissionData: any = {
         ...data,
-        contractNumber: null, // Contract number is assigned during pickup in status-change-dialog
         endDate: data.isOpenEnded ? undefined : data.endDate,
         status: editMode ? data.status : "booked", // New reservations start as "booked"
       };
       delete submissionData.isOpenEnded;
+      // Contract number is assigned during pickup in status-change-dialog, not here
+      delete submissionData.contractNumber;
       
       createReservationMutation.mutate(submissionData);
     } catch (error) {
