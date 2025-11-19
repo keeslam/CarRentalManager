@@ -1810,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/reservations/find-by-contract/:contractNumber", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     try {
       const contractNumber = req.params.contractNumber;
-      const reservations = await storage.getReservations();
+      const reservations = await storage.getAllReservations();
       const reservation = reservations.find(r => r.contractNumber === contractNumber);
       
       if (!reservation) {
@@ -3194,10 +3194,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
 
-      // Handle contract number override
+      // Handle contract number override - MUST happen BEFORE pickup to avoid unique constraint
       if (overrideContractNumber) {
         // Find and clear the contract number from any existing reservation
-        const allReservations = await storage.getReservations();
+        const allReservations = await storage.getAllReservations();
         const existingReservation = allReservations.find(r => r.contractNumber === contractNumber.trim());
         
         if (existingReservation && existingReservation.id !== reservationId) {
