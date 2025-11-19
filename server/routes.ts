@@ -6923,8 +6923,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         END $$;
       `;
       
-      await execAsync(`psql "${databaseUrl}" -c "${dropTablesQuery.replace(/\n/g, ' ')}"`);
-      console.log('✅ All tables dropped');
+      // Write query to a temp file to avoid shell escaping issues with $$
+      const dropScriptPath = path.join(os.tmpdir(), `drop-tables-${Date.now()}.sql`);
+      await fs.promises.writeFile(dropScriptPath, dropTablesQuery);
+      
+      try {
+        await execAsync(`psql "${databaseUrl}" -f "${dropScriptPath}"`);
+        console.log('✅ All tables dropped');
+      } finally {
+        // Clean up temp file
+        try {
+          await fs.promises.unlink(dropScriptPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
 
       // Step 2: Restore database using psql
       console.log('📥 Restoring database from backup...');
