@@ -3810,7 +3810,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         deletedAt: new Date(),
         deletedBy: user ? user.username : null,
         deletedByUser: user ? user.id : null,
-        updatedBy: user ? user.username : null // Also track who made the update
+        updatedBy: user ? user.username : null, // Also track who made the update
+        contractNumber: null // Free up contract number when deleting reservation
       };
       
       // If this is a maintenance block, also delete related replacement reservations
