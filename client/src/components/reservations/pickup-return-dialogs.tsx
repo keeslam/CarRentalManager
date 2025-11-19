@@ -73,12 +73,12 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     async function loadContractNumber() {
       if (open && reservation && !reservation.contractNumber) {
         try {
-          const response = await fetch('/api/reservations/next-contract-number', {
+          const response = await fetch('/api/settings/next-contract-number', {
             credentials: 'include',
           });
           if (response.ok) {
             const data = await response.json();
-            setContractNumber(data.nextContractNumber);
+            setContractNumber(data.contractNumber);
           }
         } catch (error) {
           console.error('Failed to fetch next contract number:', error);
@@ -114,14 +114,16 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
       const trimmedNumber = contractNumber.trim();
       
-      // Check for duplicates
+      // Check for duplicates (excluding current reservation if it already has this number)
       try {
-        const response = await fetch(`/api/reservations/check-contract-number?number=${encodeURIComponent(trimmedNumber)}&excludeId=${reservation.id}`, {
+        const response = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(trimmedNumber)}`, {
           credentials: 'include',
         });
         if (response.ok) {
           const data = await response.json();
-          setIsDuplicateContract(data.exists);
+          // If this reservation already has this contract number, it's not a duplicate
+          const isCurrentNumber = reservation.contractNumber === trimmedNumber;
+          setIsDuplicateContract(data.exists && !isCurrentNumber);
         }
       } catch (error) {
         console.error('Failed to check contract number:', error);
@@ -138,7 +140,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
     const debounceTimer = setTimeout(checkContractNumber, 300);
     return () => clearTimeout(debounceTimer);
-  }, [contractNumber, reservation.id]);
+  }, [contractNumber, reservation.id, reservation.contractNumber]);
 
   // Update mileage and fuel when vehicle is selected for TBD spare
   useEffect(() => {
