@@ -38,6 +38,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [contractNumber, setContractNumber] = useState("");
   const [isDuplicateContract, setIsDuplicateContract] = useState(false);
   const [isHighContractNumber, setIsHighContractNumber] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateReservationInfo, setDuplicateReservationInfo] = useState<any>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [pendingMileage, setPendingMileage] = useState<number | null>(null);
   const [overridePassword, setOverridePassword] = useState<string>("");
@@ -116,14 +118,16 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       
       // Check for duplicates (excluding current reservation if it already has this number)
       try {
-        const response = await fetch(`/api/settings/check-contract-number/${encodeURIComponent(trimmedNumber)}`, {
+        const response = await fetch(`/api/reservations/find-by-contract/${encodeURIComponent(trimmedNumber)}`, {
           credentials: 'include',
         });
         if (response.ok) {
           const data = await response.json();
           // If this reservation already has this contract number, it's not a duplicate
           const isCurrentNumber = reservation.contractNumber === trimmedNumber;
-          setIsDuplicateContract(data.exists && !isCurrentNumber);
+          const isDuplicate = data.exists && !isCurrentNumber;
+          setIsDuplicateContract(isDuplicate);
+          setDuplicateReservationInfo(isDuplicate ? data.reservation : null);
         }
       } catch (error) {
         console.error('Failed to check contract number:', error);
@@ -231,15 +235,18 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       return;
     }
 
-    // Check for duplicate contract number
+    // Check for duplicate contract number - show warning instead of blocking
     if (isDuplicateContract) {
-      toast({
-        variant: "destructive",
-        title: "Duplicate Contract Number",
-        description: "This contract number already exists. Please use a different number.",
-      });
+      setShowDuplicateWarning(true);
       return;
     }
+    
+    // If no duplicate, proceed normally
+    proceedWithPickup(false);
+  };
+
+  const proceedWithPickup = async (overrideDuplicate: boolean) => {
+    setShowDuplicateWarning(false);
     
     // Check if TBD spare and no vehicle selected
     if (isTBDSpare && !selectedVehicleId) {
@@ -291,6 +298,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       fuelLevelPickup,
       pickupDate,
       pickupNotes: pickupNotes || undefined,
+      overrideContractNumber: overrideDuplicate,
     });
   };
 
@@ -616,6 +624,65 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           </form>
         </div>
       </DialogContent>
+
+      {/* Duplicate Contract Number Warning Dialog */}
+      <Dialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Duplicate Contract Number
+            </DialogTitle>
+            <DialogDescription>
+              This contract number is already in use.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm font-medium text-amber-900 mb-2">
+                Contract Number {contractNumber} is currently assigned to:
+              </p>
+              {duplicateReservationInfo && (
+                <div className="text-sm text-amber-800 space-y-1">
+                  <div><strong>Reservation ID:</strong> #{duplicateReservationInfo.id}</div>
+                  {duplicateReservationInfo.vehicle && (
+                    <div><strong>Vehicle:</strong> {duplicateReservationInfo.vehicle.licensePlate} - {duplicateReservationInfo.vehicle.brand} {duplicateReservationInfo.vehicle.model}</div>
+                  )}
+                  {duplicateReservationInfo.customer && (
+                    <div><strong>Customer:</strong> {duplicateReservationInfo.customer.name}</div>
+                  )}
+                  <div><strong>Status:</strong> {duplicateReservationInfo.status}</div>
+                </div>
+              )}
+            </div>
+            
+            <p className="text-sm text-muted-foreground">
+              If you proceed, the contract number will be removed from the existing reservation and assigned to this one. This is useful for backfilling or correcting mistakes.
+            </p>
+            
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDuplicateWarning(false)}
+                data-testid="button-cancel-override"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                className="bg-amber-600 hover:bg-amber-700"
+                onClick={() => proceedWithPickup(true)}
+                data-testid="button-confirm-override"
+              >
+                Override & Continue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Mileage Override Dialog */}
       <MileageOverridePasswordDialog

@@ -1806,6 +1806,24 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Find reservation by contract number
+  app.get("/api/reservations/find-by-contract/:contractNumber", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
+    try {
+      const contractNumber = req.params.contractNumber;
+      const reservations = await storage.getReservations();
+      const reservation = reservations.find(r => r.contractNumber === contractNumber);
+      
+      if (!reservation) {
+        return res.json({ exists: false, reservation: null });
+      }
+      
+      return res.json({ exists: true, reservation });
+    } catch (error) {
+      console.error("Error finding reservation by contract number:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get single reservation
   app.get("/api/reservations/:id", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const id = parseInt(req.params.id);
@@ -3168,12 +3186,24 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
-      const { contractNumber, pickupMileage, fuelLevelPickup, pickupDate, pickupNotes, templateId, allowMileageDecrease, overridePassword } = req.body;
+      const { contractNumber, pickupMileage, fuelLevelPickup, pickupDate, pickupNotes, templateId, allowMileageDecrease, overridePassword, overrideContractNumber } = req.body;
       
       if (!contractNumber || contractNumber.trim() === '') {
         return res.status(400).json({ 
           message: "Contract number is required" 
         });
+      }
+
+      // Handle contract number override
+      if (overrideContractNumber) {
+        // Find and clear the contract number from any existing reservation
+        const allReservations = await storage.getReservations();
+        const existingReservation = allReservations.find(r => r.contractNumber === contractNumber.trim());
+        
+        if (existingReservation && existingReservation.id !== reservationId) {
+          console.log(`🔄 Clearing contract number ${contractNumber} from reservation #${existingReservation.id} (override requested)`);
+          await storage.updateReservation(existingReservation.id, { contractNumber: null });
+        }
       }
       
       if (pickupMileage === undefined || pickupMileage === null || pickupMileage === '' || !fuelLevelPickup) {
