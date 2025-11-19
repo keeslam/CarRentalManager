@@ -1027,6 +1027,7 @@ export class DatabaseStorage implements IStorage {
   async pickupReservation(
     reservationId: number,
     pickupData: {
+      contractNumber: string;
       pickupMileage: number;
       fuelLevelPickup: string;
       pickupDate?: string;
@@ -1060,6 +1061,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedReservation] = await db
       .update(reservations)
       .set({
+        contractNumber: pickupData.contractNumber,
         pickupMileage: pickupData.pickupMileage,
         fuelLevelPickup: pickupData.fuelLevelPickup,
         actualPickupDate: pickupDate,

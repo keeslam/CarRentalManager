@@ -3168,7 +3168,13 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid reservation ID" });
       }
 
-      const { pickupMileage, fuelLevelPickup, pickupDate, pickupNotes, templateId, allowMileageDecrease, overridePassword } = req.body;
+      const { contractNumber, pickupMileage, fuelLevelPickup, pickupDate, pickupNotes, templateId, allowMileageDecrease, overridePassword } = req.body;
+      
+      if (!contractNumber || contractNumber.trim() === '') {
+        return res.status(400).json({ 
+          message: "Contract number is required" 
+        });
+      }
       
       if (pickupMileage === undefined || pickupMileage === null || pickupMileage === '' || !fuelLevelPickup) {
         return res.status(400).json({ 
@@ -3221,6 +3227,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       const updatedReservation = await storage.pickupReservation(reservationId, {
+        contractNumber: contractNumber.trim(),
         pickupMileage: mileage,
         fuelLevelPickup,
         pickupDate,
