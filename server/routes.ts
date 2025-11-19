@@ -6901,6 +6901,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
+      const os = await import('os');
       const execAsync = promisify(exec);
 
       const databaseUrl = process.env.DATABASE_URL;
