@@ -354,7 +354,7 @@ export const reservations = pgTable("reservations", {
   totalPrice: numeric("total_price"),
   notes: text("notes"),
   damageCheckPath: text("damage_check_path"),
-  contractNumber: text("contract_number").notNull().unique(),
+  contractNumber: text("contract_number").unique(), // Nullable - assigned during pickup, not creation
   
   // Spare vehicle management
   type: text("type").default("standard").notNull(), // 'standard' | 'replacement' | 'maintenance_block'
