@@ -62,6 +62,7 @@ import { PlusCircle, FileCheck, Upload, Check, X, Edit, FileText, Eye, Clipboard
 import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 import { DriverDialog } from "@/components/customers/driver-dialog";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -238,6 +239,8 @@ export function ReservationForm({
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<z.infer<typeof formSchema> | null>(null);
   const [processingOverdue, setProcessingOverdue] = useState<number | null>(null);
+  const [viewingReservationId, setViewingReservationId] = useState<number | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -2463,7 +2466,8 @@ export function ReservationForm({
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        window.open(`/reservations/${reservation.id}`, '_blank');
+                        setViewingReservationId(reservation.id);
+                        setViewDialogOpen(true);
                       }}
                     >
                       <Eye className="h-4 w-4 mr-1" />
@@ -2583,6 +2587,13 @@ export function ReservationForm({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Reservation View Dialog for overdue reservations */}
+    <ReservationViewDialog
+      open={viewDialogOpen}
+      onOpenChange={setViewDialogOpen}
+      reservationId={viewingReservationId}
+    />
     </>
   );
 }
