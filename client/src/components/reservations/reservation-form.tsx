@@ -233,6 +233,12 @@ export function ReservationForm({
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   
+  // Overdue reservations detection states
+  const [overdueReservations, setOverdueReservations] = useState<Reservation[]>([]);
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<z.infer<typeof formSchema> | null>(null);
+  const [processingOverdue, setProcessingOverdue] = useState<number | null>(null);
+  
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
     try {
@@ -892,10 +898,41 @@ export function ReservationForm({
     }
   };
 
+  // Check for overdue reservations before submitting
+  const checkOverdueReservations = async (vehicleId: number): Promise<Reservation[]> => {
+    try {
+      const response = await fetch(`/api/reservations/overdue/${vehicleId}`);
+      if (!response.ok) {
+        console.error("Failed to check overdue reservations");
+        return [];
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error checking overdue reservations:", error);
+      return [];
+    }
+  };
+
   // Handle reservation form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       console.log("✅ Form submitted successfully, data:", data);
+      
+      // Skip overdue check when editing an existing reservation
+      if (!editMode) {
+        const vehicleId = Number(data.vehicleId);
+        if (vehicleId) {
+          const overdue = await checkOverdueReservations(vehicleId);
+          if (overdue.length > 0) {
+            // Store the form data and show the dialog
+            setPendingFormData(data);
+            setOverdueReservations(overdue);
+            setOverdueDialogOpen(true);
+            return; // Don't proceed with submission yet
+          }
+        }
+      }
+      
       // Contract number is optional when creating reservation
       // It will be assigned/validated during pickup
       await processSubmission(data);
@@ -2354,6 +2391,154 @@ export function ReservationForm({
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Overdue Reservations Dialog */}
+    <AlertDialog open={overdueDialogOpen} onOpenChange={setOverdueDialogOpen}>
+      <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Overdue Reservations Found
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            This vehicle has {overdueReservations.length} reservation{overdueReservations.length > 1 ? 's' : ''} that ended more than 3 days ago but {overdueReservations.length > 1 ? 'have' : 'has'}n't been completed. 
+            Please resolve {overdueReservations.length > 1 ? 'these' : 'this'} before creating a new reservation.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        
+        <div className="flex-1 overflow-auto py-4">
+          <div className="space-y-3">
+            {overdueReservations.map((reservation) => (
+              <div 
+                key={reservation.id} 
+                className="border rounded-lg p-4 bg-muted/30"
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {reservation.customer?.firstName} {reservation.customer?.lastName}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                    </div>
+                    <Badge variant={
+                      reservation.status === 'picked_up' ? 'default' : 
+                      reservation.status === 'returned' ? 'secondary' : 'outline'
+                    }>
+                      {reservation.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={processingOverdue === reservation.id}
+                      onClick={async () => {
+                        setProcessingOverdue(reservation.id);
+                        try {
+                          await apiRequest("PATCH", `/api/reservations/${reservation.id}/status`, {
+                            status: "completed"
+                          });
+                          toast({
+                            title: "Reservation Completed",
+                            description: "The overdue reservation has been marked as completed.",
+                          });
+                          // Re-check overdue reservations
+                          const updatedOverdue = overdueReservations.filter(r => r.id !== reservation.id);
+                          setOverdueReservations(updatedOverdue);
+                          
+                          // If no more overdue, proceed with the pending submission
+                          if (updatedOverdue.length === 0 && pendingFormData) {
+                            setOverdueDialogOpen(false);
+                            await processSubmission(pendingFormData);
+                            setPendingFormData(null);
+                          }
+                          
+                          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to complete reservation",
+                            variant: "destructive",
+                          });
+                        }
+                        setProcessingOverdue(null);
+                      }}
+                    >
+                      {processingOverdue === reservation.id ? "Processing..." : "Mark Completed"}
+                    </Button>
+                    
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={processingOverdue === reservation.id}
+                      onClick={async () => {
+                        setProcessingOverdue(reservation.id);
+                        try {
+                          await apiRequest("DELETE", `/api/reservations/${reservation.id}`);
+                          toast({
+                            title: "Reservation Deleted",
+                            description: "The overdue reservation has been deleted.",
+                          });
+                          // Re-check overdue reservations
+                          const updatedOverdue = overdueReservations.filter(r => r.id !== reservation.id);
+                          setOverdueReservations(updatedOverdue);
+                          
+                          // If no more overdue, proceed with the pending submission
+                          if (updatedOverdue.length === 0 && pendingFormData) {
+                            setOverdueDialogOpen(false);
+                            await processSubmission(pendingFormData);
+                            setPendingFormData(null);
+                          }
+                          
+                          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to delete reservation",
+                            variant: "destructive",
+                          });
+                        }
+                        setProcessingOverdue(null);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => {
+            setOverdueDialogOpen(false);
+            setPendingFormData(null);
+            setOverdueReservations([]);
+          }}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={overdueReservations.length > 0}
+            onClick={async () => {
+              if (pendingFormData) {
+                setOverdueDialogOpen(false);
+                await processSubmission(pendingFormData);
+                setPendingFormData(null);
+              }
+            }}
+          >
+            Continue with Reservation
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
