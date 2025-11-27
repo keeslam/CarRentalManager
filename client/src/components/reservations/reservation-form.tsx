@@ -2461,6 +2461,17 @@ export function ReservationForm({
                   <div className="flex flex-col gap-2">
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        window.open(`/reservations/${reservation.id}`, '_blank');
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                    
+                    <Button
+                      size="sm"
                       variant="default"
                       disabled={processingOverdue === reservation.id}
                       onClick={async () => {
