@@ -1732,6 +1732,24 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(reservations);
   });
 
+  // Get overdue reservations for a vehicle (ended 3+ days ago, not completed)
+  app.get("/api/reservations/overdue/:vehicleId", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
+    const vehicleId = parseInt(req.params.vehicleId);
+    const daysOverdue = parseInt(req.query.days as string) || 3;
+    
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    try {
+      const overdueReservations = await storage.getOverdueReservationsByVehicle(vehicleId, daysOverdue);
+      res.json(overdueReservations);
+    } catch (error) {
+      console.error("Error fetching overdue reservations:", error);
+      res.status(500).json({ message: "Failed to fetch overdue reservations" });
+    }
+  });
+
   // Get reservations by customer
   app.get("/api/reservations/customer/:customerId", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const customerId = parseInt(req.params.customerId);
