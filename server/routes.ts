@@ -6160,7 +6160,21 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // ==================== TEMPLATE BACKGROUND LIBRARY ROUTES ====================
-  // Get all backgrounds for a template
+  // Get all backgrounds across all templates (global/shared library)
+  app.get("/api/pdf-templates/backgrounds/all", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
+    try {
+      const backgrounds = await storage.getAllTemplateBackgrounds();
+      res.json(backgrounds);
+    } catch (error) {
+      console.error("Error fetching all template backgrounds:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch template backgrounds", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Get all backgrounds for a specific template
   app.get("/api/pdf-templates/:id/backgrounds", hasPermission(UserPermission.MANAGE_PDF_TEMPLATES), async (req: Request, res: Response) => {
     try {
       const templateId = parseInt(req.params.id);

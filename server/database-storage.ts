@@ -1613,6 +1613,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Template Background Library methods
+  async getAllTemplateBackgrounds(): Promise<TemplateBackground[]> {
+    return await db
+      .select()
+      .from(templateBackgrounds)
+      .orderBy(desc(templateBackgrounds.createdAt));
+  }
+  
   async getTemplateBackgrounds(templateId: number): Promise<TemplateBackground[]> {
     return await db
       .select()

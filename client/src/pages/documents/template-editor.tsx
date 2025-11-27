@@ -263,11 +263,11 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
     }
   });
 
-  // Background Library query and mutations
+  // Background Library query and mutations - GLOBAL shared library across all templates
   const { data: backgroundLibrary = [], refetch: refetchBackgrounds } = useQuery<TemplateBackground[]>({
-    queryKey: [`/api/pdf-templates/${currentTemplate?.id}/backgrounds`],
+    queryKey: ['/api/pdf-templates/backgrounds/all'],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!currentTemplate && isBackgroundLibraryOpen,
+    enabled: isBackgroundLibraryOpen,
   });
 
   const addBackgroundToLibraryMutation = useMutation({
