@@ -766,11 +766,25 @@ export function ReservationForm({
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const errorData = await response.json();
+            
+            // Check if this is an overdue error from the backend
+            if (errorData.isOverdueError && errorData.overdueReservations) {
+              // Create a custom error with the overdue data
+              const error = new Error(errorData.message || "Overdue reservations found") as any;
+              error.isOverdueError = true;
+              error.overdueReservations = errorData.overdueReservations;
+              throw error;
+            }
+            
             errorMessage = errorData.message || errorMessage;
           } else {
             errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
           }
-        } catch (parseError) {
+        } catch (parseError: any) {
+          // If this is our overdue error, rethrow it
+          if (parseError.isOverdueError) {
+            throw parseError;
+          }
           // If we can't parse the error response, use the status text
           errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
         }
@@ -838,7 +852,15 @@ export function ReservationForm({
         }
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      // Check if this is an overdue error from the backend
+      if (error.isOverdueError && error.overdueReservations) {
+        setOverdueReservations(error.overdueReservations);
+        setOverdueDialogOpen(true);
+        // Note: pendingFormData should already be set from the form's onSubmit
+        return;
+      }
+      
       toast({
         title: "Error",
         description: `Failed to ${editMode ? "update" : "create"} reservation: ${error.message}`,
@@ -877,6 +899,9 @@ export function ReservationForm({
   // Process the actual submission
   const processSubmission = async (data: z.infer<typeof formSchema>) => {
     try {
+      // Store the form data in case backend returns an overdue error
+      setPendingFormData(data);
+      
       // Prepare submission data for both edit and create modes
       const submissionData: any = {
         ...data,
@@ -2423,7 +2448,7 @@ export function ReservationForm({
                       {reservation.customer?.firstName} {reservation.customer?.lastName}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                      {formatDate(reservation.startDate)} - {reservation.endDate ? formatDate(reservation.endDate) : 'Open-ended'}
                     </div>
                     <Badge variant={
                       reservation.status === 'picked_up' ? 'default' : 
@@ -2448,15 +2473,19 @@ export function ReservationForm({
                             title: "Reservation Completed",
                             description: "The overdue reservation has been marked as completed.",
                           });
-                          // Re-check overdue reservations
-                          const updatedOverdue = overdueReservations.filter(r => r.id !== reservation.id);
-                          setOverdueReservations(updatedOverdue);
                           
-                          // If no more overdue, proceed with the pending submission
-                          if (updatedOverdue.length === 0 && pendingFormData) {
-                            setOverdueDialogOpen(false);
-                            await processSubmission(pendingFormData);
-                            setPendingFormData(null);
+                          // Refetch overdue reservations from server to ensure consistency
+                          const vehicleId = Number(pendingFormData?.vehicleId);
+                          if (vehicleId) {
+                            const freshOverdue = await checkOverdueReservations(vehicleId);
+                            setOverdueReservations(freshOverdue);
+                            
+                            // If no more overdue, proceed with the pending submission
+                            if (freshOverdue.length === 0 && pendingFormData) {
+                              setOverdueDialogOpen(false);
+                              await processSubmission(pendingFormData);
+                              setPendingFormData(null);
+                            }
                           }
                           
                           queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
@@ -2485,15 +2514,19 @@ export function ReservationForm({
                             title: "Reservation Deleted",
                             description: "The overdue reservation has been deleted.",
                           });
-                          // Re-check overdue reservations
-                          const updatedOverdue = overdueReservations.filter(r => r.id !== reservation.id);
-                          setOverdueReservations(updatedOverdue);
                           
-                          // If no more overdue, proceed with the pending submission
-                          if (updatedOverdue.length === 0 && pendingFormData) {
-                            setOverdueDialogOpen(false);
-                            await processSubmission(pendingFormData);
-                            setPendingFormData(null);
+                          // Refetch overdue reservations from server to ensure consistency
+                          const vehicleId = Number(pendingFormData?.vehicleId);
+                          if (vehicleId) {
+                            const freshOverdue = await checkOverdueReservations(vehicleId);
+                            setOverdueReservations(freshOverdue);
+                            
+                            // If no more overdue, proceed with the pending submission
+                            if (freshOverdue.length === 0 && pendingFormData) {
+                              setOverdueDialogOpen(false);
+                              await processSubmission(pendingFormData);
+                              setPendingFormData(null);
+                            }
                           }
                           
                           queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });

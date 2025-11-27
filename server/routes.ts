@@ -2069,6 +2069,16 @@ export async function registerRoutes(app: Express): Promise<void> {
             conflicts
           });
         }
+        
+        // Check for overdue reservations on this vehicle (ended 3+ days ago, not completed)
+        const overdueReservations = await storage.getOverdueReservationsByVehicle(reservationData.vehicleId);
+        if (overdueReservations.length > 0) {
+          return res.status(409).json({
+            message: "This vehicle has overdue reservations that must be resolved first",
+            overdueReservations,
+            isOverdueError: true
+          });
+        }
       }
       
       // Auto-convert BV → Opnaam before creating reservation (legal requirement)
