@@ -309,10 +309,12 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       return await res.json();
     },
     onSuccess: async (updatedTemplate) => {
-      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
-      if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
+      // Immediately update the current template with the new background info
+      if (currentTemplate && parseInt(updatedTemplate.id) === currentTemplate.id) {
         setCurrentTemplate(updatedTemplate);
       }
+      // Then refetch to ensure everything is in sync
+      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
       toast({
         title: "Success",
         description: "Background selected",
