@@ -323,11 +323,25 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       if (updatedTemplate.is_default !== undefined) {
         convertedTemplate.isDefault = updatedTemplate.is_default;
       }
+      if (updatedTemplate.fields && typeof updatedTemplate.fields === 'string') {
+        try {
+          convertedTemplate.fields = JSON.parse(updatedTemplate.fields);
+        } catch (e) {
+          convertedTemplate.fields = [];
+        }
+      }
       
       // Immediately update the current template with the new background info
       if (currentTemplate && parseInt(convertedTemplate.id) === currentTemplate.id) {
         setCurrentTemplate(convertedTemplate);
       }
+      
+      // Update the templates list so switching templates preserves the background
+      const updatedTemplates = templates.map(t => 
+        t.id === parseInt(convertedTemplate.id) ? convertedTemplate : t
+      );
+      setTemplates(updatedTemplates);
+      
       // Then refetch to ensure everything is in sync
       await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
       toast({
