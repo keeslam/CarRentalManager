@@ -309,9 +309,24 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       return await res.json();
     },
     onSuccess: async (updatedTemplate) => {
+      // Convert snake_case fields to camelCase for immediate display
+      const convertedTemplate = { ...updatedTemplate };
+      if (updatedTemplate.background_path) {
+        convertedTemplate.backgroundPath = updatedTemplate.background_path;
+      }
+      if (updatedTemplate.background_preview_path) {
+        convertedTemplate.backgroundPreviewPath = updatedTemplate.background_preview_path;
+      }
+      if (updatedTemplate.template_preview_path) {
+        convertedTemplate.templatePreviewPath = updatedTemplate.template_preview_path;
+      }
+      if (updatedTemplate.is_default !== undefined) {
+        convertedTemplate.isDefault = updatedTemplate.is_default;
+      }
+      
       // Immediately update the current template with the new background info
-      if (currentTemplate && parseInt(updatedTemplate.id) === currentTemplate.id) {
-        setCurrentTemplate(updatedTemplate);
+      if (currentTemplate && parseInt(convertedTemplate.id) === currentTemplate.id) {
+        setCurrentTemplate(convertedTemplate);
       }
       // Then refetch to ensure everything is in sync
       await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
@@ -380,20 +395,34 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
     if (templateData) {
       const templatesArray = Array.isArray(templateData) ? templateData : [];
       const processedTemplates = templatesArray.map((template: any) => {
-        if (template.fields && typeof template.fields === 'string') {
+        let processed = template;
+        
+        // Convert snake_case fields to camelCase (API returns snake_case)
+        if (template.background_path) {
+          processed = { ...processed, backgroundPath: template.background_path };
+        }
+        if (template.background_preview_path) {
+          processed = { ...processed, backgroundPreviewPath: template.background_preview_path };
+        }
+        if (template.template_preview_path) {
+          processed = { ...processed, templatePreviewPath: template.template_preview_path };
+        }
+        if (template.is_default !== undefined) {
+          processed = { ...processed, isDefault: template.is_default };
+        }
+        
+        // Parse fields if they're a string
+        if (processed.fields && typeof processed.fields === 'string') {
           try {
-            return {
-              ...template,
-              fields: JSON.parse(template.fields)
-            };
+            processed = { ...processed, fields: JSON.parse(processed.fields) };
           } catch (e) {
             console.error('Error parsing template fields:', e);
-            return template;
           }
         }
+        
         return {
-          ...template,
-          fields: Array.isArray(template.fields) ? template.fields : []
+          ...processed,
+          fields: Array.isArray(processed.fields) ? processed.fields : []
         };
       });
       
@@ -419,7 +448,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
           // Template already selected - update it with fresh data from API (including background path!)
           const updatedTemplate = processedTemplates.find(t => t.id === currentTemplate.id);
           if (updatedTemplate) {
-            console.log('🔄 Updating current template with fresh data:', { id: updatedTemplate.id, backgroundPath: updatedTemplate.backgroundPath });
+            console.log('🔄 Updating current template with fresh data:', { id: updatedTemplate.id, backgroundPath: updatedTemplate.backgroundPath, backgroundPreviewPath: updatedTemplate.backgroundPreviewPath });
             setCurrentTemplate(updatedTemplate);
           }
         }
