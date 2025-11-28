@@ -10067,6 +10067,228 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Duplicate PDF template
+  app.post("/api/damage-check-pdf-templates/:id/duplicate", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "New template name is required" });
+      }
+      
+      const duplicate = await storage.duplicateTemplate(id, name, (req as any).user?.username);
+      res.status(201).json(duplicate);
+    } catch (error: any) {
+      console.error("Error duplicating PDF template:", error);
+      res.status(500).json({ message: error.message || "Error duplicating PDF template" });
+    }
+  });
+
+  // Template Versioning endpoints
+  app.get("/api/damage-check-pdf-templates/:id/versions", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const versions = await storage.getTemplateVersions(templateId);
+      res.json(versions);
+    } catch (error) {
+      console.error("Error fetching template versions:", error);
+      res.status(500).json({ message: "Error fetching template versions" });
+    }
+  });
+
+  app.post("/api/damage-check-pdf-templates/:id/versions", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { name, sections, settings } = req.body;
+      
+      const version = await storage.createTemplateVersion(
+        templateId, 
+        name || `Version ${new Date().toISOString()}`, 
+        sections, 
+        settings || {}, 
+        (req as any).user?.username
+      );
+      res.status(201).json(version);
+    } catch (error) {
+      console.error("Error creating template version:", error);
+      res.status(500).json({ message: "Error creating template version" });
+    }
+  });
+
+  app.get("/api/damage-check-pdf-template-versions/:versionId", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const versionId = parseInt(req.params.versionId);
+      const version = await storage.getTemplateVersion(versionId);
+      
+      if (!version) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      res.json(version);
+    } catch (error) {
+      console.error("Error fetching template version:", error);
+      res.status(500).json({ message: "Error fetching template version" });
+    }
+  });
+
+  app.delete("/api/damage-check-pdf-template-versions/:versionId", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const versionId = parseInt(req.params.versionId);
+      const deleted = await storage.deleteTemplateVersion(versionId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting template version:", error);
+      res.status(500).json({ message: "Error deleting template version" });
+    }
+  });
+
+  // Restore template from version
+  app.post("/api/damage-check-pdf-templates/:id/restore/:versionId", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const versionId = parseInt(req.params.versionId);
+      
+      const version = await storage.getTemplateVersion(versionId);
+      if (!version) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      const updated = await storage.updateDamageCheckPdfTemplate(templateId, {
+        sections: version.sections,
+        updatedBy: (req as any).user?.username
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error restoring template version:", error);
+      res.status(500).json({ message: "Error restoring template version" });
+    }
+  });
+
+  // Theme endpoints
+  app.get("/api/damage-check-pdf-template-themes", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const themes = await storage.getAllTemplateThemes();
+      res.json(themes);
+    } catch (error) {
+      console.error("Error fetching themes:", error);
+      res.status(500).json({ message: "Error fetching themes" });
+    }
+  });
+
+  app.post("/api/damage-check-pdf-template-themes", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const { name, palette, isDefault } = req.body;
+      
+      if (!name || !palette) {
+        return res.status(400).json({ message: "Name and palette are required" });
+      }
+      
+      const theme = await storage.createTemplateTheme(name, palette, isDefault);
+      res.status(201).json(theme);
+    } catch (error) {
+      console.error("Error creating theme:", error);
+      res.status(500).json({ message: "Error creating theme" });
+    }
+  });
+
+  app.put("/api/damage-check-pdf-template-themes/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const theme = await storage.updateTemplateTheme(id, req.body);
+      
+      if (!theme) {
+        return res.status(404).json({ message: "Theme not found" });
+      }
+      
+      res.json(theme);
+    } catch (error) {
+      console.error("Error updating theme:", error);
+      res.status(500).json({ message: "Error updating theme" });
+    }
+  });
+
+  app.delete("/api/damage-check-pdf-template-themes/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteTemplateTheme(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Theme not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting theme:", error);
+      res.status(500).json({ message: "Error deleting theme" });
+    }
+  });
+
+  // Section Preset endpoints
+  app.get("/api/damage-check-pdf-section-presets", hasPermission(UserPermission.VIEW_DAMAGE_CHECKS, UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const presets = await storage.getAllSectionPresets();
+      res.json(presets);
+    } catch (error) {
+      console.error("Error fetching section presets:", error);
+      res.status(500).json({ message: "Error fetching section presets" });
+    }
+  });
+
+  app.post("/api/damage-check-pdf-section-presets", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const { name, description, type, config, category, isBuiltIn } = req.body;
+      
+      if (!name || !type || !config) {
+        return res.status(400).json({ message: "Name, type, and config are required" });
+      }
+      
+      const preset = await storage.createSectionPreset(name, description, type, config, category, isBuiltIn);
+      res.status(201).json(preset);
+    } catch (error) {
+      console.error("Error creating section preset:", error);
+      res.status(500).json({ message: "Error creating section preset" });
+    }
+  });
+
+  app.put("/api/damage-check-pdf-section-presets/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const preset = await storage.updateSectionPreset(id, req.body);
+      
+      if (!preset) {
+        return res.status(404).json({ message: "Section preset not found" });
+      }
+      
+      res.json(preset);
+    } catch (error) {
+      console.error("Error updating section preset:", error);
+      res.status(500).json({ message: "Error updating section preset" });
+    }
+  });
+
+  app.delete("/api/damage-check-pdf-section-presets/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSectionPreset(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Section preset not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting section preset:", error);
+      res.status(500).json({ message: "Error deleting section preset" });
+    }
+  });
+
   // Serve object storage files (for template backgrounds)
   app.get('/object-storage/*', async (req, res) => {
     try {
