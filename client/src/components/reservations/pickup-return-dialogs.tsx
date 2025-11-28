@@ -70,39 +70,44 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   // Get selected vehicle data
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId);
 
-  // Auto-generate contract number when dialog opens
+  // Reset form fields and auto-generate contract number when dialog opens
   useEffect(() => {
-    async function loadContractNumber() {
-      if (open && reservation && !reservation.contractNumber) {
-        try {
-          const response = await fetch('/api/settings/next-contract-number', {
-            credentials: 'include',
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setContractNumber(data.contractNumber);
+    async function initializeDialog() {
+      if (open && reservation) {
+        // Reset all form fields first
+        setSelectedVehicleId(null);
+        setPickupMileage(reservation.vehicle?.currentMileage?.toString() || "");
+        setFuelLevelPickup(reservation.vehicle?.currentFuelLevel || "Full");
+        setPickupDate(new Date().toISOString().split('T')[0]);
+        setPickupNotes("");
+        setIsDuplicateContract(false);
+        setIsHighContractNumber(false);
+        setOverridePassword("");
+        setPendingMileage(null);
+        
+        // If reservation already has a contract number, use it
+        if (reservation.contractNumber) {
+          setContractNumber(reservation.contractNumber);
+        } else {
+          // Otherwise, fetch the next contract number
+          try {
+            const response = await fetch('/api/settings/next-contract-number', {
+              credentials: 'include',
+            });
+            if (response.ok) {
+              const data = await response.json();
+              setContractNumber(data.contractNumber);
+            } else {
+              setContractNumber("");
+            }
+          } catch (error) {
+            console.error('Failed to fetch next contract number:', error);
+            setContractNumber("");
           }
-        } catch (error) {
-          console.error('Failed to fetch next contract number:', error);
         }
       }
     }
-    loadContractNumber();
-  }, [open, reservation]);
-
-  useEffect(() => {
-    if (open && reservation) {
-      setSelectedVehicleId(null);
-      setPickupMileage(reservation.vehicle?.currentMileage?.toString() || selectedVehicle?.currentMileage?.toString() || "");
-      setFuelLevelPickup(reservation.vehicle?.currentFuelLevel || selectedVehicle?.currentFuelLevel || "Full");
-      setPickupDate(new Date().toISOString().split('T')[0]);
-      setPickupNotes("");
-      setContractNumber(reservation.contractNumber || "");
-      setIsDuplicateContract(false);
-      setIsHighContractNumber(false);
-      setOverridePassword("");
-      setPendingMileage(null);
-    }
+    initializeDialog();
   }, [open, reservation]);
   
   // Check for duplicate contract numbers and high numbers
@@ -163,6 +168,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       pickupNotes?: string;
       allowMileageDecrease?: boolean;
       overridePassword?: string;
+      overrideContractNumber?: boolean;
     }) => {
       return await apiRequest("POST", `/api/reservations/${reservation.id}/pickup`, data);
     },
