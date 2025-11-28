@@ -561,8 +561,8 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
       const x = marker.x * canvas.width;
       const y = marker.y * canvas.height;
       
-      // Make marker size proportional to canvas size (0.5% of width)
-      const markerRadius = Math.max(6, canvas.width * 0.005);
+      // Make marker size proportional to canvas size (1% of width for larger dots)
+      const markerRadius = Math.max(12, canvas.width * 0.010);
       
       ctx.fillStyle = markerColor;
       ctx.beginPath();
