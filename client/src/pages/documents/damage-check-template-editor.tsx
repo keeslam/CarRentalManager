@@ -2154,64 +2154,121 @@ export default function DamageCheckTemplateEditor() {
                     {/* Checklist Section Editor */}
                     {editingSection.type === 'checklist' && (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="font-semibold">Checklist Items</Label>
-                          <Button variant="outline" size="sm" onClick={() => {
-                            const items = editingSection.settings.checklistItems || [];
-                            const newItem = { id: `check-${Date.now()}`, text: 'New Item', hasCheckbox: true, checked: false };
-                            setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: [...items, newItem]}});
-                          }}>
-                            <Plus className="w-4 h-4 mr-1" /> Add Item
-                          </Button>
-                        </div>
-                        <p className="text-xs text-gray-500">Add checkbox items that will appear in the checklist. Each item gets a "Yes/No" or checkbox option.</p>
-                        <ScrollArea className="h-56 border rounded-lg p-2">
-                          {(editingSection.settings.checklistItems || [
-                            { id: 'velgen', text: 'Velgen', hasCheckbox: true },
-                            { id: 'ruitenwissers', text: 'Ruitenwissers', hasCheckbox: true },
-                            { id: 'banden', text: 'Banden', hasCheckbox: true },
-                            { id: 'lichten', text: 'Lichten', hasCheckbox: true },
-                            { id: 'spiegels', text: 'Spiegels', hasCheckbox: true },
-                            { id: 'interieur', text: 'Interieur', hasCheckbox: true },
-                            { id: 'documenten', text: 'Documenten', hasCheckbox: true },
-                            { id: 'reservewiel', text: 'Reservewiel', hasCheckbox: true },
-                            { id: 'krik', text: 'Krik & Gereedschap', hasCheckbox: true },
-                            { id: 'waarschuwingsdriehoek', text: 'Waarschuwingsdriehoek', hasCheckbox: true },
-                            { id: 'ehbo', text: 'EHBO-kit', hasCheckbox: true },
-                            { id: 'brandblusser', text: 'Brandblusser', hasCheckbox: true },
-                          ]).map((item: any, index: number) => (
-                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
-                              <GripVertical className="w-4 h-4 text-gray-400" />
-                              <Input 
-                                value={item.text} 
-                                onChange={(e) => {
-                                  const items = [...(editingSection.settings.checklistItems || [])];
-                                  items[index] = { ...items[index], text: e.target.value };
-                                  setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
-                                }}
-                                placeholder="Checklist item"
-                                className="flex-1"
-                              />
-                              <div className="flex items-center gap-1">
-                                <Label className="text-xs">Checkbox</Label>
-                                <Switch checked={item.hasCheckbox !== false} onCheckedChange={(checked) => {
-                                  const items = [...(editingSection.settings.checklistItems || [])];
-                                  items[index] = { ...items[index], hasCheckbox: checked };
-                                  setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
-                                }} />
-                              </div>
-                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
-                                const items = (editingSection.settings.checklistItems || []).filter((_: any, i: number) => i !== index);
-                                setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
-                              }}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </ScrollArea>
                         <div>
-                          <Label>Checkbox Size</Label>
-                          <Input type="number" value={editingSection.settings.checkboxSize || 10} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, checkboxSize: parseInt(e.target.value)}})} min={8} max={20} />
+                          <Label className="font-semibold">Select Checklist Template</Label>
+                          <p className="text-xs text-gray-500 mb-2">Choose which damage check template to use for the checklist items. The items below come from the template.</p>
+                          <Select 
+                            value={editingSection.settings.checklistTemplateId?.toString() || ''} 
+                            onValueChange={(v) => {
+                              const templateId = parseInt(v);
+                              const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === templateId);
+                              setEditingSection({
+                                ...editingSection, 
+                                settings: {
+                                  ...editingSection.settings, 
+                                  checklistTemplateId: templateId,
+                                  checklistTemplateName: selectedTemplate?.name
+                                }
+                              });
+                            }}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Select a checklist template..." /></SelectTrigger>
+                            <SelectContent>
+                              {damageCheckTemplates.map((template: any) => (
+                                <SelectItem key={template.id} value={template.id.toString()}>
+                                  {template.name} ({template.inspectionPoints?.length || 0} items)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {editingSection.settings.checklistTemplateId && (() => {
+                          const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === editingSection.settings.checklistTemplateId);
+                          const points = selectedTemplate?.inspectionPoints || [];
+                          const categories = [...new Set(points.map((p: any) => p.category))];
+                          
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label className="font-semibold">Inspection Points ({points.length} items)</Label>
+                                <Badge variant="secondary">{categories.length} categories</Badge>
+                              </div>
+                              <ScrollArea className="h-64 border rounded-lg">
+                                {categories.map((category: string) => {
+                                  const categoryPoints = points.filter((p: any) => p.category === category);
+                                  const categoryLabels: Record<string, string> = {
+                                    'interieur': 'Interieur',
+                                    'exterieur': 'Exterieur',
+                                    'afweez_check': 'Afweez Check',
+                                    'documents': 'Documenten'
+                                  };
+                                  return (
+                                    <div key={category} className="p-2 border-b">
+                                      <div className="font-semibold text-sm bg-gray-100 p-2 rounded mb-1">
+                                        {categoryLabels[category] || category} ({categoryPoints.length})
+                                      </div>
+                                      {categoryPoints.map((point: any) => (
+                                        <div key={point.id} className="flex items-center justify-between text-sm py-1 px-2 hover:bg-gray-50">
+                                          <span>{point.name}</span>
+                                          <div className="flex gap-1">
+                                            {point.damageTypes?.map((type: string) => (
+                                              <Badge key={type} variant="outline" className="text-xs">{type}</Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                })}
+                              </ScrollArea>
+                            </div>
+                          );
+                        })()}
+                        
+                        <Separator />
+                        
+                        <div className="space-y-3">
+                          <Label className="font-semibold">Display Settings</Label>
+                          
+                          <div className="flex items-center justify-between">
+                            <Label>Group by Category</Label>
+                            <Switch checked={editingSection.settings.groupByCategory !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, groupByCategory: checked}})} />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <Label>Show Damage Type Options</Label>
+                            <Switch checked={editingSection.settings.showDamageTypes !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showDamageTypes: checked}})} />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <Label>Use Multiple Columns</Label>
+                            <Switch checked={editingSection.settings.useMultipleColumns === true} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, useMultipleColumns: checked}})} />
+                          </div>
+                          
+                          {editingSection.settings.useMultipleColumns && (
+                            <div>
+                              <Label>Number of Columns</Label>
+                              <Select value={editingSection.settings.columnCount?.toString() || '2'} onValueChange={(v) => setEditingSection({...editingSection, settings: {...editingSection.settings, columnCount: parseInt(v)}})}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="2">2 Columns</SelectItem>
+                                  <SelectItem value="3">3 Columns</SelectItem>
+                                  <SelectItem value="4">4 Columns</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <Label>Checkbox Size</Label>
+                            <Input type="number" value={editingSection.settings.checkboxSize || 10} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, checkboxSize: parseInt(e.target.value)}})} min={8} max={20} />
+                          </div>
+                          
+                          <div>
+                            <Label>Row Spacing</Label>
+                            <Input type="number" value={editingSection.settings.rowSpacing || 12} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, rowSpacing: parseInt(e.target.value)}})} min={8} max={24} />
+                          </div>
                         </div>
                       </div>
                     )}
