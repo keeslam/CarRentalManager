@@ -2032,7 +2032,310 @@ export default function DamageCheckTemplateEditor() {
                           <Label>Header Color</Label>
                           <Input type="color" value={editingSection.settings.headerColor || '#334d99'} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, headerColor: e.target.value}})} />
                         </div>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Logo</Label>
+                          <Switch checked={editingSection.settings.showLogo !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showLogo: checked}})} />
+                        </div>
                       </>
+                    )}
+                    
+                    {/* Contract Info Section Editor */}
+                    {editingSection.type === 'contractInfo' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Contract Info Fields</Label>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            const items = editingSection.settings.customItems || [];
+                            const newItem = { id: `field-${Date.now()}`, text: 'New Field:', hasCheckbox: false, fieldKey: '' };
+                            setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: [...items, newItem]}});
+                          }}>
+                            <Plus className="w-4 h-4 mr-1" /> Add Field
+                          </Button>
+                        </div>
+                        <ScrollArea className="h-48 border rounded-lg p-2">
+                          {(editingSection.settings.customItems || []).map((item: any, index: number) => (
+                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <Input 
+                                value={item.text} 
+                                onChange={(e) => {
+                                  const items = [...(editingSection.settings.customItems || [])];
+                                  items[index] = { ...items[index], text: e.target.value };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                                }}
+                                placeholder="Label:"
+                                className="flex-1"
+                              />
+                              <Select value={item.fieldKey || 'manual'} onValueChange={(v) => {
+                                const items = [...(editingSection.settings.customItems || [])];
+                                items[index] = { ...items[index], fieldKey: v === 'manual' ? '' : v };
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <SelectTrigger className="w-40"><SelectValue placeholder="Data source" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="manual">Manual entry</SelectItem>
+                                  <SelectItem value="contractNumber">Contract Number</SelectItem>
+                                  <SelectItem value="date">Date</SelectItem>
+                                  <SelectItem value="customerName">Customer Name</SelectItem>
+                                  <SelectItem value="rentalPeriod">Rental Period</SelectItem>
+                                  <SelectItem value="pickupDate">Pickup Date</SelectItem>
+                                  <SelectItem value="returnDate">Return Date</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                const items = (editingSection.settings.customItems || []).filter((_: any, i: number) => i !== index);
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                      </div>
+                    )}
+                    
+                    {/* Vehicle Data Section Editor */}
+                    {editingSection.type === 'vehicleData' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Vehicle Data Fields</Label>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            const items = editingSection.settings.customItems || [];
+                            const newItem = { id: `field-${Date.now()}`, text: 'New Field:', hasCheckbox: false, fieldKey: '' };
+                            setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: [...items, newItem]}});
+                          }}>
+                            <Plus className="w-4 h-4 mr-1" /> Add Field
+                          </Button>
+                        </div>
+                        <ScrollArea className="h-48 border rounded-lg p-2">
+                          {(editingSection.settings.customItems || []).map((item: any, index: number) => (
+                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <Input 
+                                value={item.text} 
+                                onChange={(e) => {
+                                  const items = [...(editingSection.settings.customItems || [])];
+                                  items[index] = { ...items[index], text: e.target.value };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                                }}
+                                placeholder="Label:"
+                                className="flex-1"
+                              />
+                              <Select value={item.fieldKey || 'manual'} onValueChange={(v) => {
+                                const items = [...(editingSection.settings.customItems || [])];
+                                items[index] = { ...items[index], fieldKey: v === 'manual' ? '' : v };
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <SelectTrigger className="w-40"><SelectValue placeholder="Data source" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="manual">Manual entry</SelectItem>
+                                  <SelectItem value="licensePlate">License Plate</SelectItem>
+                                  <SelectItem value="brand">Brand</SelectItem>
+                                  <SelectItem value="model">Model</SelectItem>
+                                  <SelectItem value="buildYear">Build Year</SelectItem>
+                                  <SelectItem value="mileage">Mileage</SelectItem>
+                                  <SelectItem value="fuel">Fuel Level</SelectItem>
+                                  <SelectItem value="color">Color</SelectItem>
+                                  <SelectItem value="vin">VIN Number</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                const items = (editingSection.settings.customItems || []).filter((_: any, i: number) => i !== index);
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                      </div>
+                    )}
+                    
+                    {/* Checklist Section Editor */}
+                    {editingSection.type === 'checklist' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Checklist Items</Label>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            const items = editingSection.settings.checklistItems || [];
+                            const newItem = { id: `check-${Date.now()}`, text: 'New Item', hasCheckbox: true, checked: false };
+                            setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: [...items, newItem]}});
+                          }}>
+                            <Plus className="w-4 h-4 mr-1" /> Add Item
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">Add checkbox items that will appear in the checklist. Each item gets a "Yes/No" or checkbox option.</p>
+                        <ScrollArea className="h-56 border rounded-lg p-2">
+                          {(editingSection.settings.checklistItems || [
+                            { id: 'velgen', text: 'Velgen', hasCheckbox: true },
+                            { id: 'ruitenwissers', text: 'Ruitenwissers', hasCheckbox: true },
+                            { id: 'banden', text: 'Banden', hasCheckbox: true },
+                            { id: 'lichten', text: 'Lichten', hasCheckbox: true },
+                            { id: 'spiegels', text: 'Spiegels', hasCheckbox: true },
+                            { id: 'interieur', text: 'Interieur', hasCheckbox: true },
+                            { id: 'documenten', text: 'Documenten', hasCheckbox: true },
+                            { id: 'reservewiel', text: 'Reservewiel', hasCheckbox: true },
+                            { id: 'krik', text: 'Krik & Gereedschap', hasCheckbox: true },
+                            { id: 'waarschuwingsdriehoek', text: 'Waarschuwingsdriehoek', hasCheckbox: true },
+                            { id: 'ehbo', text: 'EHBO-kit', hasCheckbox: true },
+                            { id: 'brandblusser', text: 'Brandblusser', hasCheckbox: true },
+                          ]).map((item: any, index: number) => (
+                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <Input 
+                                value={item.text} 
+                                onChange={(e) => {
+                                  const items = [...(editingSection.settings.checklistItems || [])];
+                                  items[index] = { ...items[index], text: e.target.value };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                }}
+                                placeholder="Checklist item"
+                                className="flex-1"
+                              />
+                              <div className="flex items-center gap-1">
+                                <Label className="text-xs">Checkbox</Label>
+                                <Switch checked={item.hasCheckbox !== false} onCheckedChange={(checked) => {
+                                  const items = [...(editingSection.settings.checklistItems || [])];
+                                  items[index] = { ...items[index], hasCheckbox: checked };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                }} />
+                              </div>
+                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                const items = (editingSection.settings.checklistItems || []).filter((_: any, i: number) => i !== index);
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                        <div>
+                          <Label>Checkbox Size</Label>
+                          <Input type="number" value={editingSection.settings.checkboxSize || 10} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, checkboxSize: parseInt(e.target.value)}})} min={8} max={20} />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Remarks Section Editor */}
+                    {editingSection.type === 'remarks' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Remarks Fields</Label>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            const items = editingSection.settings.customItems || [];
+                            const newItem = { id: `remark-${Date.now()}`, text: 'Remark:', hasCheckbox: false, hasTextArea: true };
+                            setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: [...items, newItem]}});
+                          }}>
+                            <Plus className="w-4 h-4 mr-1" /> Add Field
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">Add fields for notes, damage descriptions, or other remarks.</p>
+                        <ScrollArea className="h-40 border rounded-lg p-2">
+                          {(editingSection.settings.customItems || [
+                            { id: 'damage-notes', text: 'Schade Opmerkingen:', hasTextArea: true },
+                            { id: 'general-notes', text: 'Algemene Opmerkingen:', hasTextArea: true },
+                          ]).map((item: any, index: number) => (
+                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <Input 
+                                value={item.text} 
+                                onChange={(e) => {
+                                  const items = [...(editingSection.settings.customItems || [])];
+                                  items[index] = { ...items[index], text: e.target.value };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                                }}
+                                placeholder="Label:"
+                                className="flex-1"
+                              />
+                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                const items = (editingSection.settings.customItems || []).filter((_: any, i: number) => i !== index);
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                        <div>
+                          <Label>Lines per Field</Label>
+                          <Input type="number" value={editingSection.settings.linesPerField || 3} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, linesPerField: parseInt(e.target.value)}})} min={1} max={10} />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Signatures Section Editor */}
+                    {editingSection.type === 'signatures' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">Signature Fields</Label>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            const items = editingSection.settings.customItems || [];
+                            const newItem = { id: `sig-${Date.now()}`, text: 'Signature', hasCheckbox: false };
+                            setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: [...items, newItem]}});
+                          }}>
+                            <Plus className="w-4 h-4 mr-1" /> Add Signature
+                          </Button>
+                        </div>
+                        <ScrollArea className="h-40 border rounded-lg p-2">
+                          {(editingSection.settings.customItems || [
+                            { id: 'klant-sig', text: 'Handtekening Klant' },
+                            { id: 'medewerker-sig', text: 'Handtekening Medewerker' },
+                          ]).map((item: any, index: number) => (
+                            <div key={item.id} className="flex items-center gap-2 mb-2 p-2 bg-gray-50 rounded">
+                              <GripVertical className="w-4 h-4 text-gray-400" />
+                              <Input 
+                                value={item.text} 
+                                onChange={(e) => {
+                                  const items = [...(editingSection.settings.customItems || [])];
+                                  items[index] = { ...items[index], text: e.target.value };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                                }}
+                                placeholder="Signature label"
+                                className="flex-1"
+                              />
+                              <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                const items = (editingSection.settings.customItems || []).filter((_: any, i: number) => i !== index);
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, customItems: items}});
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Signature Box Height</Label>
+                            <Input type="number" value={editingSection.settings.signatureHeight || 40} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, signatureHeight: parseInt(e.target.value)}})} min={30} max={100} />
+                          </div>
+                          <div className="flex items-center gap-2 pt-6">
+                            <Label>Include Date Line</Label>
+                            <Switch checked={editingSection.settings.includeDateLine !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, includeDateLine: checked}})} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Vehicle Diagram Section Editor */}
+                    {editingSection.type === 'diagram' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-gray-600">The vehicle diagram shows a visual representation of the vehicle for marking damage locations.</p>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Front View</Label>
+                          <Switch checked={editingSection.settings.showFront !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showFront: checked}})} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Rear View</Label>
+                          <Switch checked={editingSection.settings.showRear !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showRear: checked}})} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Side Views</Label>
+                          <Switch checked={editingSection.settings.showSides !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showSides: checked}})} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Top View</Label>
+                          <Switch checked={editingSection.settings.showTop !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, showTop: checked}})} />
+                        </div>
+                      </div>
                     )}
                     
                     {editingSection.type === 'customField' && (
