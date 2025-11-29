@@ -6,12 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   ZoomIn, ZoomOut, Grid, Move, Save, Plus, Trash2, Edit, ChevronDown, ChevronUp,
-  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check, Upload, Download
+  Lock, Unlock, Eye, EyeOff, Settings2, AlignLeft, AlignCenter, AlignRight, FileDown, Check, Upload, Download,
+  Undo2, Redo2, Copy, Clipboard, ClipboardPaste, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
+  Magnet, Ruler, LayoutGrid, Table2, Image, QrCode, Barcode, Tag, History, Palette, LayoutTemplate,
+  GripVertical, RotateCcw, FileText, BookOpen, Layers, ChevronRight
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { DamageCheckTemplate } from "@shared/schema";
+import { DamageCheckTemplate, TemplateSection, TemplateSectionStyle } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -19,35 +34,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Section type definition
-interface TemplateSection {
-  id: string;
-  type: 'header' | 'contractInfo' | 'vehicleData' | 'checklist' | 'diagram' | 'remarks' | 'signatures' | 'customField';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  visible: boolean;
-  locked?: boolean;
-  settings: {
-    fontSize?: number;
-    checkboxSize?: number;
-    companyName?: string;
-    headerColor?: string;
-    headerFontSize?: number;
-    showLogo?: boolean;
-    customLabel?: string;
-    textAlign?: 'left' | 'center' | 'right';
-    customItems?: Array<{
-      id: string;
-      text: string;
-      hasCheckbox: boolean;
-      fieldKey?: string;
-    }>;
-    [key: string]: any;
-  };
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface PdfTemplate {
   id: number;
@@ -55,9 +59,95 @@ interface PdfTemplate {
   isDefault: boolean;
   sections: TemplateSection[];
   pageMargins: number;
+  pageOrientation?: 'portrait' | 'landscape';
+  pageSize?: 'A4' | 'Letter' | 'A5' | 'custom';
+  customPageWidth?: number;
+  customPageHeight?: number;
+  pageCount?: number;
+  tags?: string[];
+  category?: string;
+  themeId?: number;
+  backgroundImage?: string;
+  usageCount?: number;
+  lastUsedAt?: string;
 }
 
-// Default section layouts
+interface TemplateVersion {
+  id: number;
+  templateId: number;
+  version: number;
+  name: string;
+  sections: TemplateSection[];
+  settings: Record<string, any>;
+  createdAt: string;
+  createdBy: string;
+}
+
+interface TemplateTheme {
+  id: number;
+  name: string;
+  palette: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+    border: string;
+  };
+  isDefault: boolean;
+}
+
+interface SectionPreset {
+  id: number;
+  name: string;
+  description: string;
+  type: string;
+  config: TemplateSection;
+  category: string;
+  isBuiltIn: boolean;
+}
+
+interface HistoryEntry {
+  sections: TemplateSection[];
+  timestamp: number;
+  action: string;
+}
+
+const DEFAULT_SECTION_STYLE: TemplateSectionStyle = {
+  fontSize: 9,
+  fontFamily: 'Helvetica',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textColor: '#000000',
+  backgroundColor: 'transparent',
+  textAlign: 'left',
+  borderWidth: 1,
+  borderColor: '#cccccc',
+  borderStyle: 'solid',
+  padding: 4,
+  rotation: 0,
+  opacity: 1,
+};
+
+const PAGE_SIZES: Record<string, { width: number; height: number }> = {
+  A4: { width: 595, height: 842 },
+  Letter: { width: 612, height: 792 },
+  A5: { width: 420, height: 595 },
+};
+
+const TEXT_VARIABLES = [
+  { key: '{{today}}', label: 'Today\'s Date', sample: new Date().toLocaleDateString('nl-NL') },
+  { key: '{{vehicleName}}', label: 'Vehicle Name', sample: 'Mercedes E-Klasse' },
+  { key: '{{licensePlate}}', label: 'License Plate', sample: 'AB-123-CD' },
+  { key: '{{customerName}}', label: 'Customer Name', sample: 'Jan de Vries' },
+  { key: '{{customerPhone}}', label: 'Customer Phone', sample: '+31 6 12345678' },
+  { key: '{{contractNumber}}', label: 'Contract Number', sample: 'REN-2025-001' },
+  { key: '{{pickupDate}}', label: 'Pickup Date', sample: '22-10-2025' },
+  { key: '{{returnDate}}', label: 'Return Date', sample: '29-10-2025' },
+  { key: '{{mileage}}', label: 'Mileage', sample: '45.320 km' },
+  { key: '{{fuelLevel}}', label: 'Fuel Level', sample: '3/4 tank' },
+];
+
 const createDefaultSections = (): TemplateSection[] => [
   {
     id: 'header',
@@ -67,6 +157,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 40,
     visible: true,
+    page: 1,
     settings: {
       companyName: 'LAM GROUP',
       headerColor: '#334d99',
@@ -82,6 +173,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 60,
     visible: true,
+    page: 1,
     settings: {
       fontSize: 9,
       customItems: [
@@ -100,6 +192,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 80,
     visible: true,
+    page: 1,
     settings: {
       fontSize: 9,
       customItems: [
@@ -120,6 +213,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 340,
     visible: true,
+    page: 1,
     settings: {
       fontSize: 9,
       checkboxSize: 10,
@@ -133,6 +227,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 120,
     visible: true,
+    page: 1,
     settings: {}
   },
   {
@@ -143,6 +238,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 60,
     visible: true,
+    page: 1,
     settings: {
       fontSize: 9,
       customItems: []
@@ -156,6 +252,7 @@ const createDefaultSections = (): TemplateSection[] => [
     width: 565,
     height: 52,
     visible: true,
+    page: 1,
     settings: {
       fontSize: 9,
       customItems: [
@@ -175,16 +272,40 @@ const SECTION_LABELS: Record<string, string> = {
   remarks: 'Remarks',
   signatures: 'Signatures',
   customField: 'Custom Field',
+  table: 'Table',
+  image: 'Image',
+  qrCode: 'QR Code',
+  barcode: 'Barcode',
+};
+
+const SECTION_ICONS: Record<string, any> = {
+  header: FileText,
+  contractInfo: BookOpen,
+  vehicleData: FileText,
+  checklist: Check,
+  diagram: Image,
+  remarks: FileText,
+  signatures: Edit,
+  customField: FileText,
+  table: Table2,
+  image: Image,
+  qrCode: QrCode,
+  barcode: Barcode,
 };
 
 export default function DamageCheckTemplateEditor() {
   const { toast } = useToast();
   const [currentTemplate, setCurrentTemplate] = useState<PdfTemplate | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [draggedSection, setDraggedSection] = useState<TemplateSection | null>(null);
   const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(0.7);
   const [showGrid, setShowGrid] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
+  const [showPrintMargins, setShowPrintMargins] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [snapToEdges, setSnapToEdges] = useState(true);
   const [isMoving, setIsMoving] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
@@ -192,11 +313,43 @@ export default function DamageCheckTemplateEditor() {
   const [editingSection, setEditingSection] = useState<TemplateSection | null>(null);
   const [resizingSection, setResizingSection] = useState<{section: TemplateSection, handle: string} | null>(null);
   const [resizeStart, setResizeStart] = useState<{x: number, y: number, width: number, height: number} | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [copiedSection, setCopiedSection] = useState<TemplateSection | null>(null);
+  
+  // Undo/Redo state
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isUndoRedo, setIsUndoRedo] = useState(false);
+  
+  // Version dialog state
+  const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState('');
+  
+  // Theme dialog state
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
+  
+  // Page settings dialog
+  const [isPageSettingsDialogOpen, setIsPageSettingsDialogOpen] = useState(false);
+  
+  // Tags dialog
+  const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  
+  // Section presets panel
+  const [showPresetsPanel, setShowPresetsPanel] = useState(false);
+  
+  // Conditional section dialog
+  const [isConditionDialogOpen, setIsConditionDialogOpen] = useState(false);
+  
+  // Advanced styling panel
+  const [showAdvancedStyling, setShowAdvancedStyling] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const checklistInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   // Checklist template editing state
   const [currentChecklistTemplate, setCurrentChecklistTemplate] = useState<DamageCheckTemplate | null>(null);
@@ -204,16 +357,33 @@ export default function DamageCheckTemplateEditor() {
   const [pointEditorOpen, setPointEditorOpen] = useState(false);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
+  // Query for templates
   const { data: templates = [] } = useQuery<PdfTemplate[]>({
     queryKey: ['/api/damage-check-pdf-templates'],
   });
 
-  // Fetch damage check templates (for checklist content)
+  // Query for damage check templates (for checklist content)
   const { data: damageCheckTemplates = [] } = useQuery<DamageCheckTemplate[]>({
     queryKey: ['/api/damage-check-templates'],
   });
+  
+  // Query for themes
+  const { data: themes = [] } = useQuery<TemplateTheme[]>({
+    queryKey: ['/api/damage-check-pdf-template-themes'],
+  });
+  
+  // Query for section presets
+  const { data: sectionPresets = [] } = useQuery<SectionPreset[]>({
+    queryKey: ['/api/damage-check-pdf-section-presets'],
+  });
+  
+  // Query for versions (only when template is selected)
+  const { data: versions = [] } = useQuery<TemplateVersion[]>({
+    queryKey: ['/api/damage-check-pdf-templates', currentTemplate?.id, 'versions'],
+    enabled: !!currentTemplate?.id,
+  });
 
-  // Update current template when templates refetch (to get latest saved data)
+  // Update current template when templates refetch
   useEffect(() => {
     if (currentTemplate && templates.length > 0) {
       const updatedTemplate = templates.find(t => t.id === currentTemplate.id);
@@ -221,7 +391,6 @@ export default function DamageCheckTemplateEditor() {
         setCurrentTemplate(updatedTemplate);
       }
     } else if (!currentTemplate && templates.length > 0) {
-      // Auto-select first template if none selected
       setCurrentTemplate(templates[0]);
     }
   }, [templates]);
@@ -232,6 +401,132 @@ export default function DamageCheckTemplateEditor() {
       setCurrentChecklistTemplate(damageCheckTemplates[0]);
     }
   }, [damageCheckTemplates]);
+
+  // Initialize history when template changes
+  useEffect(() => {
+    if (currentTemplate && !isUndoRedo) {
+      setHistory([{ sections: currentTemplate.sections, timestamp: Date.now(), action: 'Initial' }]);
+      setHistoryIndex(0);
+    }
+  }, [currentTemplate?.id]);
+  
+  // Add to history when sections change (but not during undo/redo)
+  const addToHistory = useCallback((sections: TemplateSection[], action: string) => {
+    if (isUndoRedo) return;
+    
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ sections: JSON.parse(JSON.stringify(sections)), timestamp: Date.now(), action });
+      if (newHistory.length > 50) newHistory.shift();
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex, isUndoRedo]);
+  
+  // Undo function
+  const handleUndo = useCallback(() => {
+    if (historyIndex <= 0 || !currentTemplate) return;
+    
+    setIsUndoRedo(true);
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setCurrentTemplate({
+      ...currentTemplate,
+      sections: JSON.parse(JSON.stringify(history[newIndex].sections))
+    });
+    setTimeout(() => setIsUndoRedo(false), 100);
+  }, [historyIndex, history, currentTemplate]);
+  
+  // Redo function
+  const handleRedo = useCallback(() => {
+    if (historyIndex >= history.length - 1 || !currentTemplate) return;
+    
+    setIsUndoRedo(true);
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setCurrentTemplate({
+      ...currentTemplate,
+      sections: JSON.parse(JSON.stringify(history[newIndex].sections))
+    });
+    setTimeout(() => setIsUndoRedo(false), 100);
+  }, [historyIndex, history, currentTemplate]);
+  
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          handleUndo();
+        } else if ((e.key === 'y') || (e.key === 'z' && e.shiftKey)) {
+          e.preventDefault();
+          handleRedo();
+        } else if (e.key === 'c' && selectedSection) {
+          e.preventDefault();
+          handleCopySection();
+        } else if (e.key === 'v' && copiedSection) {
+          e.preventDefault();
+          handlePasteSection();
+        } else if (e.key === 's') {
+          e.preventDefault();
+          if (currentTemplate) {
+            saveTemplateMutation.mutate(currentTemplate);
+          }
+        }
+      }
+      
+      if (e.key === 'Delete' && selectedSection && currentTemplate) {
+        const section = currentTemplate.sections.find(s => s.id === selectedSection);
+        if (section?.type === 'customField' || section?.type === 'table' || section?.type === 'image' || section?.type === 'qrCode' || section?.type === 'barcode') {
+          e.preventDefault();
+          handleDeleteSection(selectedSection);
+        }
+      }
+      
+      // Arrow keys for nudging
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedSection && currentTemplate) {
+        e.preventDefault();
+        const section = currentTemplate.sections.find(s => s.id === selectedSection);
+        if (section && !section.locked) {
+          const delta = e.shiftKey ? 10 : 1;
+          let dx = 0, dy = 0;
+          if (e.key === 'ArrowUp') dy = -delta;
+          if (e.key === 'ArrowDown') dy = delta;
+          if (e.key === 'ArrowLeft') dx = -delta;
+          if (e.key === 'ArrowRight') dx = delta;
+          
+          const newX = Math.max(0, Math.min(section.x + dx, getPageWidth() - section.width));
+          const newY = Math.max(0, Math.min(section.y + dy, getPageHeight() - section.height));
+          
+          const updatedSections = currentTemplate.sections.map(s =>
+            s.id === selectedSection ? { ...s, x: newX, y: newY } : s
+          );
+          setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo, selectedSection, copiedSection, currentTemplate]);
+  
+  const getPageWidth = useCallback(() => {
+    if (!currentTemplate) return 595;
+    if (currentTemplate.pageSize === 'custom' && currentTemplate.customPageWidth) {
+      return currentTemplate.customPageWidth;
+    }
+    const size = PAGE_SIZES[currentTemplate.pageSize || 'A4'];
+    return currentTemplate.pageOrientation === 'landscape' ? size.height : size.width;
+  }, [currentTemplate]);
+  
+  const getPageHeight = useCallback(() => {
+    if (!currentTemplate) return 842;
+    if (currentTemplate.pageSize === 'custom' && currentTemplate.customPageHeight) {
+      return currentTemplate.customPageHeight;
+    }
+    const size = PAGE_SIZES[currentTemplate.pageSize || 'A4'];
+    return currentTemplate.pageOrientation === 'landscape' ? size.width : size.height;
+  }, [currentTemplate]);
 
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Partial<PdfTemplate>) => {
@@ -255,6 +550,39 @@ export default function DamageCheckTemplateEditor() {
       queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
       toast({ title: "Success", description: "Template deleted" });
       setCurrentTemplate(null);
+    },
+  });
+  
+  const duplicateTemplateMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      return await apiRequest('POST', `/api/damage-check-pdf-templates/${id}/duplicate`, { name });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      toast({ title: "Success", description: "Template duplicated" });
+      setIsDuplicateDialogOpen(false);
+      setDuplicateName('');
+    },
+  });
+  
+  const createVersionMutation = useMutation({
+    mutationFn: async ({ templateId, name, sections, settings }: { templateId: number; name: string; sections: TemplateSection[]; settings: Record<string, any> }) => {
+      return await apiRequest('POST', `/api/damage-check-pdf-templates/${templateId}/versions`, { name, sections, settings });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates', currentTemplate?.id, 'versions'] });
+      toast({ title: "Success", description: "Version saved" });
+    },
+  });
+  
+  const restoreVersionMutation = useMutation({
+    mutationFn: async ({ templateId, versionId }: { templateId: number; versionId: number }) => {
+      return await apiRequest('POST', `/api/damage-check-pdf-templates/${templateId}/restore/${versionId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      toast({ title: "Success", description: "Template restored from version" });
+      setIsVersionDialogOpen(false);
     },
   });
 
@@ -283,181 +611,211 @@ export default function DamageCheckTemplateEditor() {
       isDefault: templates.length === 0,
       sections: createDefaultSections(),
       pageMargins: 15,
+      pageOrientation: 'portrait',
+      pageSize: 'A4',
+      pageCount: 1,
     };
 
     saveTemplateMutation.mutate(newTemplate);
     setNewTemplateName('');
     setIsCreateDialogOpen(false);
   };
-
-  const handleExportTemplate = async () => {
-    if (!currentTemplate?.id) {
-      toast({
-        title: "Error",
-        description: "Please save the template first",
-        variant: "destructive"
-      });
+  
+  const handleDuplicateTemplate = () => {
+    if (!currentTemplate?.id || !duplicateName) return;
+    duplicateTemplateMutation.mutate({ id: currentTemplate.id, name: duplicateName });
+  };
+  
+  const handleSaveVersion = () => {
+    if (!currentTemplate?.id) return;
+    const versionName = `Version ${new Date().toLocaleString()}`;
+    createVersionMutation.mutate({
+      templateId: currentTemplate.id,
+      name: versionName,
+      sections: currentTemplate.sections,
+      settings: {
+        pageMargins: currentTemplate.pageMargins,
+        pageOrientation: currentTemplate.pageOrientation,
+        pageSize: currentTemplate.pageSize,
+      }
+    });
+  };
+  
+  const handleCopySection = () => {
+    if (!selectedSection || !currentTemplate) return;
+    const section = currentTemplate.sections.find(s => s.id === selectedSection);
+    if (section) {
+      setCopiedSection(JSON.parse(JSON.stringify(section)));
+      toast({ title: "Copied", description: "Section copied to clipboard" });
+    }
+  };
+  
+  const handlePasteSection = () => {
+    if (!copiedSection || !currentTemplate) return;
+    
+    const newSection: TemplateSection = {
+      ...JSON.parse(JSON.stringify(copiedSection)),
+      id: `${copiedSection.type}-${Date.now()}`,
+      x: copiedSection.x + 20,
+      y: copiedSection.y + 20,
+    };
+    
+    const updatedSections = [...currentTemplate.sections, newSection];
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+    addToHistory(updatedSections, 'Paste section');
+    setSelectedSection(newSection.id);
+    toast({ title: "Pasted", description: "Section pasted" });
+  };
+  
+  const handleDeleteSection = (sectionId: string) => {
+    if (!currentTemplate) return;
+    const updatedSections = currentTemplate.sections.filter(s => s.id !== sectionId);
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+    addToHistory(updatedSections, 'Delete section');
+    setSelectedSection(null);
+    toast({ title: "Deleted", description: "Section removed" });
+  };
+  
+  // Alignment functions
+  const alignSections = (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'distribute-h' | 'distribute-v') => {
+    if (!currentTemplate || selectedSections.length < 2) {
+      toast({ title: "Select multiple", description: "Select at least 2 sections to align", variant: "destructive" });
       return;
     }
-
-    try {
-      const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/export`, {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to export template');
+    
+    const sections = currentTemplate.sections.filter(s => selectedSections.includes(s.id));
+    let updatedSections = [...currentTemplate.sections];
+    
+    switch (alignment) {
+      case 'left': {
+        const minX = Math.min(...sections.map(s => s.x));
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, x: minX } : s
+        );
+        break;
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `template_${currentTemplate.name.replace(/\s+/g, '_')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Template exported successfully"
-      });
-    } catch (error) {
-      console.error('Error exporting template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to export template",
-        variant: "destructive"
-      });
+      case 'center': {
+        const centerX = sections.reduce((sum, s) => sum + s.x + s.width / 2, 0) / sections.length;
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, x: centerX - s.width / 2 } : s
+        );
+        break;
+      }
+      case 'right': {
+        const maxRight = Math.max(...sections.map(s => s.x + s.width));
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, x: maxRight - s.width } : s
+        );
+        break;
+      }
+      case 'top': {
+        const minY = Math.min(...sections.map(s => s.y));
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, y: minY } : s
+        );
+        break;
+      }
+      case 'middle': {
+        const centerY = sections.reduce((sum, s) => sum + s.y + s.height / 2, 0) / sections.length;
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, y: centerY - s.height / 2 } : s
+        );
+        break;
+      }
+      case 'bottom': {
+        const maxBottom = Math.max(...sections.map(s => s.y + s.height));
+        updatedSections = updatedSections.map(s => 
+          selectedSections.includes(s.id) ? { ...s, y: maxBottom - s.height } : s
+        );
+        break;
+      }
+      case 'distribute-h': {
+        const sorted = [...sections].sort((a, b) => a.x - b.x);
+        const totalWidth = sorted.reduce((sum, s) => sum + s.width, 0);
+        const spacing = (getPageWidth() - totalWidth) / (sorted.length + 1);
+        let currentX = spacing;
+        sorted.forEach(s => {
+          updatedSections = updatedSections.map(sec => 
+            sec.id === s.id ? { ...sec, x: currentX } : sec
+          );
+          currentX += s.width + spacing;
+        });
+        break;
+      }
+      case 'distribute-v': {
+        const sorted = [...sections].sort((a, b) => a.y - b.y);
+        const totalHeight = sorted.reduce((sum, s) => sum + s.height, 0);
+        const spacing = (getPageHeight() - totalHeight) / (sorted.length + 1);
+        let currentY = spacing;
+        sorted.forEach(s => {
+          updatedSections = updatedSections.map(sec => 
+            sec.id === s.id ? { ...sec, y: currentY } : sec
+          );
+          currentY += s.height + spacing;
+        });
+        break;
+      }
     }
+    
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+    addToHistory(updatedSections, `Align ${alignment}`);
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const templateData = JSON.parse(text);
-
-      const response = await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
-
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+  // Snap to edges logic
+  const findSnapPosition = (section: TemplateSection, newX: number, newY: number): { x: number; y: number } => {
+    if (!snapToEdges || !currentTemplate) return { x: newX, y: newY };
+    
+    const SNAP_THRESHOLD = 10;
+    let snapX = newX;
+    let snapY = newY;
+    
+    const otherSections = currentTemplate.sections.filter(s => s.id !== section.id && s.visible);
+    
+    for (const other of otherSections) {
+      // Left edge alignment
+      if (Math.abs(newX - other.x) < SNAP_THRESHOLD) snapX = other.x;
+      if (Math.abs(newX - (other.x + other.width)) < SNAP_THRESHOLD) snapX = other.x + other.width;
       
-      toast({
-        title: "Success",
-        description: "PDF template layout imported successfully"
-      });
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (error: any) {
-      console.error('Error importing template:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to import template",
-        variant: "destructive"
-      });
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleExportChecklistTemplate = async () => {
-    if (damageCheckTemplates.length === 0) {
-      toast({
-        title: "No Template",
-        description: "No checklist template found to export",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const template = damageCheckTemplates[0]; // Export first template
-
-    try {
-      const response = await fetch(`/api/damage-check-templates/${template.id}/export`, {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to export checklist template');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const sanitizedName = template.name
-        .replace(/[^a-zA-Z0-9-_]/g, '_')
-        .substring(0, 50);
-      a.download = `damage_check_${sanitizedName}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Checklist template exported successfully"
-      });
-    } catch (error) {
-      console.error('Error exporting checklist template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to export checklist template",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleImportChecklistFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const templateData = JSON.parse(text);
-
-      const response = await apiRequest('POST', '/api/damage-check-templates/import', templateData);
-
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      // Right edge alignment  
+      if (Math.abs((newX + section.width) - other.x) < SNAP_THRESHOLD) snapX = other.x - section.width;
+      if (Math.abs((newX + section.width) - (other.x + other.width)) < SNAP_THRESHOLD) snapX = other.x + other.width - section.width;
       
-      toast({
-        title: "Success",
-        description: "Checklist template imported successfully"
-      });
-
-      // Reset file input
-      if (checklistInputRef.current) {
-        checklistInputRef.current.value = '';
-      }
-    } catch (error: any) {
-      console.error('Error importing checklist template:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to import checklist template",
-        variant: "destructive"
-      });
-
-      // Reset file input
-      if (checklistInputRef.current) {
-        checklistInputRef.current.value = '';
-      }
+      // Top edge alignment
+      if (Math.abs(newY - other.y) < SNAP_THRESHOLD) snapY = other.y;
+      if (Math.abs(newY - (other.y + other.height)) < SNAP_THRESHOLD) snapY = other.y + other.height;
+      
+      // Bottom edge alignment
+      if (Math.abs((newY + section.height) - other.y) < SNAP_THRESHOLD) snapY = other.y - section.height;
+      if (Math.abs((newY + section.height) - (other.y + other.height)) < SNAP_THRESHOLD) snapY = other.y + other.height - section.height;
     }
+    
+    // Snap to grid
+    if (snapToGrid) {
+      const gridSize = 10;
+      snapX = Math.round(snapX / gridSize) * gridSize;
+      snapY = Math.round(snapY / gridSize) * gridSize;
+    }
+    
+    return { x: snapX, y: snapY };
   };
 
   const handleMouseDown = (e: React.MouseEvent, section: TemplateSection) => {
     if (section.locked || !isMoving || !currentTemplate || !canvasRef.current) return;
     e.preventDefault();
     
-    setSelectedSection(section.id);
+    // Multi-select with Shift key
+    if (e.shiftKey) {
+      setSelectedSections(prev => 
+        prev.includes(section.id) 
+          ? prev.filter(id => id !== section.id)
+          : [...prev, section.id]
+      );
+    } else {
+      setSelectedSection(section.id);
+      if (!selectedSections.includes(section.id)) {
+        setSelectedSections([section.id]);
+      }
+    }
     
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const clickX = (e.clientX - canvasRect.left) / zoomLevel;
@@ -475,12 +833,17 @@ export default function DamageCheckTemplateEditor() {
     if (!draggedSection || !dragOffset || !currentTemplate || !canvasRef.current) return;
     
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - canvasRect.left) / zoomLevel - dragOffset.x;
-    const y = (e.clientY - canvasRect.top) / zoomLevel - dragOffset.y;
+    let x = (e.clientX - canvasRect.left) / zoomLevel - dragOffset.x;
+    let y = (e.clientY - canvasRect.top) / zoomLevel - dragOffset.y;
+    
+    // Apply snapping
+    const snapped = findSnapPosition(draggedSection, x, y);
+    x = snapped.x;
+    y = snapped.y;
     
     // Constrain to canvas bounds
-    const constrainedX = Math.max(0, Math.min(x, 595 - draggedSection.width));
-    const constrainedY = Math.max(0, Math.min(y, 842 - draggedSection.height));
+    const constrainedX = Math.max(0, Math.min(x, getPageWidth() - draggedSection.width));
+    const constrainedY = Math.max(0, Math.min(y, getPageHeight() - draggedSection.height));
     
     const updatedSections = currentTemplate.sections.map(s =>
       s.id === draggedSection.id ? { ...s, x: constrainedX, y: constrainedY } : s
@@ -492,9 +855,11 @@ export default function DamageCheckTemplateEditor() {
 
   const handleMouseUp = () => {
     if (draggedSection && currentTemplate) {
+      addToHistory(currentTemplate.sections, 'Move section');
       saveTemplateMutation.mutate(currentTemplate);
     }
     if (resizingSection && currentTemplate) {
+      addToHistory(currentTemplate.sections, 'Resize section');
       saveTemplateMutation.mutate(currentTemplate);
     }
     setDraggedSection(null);
@@ -531,13 +896,8 @@ export default function DamageCheckTemplateEditor() {
     let newWidth = resizeStart.width;
     let newHeight = resizeStart.height;
     
-    // Calculate new dimensions based on handle
-    if (handle.includes('e')) {
-      newWidth = Math.max(50, mouseX - section.x);
-    }
-    if (handle.includes('s')) {
-      newHeight = Math.max(30, mouseY - section.y);
-    }
+    if (handle.includes('e')) newWidth = Math.max(50, mouseX - section.x);
+    if (handle.includes('s')) newHeight = Math.max(30, mouseY - section.y);
     if (handle.includes('w')) {
       const delta = mouseX - section.x;
       newWidth = Math.max(50, resizeStart.width - delta);
@@ -549,11 +909,11 @@ export default function DamageCheckTemplateEditor() {
       newY = resizeStart.y + (resizeStart.height - newHeight);
     }
     
-    // Constrain to canvas bounds
-    newX = Math.max(0, Math.min(newX, 595 - newWidth));
-    newY = Math.max(0, Math.min(newY, 842 - newHeight));
-    newWidth = Math.min(newWidth, 595 - newX);
-    newHeight = Math.min(newHeight, 842 - newY);
+    // Constrain to canvas
+    newX = Math.max(0, Math.min(newX, getPageWidth() - newWidth));
+    newY = Math.max(0, Math.min(newY, getPageHeight() - newHeight));
+    newWidth = Math.min(newWidth, getPageWidth() - newX);
+    newHeight = Math.min(newHeight, getPageHeight() - newY);
     
     const updatedSections = currentTemplate.sections.map(s =>
       s.id === section.id ? { ...s, x: newX, y: newY, width: newWidth, height: newHeight } : s
@@ -571,6 +931,7 @@ export default function DamageCheckTemplateEditor() {
     
     const updated = { ...currentTemplate, sections: updatedSections };
     setCurrentTemplate(updated);
+    addToHistory(updatedSections, 'Toggle visibility');
     saveTemplateMutation.mutate(updated);
   };
 
@@ -587,7 +948,7 @@ export default function DamageCheckTemplateEditor() {
   };
 
   const openSectionSettings = (section: TemplateSection) => {
-    setEditingSection(section);
+    setEditingSection(JSON.parse(JSON.stringify(section)));
     setIsSettingsDialogOpen(true);
   };
 
@@ -595,38 +956,15 @@ export default function DamageCheckTemplateEditor() {
     if (!currentTemplate || !editingSection) return;
     
     const updatedSections = currentTemplate.sections.map(s =>
-      s.id === editingSection.id ? { ...s, settings: { ...s.settings, ...settings } } : s
+      s.id === editingSection.id ? { ...s, settings: { ...s.settings, ...settings }, style: editingSection.style, condition: editingSection.condition } : s
     );
     
     const updated = { ...currentTemplate, sections: updatedSections };
     setCurrentTemplate(updated);
+    addToHistory(updatedSections, 'Update settings');
     saveTemplateMutation.mutate(updated);
     setIsSettingsDialogOpen(false);
     setEditingSection(null);
-  };
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingSection) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', 'logo');
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-      updateSectionSettings({ logoPath: data.filePath });
-      toast({ title: "Success", description: "Logo uploaded" });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
-    }
   };
 
   const getSectionColor = (type: string) => {
@@ -639,252 +977,667 @@ export default function DamageCheckTemplateEditor() {
       remarks: '#ec4899',
       signatures: '#06b6d4',
       customField: '#14b8a6',
+      table: '#6366f1',
+      image: '#a855f7',
+      qrCode: '#0ea5e9',
+      barcode: '#84cc16',
     };
     return colors[type] || '#6b7280';
   };
 
-  const addCustomField = () => {
+  const addSection = (type: TemplateSection['type']) => {
+    if (!currentTemplate) return;
+    
+    const baseConfig: Partial<TemplateSection> = {
+      id: `${type}-${Date.now()}`,
+      type,
+      x: 30,
+      y: 400,
+      visible: true,
+      locked: false,
+      page: currentPage,
+    };
+    
+    let newSection: TemplateSection;
+    
+    switch (type) {
+      case 'customField':
+        newSection = {
+          ...baseConfig,
+          width: 200,
+          height: 30,
+          settings: {
+            customLabel: 'New Field',
+            fieldText: 'Field Label',
+            hasCheckbox: true,
+            hasText: true,
+            fontSize: 9,
+          }
+        } as TemplateSection;
+        break;
+      case 'table':
+        newSection = {
+          ...baseConfig,
+          width: 300,
+          height: 150,
+          settings: {
+            customLabel: 'Table',
+            tableRows: 4,
+            tableCols: 3,
+            tableData: [['Header 1', 'Header 2', 'Header 3'], ['', '', ''], ['', '', ''], ['', '', '']],
+            fontSize: 9,
+          }
+        } as TemplateSection;
+        break;
+      case 'image':
+        newSection = {
+          ...baseConfig,
+          width: 150,
+          height: 100,
+          settings: {
+            customLabel: 'Image',
+            imageUrl: '',
+          }
+        } as TemplateSection;
+        break;
+      case 'qrCode':
+        newSection = {
+          ...baseConfig,
+          width: 80,
+          height: 80,
+          settings: {
+            customLabel: 'QR Code',
+            qrCodeValue: '{{contractNumber}}',
+          }
+        } as TemplateSection;
+        break;
+      case 'barcode':
+        newSection = {
+          ...baseConfig,
+          width: 150,
+          height: 50,
+          settings: {
+            customLabel: 'Barcode',
+            barcodeValue: '{{contractNumber}}',
+          }
+        } as TemplateSection;
+        break;
+      default:
+        newSection = {
+          ...baseConfig,
+          width: 200,
+          height: 60,
+          settings: { customLabel: 'New Section', fontSize: 9 }
+        } as TemplateSection;
+    }
+    
+    const updatedSections = [...currentTemplate.sections, newSection];
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+    addToHistory(updatedSections, `Add ${type}`);
+    setSelectedSection(newSection.id);
+    toast({ title: "Added", description: `${SECTION_LABELS[type]} added to template` });
+  };
+  
+  const addPresetSection = (preset: SectionPreset) => {
     if (!currentTemplate) return;
     
     const newSection: TemplateSection = {
-      id: `custom-${Date.now()}`,
-      type: 'customField',
+      ...JSON.parse(JSON.stringify(preset.config)),
+      id: `${preset.type}-${Date.now()}`,
       x: 30,
       y: 400,
-      width: 200,
-      height: 30,
-      visible: true,
-      locked: false,
-      settings: {
-        customLabel: 'New Field',
-        fieldText: 'Field Label',
-        hasCheckbox: true,
-        hasText: true,
-        fontSize: 9,
-      }
+      page: currentPage,
     };
     
-    setCurrentTemplate({
-      ...currentTemplate,
-      sections: [...currentTemplate.sections, newSection]
-    });
+    const updatedSections = [...currentTemplate.sections, newSection];
+    setCurrentTemplate({ ...currentTemplate, sections: updatedSections });
+    addToHistory(updatedSections, `Add preset: ${preset.name}`);
     setSelectedSection(newSection.id);
-    toast({
-      title: "Field Added",
-      description: "Custom field added to template"
-    });
+    toast({ title: "Added", description: `${preset.name} added to template` });
+  };
+  
+  const handleAddTag = () => {
+    if (!currentTemplate || !newTag.trim()) return;
+    
+    const updatedTags = [...(currentTemplate.tags || []), newTag.trim()];
+    const updated = { ...currentTemplate, tags: updatedTags };
+    setCurrentTemplate(updated);
+    saveTemplateMutation.mutate(updated);
+    setNewTag('');
+  };
+  
+  const handleRemoveTag = (tag: string) => {
+    if (!currentTemplate) return;
+    
+    const updatedTags = (currentTemplate.tags || []).filter(t => t !== tag);
+    const updated = { ...currentTemplate, tags: updatedTags };
+    setCurrentTemplate(updated);
+    saveTemplateMutation.mutate(updated);
+  };
+  
+  const addPage = () => {
+    if (!currentTemplate) return;
+    const newPageCount = (currentTemplate.pageCount || 1) + 1;
+    const updated = { ...currentTemplate, pageCount: newPageCount };
+    setCurrentTemplate(updated);
+    setCurrentPage(newPageCount);
+    saveTemplateMutation.mutate(updated);
+    toast({ title: "Page Added", description: `Page ${newPageCount} added` });
+  };
+  
+  const removePage = (pageNum: number) => {
+    if (!currentTemplate || (currentTemplate.pageCount || 1) <= 1) return;
+    
+    const updatedSections = currentTemplate.sections.filter(s => (s.page || 1) !== pageNum);
+    const reindexedSections = updatedSections.map(s => ({
+      ...s,
+      page: (s.page || 1) > pageNum ? (s.page || 1) - 1 : (s.page || 1)
+    }));
+    
+    const newPageCount = (currentTemplate.pageCount || 1) - 1;
+    const updated = { ...currentTemplate, sections: reindexedSections, pageCount: newPageCount };
+    setCurrentTemplate(updated);
+    setCurrentPage(Math.min(currentPage, newPageCount));
+    addToHistory(reindexedSections, 'Remove page');
+    saveTemplateMutation.mutate(updated);
+    toast({ title: "Page Removed", description: `Page ${pageNum} removed` });
+  };
+
+  const handleExportTemplate = async () => {
+    if (!currentTemplate?.id) {
+      toast({ title: "Error", description: "Please save the template first", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/export`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) throw new Error('Failed to export template');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `template_${currentTemplate.name.replace(/\s+/g, '_')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Success", description: "Template exported successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to export template", variant: "destructive" });
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const templateData = JSON.parse(text);
+      await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      toast({ title: "Success", description: "PDF template layout imported successfully" });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to import template", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+  
+  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentTemplate) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', 'template-background');
+
+    try {
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!response.ok) throw new Error('Upload failed');
+      const data = await response.json();
+      
+      const updated = { ...currentTemplate, backgroundImage: data.filePath };
+      setCurrentTemplate(updated);
+      saveTemplateMutation.mutate(updated);
+      toast({ title: "Success", description: "Background image uploaded" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to upload background", variant: "destructive" });
+    }
+  };
+
+  const renderRulers = () => {
+    if (!showRulers) return null;
+    
+    const rulerSize = 20;
+    const pageW = getPageWidth();
+    const pageH = getPageHeight();
+    
+    return (
+      <>
+        {/* Horizontal ruler */}
+        <div 
+          className="absolute bg-gray-100 border-b border-gray-300 flex items-end"
+          style={{ 
+            top: -rulerSize * zoomLevel, 
+            left: 0, 
+            width: pageW * zoomLevel, 
+            height: rulerSize * zoomLevel 
+          }}
+        >
+          {Array.from({ length: Math.ceil(pageW / 50) }).map((_, i) => (
+            <div 
+              key={i} 
+              className="relative border-r border-gray-300" 
+              style={{ width: 50 * zoomLevel, height: '100%' }}
+            >
+              <span className="absolute bottom-0 left-1 text-[8px] text-gray-600">{i * 50}</span>
+            </div>
+          ))}
+        </div>
+        
+        {/* Vertical ruler */}
+        <div 
+          className="absolute bg-gray-100 border-r border-gray-300 flex flex-col"
+          style={{ 
+            top: 0, 
+            left: -rulerSize * zoomLevel, 
+            width: rulerSize * zoomLevel, 
+            height: pageH * zoomLevel 
+          }}
+        >
+          {Array.from({ length: Math.ceil(pageH / 50) }).map((_, i) => (
+            <div 
+              key={i} 
+              className="relative border-b border-gray-300" 
+              style={{ height: 50 * zoomLevel, width: '100%' }}
+            >
+              <span className="absolute left-1 top-0 text-[8px] text-gray-600" style={{ writingMode: 'vertical-lr' }}>{i * 50}</span>
+            </div>
+          ))}
+        </div>
+      </>
+    );
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Damage Check PDF Template Editor</CardTitle>
-          <div className="flex gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleImportFile}
-            />
-            <input
-              type="file"
-              ref={checklistInputRef}
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleImportChecklistFile}
-            />
-            <Button 
-              onClick={() => fileInputRef.current?.click()} 
-              size="sm"
-              variant="outline"
-              data-testid="button-import-pdf-template"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import PDF Layout
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New Template
-            </Button>
+    <TooltipProvider>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <CardTitle>Damage Check PDF Template Editor</CardTitle>
+            <div className="flex gap-2">
+              <input type="file" ref={fileInputRef} accept=".json" className="hidden" onChange={handleImportFile} />
+              <input type="file" ref={checklistInputRef} accept=".json" className="hidden" />
+              <input type="file" ref={backgroundInputRef} accept="image/*" className="hidden" onChange={handleBackgroundUpload} />
+              
+              <Button onClick={() => fileInputRef.current?.click()} size="sm" variant="outline" data-testid="button-import-pdf-template">
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+              <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" data-testid="button-new-template">
+                <Plus className="w-4 h-4 mr-2" />
+                New Template
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-[250px_1fr] gap-4">
-          {/* Left Sidebar - Template List & Controls */}
-          <div className="space-y-4">
-            {/* Template List */}
-            <div>
-              <Label className="text-sm font-semibold mb-2 block">Templates</Label>
-              <div className="space-y-2">
-                {templates.map(template => (
-                  <Button
-                    key={template.id}
-                    variant={currentTemplate?.id === template.id ? "default" : "outline"}
-                    className="w-full justify-start"
-                    onClick={() => setCurrentTemplate(template)}
-                    data-testid={`template-${template.id}`}
-                  >
-                    {template.name}
-                    {template.isDefault && <span className="ml-2 text-xs">(Default)</span>}
+        </CardHeader>
+        
+        <CardContent>
+          {/* Toolbar */}
+          {currentTemplate && (
+            <div className="flex flex-wrap items-center gap-2 mb-4 p-2 bg-gray-50 rounded-lg border">
+              {/* Undo/Redo */}
+              <div className="flex gap-1 border-r pr-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handleUndo} disabled={historyIndex <= 0} data-testid="button-undo">
+                      <Undo2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handleRedo} disabled={historyIndex >= history.length - 1} data-testid="button-redo">
+                      <Redo2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
+                </Tooltip>
+              </div>
+              
+              {/* Copy/Paste */}
+              <div className="flex gap-1 border-r pr-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handleCopySection} disabled={!selectedSection} data-testid="button-copy">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy (Ctrl+C)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handlePasteSection} disabled={!copiedSection} data-testid="button-paste">
+                      <ClipboardPaste className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Paste (Ctrl+V)</TooltipContent>
+                </Tooltip>
+              </div>
+              
+              {/* Alignment */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" disabled={selectedSections.length < 2} data-testid="button-align">
+                    <AlignHorizontalJustifyCenter className="w-4 h-4 mr-1" />
+                    Align
                   </Button>
-                ))}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => alignSections('left')}>
+                    <AlignHorizontalJustifyStart className="w-4 h-4 mr-2" /> Align Left
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => alignSections('center')}>
+                    <AlignHorizontalJustifyCenter className="w-4 h-4 mr-2" /> Align Center
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => alignSections('right')}>
+                    <AlignHorizontalJustifyEnd className="w-4 h-4 mr-2" /> Align Right
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => alignSections('top')}>
+                    <AlignVerticalJustifyStart className="w-4 h-4 mr-2" /> Align Top
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => alignSections('middle')}>
+                    <AlignVerticalJustifyCenter className="w-4 h-4 mr-2" /> Align Middle
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => alignSections('bottom')}>
+                    <AlignVerticalJustifyEnd className="w-4 h-4 mr-2" /> Align Bottom
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => alignSections('distribute-h')}>
+                    <LayoutGrid className="w-4 h-4 mr-2" /> Distribute Horizontally
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => alignSections('distribute-v')}>
+                    <LayoutGrid className="w-4 h-4 mr-2" /> Distribute Vertically
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* View Options */}
+              <div className="flex gap-1 border-r pr-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant={showGrid ? "secondary" : "ghost"} size="sm" onClick={() => setShowGrid(!showGrid)} data-testid="button-grid">
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Grid</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant={showRulers ? "secondary" : "ghost"} size="sm" onClick={() => setShowRulers(!showRulers)} data-testid="button-rulers">
+                      <Ruler className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Rulers</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant={showPrintMargins ? "secondary" : "ghost"} size="sm" onClick={() => setShowPrintMargins(!showPrintMargins)} data-testid="button-margins">
+                      <LayoutTemplate className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Print Margins Guide</TooltipContent>
+                </Tooltip>
+              </div>
+              
+              {/* Snapping */}
+              <div className="flex gap-1 border-r pr-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant={snapToGrid ? "secondary" : "ghost"} size="sm" onClick={() => setSnapToGrid(!snapToGrid)} data-testid="button-snap-grid">
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Snap to Grid</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant={snapToEdges ? "secondary" : "ghost"} size="sm" onClick={() => setSnapToEdges(!snapToEdges)} data-testid="button-snap-edges">
+                      <Magnet className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Snap to Edges</TooltipContent>
+                </Tooltip>
+              </div>
+              
+              {/* Zoom */}
+              <div className="flex items-center gap-1 border-r pr-2">
+                <Button variant="ghost" size="sm" onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} disabled={zoomLevel <= 0.3}>
+                  <ZoomOut className="w-4 h-4" />
+                </Button>
+                <span className="text-sm w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+                <Button variant="ghost" size="sm" onClick={() => setZoomLevel(Math.min(1.5, zoomLevel + 0.1))} disabled={zoomLevel >= 1.5}>
+                  <ZoomIn className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Add Section */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-add-section">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Section
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => addSection('customField')}>
+                    <FileText className="w-4 h-4 mr-2" /> Custom Field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSection('table')}>
+                    <Table2 className="w-4 h-4 mr-2" /> Table
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSection('image')}>
+                    <Image className="w-4 h-4 mr-2" /> Image
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSection('qrCode')}>
+                    <QrCode className="w-4 h-4 mr-2" /> QR Code
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSection('barcode')}>
+                    <Barcode className="w-4 h-4 mr-2" /> Barcode
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* Pages */}
+              {(currentTemplate.pageCount || 1) > 1 && (
+                <div className="flex items-center gap-1 border-l pl-2">
+                  <span className="text-sm text-gray-600">Page:</span>
+                  {Array.from({ length: currentTemplate.pageCount || 1 }).map((_, i) => (
+                    <Button
+                      key={i}
+                      variant={currentPage === i + 1 ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={addPage} className="h-7 w-7 p-0">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Actions */}
+              <div className="flex gap-1 ml-auto">
+                <Button size="sm" onClick={() => saveTemplateMutation.mutate(currentTemplate)} disabled={saveTemplateMutation.isPending}>
+                  <Save className="w-4 h-4 mr-1" />
+                  {saveTemplateMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
               </div>
             </div>
+          )}
 
-            {currentTemplate && (
-              <>
-                {/* Editor Controls */}
-                <div className="space-y-3 pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <Label>Move Mode</Label>
-                    <Switch checked={isMoving} onCheckedChange={setIsMoving} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Show Grid</Label>
-                    <Switch checked={showGrid} onCheckedChange={setShowGrid} />
-                  </div>
-                </div>
-
-                {/* Zoom Controls */}
-                <div className="space-y-2 pt-4 border-t">
-                  <Label>Zoom: {Math.round(zoomLevel * 100)}%</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))}
-                      disabled={zoomLevel <= 0.3}
-                    >
-                      <ZoomOut className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setZoomLevel(1)}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setZoomLevel(Math.min(1.5, zoomLevel + 0.1))}
-                      disabled={zoomLevel >= 1.5}
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Sections List */}
-                <div className="space-y-2 pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold">Sections</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={addCustomField}
-                      className="h-7"
-                      data-testid="button-add-custom-field"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Field
-                    </Button>
-                  </div>
-                  {currentTemplate.sections.map(section => (
-                    <div
-                      key={section.id}
-                      className={`p-2 rounded border ${selectedSection === section.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
-                      style={{ borderLeftWidth: 4, borderLeftColor: getSectionColor(section.type) }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{section.settings.customLabel || SECTION_LABELS[section.type]}</span>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => openSectionSettings(section)}
-                            title="Settings"
-                          >
-                            <Settings2 className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => toggleSectionVisibility(section.id)}
-                          >
-                            {section.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => toggleSectionLock(section.id)}
-                          >
-                            {section.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                          </Button>
-                          {section.type === 'customField' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-red-600"
-                              onClick={() => {
-                                setCurrentTemplate({
-                                  ...currentTemplate,
-                                  sections: currentTemplate.sections.filter(s => s.id !== section.id)
-                                });
-                                toast({ title: "Field Deleted", description: "Custom field removed from template" });
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+          <div className="grid grid-cols-[280px_1fr] gap-4">
+            {/* Left Sidebar */}
+            <div className="space-y-4">
+              {/* Template List */}
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-gray-100 rounded-t-lg">
+                  <span className="font-semibold text-sm">Templates</span>
+                  <ChevronDown className="w-4 h-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ScrollArea className="h-40 border rounded-b-lg p-2">
+                    <div className="space-y-1">
+                      {templates.map(template => (
+                        <Button
+                          key={template.id}
+                          variant={currentTemplate?.id === template.id ? "default" : "ghost"}
+                          className="w-full justify-start h-auto py-2"
+                          onClick={() => setCurrentTemplate(template)}
+                          data-testid={`template-${template.id}`}
+                        >
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{template.name}</span>
+                            <div className="flex gap-1 mt-1">
+                              {template.isDefault && <Badge variant="secondary" className="text-xs h-4">Default</Badge>}
+                              {template.tags?.slice(0, 2).map(tag => (
+                                <Badge key={tag} variant="outline" className="text-xs h-4">{tag}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </Button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </ScrollArea>
+                </CollapsibleContent>
+              </Collapsible>
 
-                {/* Actions */}
-                <div className="space-y-2 pt-4 border-t">
-                  <Button
-                    className="w-full"
-                    onClick={() => saveTemplateMutation.mutate(currentTemplate)}
-                    disabled={saveTemplateMutation.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {saveTemplateMutation.isPending ? 'Saving...' : 'Save Template'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={async () => {
-                      if (!currentTemplate.id) {
-                        toast({
-                          title: "Save Required",
-                          description: "Please save the template before previewing",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
+              {currentTemplate && (
+                <>
+                  {/* Template Actions */}
+                  <div className="space-y-2 p-2 border rounded-lg">
+                    <Label className="text-sm font-semibold">Template Actions</Label>
+                    <div className="grid grid-cols-2 gap-1">
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
+                        setDuplicateName(`${currentTemplate.name} (Copy)`);
+                        setIsDuplicateDialogOpen(true);
+                      }}>
+                        <Copy className="w-3 h-3 mr-1" /> Duplicate
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsVersionDialogOpen(true)}>
+                        <History className="w-3 h-3 mr-1" /> Versions
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsTagsDialogOpen(true)}>
+                        <Tag className="w-3 h-3 mr-1" /> Tags
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsPageSettingsDialogOpen(true)}>
+                        <Settings2 className="w-3 h-3 mr-1" /> Page
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExportTemplate}>
+                        <Download className="w-3 h-3 mr-1" /> Export
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleSaveVersion}>
+                        <History className="w-3 h-3 mr-1" /> Save Ver.
+                      </Button>
+                    </div>
+                    
+                    <Separator className="my-2" />
+                    
+                    <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => backgroundInputRef.current?.click()}>
+                      <Image className="w-3 h-3 mr-1" /> Background Image
+                    </Button>
+                    
+                    {(currentTemplate.pageCount || 1) <= 1 && (
+                      <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addPage}>
+                        <Plus className="w-3 h-3 mr-1" /> Add Page
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Sections List */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-gray-100 rounded-t-lg">
+                      <span className="font-semibold text-sm">Sections (Page {currentPage})</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ScrollArea className="h-64 border rounded-b-lg p-2">
+                        <div className="space-y-1">
+                          {currentTemplate.sections
+                            .filter(s => (s.page || 1) === currentPage)
+                            .map(section => (
+                              <div
+                                key={section.id}
+                                className={`p-2 rounded border cursor-pointer transition-colors ${
+                                  selectedSection === section.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                                }`}
+                                style={{ borderLeftWidth: 4, borderLeftColor: getSectionColor(section.type) }}
+                                onClick={() => setSelectedSection(section.id)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <GripVertical className="w-3 h-3 text-gray-400" />
+                                    <span className="text-sm font-medium truncate max-w-28">
+                                      {section.settings.customLabel || SECTION_LABELS[section.type]}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-0.5">
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); openSectionSettings(section); }}>
+                                      <Settings2 className="w-3 h-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); toggleSectionVisibility(section.id); }}>
+                                      {section.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); toggleSectionLock(section.id); }}>
+                                      {section.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                                    </Button>
+                                    {['customField', 'table', 'image', 'qrCode', 'barcode'].includes(section.type) && (
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id); }}>
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                                {section.condition && (
+                                  <Badge variant="outline" className="mt-1 text-xs">Conditional</Badge>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  {/* Quick Actions */}
+                  <div className="space-y-2">
+                    <Button className="w-full" variant={currentTemplate.isDefault ? "secondary" : "outline"} onClick={async () => {
+                      if (!currentTemplate.id || currentTemplate.isDefault) return;
+                      const updatedTemplate = { ...currentTemplate, isDefault: true };
+                      await apiRequest('PATCH', `/api/damage-check-pdf-templates/${currentTemplate.id}`, updatedTemplate);
+                      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+                      toast({ title: "Success", description: "Template set as default" });
+                    }} disabled={!currentTemplate.id || currentTemplate.isDefault}>
+                      <Check className="w-4 h-4 mr-2" />
+                      {currentTemplate.isDefault ? 'Default Template' : 'Set as Default'}
+                    </Button>
+                    
+                    <Button variant="outline" className="w-full" onClick={async () => {
+                      if (!currentTemplate.id) return;
                       try {
-                        const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/preview`, {
-                          credentials: 'include',
-                        });
-                        
-                        if (!response.ok) {
-                          throw new Error('Failed to generate preview PDF');
-                        }
-                        
-                        // Get the PDF blob
+                        const response = await fetch(`/api/damage-check-pdf-templates/${currentTemplate.id}/preview`, { credentials: 'include' });
+                        if (!response.ok) throw new Error('Failed to generate preview');
                         const blob = await response.blob();
-                        
-                        // Create a download link
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -893,1188 +1646,604 @@ export default function DamageCheckTemplateEditor() {
                         a.click();
                         document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
-                        
-                        toast({
-                          title: "Preview Generated",
-                          description: "Template preview PDF downloaded successfully"
-                        });
+                        toast({ title: "Success", description: "Preview PDF downloaded" });
                       } catch (error) {
-                        console.error('Error generating preview PDF:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to generate preview PDF",
-                          variant: "destructive"
-                        });
+                        toast({ title: "Error", description: "Failed to generate preview", variant: "destructive" });
                       }
-                    }}
-                    disabled={!currentTemplate.id}
-                    data-testid="button-preview-pdf"
-                  >
-                    <FileDown className="w-4 h-4 mr-2" />
-                    Preview PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={async () => {
-                      if (!currentTemplate.id) {
-                        toast({
-                          title: "Save Required",
-                          description: "Please save the template first",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      try {
-                        const updatedTemplate = { ...currentTemplate, isDefault: true };
-                        await apiRequest('PATCH', `/api/damage-check-pdf-templates/${currentTemplate.id}`, updatedTemplate);
-                        queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
-                        toast({
-                          title: "Success",
-                          description: "Template set as default"
-                        });
-                      } catch (error) {
-                        console.error('Error setting default template:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to set template as default",
-                          variant: "destructive"
-                        });
-                      }
-                    }}
-                    disabled={!currentTemplate.id || currentTemplate.isDefault}
-                    data-testid="button-set-default"
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    {currentTemplate.isDefault ? 'Default Template' : 'Set as Default'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleExportTemplate}
-                    disabled={!currentTemplate.id}
-                    data-testid="button-export-pdf-template"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export PDF Layout
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="w-full text-red-600"
-                    onClick={() => currentTemplate.id && deleteTemplateMutation.mutate(currentTemplate.id)}
-                    disabled={deleteTemplateMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Template
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Right Side - Canvas */}
-          <div className="flex flex-col items-center">
-            {currentTemplate ? (
-              <div className="relative bg-gray-100 p-8 rounded-lg overflow-auto max-h-[800px]">
-                <div
-                  ref={canvasRef}
-                  className="relative bg-white shadow-lg mx-auto"
-                  style={{
-                    width: 595 * zoomLevel,
-                    height: 842 * zoomLevel,
-                    cursor: isMoving ? 'move' : 'default',
-                  }}
-                  onMouseMove={(e) => {
-                    handleMouseMove(e);
-                    handleResizeMouseMove(e);
-                  }}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                >
-                  {/* Grid */}
-                  {showGrid && (
-                    <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-                      <defs>
-                        <pattern id="grid" width={10 * zoomLevel} height={10 * zoomLevel} patternUnits="userSpaceOnUse">
-                          <path d={`M ${10 * zoomLevel} 0 L 0 0 0 ${10 * zoomLevel}`} fill="none" stroke="gray" strokeWidth="0.5" opacity="0.3"/>
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#grid)" />
-                    </svg>
-                  )}
-
-                  {/* Sections */}
-                  {currentTemplate.sections.filter(s => s.visible).map(section => (
-                    <div
-                      key={section.id}
-                      className={`absolute border-2 ${
-                        selectedSection === section.id ? 'border-blue-500' : 'border-gray-300'
-                      } ${section.locked ? 'cursor-not-allowed' : 'cursor-move'} rounded overflow-hidden`}
-                      style={{
-                        left: section.x * zoomLevel,
-                        top: section.y * zoomLevel,
-                        width: section.width * zoomLevel,
-                        height: section.height * zoomLevel,
-                        backgroundColor: selectedSection === section.id ? `${getSectionColor(section.type)}15` : `${getSectionColor(section.type)}05`,
-                      }}
-                      onMouseDown={(e) => handleMouseDown(e, section)}
-                    >
-                      {/* Section Label */}
-                      <div
-                        className="absolute top-0 left-0 right-0 text-white px-2 py-1 text-xs font-semibold flex items-center justify-between"
-                        style={{ backgroundColor: getSectionColor(section.type) }}
-                      >
-                        <span>{section.settings.customLabel || SECTION_LABELS[section.type]}</span>
-                        {isMoving && !section.locked && <Move className="w-3 h-3" />}
-                      </div>
-                      
-                      {/* Section Content Preview */}
-                      <div className="p-2 pt-8 text-[8px] text-gray-700 leading-tight" style={{ textAlign: section.settings.textAlign || 'left' }}>
-                        {section.type === 'header' && (
-                          <div className="font-bold" style={{ fontSize: `${section.settings.headerFontSize || 14}px`, color: section.settings.headerColor || '#334d99', textAlign: section.settings.textAlign || 'center' }}>
-                            {section.settings.companyName || 'LAM GROUP'}
-                            {section.settings.logoPath && <div className="text-[6px] text-gray-400 mt-1">[Logo]</div>}
-                          </div>
-                        )}
-                        {section.type === 'contractInfo' && (
-                          <div 
-                            className="w-full"
-                            style={{
-                              columnCount: section.settings.columnCount || 1,
-                              columnGap: '8px'
-                            }}
-                          >
-                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
-                              section.settings.customItems.map(item => {
-                                const sampleValues: Record<string, string> = {
-                                  contractNumber: 'REN-2025-001',
-                                  date: new Date().toLocaleDateString('nl-NL'),
-                                  customerName: 'Jan de Vries',
-                                  rentalPeriod: '22-10-2025 - 29-10-2025'
-                                };
-                                const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
-                                return (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
-                                    {item.hasCheckbox && <span>☐</span>}
-                                    <span>{item.text} {value}</span>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'vehicleData' && (
-                          <div 
-                            className="w-full"
-                            style={{
-                              columnCount: section.settings.columnCount || 1,
-                              columnGap: '8px'
-                            }}
-                          >
-                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
-                              section.settings.customItems.map(item => {
-                                const sampleValues: Record<string, string> = {
-                                  licensePlate: 'AB-123-CD',
-                                  brand: 'Mercedes',
-                                  model: 'E-Klasse',
-                                  buildYear: '2020',
-                                  mileage: '45.320 km',
-                                  fuel: '3/4 tank'
-                                };
-                                const value = item.fieldKey ? sampleValues[item.fieldKey] || '[Data]' : '';
-                                return (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
-                                    {item.hasCheckbox && <span>☐</span>}
-                                    <span>{item.text} {value}</span>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="text-[6px] text-gray-400">No fields. Add fields in settings.</div>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'checklist' && (
-                          <div 
-                            className="w-full h-full overflow-auto text-[8px] leading-tight p-1"
-                            style={{ 
-                              columnCount: section.settings.columnCount || 3,
-                              columnGap: '8px'
-                            }}
-                          >
-                            {damageCheckTemplates.length > 0 && damageCheckTemplates[0].inspectionPoints ? (
-                              <>
-                                {/* Group by category */}
-                                {['interieur', 'exterieur', 'afweez_check'].map(category => {
-                                  const categoryItems = (damageCheckTemplates[0].inspectionPoints as any[])
-                                    .filter((item: any) => item.category === category);
-                                  
-                                  if (categoryItems.length === 0) return null;
-                                  
-                                  const categoryTitle = category === 'interieur' ? 'Interieur' : 
-                                                       category === 'exterieur' ? 'Exterieur' : 
-                                                       'Aflever Check';
-                                  
-                                  return (
-                                    <div key={category} className="mb-1" style={{ breakInside: 'avoid-column' }}>
-                                      <div className="font-bold">{categoryTitle}</div>
-                                      {categoryItems.map((item: any, idx: number) => (
-                                        <div key={idx} className="ml-1 flex items-start gap-1">
-                                          <span>☐</span>
-                                          <span>{item.name}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            ) : (
-                              <>
-                                <div>☐ Interieur: Binnenzijde auto schoon</div>
-                                <div>☐ Exterieur: Buitenzijde auto schoon</div>
-                                <div>☐ Aflever Check: Olie - water</div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'diagram' && (
-                          <div className="flex items-center justify-center h-full p-2">
-                            {damageCheckTemplates.length > 0 && (
-                              damageCheckTemplates[0].diagramTopView || 
-                              damageCheckTemplates[0].diagramFrontView || 
-                              damageCheckTemplates[0].diagramSideView || 
-                              damageCheckTemplates[0].diagramRearView
-                            ) ? (
-                              <div className="grid grid-cols-2 gap-1 w-full h-full">
-                                {damageCheckTemplates[0].diagramTopView && (
-                                  <div className="flex items-center justify-center border border-gray-200">
-                                    <img 
-                                      src={damageCheckTemplates[0].diagramTopView} 
-                                      alt="Top View" 
-                                      className="max-w-full max-h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                                {damageCheckTemplates[0].diagramFrontView && (
-                                  <div className="flex items-center justify-center border border-gray-200">
-                                    <img 
-                                      src={damageCheckTemplates[0].diagramFrontView} 
-                                      alt="Front View" 
-                                      className="max-w-full max-h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                                {damageCheckTemplates[0].diagramSideView && (
-                                  <div className="flex items-center justify-center border border-gray-200">
-                                    <img 
-                                      src={damageCheckTemplates[0].diagramSideView} 
-                                      alt="Side View" 
-                                      className="max-w-full max-h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                                {damageCheckTemplates[0].diagramRearView && (
-                                  <div className="flex items-center justify-center border border-gray-200">
-                                    <img 
-                                      src={damageCheckTemplates[0].diagramRearView} 
-                                      alt="Rear View" 
-                                      className="max-w-full max-h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-center text-[7px] text-gray-400 border border-dashed border-gray-300 p-2 w-full h-full flex items-center justify-center">
-                                <div>
-                                  <div>Voertuig Diagram</div>
-                                  <div className="text-[6px]">(Schade markering)</div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'remarks' && (
-                          <div className="text-[7px]">
-                            <div className="border border-gray-300 p-1 bg-gray-50 mb-2" style={{ minHeight: '40px' }}>
-                              [Ruimte voor opmerkingen]
-                            </div>
-                            {section.settings.customItems && section.settings.customItems.length > 0 && (
-                              <div 
-                                className="w-full"
-                                style={{
-                                  columnCount: section.settings.columnCount || 1,
-                                  columnGap: '8px'
-                                }}
-                              >
-                                {section.settings.customItems.map(item => (
-                                  <div key={item.id} className="flex items-center gap-1 text-[7px] mb-1" style={{ breakInside: 'avoid-column' }}>
-                                    {item.hasCheckbox && <span>☐</span>}
-                                    <span>{item.text}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'signatures' && (
-                          <div 
-                            className="w-full"
-                            style={{
-                              columnCount: section.settings.columnCount || 2,
-                              columnGap: '8px'
-                            }}
-                          >
-                            {section.settings.customItems && section.settings.customItems.length > 0 ? (
-                              section.settings.customItems.map(item => (
-                                <div key={item.id} className="text-center mb-2" style={{ breakInside: 'avoid-column' }}>
-                                  <div className="border-b border-gray-400 mb-1 h-8"></div>
-                                  <div className="flex items-center justify-center gap-1 text-[7px]">
-                                    {item.hasCheckbox && <span>☐</span>}
-                                    <span className="font-bold">{item.text}</span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-[6px] text-gray-400">No signature fields. Add fields in settings.</div>
-                            )}
-                          </div>
-                        )}
-                        {section.type === 'customField' && (
-                          <div className="flex items-center gap-2 text-[8px]" style={{ fontSize: `${section.settings.fontSize || 9}px` }}>
-                            {section.settings.hasCheckbox && (
-                              <div className="border border-gray-400" style={{ width: `${section.settings.checkboxSize || 10}px`, height: `${section.settings.checkboxSize || 10}px`, flexShrink: 0 }}></div>
-                            )}
-                            {section.settings.hasText && (
-                              <div>{section.settings.fieldText || 'Field Label'}</div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Resize Handles - only show when section is selected */}
-                      {selectedSection === section.id && !section.locked && (
-                        <>
-                          {/* Corner handles */}
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
-                            style={{ top: -2, left: -2 }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'nw')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
-                            style={{ top: -2, right: -2 }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'ne')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
-                            style={{ bottom: -2, left: -2 }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'sw')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
-                            style={{ bottom: -2, right: -2 }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'se')}
-                          />
-                          
-                          {/* Edge handles */}
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
-                            style={{ top: -2, left: '50%', transform: 'translateX(-50%)' }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'n')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
-                            style={{ bottom: -2, left: '50%', transform: 'translateX(-50%)' }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 's')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
-                            style={{ top: '50%', left: -2, transform: 'translateY(-50%)' }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'w')}
-                          />
-                          <div
-                            className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
-                            style={{ top: '50%', right: -2, transform: 'translateY(-50%)' }}
-                            onMouseDown={(e) => handleResizeMouseDown(e, section, 'e')}
-                          />
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-96 text-gray-500">
-                Select a template or create a new one to start editing
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Create Template Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Template</DialogTitle>
-              <DialogDescription>
-                Create a new damage check PDF template with default section layout
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="templateName">Template Name</Label>
-                <Input
-                  id="templateName"
-                  value={newTemplateName}
-                  onChange={(e) => setNewTemplateName(e.target.value)}
-                  placeholder="e.g., Default Layout"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateTemplate}>Create Template</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Section Settings Dialog */}
-        <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingSection ? `${SECTION_LABELS[editingSection.type]} Settings` : 'Section Settings'}
-              </DialogTitle>
-              <DialogDescription>
-                Customize the appearance and content of this section
-              </DialogDescription>
-            </DialogHeader>
-            {editingSection && (
-              <div className="space-y-4 py-4">
-                {/* Custom Label - Available for all sections */}
-                <div>
-                  <Label htmlFor="customLabel">Section Header</Label>
-                  <Input
-                    id="customLabel"
-                    value={editingSection.settings.customLabel || ''}
-                    onChange={(e) => setEditingSection({
-                      ...editingSection,
-                      settings: { ...editingSection.settings, customLabel: e.target.value }
-                    })}
-                    placeholder={SECTION_LABELS[editingSection.type]}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Leave empty to use default: "{SECTION_LABELS[editingSection.type]}"</p>
-                </div>
-
-                {/* Text Alignment - Available for most sections */}
-                {editingSection.type !== 'diagram' && (
-                  <div>
-                    <Label>Text Alignment</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        variant={editingSection.settings.textAlign === 'left' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, textAlign: 'left' }
-                        })}
-                      >
-                        <AlignLeft className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant={editingSection.settings.textAlign === 'center' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, textAlign: 'center' }
-                        })}
-                      >
-                        <AlignCenter className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant={editingSection.settings.textAlign === 'right' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, textAlign: 'right' }
-                        })}
-                      >
-                        <AlignRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Custom Items - Available for all sections */}
-                {editingSection.type !== 'diagram' && editingSection.type !== 'customField' && (
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm font-semibold">Custom Items</Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const customItems = editingSection.settings.customItems || [];
-                          setEditingSection({
-                            ...editingSection,
-                            settings: {
-                              ...editingSection.settings,
-                              customItems: [
-                                ...customItems,
-                                {
-                                  id: `item-${Date.now()}`,
-                                  text: 'New item',
-                                  hasCheckbox: true
-                                }
-                              ]
-                            }
-                          });
-                        }}
-                        data-testid="button-add-custom-item"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Item
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">Add custom text and checkboxes to this section</p>
+                    }} disabled={!currentTemplate.id}>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Preview PDF
+                    </Button>
                     
-                    {(editingSection.settings.customItems || []).length === 0 ? (
-                      <div className="text-sm text-gray-400 text-center py-4 border border-dashed rounded">
-                        No custom items. Click "Add Item" to add text or checkboxes.
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {(editingSection.settings.customItems || []).map((item, index) => (
-                          <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                            <div className="flex items-center gap-2 flex-1">
-                              <Switch
-                                checked={item.hasCheckbox}
-                                onCheckedChange={(checked) => {
-                                  const customItems = [...(editingSection.settings.customItems || [])];
-                                  customItems[index] = { ...item, hasCheckbox: checked };
-                                  setEditingSection({
-                                    ...editingSection,
-                                    settings: { ...editingSection.settings, customItems }
-                                  });
-                                }}
-                                title="Show checkbox"
-                              />
-                              <Input
-                                value={item.text}
-                                onChange={(e) => {
-                                  const customItems = [...(editingSection.settings.customItems || [])];
-                                  customItems[index] = { ...item, text: e.target.value };
-                                  setEditingSection({
-                                    ...editingSection,
-                                    settings: { ...editingSection.settings, customItems }
-                                  });
-                                }}
-                                placeholder="Item text"
-                                className="flex-1"
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-600"
-                              onClick={() => {
-                                const customItems = (editingSection.settings.customItems || []).filter((_, i) => i !== index);
-                                setEditingSection({
-                                  ...editingSection,
-                                  settings: { ...editingSection.settings, customItems }
-                                });
-                              }}
-                              title="Delete item"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Header Section Settings */}
-                {editingSection.type === 'header' && (
-                  <>
-                    <div>
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <Input
-                        id="companyName"
-                        value={editingSection.settings.companyName || ''}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, companyName: e.target.value }
-                        })}
-                        placeholder="LAM GROUP"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="headerFontSize">Font Size</Label>
-                      <Input
-                        id="headerFontSize"
-                        type="number"
-                        value={editingSection.settings.headerFontSize || 14}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, headerFontSize: parseInt(e.target.value) }
-                        })}
-                        min="8"
-                        max="24"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="headerColor">Header Color</Label>
-                      <Input
-                        id="headerColor"
-                        type="color"
-                        value={editingSection.settings.headerColor || '#334d99'}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, headerColor: e.target.value }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Logo</Label>
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
-                      <div className="flex gap-2 items-center">
-                        <Button
-                          variant="outline"
-                          onClick={() => logoInputRef.current?.click()}
-                          type="button"
-                        >
-                          Upload Logo
-                        </Button>
-                        {editingSection.settings.logoPath && (
-                          <span className="text-sm text-gray-600">Logo uploaded</span>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Text Sections (contractInfo, vehicleData, remarks) */}
-                {(editingSection.type === 'contractInfo' || 
-                  editingSection.type === 'vehicleData' || 
-                  editingSection.type === 'remarks' ||
-                  editingSection.type === 'signatures') && (
-                  <>
-                    <div>
-                      <Label htmlFor="fontSize">Font Size</Label>
-                      <Input
-                        id="fontSize"
-                        type="number"
-                        value={editingSection.settings.fontSize || 9}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
-                        })}
-                        min="6"
-                        max="18"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="columnCount">Number of Columns</Label>
-                      <Input
-                        id="columnCount"
-                        type="number"
-                        value={editingSection.settings.columnCount || 1}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, columnCount: parseInt(e.target.value) }
-                        })}
-                        min="1"
-                        max="4"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Arrange items in columns (1-4)</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Checklist Section */}
-                {editingSection.type === 'checklist' && (
-                  <>
-                    <div>
-                      <Label htmlFor="checklistFontSize">Font Size</Label>
-                      <Input
-                        id="checklistFontSize"
-                        type="number"
-                        value={editingSection.settings.fontSize || 9}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
-                        })}
-                        min="6"
-                        max="18"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="checkboxSize">Checkbox Size</Label>
-                      <Input
-                        id="checkboxSize"
-                        type="number"
-                        value={editingSection.settings.checkboxSize || 10}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, checkboxSize: parseInt(e.target.value) }
-                        })}
-                        min="6"
-                        max="16"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="columnCount">Number of Columns</Label>
-                      <Input
-                        id="columnCount"
-                        type="number"
-                        value={editingSection.settings.columnCount || 3}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, columnCount: parseInt(e.target.value) }
-                        })}
-                        min="1"
-                        max="4"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Arrange checklist items in columns (1-4)</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Custom Field Section */}
-                {editingSection.type === 'customField' && (
-                  <>
-                    <div>
-                      <Label htmlFor="fieldText">Field Text</Label>
-                      <Input
-                        id="fieldText"
-                        value={editingSection.settings.fieldText || ''}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, fieldText: e.target.value }
-                        })}
-                        placeholder="Field Label"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Text to display in the field</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="hasCheckbox">Show Checkbox</Label>
-                      <Switch
-                        id="hasCheckbox"
-                        checked={editingSection.settings.hasCheckbox !== false}
-                        onCheckedChange={(checked) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, hasCheckbox: checked }
-                        })}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="hasText">Show Text</Label>
-                      <Switch
-                        id="hasText"
-                        checked={editingSection.settings.hasText !== false}
-                        onCheckedChange={(checked) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, hasText: checked }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="customFieldFontSize">Font Size</Label>
-                      <Input
-                        id="customFieldFontSize"
-                        type="number"
-                        value={editingSection.settings.fontSize || 9}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, fontSize: parseInt(e.target.value) }
-                        })}
-                        min="6"
-                        max="18"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="customFieldCheckboxSize">Checkbox Size</Label>
-                      <Input
-                        id="customFieldCheckboxSize"
-                        type="number"
-                        value={editingSection.settings.checkboxSize || 10}
-                        onChange={(e) => setEditingSection({
-                          ...editingSection,
-                          settings: { ...editingSection.settings, checkboxSize: parseInt(e.target.value) }
-                        })}
-                        min="6"
-                        max="16"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => {
-                setIsSettingsDialogOpen(false);
-                setEditingSection(null);
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={() => editingSection && updateSectionSettings(editingSection.settings)}>
-                Save Settings
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Checklist Content Template Editor Section - Collapsible */}
-        <div className="mt-8 pt-6 border-t">
-          <div 
-            className="flex justify-between items-center mb-4 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
-            onClick={() => setChecklistExpanded(!checklistExpanded)}
-          >
-            <div className="flex items-center gap-3">
-              {checklistExpanded ? <ChevronUp className="w-5 h-5 text-gray-600" /> : <ChevronDown className="w-5 h-5 text-gray-600" />}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Damage Check Checklist Content</h3>
-                {!checklistExpanded && currentChecklistTemplate && (
-                  <p className="text-sm text-gray-600">
-                    {currentChecklistTemplate.name} • {currentChecklistTemplate.inspectionPoints?.length || 0} items
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportChecklistTemplate}
-                disabled={!currentChecklistTemplate}
-                data-testid="button-export-checklist-template"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => checklistInputRef.current?.click()}
-                data-testid="button-import-checklist-template"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (!currentChecklistTemplate) return;
-                  saveChecklistTemplateMutation.mutate(currentChecklistTemplate);
-                }}
-                disabled={!currentChecklistTemplate || saveChecklistTemplateMutation.isPending}
-                data-testid="button-save-checklist"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saveChecklistTemplateMutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-
-          {checklistExpanded && (
-            <div className="space-y-4 animate-in slide-in-from-top-2">
-              {currentChecklistTemplate ? (
-                <>
-                  {/* Template info */}
-                  <div className="bg-gray-50 p-3 rounded-md flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">{currentChecklistTemplate.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {currentChecklistTemplate.inspectionPoints?.length || 0} inspection points
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setEditingPoint(null);
-                        setPointEditorOpen(true);
-                      }}
-                      data-testid="button-add-inspection-point"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Point
+                    <Button variant="outline" className="w-full text-red-600" onClick={() => currentTemplate.id && deleteTemplateMutation.mutate(currentTemplate.id)} disabled={deleteTemplateMutation.isPending}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Template
                     </Button>
                   </div>
+                </>
+              )}
+            </div>
 
-                  {/* Inspection points grid */}
-                  {currentChecklistTemplate.inspectionPoints && currentChecklistTemplate.inspectionPoints.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[500px] overflow-y-auto">
-                      {currentChecklistTemplate.inspectionPoints.map((point: any, index: number) => (
-                        <div
-                          key={point.id || index}
-                          className="border rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer bg-white relative group"
-                          onClick={() => {
-                            setEditingPoint(point);
-                            setPointEditorOpen(true);
-                          }}
-                          data-testid={`card-inspection-point-${index}`}
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-start justify-between">
-                              <span className="font-medium text-sm line-clamp-2 pr-2">{point.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCurrentChecklistTemplate({
-                                    ...currentChecklistTemplate,
-                                    inspectionPoints: currentChecklistTemplate.inspectionPoints.filter((p: any) => p.id !== point.id)
-                                  });
-                                }}
-                                data-testid={`button-delete-point-${index}`}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+            {/* Canvas Area */}
+            <div className="flex flex-col items-center">
+              {currentTemplate ? (
+                <div className="relative bg-gray-100 p-8 rounded-lg overflow-auto max-h-[800px]" style={{ paddingLeft: showRulers ? 28 : 32, paddingTop: showRulers ? 28 : 32 }}>
+                  {renderRulers()}
+                  
+                  <div
+                    ref={canvasRef}
+                    className="relative bg-white shadow-lg mx-auto"
+                    style={{
+                      width: getPageWidth() * zoomLevel,
+                      height: getPageHeight() * zoomLevel,
+                      cursor: isMoving ? 'move' : 'default',
+                      backgroundImage: currentTemplate.backgroundImage ? `url(${currentTemplate.backgroundImage})` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                    onMouseMove={(e) => {
+                      handleMouseMove(e);
+                      handleResizeMouseMove(e);
+                    }}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onClick={() => setSelectedSection(null)}
+                  >
+                    {/* Grid */}
+                    {showGrid && (
+                      <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                        <defs>
+                          <pattern id="grid" width={10 * zoomLevel} height={10 * zoomLevel} patternUnits="userSpaceOnUse">
+                            <path d={`M ${10 * zoomLevel} 0 L 0 0 0 ${10 * zoomLevel}`} fill="none" stroke="gray" strokeWidth="0.5" opacity="0.3"/>
+                          </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                      </svg>
+                    )}
+                    
+                    {/* Print Margins Guide */}
+                    {showPrintMargins && (
+                      <div 
+                        className="absolute border-2 border-dashed border-red-300 pointer-events-none"
+                        style={{
+                          left: (currentTemplate.pageMargins || 15) * zoomLevel,
+                          top: (currentTemplate.pageMargins || 15) * zoomLevel,
+                          right: (currentTemplate.pageMargins || 15) * zoomLevel,
+                          bottom: (currentTemplate.pageMargins || 15) * zoomLevel,
+                        }}
+                      />
+                    )}
+
+                    {/* Sections */}
+                    {currentTemplate.sections
+                      .filter(s => s.visible && (s.page || 1) === currentPage)
+                      .map(section => {
+                        const style = section.style || {};
+                        const borderStyle = style.borderStyle || 'solid';
+                        const borderWidth = style.borderWidth ?? 1;
+                        const borderColor = style.borderColor || '#cccccc';
+                        const rotation = style.rotation || 0;
+                        const opacity = style.opacity ?? 1;
+                        const padding = style.padding ?? 4;
+                        
+                        return (
+                          <div
+                            key={section.id}
+                            className={`absolute ${
+                              selectedSection === section.id || selectedSections.includes(section.id) ? 'ring-2 ring-blue-500' : ''
+                            } ${section.locked ? 'cursor-not-allowed' : 'cursor-move'} rounded overflow-hidden`}
+                            style={{
+                              left: section.x * zoomLevel,
+                              top: section.y * zoomLevel,
+                              width: section.width * zoomLevel,
+                              height: section.height * zoomLevel,
+                              backgroundColor: style.backgroundColor || `${getSectionColor(section.type)}05`,
+                              borderWidth: borderWidth * zoomLevel,
+                              borderColor: selectedSection === section.id ? '#3b82f6' : borderColor,
+                              borderStyle: borderStyle === 'none' ? 'solid' : borderStyle,
+                              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                              opacity,
+                              padding: padding * zoomLevel,
+                            }}
+                            onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, section); }}
+                          >
+                            {/* Section Label */}
+                            <div
+                              className="absolute top-0 left-0 right-0 text-white px-2 py-0.5 text-xs font-semibold flex items-center justify-between"
+                              style={{ backgroundColor: getSectionColor(section.type), fontSize: 10 * zoomLevel }}
+                            >
+                              <span>{section.settings.customLabel || SECTION_LABELS[section.type]}</span>
+                              {section.locked && <Lock className="w-3 h-3" />}
                             </div>
-                            <div className="flex flex-wrap gap-1">
-                              <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 capitalize">
-                                {point.category}
-                              </span>
-                              {point.required && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-800">
-                                  Required
-                                </span>
+                            
+                            {/* Section Content Preview */}
+                            <div 
+                              className="pt-6 text-gray-700 leading-tight overflow-hidden" 
+                              style={{ 
+                                fontSize: (style.fontSize || section.settings.fontSize || 9) * zoomLevel,
+                                textAlign: style.textAlign || section.settings.textAlign || 'left',
+                                fontWeight: style.fontWeight || 'normal',
+                                fontStyle: style.fontStyle || 'normal',
+                                color: style.textColor || '#000000',
+                              }}
+                            >
+                              {section.type === 'header' && (
+                                <div className="font-bold text-center" style={{ color: section.settings.headerColor || '#334d99' }}>
+                                  {section.settings.companyName || 'LAM GROUP'}
+                                </div>
+                              )}
+                              {section.type === 'table' && (
+                                <div className="text-xs text-gray-500">[Table: {section.settings.tableRows}x{section.settings.tableCols}]</div>
+                              )}
+                              {section.type === 'image' && (
+                                <div className="flex items-center justify-center h-full text-gray-400">
+                                  {section.settings.imageUrl ? <img src={section.settings.imageUrl} alt="Section" className="max-w-full max-h-full object-contain" /> : <Image className="w-8 h-8" />}
+                                </div>
+                              )}
+                              {section.type === 'qrCode' && (
+                                <div className="flex items-center justify-center h-full">
+                                  <QrCode className="w-12 h-12 text-gray-600" />
+                                </div>
+                              )}
+                              {section.type === 'barcode' && (
+                                <div className="flex items-center justify-center h-full">
+                                  <Barcode className="w-16 h-8 text-gray-600" />
+                                </div>
+                              )}
+                              {section.type === 'customField' && (
+                                <div className="flex items-center gap-1">
+                                  {section.settings.hasCheckbox && <span>☐</span>}
+                                  {section.settings.hasText && <span>{section.settings.fieldText || 'Field'}</span>}
+                                </div>
+                              )}
+                              {!['header', 'table', 'image', 'qrCode', 'barcode', 'customField'].includes(section.type) && (
+                                <div className="text-xs text-gray-500">[{SECTION_LABELS[section.type]}]</div>
                               )}
                             </div>
-                            {point.damageTypes && point.damageTypes.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {point.damageTypes.slice(0, 4).map((type: string) => (
-                                  <span key={type} className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
-                                    {type}
-                                  </span>
-                                ))}
-                                {point.damageTypes.length > 4 && (
-                                  <span className="text-xs px-1.5 py-0.5 text-gray-500">
-                                    +{point.damageTypes.length - 4}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {point.description && (
-                              <p className="text-xs text-gray-500 line-clamp-2">{point.description}</p>
+
+                            {/* Resize Handles */}
+                            {(selectedSection === section.id || selectedSections.includes(section.id)) && !section.locked && (
+                              <>
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize" style={{ top: -2, left: -2 }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'nw')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize" style={{ top: -2, right: -2 }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'ne')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize" style={{ bottom: -2, left: -2 }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'sw')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize" style={{ bottom: -2, right: -2 }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'se')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize" style={{ top: -2, left: '50%', transform: 'translateX(-50%)' }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'n')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize" style={{ bottom: -2, left: '50%', transform: 'translateX(-50%)' }} onMouseDown={(e) => handleResizeMouseDown(e, section, 's')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize" style={{ top: '50%', left: -2, transform: 'translateY(-50%)' }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'w')} />
+                                <div className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize" style={{ top: '50%', right: -2, transform: 'translateY(-50%)' }} onMouseDown={(e) => handleResizeMouseDown(e, section, 'e')} />
+                              </>
                             )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
-                      <p>No inspection points yet</p>
-                      <p className="text-xs mt-1">Click "Add Point" to create your first check point</p>
-                    </div>
-                  )}
-                </>
+                        );
+                      })}
+                  </div>
+                </div>
               ) : (
-                <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
-                  <p>No checklist template available</p>
-                  <p className="text-xs mt-1">Import a checklist template to get started</p>
+                <div className="flex items-center justify-center h-96 text-gray-500">
+                  Select a template or create a new one to start editing
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Inspection Point Editor Dialog */}
-        <InspectionPointEditor
-          open={pointEditorOpen}
-          onOpenChange={setPointEditorOpen}
-          point={editingPoint}
-          onSave={(point: any) => {
-            if (!currentChecklistTemplate) return;
-            
-            if (editingPoint) {
-              // Update existing point
-              setCurrentChecklistTemplate({
-                ...currentChecklistTemplate,
-                inspectionPoints: currentChecklistTemplate.inspectionPoints.map((p: any) => 
-                  p.id === point.id ? point : p
-                )
-              });
-            } else {
-              // Add new point
-              setCurrentChecklistTemplate({
-                ...currentChecklistTemplate,
-                inspectionPoints: [...(currentChecklistTemplate.inspectionPoints || []), point]
-              });
-            }
-            setPointEditorOpen(false);
-          }}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
-// Inspection Point Editor Component
-const INSPECTION_CATEGORIES = [
-  { value: 'interieur', label: 'Interieur' },
-  { value: 'exterieur', label: 'Exterieur' },
-  { value: 'afweez_check', label: 'Afweez Check' },
-  { value: 'documents', label: 'Documents' },
-];
-
-const DAMAGE_TYPES = [
-  { value: 'kapot', label: 'Kapot' },
-  { value: 'gat', label: 'Gat' },
-  { value: 'kras', label: 'Kras' },
-  { value: 'deuk', label: 'Deuk' },
-  { value: 'ster', label: 'Ster' },
-  { value: 'beschadigd', label: 'Beschadigd' },
-  { value: 'vuil', label: 'Vuil' },
-  { value: 'ontbreekt', label: 'Ontbreekt' },
-];
-
-function InspectionPointEditor({
-  open,
-  onOpenChange,
-  point,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  point: any | null;
-  onSave: (point: any) => void;
-}) {
-  const [name, setName] = useState(point?.name || "");
-  const [category, setCategory] = useState(point?.category || "exterieur");
-  const [description, setDescription] = useState(point?.description || "");
-  const [required, setRequired] = useState(point?.required || false);
-  const [selectedDamageTypes, setSelectedDamageTypes] = useState<string[]>(
-    point?.damageTypes || ["kras", "deuk"]
-  );
-
-  useEffect(() => {
-    if (point) {
-      setName(point.name);
-      setCategory(point.category);
-      setDescription(point.description || "");
-      setRequired(point.required);
-      setSelectedDamageTypes(point.damageTypes || ["kras", "deuk"]);
-    } else {
-      setName("");
-      setCategory("exterieur");
-      setDescription("");
-      setRequired(false);
-      setSelectedDamageTypes(["kras", "deuk"]);
-    }
-  }, [point]);
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-
-    const newPoint = {
-      id: point?.id || `point-${Date.now()}`,
-      name: name.trim(),
-      category,
-      description: description.trim(),
-      required,
-      damageTypes: selectedDamageTypes,
-    };
-
-    onSave(newPoint);
-    onOpenChange(false);
-  };
-
-  const toggleDamageType = (type: string) => {
-    setSelectedDamageTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{point ? "Edit Inspection Point" : "Add Inspection Point"}</DialogTitle>
-          <DialogDescription>
-            Define a new item to check during vehicle inspection
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div>
-            <Label htmlFor="pointName">Point Name *</Label>
-            <Input
-              id="pointName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Voorruit"
-            />
           </div>
-          <div>
-            <Label htmlFor="pointCategory">Category *</Label>
-            <select
-              id="pointCategory"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-md border border-gray-300 p-2"
-            >
-              {INSPECTION_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="pointDescription">Description (Optional)</Label>
-            <Input
-              id="pointDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Additional notes"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch checked={required} onCheckedChange={setRequired} id="pointRequired" />
-            <Label htmlFor="pointRequired">Required field</Label>
-          </div>
-          <div>
-            <Label>Damage Types</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {DAMAGE_TYPES.map(type => (
-                <div key={type.value} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`damage-${type.value}`}
-                    checked={selectedDamageTypes.includes(type.value)}
-                    onChange={() => toggleDamageType(type.value)}
-                    className="rounded"
-                  />
-                  <Label htmlFor={`damage-${type.value}`} className="cursor-pointer">
-                    {type.label}
-                  </Label>
+
+          {/* Dialogs */}
+          
+          {/* Create Template Dialog */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Template</DialogTitle>
+                <DialogDescription>Create a new damage check PDF template with default section layout</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="templateName">Template Name</Label>
+                  <Input id="templateName" value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} placeholder="e.g., Default Layout" />
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>
-            {point ? "Update" : "Add"} Point
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateTemplate}>Create Template</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Duplicate Template Dialog */}
+          <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Duplicate Template</DialogTitle>
+                <DialogDescription>Create a copy of the current template</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="duplicateName">New Template Name</Label>
+                  <Input id="duplicateName" value={duplicateName} onChange={(e) => setDuplicateName(e.target.value)} placeholder="Template name" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsDuplicateDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleDuplicateTemplate} disabled={duplicateTemplateMutation.isPending}>
+                  {duplicateTemplateMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Version History Dialog */}
+          <Dialog open={isVersionDialogOpen} onOpenChange={setIsVersionDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Version History</DialogTitle>
+                <DialogDescription>View and restore previous versions of this template</DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="h-80">
+                <div className="space-y-2 p-2">
+                  {versions.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">No saved versions yet</div>
+                  ) : (
+                    versions.map(version => (
+                      <div key={version.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                        <div>
+                          <div className="font-medium">Version {version.version}</div>
+                          <div className="text-sm text-gray-500">{version.name}</div>
+                          <div className="text-xs text-gray-400">{new Date(version.createdAt).toLocaleString()}</div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          if (currentTemplate?.id) {
+                            restoreVersionMutation.mutate({ templateId: currentTemplate.id, versionId: version.id });
+                          }
+                        }} disabled={restoreVersionMutation.isPending}>
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          Restore
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Tags Dialog */}
+          <Dialog open={isTagsDialogOpen} onOpenChange={setIsTagsDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Manage Tags</DialogTitle>
+                <DialogDescription>Add tags to organize your templates</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex gap-2">
+                  <Input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder="Add a tag..." onKeyDown={(e) => e.key === 'Enter' && handleAddTag()} />
+                  <Button onClick={handleAddTag}>Add</Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(currentTemplate?.tags || []).map(tag => (
+                    <Badge key={tag} variant="secondary" className="px-3 py-1">
+                      {tag}
+                      <button className="ml-2 hover:text-red-600" onClick={() => handleRemoveTag(tag)}>×</button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Page Settings Dialog */}
+          <Dialog open={isPageSettingsDialogOpen} onOpenChange={setIsPageSettingsDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Page Settings</DialogTitle>
+                <DialogDescription>Configure page size and orientation</DialogDescription>
+              </DialogHeader>
+              {currentTemplate && (
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label>Page Size</Label>
+                    <Select value={currentTemplate.pageSize || 'A4'} onValueChange={(value: 'A4' | 'Letter' | 'A5' | 'custom') => {
+                      setCurrentTemplate({ ...currentTemplate, pageSize: value });
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                        <SelectItem value="Letter">Letter (8.5 × 11 in)</SelectItem>
+                        <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>Orientation</Label>
+                    <Select value={currentTemplate.pageOrientation || 'portrait'} onValueChange={(value: 'portrait' | 'landscape') => {
+                      setCurrentTemplate({ ...currentTemplate, pageOrientation: value });
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="portrait">Portrait</SelectItem>
+                        <SelectItem value="landscape">Landscape</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>Page Margins (pt)</Label>
+                    <Input type="number" value={currentTemplate.pageMargins || 15} onChange={(e) => setCurrentTemplate({ ...currentTemplate, pageMargins: parseInt(e.target.value) || 15 })} min={0} max={50} />
+                  </div>
+                  
+                  {currentTemplate.pageSize === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Width (pt)</Label>
+                        <Input type="number" value={currentTemplate.customPageWidth || 595} onChange={(e) => setCurrentTemplate({ ...currentTemplate, customPageWidth: parseInt(e.target.value) || 595 })} />
+                      </div>
+                      <div>
+                        <Label>Height (pt)</Label>
+                        <Input type="number" value={currentTemplate.customPageHeight || 842} onChange={(e) => setCurrentTemplate({ ...currentTemplate, customPageHeight: parseInt(e.target.value) || 842 })} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsPageSettingsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={() => {
+                  if (currentTemplate) {
+                    saveTemplateMutation.mutate(currentTemplate);
+                  }
+                  setIsPageSettingsDialogOpen(false);
+                }}>Save</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Section Settings Dialog */}
+          <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingSection ? `${SECTION_LABELS[editingSection.type]} Settings` : 'Section Settings'}
+                </DialogTitle>
+                <DialogDescription>Customize the appearance and content of this section</DialogDescription>
+              </DialogHeader>
+              {editingSection && (
+                <Tabs defaultValue="content" className="w-full">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="content">Content</TabsTrigger>
+                    <TabsTrigger value="style">Style</TabsTrigger>
+                    <TabsTrigger value="border">Border</TabsTrigger>
+                    <TabsTrigger value="condition">Condition</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="content" className="space-y-4 mt-4">
+                    <div>
+                      <Label>Section Header</Label>
+                      <Input value={editingSection.settings.customLabel || ''} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, customLabel: e.target.value}})} placeholder={SECTION_LABELS[editingSection.type]} />
+                    </div>
+                    
+                    {editingSection.type === 'header' && (
+                      <>
+                        <div>
+                          <Label>Company Name</Label>
+                          <Input value={editingSection.settings.companyName || ''} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, companyName: e.target.value}})} />
+                        </div>
+                        <div>
+                          <Label>Header Color</Label>
+                          <Input type="color" value={editingSection.settings.headerColor || '#334d99'} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, headerColor: e.target.value}})} />
+                        </div>
+                      </>
+                    )}
+                    
+                    {editingSection.type === 'customField' && (
+                      <>
+                        <div>
+                          <Label>Field Text</Label>
+                          <Input value={editingSection.settings.fieldText || ''} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, fieldText: e.target.value}})} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label>Show Checkbox</Label>
+                          <Switch checked={editingSection.settings.hasCheckbox !== false} onCheckedChange={(checked) => setEditingSection({...editingSection, settings: {...editingSection.settings, hasCheckbox: checked}})} />
+                        </div>
+                      </>
+                    )}
+                    
+                    {editingSection.type === 'table' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Rows</Label>
+                            <Input type="number" value={editingSection.settings.tableRows || 4} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, tableRows: parseInt(e.target.value)}})} min={1} max={20} />
+                          </div>
+                          <div>
+                            <Label>Columns</Label>
+                            <Input type="number" value={editingSection.settings.tableCols || 3} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, tableCols: parseInt(e.target.value)}})} min={1} max={10} />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {editingSection.type === 'qrCode' && (
+                      <div>
+                        <Label>QR Code Value</Label>
+                        <Input value={editingSection.settings.qrCodeValue || ''} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, qrCodeValue: e.target.value}})} placeholder="{{contractNumber}}" />
+                        <p className="text-xs text-gray-500 mt-1">Use variables like {'{{contractNumber}}'}, {'{{licensePlate}}'}</p>
+                      </div>
+                    )}
+                    
+                    {editingSection.type === 'barcode' && (
+                      <div>
+                        <Label>Barcode Value</Label>
+                        <Input value={editingSection.settings.barcodeValue || ''} onChange={(e) => setEditingSection({...editingSection, settings: {...editingSection.settings, barcodeValue: e.target.value}})} placeholder="{{contractNumber}}" />
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label>Text Variables</Label>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {TEXT_VARIABLES.map(v => (
+                          <Badge key={v.key} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => {
+                            if (editingSection.type === 'qrCode') {
+                              setEditingSection({...editingSection, settings: {...editingSection.settings, qrCodeValue: v.key}});
+                            } else if (editingSection.type === 'barcode') {
+                              setEditingSection({...editingSection, settings: {...editingSection.settings, barcodeValue: v.key}});
+                            }
+                          }}>
+                            {v.key}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="style" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Font Size</Label>
+                        <Input type="number" value={editingSection.style?.fontSize || editingSection.settings.fontSize || 9} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), fontSize: parseInt(e.target.value)}})} min={6} max={24} />
+                      </div>
+                      <div>
+                        <Label>Font Weight</Label>
+                        <Select value={editingSection.style?.fontWeight || 'normal'} onValueChange={(v: 'normal' | 'bold') => setEditingSection({...editingSection, style: {...(editingSection.style || {}), fontWeight: v}})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="bold">Bold</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Text Color</Label>
+                        <Input type="color" value={editingSection.style?.textColor || '#000000'} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), textColor: e.target.value}})} />
+                      </div>
+                      <div>
+                        <Label>Background Color</Label>
+                        <Input type="color" value={editingSection.style?.backgroundColor || '#ffffff'} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), backgroundColor: e.target.value}})} />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Text Alignment</Label>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant={editingSection.style?.textAlign === 'left' ? 'default' : 'outline'} size="sm" onClick={() => setEditingSection({...editingSection, style: {...(editingSection.style || {}), textAlign: 'left'}})}>
+                          <AlignLeft className="w-4 h-4" />
+                        </Button>
+                        <Button variant={editingSection.style?.textAlign === 'center' ? 'default' : 'outline'} size="sm" onClick={() => setEditingSection({...editingSection, style: {...(editingSection.style || {}), textAlign: 'center'}})}>
+                          <AlignCenter className="w-4 h-4" />
+                        </Button>
+                        <Button variant={editingSection.style?.textAlign === 'right' ? 'default' : 'outline'} size="sm" onClick={() => setEditingSection({...editingSection, style: {...(editingSection.style || {}), textAlign: 'right'}})}>
+                          <AlignRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Padding (pt)</Label>
+                        <Input type="number" value={editingSection.style?.padding ?? 4} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), padding: parseInt(e.target.value)}})} min={0} max={50} />
+                      </div>
+                      <div>
+                        <Label>Rotation (deg)</Label>
+                        <Input type="number" value={editingSection.style?.rotation || 0} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), rotation: parseInt(e.target.value)}})} min={-180} max={180} />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Opacity</Label>
+                      <Input type="range" min={0} max={1} step={0.1} value={editingSection.style?.opacity ?? 1} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), opacity: parseFloat(e.target.value)}})} />
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="border" className="space-y-4 mt-4">
+                    <div>
+                      <Label>Border Style</Label>
+                      <Select value={editingSection.style?.borderStyle || 'solid'} onValueChange={(v: 'solid' | 'dashed' | 'dotted' | 'none') => setEditingSection({...editingSection, style: {...(editingSection.style || {}), borderStyle: v}})}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="solid">Solid</SelectItem>
+                          <SelectItem value="dashed">Dashed</SelectItem>
+                          <SelectItem value="dotted">Dotted</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Border Width</Label>
+                        <Input type="number" value={editingSection.style?.borderWidth ?? 1} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), borderWidth: parseInt(e.target.value)}})} min={0} max={10} />
+                      </div>
+                      <div>
+                        <Label>Border Color</Label>
+                        <Input type="color" value={editingSection.style?.borderColor || '#cccccc'} onChange={(e) => setEditingSection({...editingSection, style: {...(editingSection.style || {}), borderColor: e.target.value}})} />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="condition" className="space-y-4 mt-4">
+                    <p className="text-sm text-gray-600">Show this section only when a condition is met</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label>Enable Condition</Label>
+                      <Switch checked={!!editingSection.condition} onCheckedChange={(checked) => {
+                        if (checked) {
+                          setEditingSection({...editingSection, condition: { field: 'checkType', operator: 'equals', value: 'pickup' }});
+                        } else {
+                          setEditingSection({...editingSection, condition: undefined});
+                        }
+                      }} />
+                    </div>
+                    
+                    {editingSection.condition && (
+                      <>
+                        <div>
+                          <Label>Field</Label>
+                          <Select value={editingSection.condition.field} onValueChange={(v) => setEditingSection({...editingSection, condition: {...editingSection.condition!, field: v}})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="checkType">Check Type (pickup/return)</SelectItem>
+                              <SelectItem value="vehicleType">Vehicle Type</SelectItem>
+                              <SelectItem value="customerType">Customer Type</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label>Operator</Label>
+                          <Select value={editingSection.condition.operator} onValueChange={(v: 'equals' | 'notEquals' | 'contains' | 'isEmpty' | 'isNotEmpty') => setEditingSection({...editingSection, condition: {...editingSection.condition!, operator: v}})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="equals">Equals</SelectItem>
+                              <SelectItem value="notEquals">Not Equals</SelectItem>
+                              <SelectItem value="contains">Contains</SelectItem>
+                              <SelectItem value="isEmpty">Is Empty</SelectItem>
+                              <SelectItem value="isNotEmpty">Is Not Empty</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {!['isEmpty', 'isNotEmpty'].includes(editingSection.condition.operator) && (
+                          <div>
+                            <Label>Value</Label>
+                            <Input value={editingSection.condition.value || ''} onChange={(e) => setEditingSection({...editingSection, condition: {...editingSection.condition!, value: e.target.value}})} placeholder="e.g., pickup, return" />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              )}
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => { setIsSettingsDialogOpen(false); setEditingSection(null); }}>Cancel</Button>
+                <Button onClick={() => editingSection && updateSectionSettings(editingSection.settings)}>Save Settings</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
