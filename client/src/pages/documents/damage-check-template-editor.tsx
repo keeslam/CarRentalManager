@@ -23,7 +23,7 @@ import {
   Undo2, Redo2, Copy, Clipboard, ClipboardPaste, AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter,
   AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
   Magnet, Ruler, LayoutGrid, Table2, Image, QrCode, Barcode, Tag, History, Palette, LayoutTemplate,
-  GripVertical, RotateCcw, FileText, BookOpen, Layers, ChevronRight
+  GripVertical, RotateCcw, FileText, BookOpen, Layers, ChevronRight, Car, RefreshCw
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DamageCheckTemplate, TemplateSection, TemplateSectionStyle } from "@shared/schema";
@@ -1796,8 +1796,97 @@ export default function DamageCheckTemplateEditor() {
                                   {section.settings.hasText && <span>{section.settings.fieldText || 'Field'}</span>}
                                 </div>
                               )}
-                              {!['header', 'table', 'image', 'qrCode', 'barcode', 'customField'].includes(section.type) && (
-                                <div className="text-xs text-gray-500">[{SECTION_LABELS[section.type]}]</div>
+                              {section.type === 'contractInfo' && (
+                                <div className="space-y-0.5 pt-2" style={{ fontSize: Math.max(8, (section.settings.fontSize || 9) * zoomLevel * 0.9) }}>
+                                  {(section.settings.contractFields || [
+                                    { id: 'contract', label: 'Contract Nr:', value: '{{contractNumber}}' },
+                                    { id: 'date', label: 'Datum:', value: '{{date}}' },
+                                    { id: 'customer', label: 'Klant:', value: '{{customerName}}' },
+                                  ]).slice(0, 5).map((field: any) => (
+                                    <div key={field.id} className="flex gap-1">
+                                      <span className="font-semibold">{field.label}</span>
+                                      <span className="text-gray-600">___________</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {section.type === 'vehicleData' && (
+                                <div className="space-y-0.5 pt-2" style={{ fontSize: Math.max(8, (section.settings.fontSize || 9) * zoomLevel * 0.9) }}>
+                                  {(section.settings.vehicleFields || [
+                                    { id: 'plate', label: 'Kenteken:', value: '{{licensePlate}}' },
+                                    { id: 'brand', label: 'Merk:', value: '{{brand}}' },
+                                    { id: 'model', label: 'Model:', value: '{{model}}' },
+                                  ]).slice(0, 5).map((field: any) => (
+                                    <div key={field.id} className="flex gap-1">
+                                      <span className="font-semibold">{field.label}</span>
+                                      <span className="text-gray-600">___________</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {section.type === 'checklist' && (() => {
+                                const templateId = section.settings.checklistTemplateId;
+                                const checklistTemplate = templateId ? damageCheckTemplates.find((t: any) => t.id === templateId) : null;
+                                const items = section.settings.checklistItems || checklistTemplate?.inspectionPoints || [];
+                                const columns = section.settings.useMultipleColumns ? (section.settings.columnCount || 2) : 1;
+                                const itemsPerCol = Math.ceil(Math.min(items.length, 12) / columns);
+                                
+                                return (
+                                  <div className="pt-2" style={{ fontSize: Math.max(7, (section.settings.fontSize || 9) * zoomLevel * 0.85) }}>
+                                    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+                                      {items.slice(0, 12).map((item: any, idx: number) => (
+                                        <div key={item.id || idx} className="flex items-center gap-1">
+                                          <span className="inline-block border border-gray-400" style={{ width: (section.settings.checkboxSize || 8) * zoomLevel, height: (section.settings.checkboxSize || 8) * zoomLevel }}></span>
+                                          <span className="truncate">{item.name || item.text}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {items.length > 12 && <div className="text-gray-400 text-center mt-1">+{items.length - 12} more items...</div>}
+                                  </div>
+                                );
+                              })()}
+                              {section.type === 'remarks' && (
+                                <div className="space-y-1 pt-2" style={{ fontSize: Math.max(8, (section.settings.fontSize || 9) * zoomLevel * 0.9) }}>
+                                  {(section.settings.customItems || [
+                                    { id: 'damage', text: 'Schade Opmerkingen:' },
+                                    { id: 'general', text: 'Algemene Opmerkingen:' },
+                                  ]).slice(0, 3).map((item: any) => (
+                                    <div key={item.id}>
+                                      <div className="font-semibold">{item.text}</div>
+                                      <div className="border-b border-gray-300 h-3"></div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {section.type === 'signatures' && (
+                                <div className="grid grid-cols-2 gap-2 pt-2" style={{ fontSize: Math.max(8, (section.settings.fontSize || 9) * zoomLevel * 0.9) }}>
+                                  {(section.settings.customItems || [
+                                    { id: 'klant', text: 'Handtekening Klant' },
+                                    { id: 'medewerker', text: 'Handtekening Medewerker' },
+                                  ]).map((item: any) => (
+                                    <div key={item.id} className="text-center">
+                                      <div className="border border-gray-300 bg-gray-50" style={{ height: (section.settings.signatureHeight || 30) * zoomLevel * 0.6 }}></div>
+                                      <div className="text-xs mt-0.5">{item.text}</div>
+                                      {section.settings.includeDateLine !== false && <div className="text-xs text-gray-400">Datum: __/__/____</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {section.type === 'diagram' && (
+                                <div className="flex items-center justify-center h-full pt-2">
+                                  <div className="text-center text-gray-500">
+                                    <Car className="w-16 h-10 mx-auto text-gray-400" />
+                                    <div className="text-xs mt-1">Vehicle Diagram</div>
+                                    <div className="text-xs text-gray-400">
+                                      {[
+                                        section.settings.showFront !== false && 'Front',
+                                        section.settings.showRear !== false && 'Rear',
+                                        section.settings.showSides !== false && 'Sides',
+                                        section.settings.showTop !== false && 'Top'
+                                      ].filter(Boolean).join(', ')}
+                                    </div>
+                                  </div>
+                                </div>
                               )}
                             </div>
 
@@ -2154,77 +2243,224 @@ export default function DamageCheckTemplateEditor() {
                     {/* Checklist Section Editor */}
                     {editingSection.type === 'checklist' && (
                       <div className="space-y-3">
-                        <div>
-                          <Label className="font-semibold">Select Checklist Template</Label>
-                          <p className="text-xs text-gray-500 mb-2">Choose which damage check template to use for the checklist items. The items below come from the template.</p>
-                          <Select 
-                            value={editingSection.settings.checklistTemplateId?.toString() || ''} 
-                            onValueChange={(v) => {
-                              const templateId = parseInt(v);
-                              const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === templateId);
-                              setEditingSection({
-                                ...editingSection, 
-                                settings: {
-                                  ...editingSection.settings, 
-                                  checklistTemplateId: templateId,
-                                  checklistTemplateName: selectedTemplate?.name
-                                }
-                              });
+                        {/* Mode Toggle */}
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div>
+                            <Label className="font-semibold">Custom Items Mode</Label>
+                            <p className="text-xs text-gray-500">Edit items directly instead of using template</p>
+                          </div>
+                          <Switch 
+                            checked={editingSection.settings.useCustomItems === true} 
+                            onCheckedChange={(checked) => {
+                              if (checked && !editingSection.settings.checklistItems?.length) {
+                                const templateId = editingSection.settings.checklistTemplateId;
+                                const selectedTemplate = templateId ? damageCheckTemplates.find((t: any) => t.id === templateId) : null;
+                                const clonedItems = (selectedTemplate?.inspectionPoints || []).map((p: any) => ({
+                                  id: p.id,
+                                  name: p.name,
+                                  text: p.name,
+                                  category: p.category,
+                                  damageTypes: p.damageTypes || [],
+                                  hasCheckbox: true,
+                                  required: p.required
+                                }));
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, useCustomItems: checked, checklistItems: clonedItems}});
+                              } else {
+                                setEditingSection({...editingSection, settings: {...editingSection.settings, useCustomItems: checked}});
+                              }
                             }}
-                          >
-                            <SelectTrigger><SelectValue placeholder="Select a checklist template..." /></SelectTrigger>
-                            <SelectContent>
-                              {damageCheckTemplates.map((template: any) => (
-                                <SelectItem key={template.id} value={template.id.toString()}>
-                                  {template.name} ({template.inspectionPoints?.length || 0} items)
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                         
-                        {editingSection.settings.checklistTemplateId && (() => {
-                          const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === editingSection.settings.checklistTemplateId);
-                          const points = selectedTemplate?.inspectionPoints || [];
-                          const categories = [...new Set(points.map((p: any) => p.category))];
-                          
-                          return (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Label className="font-semibold">Inspection Points ({points.length} items)</Label>
-                                <Badge variant="secondary">{categories.length} categories</Badge>
-                              </div>
-                              <ScrollArea className="h-64 border rounded-lg">
-                                {categories.map((category: string) => {
-                                  const categoryPoints = points.filter((p: any) => p.category === category);
-                                  const categoryLabels: Record<string, string> = {
-                                    'interieur': 'Interieur',
-                                    'exterieur': 'Exterieur',
-                                    'afweez_check': 'Afweez Check',
-                                    'documents': 'Documenten'
-                                  };
-                                  return (
-                                    <div key={category} className="p-2 border-b">
-                                      <div className="font-semibold text-sm bg-gray-100 p-2 rounded mb-1">
-                                        {categoryLabels[category] || category} ({categoryPoints.length})
-                                      </div>
-                                      {categoryPoints.map((point: any) => (
-                                        <div key={point.id} className="flex items-center justify-between text-sm py-1 px-2 hover:bg-gray-50">
-                                          <span>{point.name}</span>
-                                          <div className="flex gap-1">
-                                            {point.damageTypes?.map((type: string) => (
-                                              <Badge key={type} variant="outline" className="text-xs">{type}</Badge>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                })}
-                              </ScrollArea>
+                        {/* Template Selection (when not using custom items) */}
+                        {!editingSection.settings.useCustomItems && (
+                          <>
+                            <div>
+                              <Label className="font-semibold">Select Checklist Template</Label>
+                              <p className="text-xs text-gray-500 mb-2">Items come from the template. Enable "Custom Items Mode" to edit them.</p>
+                              <Select 
+                                value={editingSection.settings.checklistTemplateId?.toString() || ''} 
+                                onValueChange={(v) => {
+                                  const templateId = parseInt(v);
+                                  const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === templateId);
+                                  setEditingSection({
+                                    ...editingSection, 
+                                    settings: {
+                                      ...editingSection.settings, 
+                                      checklistTemplateId: templateId,
+                                      checklistTemplateName: selectedTemplate?.name
+                                    }
+                                  });
+                                }}
+                              >
+                                <SelectTrigger><SelectValue placeholder="Select a checklist template..." /></SelectTrigger>
+                                <SelectContent>
+                                  {damageCheckTemplates.map((template: any) => (
+                                    <SelectItem key={template.id} value={template.id.toString()}>
+                                      {template.name} ({template.inspectionPoints?.length || 0} items)
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                          );
-                        })()}
+                            
+                            {editingSection.settings.checklistTemplateId && (() => {
+                              const selectedTemplate = damageCheckTemplates.find((t: any) => t.id === editingSection.settings.checklistTemplateId);
+                              const points = selectedTemplate?.inspectionPoints || [];
+                              const categories = [...new Set(points.map((p: any) => p.category))];
+                              const categoryLabels: Record<string, string> = {
+                                'interieur': 'Interieur',
+                                'exterieur': 'Exterieur',
+                                'afweez_check': 'Afweez Check',
+                                'documents': 'Documenten'
+                              };
+                              
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="font-semibold">Template Items ({points.length})</Label>
+                                    <Button variant="outline" size="sm" onClick={() => {
+                                      const clonedItems = points.map((p: any) => ({
+                                        id: p.id,
+                                        name: p.name,
+                                        text: p.name,
+                                        category: p.category,
+                                        damageTypes: p.damageTypes || [],
+                                        hasCheckbox: true,
+                                        required: p.required
+                                      }));
+                                      setEditingSection({...editingSection, settings: {...editingSection.settings, useCustomItems: true, checklistItems: clonedItems}});
+                                      toast({ title: "Cloned", description: `${points.length} items cloned for editing` });
+                                    }}>
+                                      <Copy className="w-3 h-3 mr-1" /> Clone to Edit
+                                    </Button>
+                                  </div>
+                                  <ScrollArea className="h-48 border rounded-lg">
+                                    {categories.map((category: string) => {
+                                      const categoryPoints = points.filter((p: any) => p.category === category);
+                                      return (
+                                        <div key={category} className="p-2 border-b">
+                                          <div className="font-semibold text-xs bg-gray-100 p-1.5 rounded mb-1">
+                                            {categoryLabels[category] || category} ({categoryPoints.length})
+                                          </div>
+                                          {categoryPoints.map((point: any) => (
+                                            <div key={point.id} className="flex items-center justify-between text-xs py-0.5 px-2">
+                                              <span>{point.name}</span>
+                                              <div className="flex gap-0.5">
+                                                {point.damageTypes?.slice(0, 3).map((type: string) => (
+                                                  <Badge key={type} variant="outline" className="text-[10px] h-4">{type}</Badge>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })}
+                                  </ScrollArea>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                        
+                        {/* Custom Items Editor (when using custom items) */}
+                        {editingSection.settings.useCustomItems && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-semibold">Checklist Items ({(editingSection.settings.checklistItems || []).length})</Label>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm" onClick={() => {
+                                  const templateId = editingSection.settings.checklistTemplateId;
+                                  const selectedTemplate = templateId ? damageCheckTemplates.find((t: any) => t.id === templateId) : null;
+                                  if (selectedTemplate) {
+                                    const clonedItems = selectedTemplate.inspectionPoints.map((p: any) => ({
+                                      id: p.id,
+                                      name: p.name,
+                                      text: p.name,
+                                      category: p.category,
+                                      damageTypes: p.damageTypes || [],
+                                      hasCheckbox: true,
+                                      required: p.required
+                                    }));
+                                    setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: clonedItems}});
+                                    toast({ title: "Reset", description: "Items reset to template defaults" });
+                                  }
+                                }} title="Reset to template">
+                                  <RefreshCw className="w-3 h-3" />
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => {
+                                  const items = editingSection.settings.checklistItems || [];
+                                  const newItem = { 
+                                    id: `check-${Date.now()}`, 
+                                    name: 'New Item', 
+                                    text: 'New Item', 
+                                    category: 'custom',
+                                    damageTypes: ['Ja', 'Nee'],
+                                    hasCheckbox: true,
+                                    required: false
+                                  };
+                                  setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: [...items, newItem]}});
+                                }}>
+                                  <Plus className="w-3 h-3 mr-1" /> Add
+                                </Button>
+                              </div>
+                            </div>
+                            <ScrollArea className="h-64 border rounded-lg p-2">
+                              {(editingSection.settings.checklistItems || []).map((item: any, index: number) => (
+                                <div key={item.id} className="flex items-start gap-2 mb-2 p-2 bg-gray-50 rounded border">
+                                  <GripVertical className="w-4 h-4 text-gray-400 mt-2" />
+                                  <div className="flex-1 space-y-1">
+                                    <Input 
+                                      value={item.name || item.text} 
+                                      onChange={(e) => {
+                                        const items = [...(editingSection.settings.checklistItems || [])];
+                                        items[index] = { ...items[index], name: e.target.value, text: e.target.value };
+                                        setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                      }}
+                                      placeholder="Item name"
+                                      className="h-8"
+                                    />
+                                    <div className="flex gap-2">
+                                      <Select 
+                                        value={item.category || 'custom'} 
+                                        onValueChange={(v) => {
+                                          const items = [...(editingSection.settings.checklistItems || [])];
+                                          items[index] = { ...items[index], category: v };
+                                          setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-7 text-xs flex-1"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="interieur">Interieur</SelectItem>
+                                          <SelectItem value="exterieur">Exterieur</SelectItem>
+                                          <SelectItem value="afweez_check">Afweez Check</SelectItem>
+                                          <SelectItem value="documents">Documenten</SelectItem>
+                                          <SelectItem value="custom">Custom</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <Input 
+                                        value={(item.damageTypes || []).join(', ')} 
+                                        onChange={(e) => {
+                                          const items = [...(editingSection.settings.checklistItems || [])];
+                                          items[index] = { ...items[index], damageTypes: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) };
+                                          setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                        }}
+                                        placeholder="Options: Ja, Nee"
+                                        className="h-7 text-xs flex-1"
+                                      />
+                                    </div>
+                                  </div>
+                                  <Button variant="ghost" size="sm" className="text-red-600 h-8 w-8 p-0" onClick={() => {
+                                    const items = (editingSection.settings.checklistItems || []).filter((_: any, i: number) => i !== index);
+                                    setEditingSection({...editingSection, settings: {...editingSection.settings, checklistItems: items}});
+                                  }}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </ScrollArea>
+                          </div>
+                        )}
                         
                         <Separator />
                         
