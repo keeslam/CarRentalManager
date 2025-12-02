@@ -312,8 +312,29 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh]" data-testid="dialog-reservation-list">
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        // Don't close list dialog if view/edit dialogs are open
+        if (!isOpen && (viewDialogOpen || editDialogOpen)) {
+          return;
+        }
+        onOpenChange(isOpen);
+      }}>
+        <DialogContent 
+          className="w-[95vw] max-w-[95vw] max-h-[90vh]" 
+          data-testid="dialog-reservation-list"
+          onPointerDownOutside={(e) => {
+            // Prevent closing when clicking on child dialogs
+            if (viewDialogOpen || editDialogOpen) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            // Prevent closing when interacting with child dialogs
+            if (viewDialogOpen || editDialogOpen) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Reservations</DialogTitle>
             <DialogDescription>
