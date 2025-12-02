@@ -51,7 +51,16 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search, FileText, Building, MapPin, Clock, History } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
@@ -183,6 +192,11 @@ export default function ReservationCalendarPage() {
   const [completedRentalsDialogOpen, setCompletedRentalsDialogOpen] = useState(false);
   const [completedRentalsSearch, setCompletedRentalsSearch] = useState('');
   const [completedRentalsDateFilter, setCompletedRentalsDateFilter] = useState<'all' | '7days' | '30days' | '90days' | 'year'>('all');
+  
+  // Administration dialog for external invoicing
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminHistorySearch, setAdminHistorySearch] = useState('');
+  const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('30days');
   
   // Drag and drop state
   const [draggedReservation, setDraggedReservation] = useState<Reservation | null>(null);
@@ -802,6 +816,10 @@ export default function ReservationCalendarPage() {
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
             View Completed ({completedRentals.length})
+          </Button>
+          <Button variant="outline" onClick={() => setAdminDialogOpen(true)} data-testid="button-administration">
+            <FileText className="h-4 w-4 mr-2" />
+            Administration
           </Button>
           <ReservationAddDialog
             onSuccess={async (reservation) => {
@@ -2924,6 +2942,252 @@ export default function ReservationCalendarPage() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompletedRentalsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Administration Dialog for External Invoicing */}
+      <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Administration - Invoice Data
+            </DialogTitle>
+            <DialogDescription>
+              Overview of rental information for external invoicing system
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs defaultValue="current" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="current" className="flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                Current Rentals
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                History
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Current Rentals Tab */}
+            <TabsContent value="current" className="mt-4">
+              {(() => {
+                // Get all currently picked up rentals (active rentals)
+                const currentRentals = reservations?.filter(res => 
+                  res.status === 'picked_up' && res.type !== 'maintenance_block'
+                ) || [];
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        Vehicles currently out on rental ({currentRentals.length})
+                      </p>
+                    </div>
+                    
+                    <ScrollArea className="h-[400px] rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[80px]">GPS</TableHead>
+                            <TableHead className="w-[100px]">License Plate</TableHead>
+                            <TableHead>Make / Model</TableHead>
+                            <TableHead className="w-[100px]">Contract #</TableHead>
+                            <TableHead>Company</TableHead>
+                            <TableHead className="w-[100px]">Pickup Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentRentals.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                No vehicles currently rented
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            currentRentals.map((rental) => (
+                              <TableRow key={rental.id} data-testid={`admin-current-row-${rental.id}`}>
+                                <TableCell className="font-mono">
+                                  <Badge variant="outline" className="font-mono">
+                                    {rental.vehicle?.imei || '-'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  <span className="bg-primary/10 px-2 py-1 rounded text-sm">
+                                    {formatLicensePlate(rental.vehicle?.licensePlate || '')}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Car className="h-4 w-4 text-muted-foreground" />
+                                    {rental.vehicle?.brand} {rental.vehicle?.model}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-mono font-semibold">
+                                  {rental.contractNumber || '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+            
+            {/* History Tab */}
+            <TabsContent value="history" className="mt-4">
+              {(() => {
+                // Get completed/returned rentals
+                const historyRentals = reservations?.filter(res => 
+                  (res.status === 'returned' || res.status === 'completed') && res.type !== 'maintenance_block'
+                ) || [];
+                
+                // Apply date filter
+                const now = new Date();
+                const filteredHistory = historyRentals.filter(rental => {
+                  if (adminHistoryDateFilter === 'all') return true;
+                  const endDate = rental.endDate ? parseISO(rental.endDate) : null;
+                  if (!endDate) return false;
+                  
+                  switch (adminHistoryDateFilter) {
+                    case '7days': return differenceInDays(now, endDate) <= 7;
+                    case '30days': return differenceInDays(now, endDate) <= 30;
+                    case '90days': return differenceInDays(now, endDate) <= 90;
+                    default: return true;
+                  }
+                });
+                
+                // Apply search filter
+                const searchedHistory = filteredHistory.filter(rental => {
+                  if (!adminHistorySearch) return true;
+                  const search = adminHistorySearch.toLowerCase();
+                  return (
+                    rental.vehicle?.licensePlate?.toLowerCase().includes(search) ||
+                    rental.vehicle?.brand?.toLowerCase().includes(search) ||
+                    rental.vehicle?.model?.toLowerCase().includes(search) ||
+                    rental.customer?.companyName?.toLowerCase().includes(search) ||
+                    rental.customer?.name?.toLowerCase().includes(search) ||
+                    rental.contractNumber?.toLowerCase().includes(search) ||
+                    rental.vehicle?.imei?.toLowerCase().includes(search)
+                  );
+                });
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search by plate, company, contract..."
+                          value={adminHistorySearch}
+                          onChange={(e) => setAdminHistorySearch(e.target.value)}
+                          className="h-9"
+                          data-testid="input-admin-history-search"
+                        />
+                      </div>
+                      <Select value={adminHistoryDateFilter} onValueChange={(v: any) => setAdminHistoryDateFilter(v)}>
+                        <SelectTrigger className="w-[140px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7days">Last 7 days</SelectItem>
+                          <SelectItem value="30days">Last 30 days</SelectItem>
+                          <SelectItem value="90days">Last 90 days</SelectItem>
+                          <SelectItem value="all">All time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground">
+                      Completed rentals ({searchedHistory.length})
+                    </p>
+                    
+                    <ScrollArea className="h-[350px] rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[80px]">GPS</TableHead>
+                            <TableHead className="w-[100px]">License Plate</TableHead>
+                            <TableHead>Make / Model</TableHead>
+                            <TableHead className="w-[100px]">Contract #</TableHead>
+                            <TableHead>Company</TableHead>
+                            <TableHead className="w-[100px]">Pickup Date</TableHead>
+                            <TableHead className="w-[100px]">Return Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {searchedHistory.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                No completed rentals found
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            searchedHistory.map((rental) => (
+                              <TableRow key={rental.id} data-testid={`admin-history-row-${rental.id}`}>
+                                <TableCell className="font-mono">
+                                  <Badge variant="outline" className="font-mono">
+                                    {rental.vehicle?.imei || '-'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  <span className="bg-primary/10 px-2 py-1 rounded text-sm">
+                                    {formatLicensePlate(rental.vehicle?.licensePlate || '')}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Car className="h-4 w-4 text-muted-foreground" />
+                                    {rental.vehicle?.brand} {rental.vehicle?.model}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-mono font-semibold">
+                                  {rental.contractNumber || '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  {rental.endDate ? format(parseISO(rental.endDate), 'dd MMM yyyy') : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          </Tabs>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>
               Close
             </Button>
           </DialogFooter>
