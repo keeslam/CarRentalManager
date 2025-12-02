@@ -197,7 +197,7 @@ export default function ReservationCalendarPage() {
   // Administration dialog for external invoicing
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
   const [adminHistorySearch, setAdminHistorySearch] = useState('');
-  const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('30days');
+  const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('all');
   const [adminCurrentSearch, setAdminCurrentSearch] = useState('');
   const [adminCurrentSort, setAdminCurrentSort] = useState<'pickup' | 'plate' | 'company' | 'contract'>('pickup');
   const [adminHistorySort, setAdminHistorySort] = useState<{ column: string; direction: 'asc' | 'desc' }>({ column: 'return', direction: 'desc' });
