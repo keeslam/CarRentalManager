@@ -66,7 +66,14 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
     enabled: open && !!reservation.id,
   });
 
+  // Fetch paper damage check documents for this reservation
+  const { data: reservationDocuments } = useQuery<any[]>({
+    queryKey: [`/api/documents/reservation/${reservation.id}`],
+    enabled: open && !!reservation.id,
+  });
+
   const pickupDamageChecks = damageChecks?.filter((check: any) => check.checkType === 'pickup') || [];
+  const pickupPaperDamageChecks = reservationDocuments?.filter((doc: any) => doc.documentType === 'Damage Check (Pickup - Paper)') || [];
   
   // Get selected vehicle data
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId);
@@ -484,12 +491,17 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             <div className="border rounded-lg p-4 bg-green-50 space-y-3">
               <h3 className="font-semibold text-base">Damage Check</h3>
               
-              {pickupDamageChecks.length > 0 ? (
+              {pickupDamageChecks.length > 0 || pickupPaperDamageChecks.length > 0 ? (
                 <div className="space-y-2">
-                  {(() => {
-                    const check = pickupDamageChecks[0]; // Only one check per type
+                  {/* Interactive damage checks */}
+                  {pickupDamageChecks.length > 0 && (() => {
+                    const check = pickupDamageChecks[0];
                     return (
                       <div className="bg-white border rounded-md p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ClipboardCheck className="h-4 w-4 text-green-600" />
+                          <span className="text-xs font-medium text-green-600">Interactive Check</span>
+                        </div>
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm flex-1">
                             <p className="font-medium">
@@ -568,6 +580,146 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                       </div>
                     );
                   })()}
+                  
+                  {/* Paper damage checks */}
+                  {pickupPaperDamageChecks.map((doc: any) => (
+                    <div key={doc.id} className="bg-white border rounded-md p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-600">Paper Check (Uploaded)</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm flex-1">
+                          <p className="font-medium">{doc.fileName || 'Paper Damage Check'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded {new Date(doc.createdAt).toLocaleDateString()} at {new Date(doc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(doc.filePath, '_blank')}
+                            title="View document"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={async () => {
+                              if (confirm('Delete this paper damage check? This cannot be undone.')) {
+                                try {
+                                  await apiRequest('DELETE', `/api/documents/${doc.id}`, {});
+                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                                  toast({
+                                    title: "Deleted",
+                                    description: "Paper damage check deleted successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "Failed to delete paper damage check",
+                                  });
+                                }
+                              }
+                            }}
+                            title="Delete paper damage check"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Add more buttons */}
+                  <div className="flex gap-2 mt-2">
+                    {pickupDamageChecks.length === 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="bg-white"
+                        onClick={() => {
+                          setEditingDamageCheckId(null);
+                          setDamageCheckDialogOpen(true);
+                        }}
+                      >
+                        <ClipboardCheck className="h-3 w-3 mr-1" />
+                        Add Interactive Check
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-white"
+                      disabled={uploadingPaperDamageCheck}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        input.onchange = async (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (!file) return;
+                          
+                          setUploadingPaperDamageCheck(true);
+                          const formData = new FormData();
+                          const vehicleIdToUse = isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId;
+                          if (!vehicleIdToUse) {
+                            toast({
+                              title: "Error",
+                              description: "No vehicle selected",
+                              variant: "destructive",
+                            });
+                            setUploadingPaperDamageCheck(false);
+                            return;
+                          }
+                          formData.append('vehicleId', vehicleIdToUse.toString());
+                          formData.append('reservationId', reservation.id.toString());
+                          formData.append('documentType', 'Damage Check (Pickup - Paper)');
+                          formData.append('file', file);
+
+                          try {
+                            const response = await fetch('/api/documents', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include',
+                            });
+                            
+                            if (!response.ok) {
+                              throw new Error('Upload failed');
+                            }
+                            
+                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            toast({
+                              title: "Success",
+                              description: "Paper damage check uploaded successfully",
+                            });
+                          } catch (error) {
+                            console.error('Upload failed:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upload paper damage check",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setUploadingPaperDamageCheck(false);
+                          }
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Upload className="h-3 w-3 mr-1" />
+                      {uploadingPaperDamageCheck ? "Uploading..." : "Upload Paper Check"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -823,7 +975,14 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
     enabled: open && !!reservation.id,
   });
 
+  // Fetch paper damage check documents for this reservation
+  const { data: reservationDocuments } = useQuery<any[]>({
+    queryKey: [`/api/documents/reservation/${reservation.id}`],
+    enabled: open && !!reservation.id,
+  });
+
   const returnDamageChecks = damageChecks?.filter((check: any) => check.checkType === 'return') || [];
+  const returnPaperDamageChecks = reservationDocuments?.filter((doc: any) => doc.documentType === 'Damage Check (Return - Paper)') || [];
 
   useEffect(() => {
     if (open && reservation) {
@@ -1013,12 +1172,17 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             <div className="border rounded-lg p-4 bg-green-50 space-y-3">
               <h3 className="font-semibold text-base">Damage Check</h3>
               
-              {returnDamageChecks.length > 0 ? (
+              {returnDamageChecks.length > 0 || returnPaperDamageChecks.length > 0 ? (
                 <div className="space-y-2">
-                  {(() => {
-                    const check = returnDamageChecks[0]; // Only one check per type
+                  {/* Interactive damage checks */}
+                  {returnDamageChecks.length > 0 && (() => {
+                    const check = returnDamageChecks[0];
                     return (
                       <div className="bg-white border rounded-md p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ClipboardCheck className="h-4 w-4 text-green-600" />
+                          <span className="text-xs font-medium text-green-600">Interactive Check</span>
+                        </div>
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm flex-1">
                             <p className="font-medium">
@@ -1097,6 +1261,145 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                       </div>
                     );
                   })()}
+                  
+                  {/* Paper damage checks */}
+                  {returnPaperDamageChecks.map((doc: any) => (
+                    <div key={doc.id} className="bg-white border rounded-md p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-600">Paper Check (Uploaded)</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm flex-1">
+                          <p className="font-medium">{doc.fileName || 'Paper Damage Check'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded {new Date(doc.createdAt).toLocaleDateString()} at {new Date(doc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(doc.filePath, '_blank')}
+                            title="View document"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={async () => {
+                              if (confirm('Delete this paper damage check? This cannot be undone.')) {
+                                try {
+                                  await apiRequest('DELETE', `/api/documents/${doc.id}`, {});
+                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                                  toast({
+                                    title: "Deleted",
+                                    description: "Paper damage check deleted successfully",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Error",
+                                    description: "Failed to delete paper damage check",
+                                  });
+                                }
+                              }
+                            }}
+                            title="Delete paper damage check"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Add more buttons */}
+                  <div className="flex gap-2 mt-2">
+                    {returnDamageChecks.length === 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="bg-white"
+                        onClick={() => {
+                          setEditingDamageCheckId(null);
+                          setDamageCheckDialogOpen(true);
+                        }}
+                      >
+                        <ClipboardCheck className="h-3 w-3 mr-1" />
+                        Add Interactive Check
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-white"
+                      disabled={uploadingPaperDamageCheck}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        input.onchange = async (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (!file) return;
+                          
+                          setUploadingPaperDamageCheck(true);
+                          const formData = new FormData();
+                          if (!reservation.vehicleId) {
+                            toast({
+                              title: "Error",
+                              description: "No vehicle associated with this reservation",
+                              variant: "destructive",
+                            });
+                            setUploadingPaperDamageCheck(false);
+                            return;
+                          }
+                          formData.append('vehicleId', reservation.vehicleId.toString());
+                          formData.append('reservationId', reservation.id.toString());
+                          formData.append('documentType', 'Damage Check (Return - Paper)');
+                          formData.append('file', file);
+
+                          try {
+                            const response = await fetch('/api/documents', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include',
+                            });
+                            
+                            if (!response.ok) {
+                              throw new Error('Upload failed');
+                            }
+                            
+                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            toast({
+                              title: "Success",
+                              description: "Paper damage check uploaded successfully",
+                            });
+                          } catch (error) {
+                            console.error('Upload failed:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upload paper damage check",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setUploadingPaperDamageCheck(false);
+                          }
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Upload className="h-3 w-3 mr-1" />
+                      {uploadingPaperDamageCheck ? "Uploading..." : "Upload Paper Check"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
