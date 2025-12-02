@@ -200,6 +200,7 @@ export default function ReservationCalendarPage() {
   const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('30days');
   const [adminCurrentSearch, setAdminCurrentSearch] = useState('');
   const [adminCurrentSort, setAdminCurrentSort] = useState<'pickup' | 'plate' | 'company' | 'contract'>('pickup');
+  const [adminHistorySort, setAdminHistorySort] = useState<{ column: string; direction: 'asc' | 'desc' }>({ column: 'return', direction: 'desc' });
   
   // Drag and drop state
   const [draggedReservation, setDraggedReservation] = useState<Reservation | null>(null);
@@ -3191,6 +3192,59 @@ export default function ReservationCalendarPage() {
                   };
                 };
                 
+                // Apply sorting
+                const sortedHistory = [...searchedHistory].sort((a, b) => {
+                  const dir = adminHistorySort.direction === 'asc' ? 1 : -1;
+                  const vehicleA = a.vehicle || vehicles?.find(v => v.id === a.vehicleId);
+                  const vehicleB = b.vehicle || vehicles?.find(v => v.id === b.vehicleId);
+                  
+                  switch (adminHistorySort.column) {
+                    case 'gps':
+                      return dir * ((vehicleA?.imei ? 1 : 0) - (vehicleB?.imei ? 1 : 0));
+                    case 'plate':
+                      return dir * (vehicleA?.licensePlate || '').localeCompare(vehicleB?.licensePlate || '');
+                    case 'model':
+                      return dir * (`${vehicleA?.brand} ${vehicleA?.model}` || '').localeCompare(`${vehicleB?.brand} ${vehicleB?.model}` || '');
+                    case 'contract':
+                      return dir * (a.contractNumber || '').localeCompare(b.contractNumber || '');
+                    case 'company':
+                      return dir * (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
+                    case 'pickup':
+                      return dir * (new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+                    case 'return':
+                      return dir * (new Date(a.endDate || 0).getTime() - new Date(b.endDate || 0).getTime());
+                    case 'damage':
+                      const checkA = getDamageCheckInfo(a.id);
+                      const checkB = getDamageCheckInfo(b.id);
+                      return dir * ((checkA ? 1 : 0) - (checkB ? 1 : 0));
+                    case 'kmout':
+                      return dir * ((a.pickupMileage || 0) - (b.pickupMileage || 0));
+                    case 'kmin':
+                      return dir * ((a.returnMileage || 0) - (b.returnMileage || 0));
+                    default:
+                      return 0;
+                  }
+                });
+                
+                // Toggle sort helper
+                const toggleSort = (column: string) => {
+                  setAdminHistorySort(prev => ({
+                    column,
+                    direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+                  }));
+                };
+                
+                // Sort icon helper
+                const SortIcon = ({ column }: { column: string }) => (
+                  <span className="ml-1 inline-flex">
+                    {adminHistorySort.column === column ? (
+                      adminHistorySort.direction === 'asc' ? '↑' : '↓'
+                    ) : (
+                      <span className="text-gray-300">↕</span>
+                    )}
+                  </span>
+                );
+                
                 return (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
@@ -3217,7 +3271,7 @@ export default function ReservationCalendarPage() {
                     </div>
                     
                     <p className="text-sm text-muted-foreground">
-                      Completed rentals ({searchedHistory.length})
+                      Completed rentals ({sortedHistory.length})
                     </p>
                     
                     <div className="border rounded-md overflow-hidden">
@@ -3225,27 +3279,77 @@ export default function ReservationCalendarPage() {
                         <Table>
                           <TableHeader className="bg-muted/50 sticky top-0">
                             <TableRow className="border-b-2">
-                              <TableHead className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap">GPS</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">License Plate</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Make / Model</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Contract #</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Company / Customer</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Pickup</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Return</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Damage Check</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">KM Out</TableHead>
-                              <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">KM In</TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('gps')}
+                              >
+                                GPS<SortIcon column="gps" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('plate')}
+                              >
+                                License Plate<SortIcon column="plate" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('model')}
+                              >
+                                Make / Model<SortIcon column="model" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('contract')}
+                              >
+                                Contract #<SortIcon column="contract" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('company')}
+                              >
+                                Company / Customer<SortIcon column="company" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('pickup')}
+                              >
+                                Pickup<SortIcon column="pickup" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('return')}
+                              >
+                                Return<SortIcon column="return" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('damage')}
+                              >
+                                Damage Check<SortIcon column="damage" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('kmout')}
+                              >
+                                KM Out<SortIcon column="kmout" />
+                              </TableHead>
+                              <TableHead 
+                                className="px-2 py-1 font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                onClick={() => toggleSort('kmin')}
+                              >
+                                KM In<SortIcon column="kmin" />
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {searchedHistory.length === 0 ? (
+                            {sortedHistory.length === 0 ? (
                               <TableRow>
                                 <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                                   No completed rentals found
                                 </TableCell>
                               </TableRow>
                             ) : (
-                              searchedHistory.map((rental) => {
+                              sortedHistory.map((rental) => {
                                 const damageCheck = getDamageCheckInfo(rental.id);
                                 const vehicleData = rental.vehicle || vehicles?.find(v => v.id === rental.vehicleId);
                                 return (
