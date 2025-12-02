@@ -3101,10 +3101,12 @@ export default function ReservationCalendarPage() {
                             ) : (
                               sortedCurrent.map((rental) => (
                                 <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-current-row-${rental.id}`}>
-                                  <TableCell className="font-mono border-r">
-                                    <Badge variant="outline" className="font-mono text-xs">
-                                      {rental.vehicle?.imei || '-'}
-                                    </Badge>
+                                  <TableCell className="border-r text-center">
+                                    {rental.vehicle?.imei ? (
+                                      <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">No</Badge>
+                                    )}
                                   </TableCell>
                                   <TableCell className="font-semibold border-r">
                                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
@@ -3138,8 +3140,8 @@ export default function ReservationCalendarPage() {
             {/* History Tab */}
             <TabsContent value="history" className="mt-4">
               {(() => {
-                // Get completed/returned rentals
-                const historyRentals = reservations?.filter(res => 
+                // Get completed/returned rentals from ALL reservations (not filtered ones)
+                const historyRentals = allReservations?.filter(res => 
                   (res.status === 'returned' || res.status === 'completed') && res.type !== 'maintenance_block'
                 ) || [];
                 
@@ -3242,10 +3244,12 @@ export default function ReservationCalendarPage() {
                                 const damageCheck = getDamageCheckInfo(rental.id);
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-history-row-${rental.id}`}>
-                                    <TableCell className="font-mono border-r">
-                                      <Badge variant="outline" className="font-mono text-xs">
-                                        {rental.vehicle?.imei || '-'}
-                                      </Badge>
+                                    <TableCell className="border-r text-center">
+                                      {rental.vehicle?.imei ? (
+                                        <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="text-xs">No</Badge>
+                                      )}
                                     </TableCell>
                                     <TableCell className="font-semibold border-r">
                                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
