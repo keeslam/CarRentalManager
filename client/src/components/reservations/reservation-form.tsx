@@ -1749,69 +1749,6 @@ export function ReservationForm({
                   )}
                 />
                 
-                {/* Start Mileage and Fuel at Pickup - shown when picked up or later */}
-                {(currentStatus === "picked_up" || currentStatus === "returned" || currentStatus === "completed") && (
-                  <div className="col-span-1">
-                    <div className="flex flex-col space-y-1.5">
-                      <label htmlFor="startMileage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Mileage When Picked Up
-                      </label>
-                      <input
-                        id="startMileage"
-                        type="number"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Enter the starting mileage"
-                        value={startMileage || ""}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || undefined;
-                          setStartMileage(value);
-                          form.setValue("pickupMileage", value as any);
-                        }}
-                      />
-                      <p className="text-[0.8rem] text-muted-foreground">
-                        Enter the vehicle's odometer reading when it was picked up
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {(currentStatus === "picked_up" || currentStatus === "returned" || currentStatus === "completed") && (
-                  <FormField
-                    control={form.control}
-                    name="fuelLevelPickup"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fuel Level at Pickup</FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            const newValue = value === "not_recorded" ? undefined : value;
-                            field.onChange(newValue);
-                            setFuelLevelPickup(newValue);
-                          }} 
-                          value={field.value || "not_recorded"}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-fuel-level-pickup">
-                              <SelectValue placeholder="Select fuel level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="not_recorded">Not recorded</SelectItem>
-                            <SelectItem value="Empty">Empty</SelectItem>
-                            <SelectItem value="1/4">1/4</SelectItem>
-                            <SelectItem value="1/2">1/2</SelectItem>
-                            <SelectItem value="3/4">3/4</SelectItem>
-                            <SelectItem value="Full">Full</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Record the fuel level when vehicle was picked up
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                )}
-                
                 {/* Mileage When Returned - only when status is completed */}
                 {currentStatus === "completed" && (
                   <div className="col-span-1">
