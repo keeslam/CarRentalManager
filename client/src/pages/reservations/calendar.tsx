@@ -169,6 +169,7 @@ export default function ReservationCalendarPage() {
   
   // List view dialog
   const [listDialogOpen, setListDialogOpen] = useState(false);
+  const [openedFromListView, setOpenedFromListView] = useState(false);
   
   // Color coding dialog
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
@@ -1483,6 +1484,11 @@ export default function ReservationCalendarPage() {
           setViewDialogOpen(open);
           if (!open) {
             setSelectedReservation(null);
+            // Reopen list view if we came from there
+            if (openedFromListView) {
+              setListDialogOpen(true);
+              setOpenedFromListView(false);
+            }
           }
         }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -2320,6 +2326,11 @@ export default function ReservationCalendarPage() {
           setEditDialogOpen(open);
           if (!open) {
             setSelectedReservation(null);
+            // Reopen list view if we came from there (and not going to view dialog)
+            if (openedFromListView) {
+              setListDialogOpen(true);
+              setOpenedFromListView(false);
+            }
           }
         }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -2348,15 +2359,22 @@ export default function ReservationCalendarPage() {
                   if (response.ok) {
                     const updatedReservation = await response.json();
                     setSelectedReservation(updatedReservation);
+                    // Keep openedFromListView true so view dialog can return to list when closed
                     setViewDialogOpen(true);
                   }
                 } catch (error) {
                   console.error('Error fetching updated reservation:', error);
+                  // If fetch fails, still reopen list view if we came from there
+                  if (openedFromListView) {
+                    setListDialogOpen(true);
+                    setOpenedFromListView(false);
+                  }
                 }
               }}
               onCancel={() => {
                 // Close the edit dialog and reopen view dialog
                 setEditDialogOpen(false);
+                // Keep openedFromListView true so view dialog can return to list when closed
                 setViewDialogOpen(true);
               }}
             />
@@ -2615,6 +2633,18 @@ export default function ReservationCalendarPage() {
       <ReservationListDialog
         open={listDialogOpen}
         onOpenChange={setListDialogOpen}
+        onViewReservation={(reservation) => {
+          setSelectedReservation(reservation);
+          setOpenedFromListView(true);
+          setListDialogOpen(false);
+          setViewDialogOpen(true);
+        }}
+        onEditReservation={(reservation) => {
+          setSelectedReservation(reservation);
+          setOpenedFromListView(true);
+          setListDialogOpen(false);
+          setEditDialogOpen(true);
+        }}
       />
 
 

@@ -44,9 +44,11 @@ import { format, differenceInDays, addDays, parseISO, startOfToday, endOfToday, 
 interface ReservationListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onViewReservation?: (reservation: Reservation) => void;
+  onEditReservation?: (reservation: Reservation) => void;
 }
 
-export function ReservationListDialog({ open, onOpenChange }: ReservationListDialogProps) {
+export function ReservationListDialog({ open, onOpenChange, onViewReservation, onEditReservation }: ReservationListDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState("all");
@@ -435,8 +437,12 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedViewReservationId(reservation.id);
-                                    setViewDialogOpen(true);
+                                    if (onViewReservation) {
+                                      onViewReservation(reservation);
+                                    } else {
+                                      setSelectedViewReservationId(reservation.id);
+                                      setViewDialogOpen(true);
+                                    }
                                   }}
                                   data-testid={`view-reservation-${reservation.id}`}
                                 >
@@ -446,8 +452,12 @@ export function ReservationListDialog({ open, onOpenChange }: ReservationListDia
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedEditReservationId(reservation.id);
-                                    setEditDialogOpen(true);
+                                    if (onEditReservation) {
+                                      onEditReservation(reservation);
+                                    } else {
+                                      setSelectedEditReservationId(reservation.id);
+                                      setEditDialogOpen(true);
+                                    }
                                   }}
                                   data-testid={`edit-reservation-${reservation.id}`}
                                 >
