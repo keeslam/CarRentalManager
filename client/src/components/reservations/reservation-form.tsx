@@ -63,6 +63,7 @@ import { useTranslation } from 'react-i18next';
 import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display";
 import { DriverDialog } from "@/components/customers/driver-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -241,6 +242,13 @@ export function ReservationForm({
   const [processingOverdue, setProcessingOverdue] = useState<number | null>(null);
   const [viewingReservationId, setViewingReservationId] = useState<number | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  
+  // Pickup/Return dialog workflow states - when user sets status to picked_up/returned, 
+  // we save the reservation first and then open the appropriate dialog
+  const [pendingStatusChange, setPendingStatusChange] = useState<"picked_up" | "returned" | null>(null);
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [pendingDialogReservation, setPendingDialogReservation] = useState<Reservation | null>(null);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -830,7 +838,39 @@ export function ReservationForm({
         }
       });
       
-      // Show success message
+      // Check if we need to trigger pickup/return dialog
+      if (pendingStatusChange && data && data.id) {
+        // Prepare the reservation data for the dialog
+        const reservationForDialog: Reservation = {
+          ...data,
+          vehicle: selectedVehicle || undefined,
+          customer: selectedCustomer || undefined,
+        };
+        
+        setPendingDialogReservation(reservationForDialog);
+        
+        if (pendingStatusChange === "picked_up") {
+          // Open the pickup dialog for proper data entry
+          toast({
+            title: "Opening Pickup Dialog",
+            description: "Please complete the pickup details (contract number, mileage, fuel level).",
+          });
+          setPickupDialogOpen(true);
+        } else if (pendingStatusChange === "returned") {
+          // Open the return dialog for proper data entry
+          toast({
+            title: "Opening Return Dialog",
+            description: "Please complete the return details (mileage, fuel level, damage check).",
+          });
+          setReturnDialogOpen(true);
+        }
+        
+        // Reset the pending status change
+        setPendingStatusChange(null);
+        return; // Don't run the onSuccess callback or navigate yet - dialog will handle it
+      }
+      
+      // Show success message (only if no dialog was triggered)
       toast({
         title: `Reservation ${editMode ? "updated" : "created"} successfully`,
         description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
@@ -905,11 +945,35 @@ export function ReservationForm({
       // Store the form data in case backend returns an overdue error
       setPendingFormData(data);
       
+      // Check if user wants to set status to picked_up or returned
+      // These require the proper dialogs for data entry (contract number, mileage, fuel, damage check)
+      const intendedStatus = data.status || "booked";
+      const currentReservationStatus = initialData?.status || "booked";
+      
+      // Determine if we need to trigger a pickup/return dialog after save
+      let statusForSave = intendedStatus;
+      let triggerDialog: "picked_up" | "returned" | null = null;
+      
+      if (intendedStatus === "picked_up" && currentReservationStatus !== "picked_up") {
+        // User wants picked_up but current status is not picked_up
+        // Save as "booked" first, then trigger pickup dialog
+        statusForSave = editMode ? currentReservationStatus : "booked";
+        triggerDialog = "picked_up";
+      } else if (intendedStatus === "returned" && currentReservationStatus !== "returned" && currentReservationStatus !== "completed") {
+        // User wants returned but current status is not returned or completed
+        // Save current status first, then trigger return dialog
+        statusForSave = editMode ? currentReservationStatus : "booked";
+        triggerDialog = "returned";
+      }
+      
+      // Store the pending status change for onSuccess to handle
+      setPendingStatusChange(triggerDialog);
+      
       // Prepare submission data for both edit and create modes
       const submissionData: any = {
         ...data,
         endDate: data.isOpenEnded ? undefined : data.endDate,
-        status: editMode ? data.status : "booked", // New reservations start as "booked"
+        status: statusForSave,
       };
       delete submissionData.isOpenEnded;
       // Contract number is assigned during pickup in status-change-dialog, not here
@@ -2594,6 +2658,108 @@ export function ReservationForm({
       onOpenChange={setViewDialogOpen}
       reservationId={viewingReservationId}
     />
+    
+    {/* Pickup Dialog - triggered when status is set to picked_up */}
+    {pendingDialogReservation && (
+      <PickupDialog
+        open={pickupDialogOpen}
+        onOpenChange={(open) => {
+          setPickupDialogOpen(open);
+          if (!open) {
+            // Dialog was closed/cancelled - reset states
+            setPendingDialogReservation(null);
+            // Update form status back to booked since pickup was cancelled
+            form.setValue("status", initialData?.status || "booked");
+            setCurrentStatus(initialData?.status || "booked");
+          }
+        }}
+        reservation={pendingDialogReservation}
+        onSuccess={async () => {
+          // Pickup completed successfully
+          setPickupDialogOpen(false);
+          
+          // Update form status to picked_up
+          form.setValue("status", "picked_up");
+          setCurrentStatus("picked_up");
+          
+          // Show success message
+          toast({
+            title: "Vehicle Picked Up",
+            description: "Pickup completed successfully with contract number and mileage recorded.",
+          });
+          
+          // Invalidate queries
+          await invalidateByPrefix('/api/reservations');
+          await invalidateByPrefix('/api/vehicles');
+          
+          // Fetch updated reservation to pass to callback
+          if (onSuccess && pendingDialogReservation) {
+            try {
+              const response = await fetch(`/api/reservations/${pendingDialogReservation.id}`, { credentials: 'include' });
+              if (response.ok) {
+                const updatedReservation = await response.json();
+                onSuccess(updatedReservation);
+              }
+            } catch (e) {
+              console.error('Failed to fetch updated reservation:', e);
+            }
+          }
+          
+          setPendingDialogReservation(null);
+        }}
+      />
+    )}
+    
+    {/* Return Dialog - triggered when status is set to returned */}
+    {pendingDialogReservation && (
+      <ReturnDialog
+        open={returnDialogOpen}
+        onOpenChange={(open) => {
+          setReturnDialogOpen(open);
+          if (!open) {
+            // Dialog was closed/cancelled - reset states
+            setPendingDialogReservation(null);
+            // Update form status back to picked_up since return was cancelled
+            form.setValue("status", initialData?.status || "picked_up");
+            setCurrentStatus(initialData?.status || "picked_up");
+          }
+        }}
+        reservation={pendingDialogReservation}
+        onSuccess={async () => {
+          // Return completed successfully
+          setReturnDialogOpen(false);
+          
+          // Update form status to returned
+          form.setValue("status", "returned");
+          setCurrentStatus("returned");
+          
+          // Show success message
+          toast({
+            title: "Vehicle Returned",
+            description: "Return completed successfully with mileage and fuel level recorded.",
+          });
+          
+          // Invalidate queries
+          await invalidateByPrefix('/api/reservations');
+          await invalidateByPrefix('/api/vehicles');
+          
+          // Fetch updated reservation to pass to callback
+          if (onSuccess && pendingDialogReservation) {
+            try {
+              const response = await fetch(`/api/reservations/${pendingDialogReservation.id}`, { credentials: 'include' });
+              if (response.ok) {
+                const updatedReservation = await response.json();
+                onSuccess(updatedReservation);
+              }
+            } catch (e) {
+              console.error('Failed to fetch updated reservation:', e);
+            }
+          }
+          
+          setPendingDialogReservation(null);
+        }}
+      />
+    )}
     </>
   );
 }
