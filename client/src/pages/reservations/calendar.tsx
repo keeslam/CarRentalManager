@@ -198,6 +198,8 @@ export default function ReservationCalendarPage() {
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
   const [adminHistorySearch, setAdminHistorySearch] = useState('');
   const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('30days');
+  const [adminCurrentSearch, setAdminCurrentSearch] = useState('');
+  const [adminCurrentSort, setAdminCurrentSort] = useState<'pickup' | 'plate' | 'company' | 'contract'>('pickup');
   
   // Drag and drop state
   const [draggedReservation, setDraggedReservation] = useState<Reservation | null>(null);
@@ -561,6 +563,12 @@ export default function ReservationCalendarPage() {
   const { data: recentDamageChecks } = useQuery<any[]>({
     queryKey: [`/api/interactive-damage-checks/vehicle/${selectedReservation?.vehicleId}/customer/${selectedReservation?.customerId}`],
     enabled: !!selectedReservation?.vehicleId && !!selectedReservation?.customerId
+  });
+
+  // Fetch all damage checks for admin history view
+  const { data: allDamageChecks = [] } = useQuery<any[]>({
+    queryKey: ['/api/interactive-damage-checks'],
+    enabled: adminDialogOpen
   });
 
   // Auto-open reservation dialog from sessionStorage (from notifications)
@@ -2980,7 +2988,7 @@ export default function ReservationCalendarPage() {
 
       {/* Administration Dialog for External Invoicing */}
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[85vh]">
+        <DialogContent className="max-w-7xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -3011,73 +3019,117 @@ export default function ReservationCalendarPage() {
                   res.status === 'picked_up' && res.type !== 'maintenance_block'
                 ) || [];
                 
+                // Apply search filter
+                const searchedCurrent = currentRentals.filter(rental => {
+                  if (!adminCurrentSearch) return true;
+                  const search = adminCurrentSearch.toLowerCase();
+                  return (
+                    rental.vehicle?.licensePlate?.toLowerCase().includes(search) ||
+                    rental.vehicle?.brand?.toLowerCase().includes(search) ||
+                    rental.vehicle?.model?.toLowerCase().includes(search) ||
+                    rental.customer?.companyName?.toLowerCase().includes(search) ||
+                    rental.customer?.name?.toLowerCase().includes(search) ||
+                    rental.contractNumber?.toLowerCase().includes(search) ||
+                    rental.vehicle?.imei?.toLowerCase().includes(search)
+                  );
+                });
+                
+                // Apply sort
+                const sortedCurrent = [...searchedCurrent].sort((a, b) => {
+                  switch (adminCurrentSort) {
+                    case 'plate':
+                      return (a.vehicle?.licensePlate || '').localeCompare(b.vehicle?.licensePlate || '');
+                    case 'company':
+                      return (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
+                    case 'contract':
+                      return (a.contractNumber || '').localeCompare(b.contractNumber || '');
+                    case 'pickup':
+                    default:
+                      return new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime();
+                  }
+                });
+                
                 return (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">
-                        Vehicles currently out on rental ({currentRentals.length})
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search by plate, GPS, company, contract..."
+                          value={adminCurrentSearch}
+                          onChange={(e) => setAdminCurrentSearch(e.target.value)}
+                          className="h-9"
+                          data-testid="input-admin-current-search"
+                        />
+                      </div>
+                      <Select value={adminCurrentSort} onValueChange={(v: any) => setAdminCurrentSort(v)}>
+                        <SelectTrigger className="w-[160px] h-9">
+                          <SelectValue placeholder="Sort by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pickup">Pickup Date</SelectItem>
+                          <SelectItem value="plate">License Plate</SelectItem>
+                          <SelectItem value="company">Company</SelectItem>
+                          <SelectItem value="contract">Contract #</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
-                    <ScrollArea className="h-[400px] rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[80px]">GPS</TableHead>
-                            <TableHead className="w-[100px]">License Plate</TableHead>
-                            <TableHead>Make / Model</TableHead>
-                            <TableHead className="w-[100px]">Contract #</TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead className="w-[100px]">Pickup Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentRentals.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                No vehicles currently rented
-                              </TableCell>
+                    <p className="text-sm text-muted-foreground">
+                      Vehicles currently out on rental ({sortedCurrent.length})
+                    </p>
+                    
+                    <div className="border rounded-md overflow-hidden">
+                      <ScrollArea className="h-[400px]">
+                        <Table>
+                          <TableHeader className="bg-muted/50 sticky top-0">
+                            <TableRow className="border-b-2">
+                              <TableHead className="w-[100px] border-r font-semibold">GPS</TableHead>
+                              <TableHead className="w-[120px] border-r font-semibold">License Plate</TableHead>
+                              <TableHead className="border-r font-semibold">Make / Model</TableHead>
+                              <TableHead className="w-[110px] border-r font-semibold">Contract #</TableHead>
+                              <TableHead className="border-r font-semibold">Company / Customer</TableHead>
+                              <TableHead className="w-[110px] font-semibold">Pickup Date</TableHead>
                             </TableRow>
-                          ) : (
-                            currentRentals.map((rental) => (
-                              <TableRow key={rental.id} data-testid={`admin-current-row-${rental.id}`}>
-                                <TableCell className="font-mono">
-                                  <Badge variant="outline" className="font-mono">
-                                    {rental.vehicle?.imei || '-'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-semibold">
-                                  <span className="bg-primary/10 px-2 py-1 rounded text-sm">
-                                    {formatLicensePlate(rental.vehicle?.licensePlate || '')}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Car className="h-4 w-4 text-muted-foreground" />
-                                    {rental.vehicle?.brand} {rental.vehicle?.model}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="font-mono font-semibold">
-                                  {rental.contractNumber || '-'}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Building className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                    {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
-                                  </div>
+                          </TableHeader>
+                          <TableBody>
+                            {sortedCurrent.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                  No vehicles currently rented
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
+                            ) : (
+                              sortedCurrent.map((rental) => (
+                                <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-current-row-${rental.id}`}>
+                                  <TableCell className="font-mono border-r">
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                      {rental.vehicle?.imei || '-'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-semibold border-r">
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                      {formatLicensePlate(rental.vehicle?.licensePlate || '')}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="border-r">
+                                    {rental.vehicle?.brand} {rental.vehicle?.model}
+                                  </TableCell>
+                                  <TableCell className="font-mono font-semibold border-r">
+                                    {rental.contractNumber || '-'}
+                                  </TableCell>
+                                  <TableCell className="border-r">
+                                    <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
                   </div>
                 );
               })()}
@@ -3121,12 +3173,23 @@ export default function ReservationCalendarPage() {
                   );
                 });
                 
+                // Helper to get damage check info for a reservation
+                const getDamageCheckInfo = (reservationId: number) => {
+                  const check = allDamageChecks.find((c: any) => c.reservationId === reservationId);
+                  if (!check) return null;
+                  return {
+                    exists: true,
+                    date: check.checkDate || check.createdAt,
+                    completedBy: check.completedBy || 'Unknown'
+                  };
+                };
+                
                 return (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
                         <Input
-                          placeholder="Search by plate, company, contract..."
+                          placeholder="Search by plate, GPS, company, contract..."
                           value={adminHistorySearch}
                           onChange={(e) => setAdminHistorySearch(e.target.value)}
                           className="h-9"
@@ -3150,66 +3213,89 @@ export default function ReservationCalendarPage() {
                       Completed rentals ({searchedHistory.length})
                     </p>
                     
-                    <ScrollArea className="h-[350px] rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[80px]">GPS</TableHead>
-                            <TableHead className="w-[100px]">License Plate</TableHead>
-                            <TableHead>Make / Model</TableHead>
-                            <TableHead className="w-[100px]">Contract #</TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead className="w-[100px]">Pickup Date</TableHead>
-                            <TableHead className="w-[100px]">Return Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {searchedHistory.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                No completed rentals found
-                              </TableCell>
+                    <div className="border rounded-md overflow-hidden">
+                      <ScrollArea className="h-[350px]">
+                        <Table>
+                          <TableHeader className="bg-muted/50 sticky top-0">
+                            <TableRow className="border-b-2">
+                              <TableHead className="w-[90px] border-r font-semibold">GPS</TableHead>
+                              <TableHead className="w-[110px] border-r font-semibold">License Plate</TableHead>
+                              <TableHead className="w-[140px] border-r font-semibold">Make / Model</TableHead>
+                              <TableHead className="w-[90px] border-r font-semibold">Contract #</TableHead>
+                              <TableHead className="w-[150px] border-r font-semibold">Company / Customer</TableHead>
+                              <TableHead className="w-[90px] border-r font-semibold">Pickup Date</TableHead>
+                              <TableHead className="w-[90px] border-r font-semibold">Return Date</TableHead>
+                              <TableHead className="w-[150px] border-r font-semibold">Damage Check</TableHead>
+                              <TableHead className="w-[80px] border-r font-semibold">KM Pickup</TableHead>
+                              <TableHead className="w-[80px] font-semibold">KM Return</TableHead>
                             </TableRow>
-                          ) : (
-                            searchedHistory.map((rental) => (
-                              <TableRow key={rental.id} data-testid={`admin-history-row-${rental.id}`}>
-                                <TableCell className="font-mono">
-                                  <Badge variant="outline" className="font-mono">
-                                    {rental.vehicle?.imei || '-'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-semibold">
-                                  <span className="bg-primary/10 px-2 py-1 rounded text-sm">
-                                    {formatLicensePlate(rental.vehicle?.licensePlate || '')}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Car className="h-4 w-4 text-muted-foreground" />
-                                    {rental.vehicle?.brand} {rental.vehicle?.model}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="font-mono font-semibold">
-                                  {rental.contractNumber || '-'}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Building className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
-                                </TableCell>
-                                <TableCell>
-                                  {rental.endDate ? format(parseISO(rental.endDate), 'dd MMM yyyy') : '-'}
+                          </TableHeader>
+                          <TableBody>
+                            {searchedHistory.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                                  No completed rentals found
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
+                            ) : (
+                              searchedHistory.map((rental) => {
+                                const damageCheck = getDamageCheckInfo(rental.id);
+                                return (
+                                  <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-history-row-${rental.id}`}>
+                                    <TableCell className="font-mono border-r">
+                                      <Badge variant="outline" className="font-mono text-xs">
+                                        {rental.vehicle?.imei || '-'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-semibold border-r">
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                        {formatLicensePlate(rental.vehicle?.licensePlate || '')}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="border-r text-sm">
+                                      {rental.vehicle?.brand} {rental.vehicle?.model}
+                                    </TableCell>
+                                    <TableCell className="font-mono font-semibold border-r">
+                                      {rental.contractNumber || '-'}
+                                    </TableCell>
+                                    <TableCell className="border-r">
+                                      <span className="font-medium text-sm">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
+                                    </TableCell>
+                                    <TableCell className="border-r text-sm">
+                                      {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yy') : '-'}
+                                    </TableCell>
+                                    <TableCell className="border-r text-sm">
+                                      {rental.endDate ? format(parseISO(rental.endDate), 'dd MMM yy') : '-'}
+                                    </TableCell>
+                                    <TableCell className="border-r">
+                                      {damageCheck ? (
+                                        <div className="text-xs">
+                                          <Badge variant="default" className="bg-green-100 text-green-800 text-xs mb-0.5">Yes</Badge>
+                                          <div className="text-muted-foreground">
+                                            {damageCheck.date ? format(parseISO(damageCheck.date), 'dd MMM yy') : '-'}
+                                          </div>
+                                          <div className="text-muted-foreground truncate max-w-[100px]" title={damageCheck.completedBy}>
+                                            {damageCheck.completedBy}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <Badge variant="secondary" className="text-xs">No</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="border-r text-sm font-mono">
+                                      {rental.pickupMileage?.toLocaleString() || '-'}
+                                    </TableCell>
+                                    <TableCell className="text-sm font-mono">
+                                      {rental.returnMileage?.toLocaleString() || '-'}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })
+                            )}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
                   </div>
                 );
               })()}
