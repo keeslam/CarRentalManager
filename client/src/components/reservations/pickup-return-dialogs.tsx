@@ -46,6 +46,22 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
+  const [uploadedPaperCheckIds, setUploadedPaperCheckIds] = useState<number[]>([]);
+
+  // Cleanup function to delete uploaded paper checks on cancel
+  const cleanupUploadedPaperChecks = async () => {
+    for (const docId of uploadedPaperCheckIds) {
+      try {
+        await fetch(`/api/documents/${docId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Failed to cleanup paper damage check:', error);
+      }
+    }
+    setUploadedPaperCheckIds([]);
+  };
 
   // Fetch available vehicles for TBD spare selection
   const { data: vehicles } = useQuery<any[]>({
@@ -197,6 +213,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
       setOverridePassword("");
       setPendingMileage(null);
+      setUploadedPaperCheckIds([]); // Clear tracked IDs - documents are now permanent
       
       // Call the success callback first (to reopen view dialog)
       if (onSuccess) {
@@ -704,6 +721,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                               throw new Error('Upload failed');
                             }
                             
+                            const uploadedDoc = await response.json();
+                            setUploadedPaperCheckIds(prev => [...prev, uploadedDoc.id]);
                             await refetchDocuments();
                             toast({
                               title: "Success",
@@ -788,6 +807,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                               throw new Error('Upload failed');
                             }
                             
+                            const uploadedDoc = await response.json();
+                            setUploadedPaperCheckIds(prev => [...prev, uploadedDoc.id]);
                             await refetchDocuments();
                             toast({
                               title: "Success",
@@ -832,7 +853,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={async () => {
+                  await cleanupUploadedPaperChecks();
+                  onOpenChange(false);
+                }}
                 disabled={pickupMutation.isPending}
                 data-testid="button-cancel-pickup"
               >
@@ -968,6 +992,22 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
+  const [uploadedPaperCheckIds, setUploadedPaperCheckIds] = useState<number[]>([]);
+
+  // Cleanup function to delete uploaded paper checks on cancel
+  const cleanupUploadedPaperChecks = async () => {
+    for (const docId of uploadedPaperCheckIds) {
+      try {
+        await fetch(`/api/documents/${docId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Failed to cleanup paper damage check:', error);
+      }
+    }
+    setUploadedPaperCheckIds([]);
+  };
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
@@ -1026,6 +1066,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
       await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+      setUploadedPaperCheckIds([]); // Clear tracked IDs - documents are now permanent
       
       // Call the success callback first (to reopen view dialog)
       if (onSuccess) {
@@ -1391,6 +1432,8 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                               throw new Error('Upload failed');
                             }
                             
+                            const uploadedDoc = await response.json();
+                            setUploadedPaperCheckIds(prev => [...prev, uploadedDoc.id]);
                             await refetchDocuments();
                             toast({
                               title: "Success",
@@ -1474,6 +1517,8 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                               throw new Error('Upload failed');
                             }
                             
+                            const uploadedDoc = await response.json();
+                            setUploadedPaperCheckIds(prev => [...prev, uploadedDoc.id]);
                             await refetchDocuments();
                             toast({
                               title: "Success",
@@ -1519,7 +1564,10 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={async () => {
+                  await cleanupUploadedPaperChecks();
+                  onOpenChange(false);
+                }}
                 disabled={returnMutation.isPending}
                 data-testid="button-cancel-return"
               >
