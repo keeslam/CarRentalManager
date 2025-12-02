@@ -2092,7 +2092,7 @@ export default function ReservationCalendarPage() {
 
               {/* Damage Checks Section */}
               {selectedReservation?.vehicleId && (
-                <div className="bg-purple-50 border border-purple-200 rounded-md p-2.5">
+                <div className="bg-purple-50 border border-purple-200 rounded-md p-2.5 text-[20px]">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-[10px] font-medium text-purple-700 uppercase flex items-center gap-1.5">
                       <ClipboardCheck className="h-3.5 w-3.5" />
