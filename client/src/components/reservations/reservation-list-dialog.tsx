@@ -22,7 +22,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { Reservation, Vehicle } from "@shared/schema";
@@ -230,187 +229,81 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     return days === 1 ? '1 day' : `${days} days`;
   };
 
-  // Reservation Card Component
+  // Reservation Card Component - Compact
   const ReservationCard = ({ reservation }: { reservation: Reservation }) => {
     const duration = getDuration(reservation.startDate, reservation.endDate);
     
     return (
-      <div className="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow" data-testid={`reservation-card-${reservation.id}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 border-b rounded-t-lg">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-lg">#{reservation.id}</span>
-            {reservation.contractNumber && (
-              <span className="text-sm text-gray-600">
-                Contract: <span className="font-mono font-semibold">{reservation.contractNumber}</span>
-              </span>
-            )}
+      <div className="bg-white border rounded-md hover:bg-gray-50 transition-colors" data-testid={`reservation-card-${reservation.id}`}>
+        <div className="p-2 grid grid-cols-[auto_1fr_1fr_1fr_1fr_auto] gap-3 items-center">
+          {/* ID & Status */}
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-sm">#{reservation.id}</span>
             {getStatusBadge(reservation.status)}
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleView(reservation)}
-              data-testid={`view-btn-${reservation.id}`}
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
+
+          {/* Vehicle */}
+          <div className="min-w-0">
+            <div className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-mono font-bold inline-block">
+              {formatLicensePlate(reservation.vehicle?.licensePlate || '-')}
+            </div>
+            <div className="text-xs text-gray-600 truncate">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
+          </div>
+
+          {/* Customer */}
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">
+              {reservation.customer?.companyName || reservation.customer?.name || '-'}
+            </div>
+            {reservation.contractNumber && (
+              <div className="text-xs text-gray-500 font-mono">{reservation.contractNumber}</div>
+            )}
+          </div>
+
+          {/* Dates */}
+          <div className="text-xs">
+            <div className="flex items-center gap-1">
+              <span className="text-gray-500">Out:</span>
+              <span className="font-medium">{reservation.startDate ? format(parseISO(reservation.startDate), 'dd MMM yy') : '-'}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-gray-500">In:</span>
+              <span className="font-medium">{reservation.endDate ? format(parseISO(reservation.endDate), 'dd MMM yy') : '-'}</span>
+              {duration && <span className="text-gray-400">({duration})</span>}
+            </div>
+          </div>
+
+          {/* Mileage & Price */}
+          <div className="text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">KM:</span>
+              <span className="font-mono">{reservation.pickupMileage?.toLocaleString() || '-'}</span>
+              <span className="text-gray-400">→</span>
+              <span className="font-mono">{reservation.returnMileage?.toLocaleString() || '-'}</span>
+            </div>
+            {reservation.totalPrice && (
+              <div className="font-semibold text-green-700">{formatCurrency(Number(reservation.totalPrice))}</div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleView(reservation)} data-testid={`view-btn-${reservation.id}`}>
+              <Eye className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(reservation)}
-              data-testid={`edit-btn-${reservation.id}`}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(reservation)} data-testid={`edit-btn-${reservation.id}`}>
+              <Edit className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => handleDelete(reservation)}
-              data-testid={`delete-btn-${reservation.id}`}
-            >
-              <Trash2 className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(reservation)} data-testid={`delete-btn-${reservation.id}`}>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
-
-        {/* Content Grid */}
-        <div className="p-4 grid grid-cols-4 gap-4">
-          {/* Vehicle Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Car className="h-4 w-4" />
-              Vehicle
-            </div>
-            <div className="space-y-1">
-              <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono font-bold inline-block">
-                {formatLicensePlate(reservation.vehicle?.licensePlate || '-')}
-              </div>
-              <div className="text-sm">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
-              {reservation.vehicle?.vehicleType && (
-                <div className="text-xs text-gray-500">{reservation.vehicle.vehicleType}</div>
-              )}
-            </div>
-          </div>
-
-          {/* Customer Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <User className="h-4 w-4" />
-              Customer
-            </div>
-            <div className="space-y-1">
-              {reservation.customer?.companyName && (
-                <div className="flex items-center gap-1 text-sm">
-                  <Building className="h-3 w-3 text-gray-400" />
-                  <span className="font-medium">{reservation.customer.companyName}</span>
-                </div>
-              )}
-              <div className="text-sm font-medium">{reservation.customer?.name || '-'}</div>
-              {reservation.customer?.phone && (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Phone className="h-3 w-3" />
-                  {reservation.customer.phone}
-                </div>
-              )}
-              {reservation.driver && (
-                <div className="text-xs text-gray-600 mt-1">
-                  Driver: {reservation.driver.firstName} {reservation.driver.lastName}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dates Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Calendar className="h-4 w-4" />
-              Rental Period
-            </div>
-            <div className="space-y-1">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <div className="text-xs text-gray-500">Pickup</div>
-                  <div className="font-medium">
-                    {reservation.startDate ? format(parseISO(reservation.startDate), 'dd MMM yyyy') : '-'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Return</div>
-                  <div className="font-medium">
-                    {reservation.endDate ? format(parseISO(reservation.endDate), 'dd MMM yyyy') : '-'}
-                  </div>
-                </div>
-              </div>
-              {duration && (
-                <div className="flex items-center gap-1 text-xs text-gray-600">
-                  <Clock className="h-3 w-3" />
-                  {duration}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Details Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <FileText className="h-4 w-4" />
-              Details
-            </div>
-            <div className="space-y-1 text-sm">
-              {/* Mileage */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-gray-500">KM Out</div>
-                  <div className="font-mono">{reservation.pickupMileage?.toLocaleString() || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">KM In</div>
-                  <div className="font-mono">{reservation.returnMileage?.toLocaleString() || '-'}</div>
-                </div>
-              </div>
-              
-              {/* Fuel */}
-              {(reservation.fuelLevelPickup || reservation.fuelLevelReturn) && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Fuel className="h-3 w-3 text-gray-400" />
-                  <span className="text-xs">
-                    {reservation.fuelLevelPickup || '-'} → {reservation.fuelLevelReturn || '-'}
-                  </span>
-                </div>
-              )}
-              
-              {/* Price */}
-              {reservation.totalPrice && (
-                <div className="mt-1">
-                  <span className="text-xs text-gray-500">Total: </span>
-                  <span className="font-semibold text-green-700">
-                    {formatCurrency(Number(reservation.totalPrice))}
-                  </span>
-                </div>
-              )}
-
-              {/* Delivery */}
-              {reservation.deliveryRequired && (
-                <div className="flex items-center gap-1 mt-1 text-xs text-orange-600">
-                  <MapPin className="h-3 w-3" />
-                  Delivery: {reservation.deliveryAddress || 'Yes'}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Notes */}
+        
+        {/* Notes - inline if present */}
         {reservation.notes && (
-          <div className="px-4 pb-3">
-            <div className="text-xs text-gray-500 bg-gray-50 rounded p-2 italic">
-              {reservation.notes}
-            </div>
+          <div className="px-2 pb-2 -mt-1">
+            <div className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1 italic truncate">{reservation.notes}</div>
           </div>
         )}
       </div>
@@ -441,124 +334,92 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
             </TabsList>
 
             {/* Current Reservations Tab */}
-            <TabsContent value="current" className="mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
+            <TabsContent value="current" className="mt-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
                   <Input
                     placeholder="Search by plate, customer, contract, ID..."
                     value={currentSearch}
                     onChange={(e) => setCurrentSearch(e.target.value)}
-                    className="flex-1 h-9"
+                    className="flex-1 h-8 text-sm"
                     data-testid="input-current-search"
                   />
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    Sort:
-                    <Button
-                      variant={currentSort.column === 'pickup' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleCurrentSort('pickup')}
-                    >
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Button variant={currentSort.column === 'pickup' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleCurrentSort('pickup')}>
                       Pickup {currentSort.column === 'pickup' && (currentSort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
-                    <Button
-                      variant={currentSort.column === 'customer' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleCurrentSort('customer')}
-                    >
+                    <Button variant={currentSort.column === 'customer' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleCurrentSort('customer')}>
                       Customer {currentSort.column === 'customer' && (currentSort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
-                    <Button
-                      variant={currentSort.column === 'plate' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleCurrentSort('plate')}
-                    >
+                    <Button variant={currentSort.column === 'plate' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleCurrentSort('plate')}>
                       Plate {currentSort.column === 'plate' && (currentSort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
                   </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {filteredCurrentReservations.length} active
+                  </span>
                 </div>
                 
-                <p className="text-sm text-muted-foreground">
-                  Active reservations ({filteredCurrentReservations.length})
-                </p>
-                
-                <ScrollArea className="h-[500px]">
-                  <div className="space-y-3 pr-4">
-                    {isLoadingReservations ? (
-                      <div className="text-center py-8 text-gray-500">
-                        Loading reservations...
-                      </div>
-                    ) : filteredCurrentReservations.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        No active reservations found
-                      </div>
-                    ) : (
-                      filteredCurrentReservations.map((reservation) => (
-                        <ReservationCard key={reservation.id} reservation={reservation} />
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
+                <div className="border rounded-md overflow-hidden">
+                  <ScrollArea className="h-[calc(70vh-180px)]">
+                    <div className="divide-y">
+                      {isLoadingReservations ? (
+                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                      ) : filteredCurrentReservations.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No active reservations found</div>
+                      ) : (
+                        filteredCurrentReservations.map((reservation) => (
+                          <ReservationCard key={reservation.id} reservation={reservation} />
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </TabsContent>
 
             {/* History Tab */}
-            <TabsContent value="history" className="mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
+            <TabsContent value="history" className="mt-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
                   <Input
                     placeholder="Search by plate, customer, contract, ID..."
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
-                    className="flex-1 h-9"
+                    className="flex-1 h-8 text-sm"
                     data-testid="input-history-search"
                   />
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    Sort:
-                    <Button
-                      variant={historySort.column === 'return' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleHistorySort('return')}
-                    >
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Button variant={historySort.column === 'return' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleHistorySort('return')}>
                       Return {historySort.column === 'return' && (historySort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
-                    <Button
-                      variant={historySort.column === 'customer' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleHistorySort('customer')}
-                    >
+                    <Button variant={historySort.column === 'customer' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleHistorySort('customer')}>
                       Customer {historySort.column === 'customer' && (historySort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
-                    <Button
-                      variant={historySort.column === 'plate' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => toggleHistorySort('plate')}
-                    >
+                    <Button variant={historySort.column === 'plate' ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs px-2" onClick={() => toggleHistorySort('plate')}>
                       Plate {historySort.column === 'plate' && (historySort.direction === 'asc' ? '↑' : '↓')}
                     </Button>
                   </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {filteredHistoryReservations.length} completed
+                  </span>
                 </div>
                 
-                <p className="text-sm text-muted-foreground">
-                  Completed reservations ({filteredHistoryReservations.length})
-                </p>
-                
-                <ScrollArea className="h-[500px]">
-                  <div className="space-y-3 pr-4">
-                    {isLoadingReservations ? (
-                      <div className="text-center py-8 text-gray-500">
-                        Loading reservations...
-                      </div>
-                    ) : filteredHistoryReservations.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        No completed reservations found
-                      </div>
-                    ) : (
-                      filteredHistoryReservations.map((reservation) => (
-                        <ReservationCard key={reservation.id} reservation={reservation} />
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
+                <div className="border rounded-md overflow-hidden">
+                  <ScrollArea className="h-[calc(70vh-180px)]">
+                    <div className="divide-y">
+                      {isLoadingReservations ? (
+                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                      ) : filteredHistoryReservations.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No completed reservations found</div>
+                      ) : (
+                        filteredHistoryReservations.map((reservation) => (
+                          <ReservationCard key={reservation.id} reservation={reservation} />
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
