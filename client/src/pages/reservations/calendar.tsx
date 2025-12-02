@@ -3140,10 +3140,12 @@ export default function ReservationCalendarPage() {
             {/* History Tab */}
             <TabsContent value="history" className="mt-4">
               {(() => {
-                // Get completed/returned rentals from ALL reservations (not filtered ones)
-                const historyRentals = allReservations?.filter(res => 
-                  (res.status === 'returned' || res.status === 'completed') && res.type !== 'maintenance_block'
-                ) || [];
+                // Use completedRentals which fetches ALL completed/returned rentals (not date-filtered)
+                // Enrich with vehicle data from vehicles array
+                const historyRentals = completedRentals.map(rental => ({
+                  ...rental,
+                  vehicle: rental.vehicle || vehicles?.find(v => v.id === rental.vehicleId)
+                }));
                 
                 // Apply date filter
                 const now = new Date();
