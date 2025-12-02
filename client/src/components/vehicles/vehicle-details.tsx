@@ -51,7 +51,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download, ChevronDown, ChevronRight, ChevronLeft } from "lucide-react";
+import { Bell, Mail, User, Eye, Edit, Calendar, Plus, Upload, X, FileCheck, Printer, Trash2, Download, ChevronDown, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -2992,7 +2992,22 @@ function AvailabilityToggleDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState(vehicle.availabilityStatus || 'available');
+  const [showRentedWarning, setShowRentedWarning] = useState(false);
   const { toast } = useToast();
+  
+  // Query reservations for this vehicle to check for active rentals
+  const { data: vehicleReservations } = useQuery<Reservation[]>({
+    queryKey: [`/api/reservations/vehicle/${vehicle.id}`],
+    enabled: open, // Only fetch when dialog is open
+  });
+  
+  // Find active reservations
+  const activePickedUpReservation = vehicleReservations?.find(
+    (res) => res.status === 'picked_up'
+  );
+  const activeBookedReservation = vehicleReservations?.find(
+    (res) => res.status === 'booked'
+  );
   
   const updateAvailabilityMutation = useMutation({
     mutationFn: async (availabilityStatus: string) => {
@@ -3013,6 +3028,7 @@ function AvailabilityToggleDialog({
       });
       onSuccess();
       setOpen(false);
+      setShowRentedWarning(false);
     },
     onError: (error: any) => {
       toast({
@@ -3023,12 +3039,96 @@ function AvailabilityToggleDialog({
     }
   });
 
+  const handleStatusChange = (newStatus: string) => {
+    setAvailabilityStatus(newStatus);
+    // Reset warning when changing to non-rented status
+    if (newStatus !== 'rented') {
+      setShowRentedWarning(false);
+    }
+  };
+
   const handleSave = () => {
+    // Safety check for "rented" status
+    if (availabilityStatus === 'rented') {
+      // Check if there's an active picked_up reservation
+      if (!activePickedUpReservation) {
+        // No active rental - show warning
+        setShowRentedWarning(true);
+        return;
+      }
+      
+      // Check if the picked_up reservation has required data
+      const hasContractNumber = !!activePickedUpReservation.contractNumber;
+      const hasPickupMileage = activePickedUpReservation.pickupMileage !== null && activePickedUpReservation.pickupMileage !== undefined;
+      
+      if (!hasContractNumber || !hasPickupMileage) {
+        setShowRentedWarning(true);
+        return;
+      }
+    }
+    
+    // All checks passed
+    updateAvailabilityMutation.mutate(availabilityStatus);
+  };
+  
+  const handleForceChange = () => {
+    // User confirmed they want to force the change
     updateAvailabilityMutation.mutate(availabilityStatus);
   };
 
+  // Get warning details
+  const getWarningDetails = () => {
+    if (availabilityStatus !== 'rented') return null;
+    
+    if (!activePickedUpReservation && !activeBookedReservation) {
+      return {
+        type: 'error' as const,
+        title: 'No Active Reservation',
+        message: 'This vehicle has no active reservation. Setting the status to "Rented" without a reservation will cause data inconsistency.',
+        suggestion: 'Create a reservation and complete the pickup process from the Calendar instead.',
+        canForce: false,
+      };
+    }
+    
+    if (!activePickedUpReservation && activeBookedReservation) {
+      return {
+        type: 'warning' as const,
+        title: 'Reservation Not Picked Up',
+        message: 'This vehicle has a booked reservation but the pickup has not been completed. The pickup process collects important information like contract number and mileage.',
+        suggestion: 'Use the Calendar to complete the pickup process for this reservation instead.',
+        canForce: false,
+      };
+    }
+    
+    if (activePickedUpReservation) {
+      const missingItems = [];
+      if (!activePickedUpReservation.contractNumber) missingItems.push('Contract Number');
+      if (activePickedUpReservation.pickupMileage === null || activePickedUpReservation.pickupMileage === undefined) missingItems.push('Pickup Mileage');
+      
+      if (missingItems.length > 0) {
+        return {
+          type: 'warning' as const,
+          title: 'Missing Pickup Information',
+          message: `The active reservation is missing: ${missingItems.join(', ')}. This information is typically collected during the pickup process.`,
+          suggestion: 'Consider completing these details before marking the vehicle as rented.',
+          canForce: true,
+        };
+      }
+    }
+    
+    return null;
+  };
+  
+  const warningDetails = showRentedWarning ? getWarningDetails() : null;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setShowRentedWarning(false);
+        setAvailabilityStatus(vehicle.availabilityStatus || 'available');
+      }
+    }}>
       <DialogTrigger asChild>
         <Button 
           variant="outline" 
@@ -3050,7 +3150,7 @@ function AvailabilityToggleDialog({
         <div className="py-6">
           <div className="space-y-4">
             <Label className="text-base font-semibold">Availability Status</Label>
-            <Select value={availabilityStatus} onValueChange={setAvailabilityStatus}>
+            <Select value={availabilityStatus} onValueChange={handleStatusChange}>
               <SelectTrigger data-testid="select-dialog-availability">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -3064,24 +3164,61 @@ function AvailabilityToggleDialog({
             <p className="text-sm text-muted-foreground">
               Track vehicle ownership, repair status, and rental availability
             </p>
+            
+            {/* Warning message for rented status */}
+            {warningDetails && (
+              <div className={`rounded-lg p-4 ${warningDetails.type === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className={`h-5 w-5 mt-0.5 ${warningDetails.type === 'error' ? 'text-red-600' : 'text-yellow-600'}`} />
+                  <div className="flex-1">
+                    <h4 className={`font-semibold ${warningDetails.type === 'error' ? 'text-red-800' : 'text-yellow-800'}`}>
+                      {warningDetails.title}
+                    </h4>
+                    <p className={`text-sm mt-1 ${warningDetails.type === 'error' ? 'text-red-700' : 'text-yellow-700'}`}>
+                      {warningDetails.message}
+                    </p>
+                    <p className={`text-sm mt-2 font-medium ${warningDetails.type === 'error' ? 'text-red-800' : 'text-yellow-800'}`}>
+                      {warningDetails.suggestion}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button 
             variant="outline" 
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              setShowRentedWarning(false);
+            }}
             disabled={updateAvailabilityMutation.isPending}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave}
-            disabled={updateAvailabilityMutation.isPending}
-            data-testid="button-save-availability"
-          >
-            {updateAvailabilityMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
+          
+          {warningDetails?.canForce && (
+            <Button 
+              variant="destructive"
+              onClick={handleForceChange}
+              disabled={updateAvailabilityMutation.isPending}
+              data-testid="button-force-availability"
+            >
+              {updateAvailabilityMutation.isPending ? "Saving..." : "Force Change Anyway"}
+            </Button>
+          )}
+          
+          {!warningDetails && (
+            <Button 
+              onClick={handleSave}
+              disabled={updateAvailabilityMutation.isPending}
+              data-testid="button-save-availability"
+            >
+              {updateAvailabilityMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
