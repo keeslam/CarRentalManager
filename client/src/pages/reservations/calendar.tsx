@@ -3083,12 +3083,12 @@ export default function ReservationCalendarPage() {
                         <Table>
                           <TableHeader className="bg-muted/50 sticky top-0">
                             <TableRow className="border-b-2">
-                              <TableHead className="w-14 border-r font-semibold text-center">GPS</TableHead>
-                              <TableHead className="w-28 border-r font-semibold">License Plate</TableHead>
-                              <TableHead className="w-40 border-r font-semibold">Make / Model</TableHead>
-                              <TableHead className="w-24 border-r font-semibold">Contract #</TableHead>
-                              <TableHead className="min-w-[200px] border-r font-semibold">Company / Customer</TableHead>
-                              <TableHead className="w-28 font-semibold">Pickup Date</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap">GPS</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">License Plate</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Make / Model</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Contract #</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Company / Customer</TableHead>
+                              <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">Pickup Date</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -3103,30 +3103,28 @@ export default function ReservationCalendarPage() {
                                 const vehicleData = rental.vehicle || vehicles?.find(v => v.id === rental.vehicleId);
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-current-row-${rental.id}`}>
-                                    <TableCell className="border-r text-center">
+                                    <TableCell className="px-2 py-1 border-r text-center whitespace-nowrap">
                                       {vehicleData?.imei ? (
                                         <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
                                       )}
                                     </TableCell>
-                                    <TableCell className="font-semibold border-r">
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                    <TableCell className="px-2 py-1 font-semibold border-r whitespace-nowrap">
+                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-sm font-mono">
                                         {formatLicensePlate(vehicleData?.licensePlate || '')}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="border-r">
+                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
                                       {vehicleData?.brand} {vehicleData?.model}
                                     </TableCell>
-                                    <TableCell className="font-mono font-semibold border-r">
+                                    <TableCell className="px-2 py-1 font-mono font-semibold border-r whitespace-nowrap">
                                       {rental.contractNumber || '-'}
                                     </TableCell>
-                                    <TableCell className="border-r">
-                                      <span className="font-medium truncate block max-w-[300px]" title={rental.customer?.companyName || rental.customer?.name || '-'}>
-                                        {rental.customer?.companyName || rental.customer?.name || '-'}
-                                      </span>
+                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
+                                      <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="px-2 py-1 whitespace-nowrap">
                                       {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
                                     </TableCell>
                                   </TableRow>
@@ -3227,16 +3225,16 @@ export default function ReservationCalendarPage() {
                         <Table>
                           <TableHeader className="bg-muted/50 sticky top-0">
                             <TableRow className="border-b-2">
-                              <TableHead className="w-14 border-r font-semibold text-center">GPS</TableHead>
-                              <TableHead className="w-28 border-r font-semibold">License Plate</TableHead>
-                              <TableHead className="w-36 border-r font-semibold">Make / Model</TableHead>
-                              <TableHead className="w-24 border-r font-semibold">Contract #</TableHead>
-                              <TableHead className="min-w-[180px] border-r font-semibold">Company / Customer</TableHead>
-                              <TableHead className="w-24 border-r font-semibold">Pickup</TableHead>
-                              <TableHead className="w-24 border-r font-semibold">Return</TableHead>
-                              <TableHead className="w-32 border-r font-semibold">Damage Check</TableHead>
-                              <TableHead className="w-20 border-r font-semibold">KM Out</TableHead>
-                              <TableHead className="w-20 font-semibold">KM In</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap">GPS</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">License Plate</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Make / Model</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Contract #</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Company / Customer</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Pickup</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Return</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Damage Check</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">KM Out</TableHead>
+                              <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">KM In</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -3252,54 +3250,49 @@ export default function ReservationCalendarPage() {
                                 const vehicleData = rental.vehicle || vehicles?.find(v => v.id === rental.vehicleId);
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-history-row-${rental.id}`}>
-                                    <TableCell className="border-r text-center">
+                                    <TableCell className="px-2 py-1 border-r text-center whitespace-nowrap">
                                       {vehicleData?.imei ? (
                                         <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
                                       )}
                                     </TableCell>
-                                    <TableCell className="font-semibold border-r">
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                    <TableCell className="px-2 py-1 font-semibold border-r whitespace-nowrap">
+                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-sm font-mono">
                                         {formatLicensePlate(vehicleData?.licensePlate || '')}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="border-r text-sm">
+                                    <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
                                       {vehicleData?.brand} {vehicleData?.model}
                                     </TableCell>
-                                    <TableCell className="font-mono font-semibold border-r">
+                                    <TableCell className="px-2 py-1 font-mono font-semibold border-r whitespace-nowrap">
                                       {rental.contractNumber || '-'}
                                     </TableCell>
-                                    <TableCell className="border-r">
-                                      <span className="font-medium text-sm truncate block max-w-[250px]" title={rental.customer?.companyName || rental.customer?.name || '-'}>
-                                        {rental.customer?.companyName || rental.customer?.name || '-'}
-                                      </span>
+                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
+                                      <span className="font-medium text-sm">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
                                     </TableCell>
-                                    <TableCell className="border-r text-sm">
+                                    <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
                                       {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yy') : '-'}
                                     </TableCell>
-                                    <TableCell className="border-r text-sm">
+                                    <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
                                       {rental.endDate ? format(parseISO(rental.endDate), 'dd MMM yy') : '-'}
                                     </TableCell>
-                                    <TableCell className="border-r">
+                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
                                       {damageCheck ? (
-                                        <div className="text-xs">
-                                          <Badge variant="default" className="bg-green-100 text-green-800 text-xs mb-0.5">Yes</Badge>
-                                          <div className="text-muted-foreground">
-                                            {damageCheck.date ? format(parseISO(damageCheck.date), 'dd MMM yy') : '-'}
-                                          </div>
-                                          <div className="text-muted-foreground truncate max-w-[100px]" title={damageCheck.completedBy}>
-                                            {damageCheck.completedBy}
-                                          </div>
-                                        </div>
+                                        <span className="text-xs">
+                                          <Badge variant="default" className="bg-green-100 text-green-800 text-xs">Yes</Badge>
+                                          <span className="text-muted-foreground ml-1">
+                                            {damageCheck.date ? format(parseISO(damageCheck.date), 'dd/MM') : ''} {damageCheck.completedBy}
+                                          </span>
+                                        </span>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
                                       )}
                                     </TableCell>
-                                    <TableCell className="border-r text-sm font-mono">
+                                    <TableCell className="px-2 py-1 border-r text-sm font-mono whitespace-nowrap">
                                       {rental.pickupMileage?.toLocaleString() || '-'}
                                     </TableCell>
-                                    <TableCell className="text-sm font-mono">
+                                    <TableCell className="px-2 py-1 text-sm font-mono whitespace-nowrap">
                                       {rental.returnMileage?.toLocaleString() || '-'}
                                     </TableCell>
                                   </TableRow>
