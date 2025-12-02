@@ -861,7 +861,6 @@ export default function ReservationCalendarPage() {
           </ReservationAddDialog>
         </div>
       </div>
-      
       <Card>
         <CardHeader className="flex-row justify-between items-center space-y-0 pb-2">
           <div>
@@ -1486,7 +1485,6 @@ export default function ReservationCalendarPage() {
           />
         </CardContent>
       </Card>
-      
       {/* View Reservation Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={(open) => {
           console.log('View dialog open change:', open);
@@ -1615,7 +1613,7 @@ export default function ReservationCalendarPage() {
                             <div className="grid grid-cols-2 gap-3">
                               {isActive ? (
                                 // Show reservation mileage for active reservations
-                                <>
+                                (<>
                                   {selectedReservation.pickupMileage !== null && selectedReservation.pickupMileage !== undefined && (
                                     <div>
                                       <div className="text-[10px] text-gray-500 uppercase">Pickup</div>
@@ -1632,17 +1630,15 @@ export default function ReservationCalendarPage() {
                                       </div>
                                     </div>
                                   )}
-                                </>
+                                </>)
                               ) : (
                                 // Show vehicle's current mileage for scheduled reservations
-                                vehicleCurrentMileage !== null && vehicleCurrentMileage !== undefined && (
-                                  <div>
-                                    <div className="text-[10px] text-gray-500 uppercase">Current</div>
-                                    <div className="text-xs font-semibold text-gray-900">
-                                      {vehicleCurrentMileage.toLocaleString()} km
-                                    </div>
+                                (vehicleCurrentMileage !== null && vehicleCurrentMileage !== undefined && (<div>
+                                  <div className="text-[10px] text-gray-500 uppercase">Current</div>
+                                  <div className="text-xs font-semibold text-gray-900">
+                                    {vehicleCurrentMileage.toLocaleString()} km
                                   </div>
-                                )
+                                </div>))
                               )}
                             </div>
                           </div>
@@ -2187,7 +2183,7 @@ export default function ReservationCalendarPage() {
 
                   {/* Recent History */}
                   {recentDamageChecks && recentDamageChecks.length > 0 && (
-                    <div>
+                    <div className="text-[20px]">
                       <span className="text-[10px] font-semibold text-purple-700 block mb-1.5">Recent History (Vehicle + Customer):</span>
                       <div className="space-y-1.5">
                         {recentDamageChecks.slice(0, 3).map((check) => (
@@ -2305,7 +2301,6 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Interactive Damage Check Dialog */}
       {damageCheckDialogOpen && selectedReservation?.vehicleId && (
         <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
@@ -2328,7 +2323,6 @@ export default function ReservationCalendarPage() {
           </DialogContent>
         </Dialog>
       )}
-      
       {/* Edit Reservation Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
           console.log('Edit dialog open change:', open);
@@ -2390,7 +2384,6 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Status Change Dialog */}
       {selectedReservation && (() => {
         console.log('🚀 Rendering StatusChangeDialog with selectedReservation:', {
@@ -2472,7 +2465,6 @@ export default function ReservationCalendarPage() {
           />
         );
       })()}
-      
       {/* Day Reservations Dialog */}
       <Dialog open={dayDialogOpen} onOpenChange={(open) => {
           console.log('Day dialog open change:', open);
@@ -2607,7 +2599,6 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* New Reservation Dialog */}
       <Dialog 
         open={addDialogOpen} 
@@ -2637,7 +2628,6 @@ export default function ReservationCalendarPage() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Reservation List Dialog */}
       <ReservationListDialog
         open={listDialogOpen}
@@ -2655,14 +2645,11 @@ export default function ReservationCalendarPage() {
           setEditDialogOpen(true);
         }}
       />
-
-
       {/* Color Coding Dialog */}
       <ColorCodingDialog
         open={colorDialogOpen}
         onOpenChange={setColorDialogOpen}
       />
-
       {/* Document Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -2709,7 +2696,6 @@ export default function ReservationCalendarPage() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Email Document Dialog */}
       {selectedReservation && (
         <EmailDocumentDialog
@@ -2721,7 +2707,6 @@ export default function ReservationCalendarPage() {
           reservation={selectedReservation}
         />
       )}
-
       {/* Completed Rentals Dialog */}
       <Dialog open={completedRentalsDialogOpen} onOpenChange={setCompletedRentalsDialogOpen}>
         <DialogContent className="max-w-7xl max-h-[85vh]">
@@ -2986,7 +2971,6 @@ export default function ReservationCalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Administration Dialog for External Invoicing */}
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
         <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh]">
@@ -3420,7 +3404,6 @@ export default function ReservationCalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Pickup/Return Dialogs */}
       {selectedReservation && (
         <>
