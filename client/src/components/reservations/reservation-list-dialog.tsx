@@ -1,14 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
-import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
-import { Eye, Edit, Trash2, Car, History } from "lucide-react";
+import { Eye, Edit, Trash2, Car, History, User, Calendar, FileText, Fuel, MapPin, Phone, Building, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,25 +16,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
 import { Reservation, Vehicle } from "@shared/schema";
-import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
-import { format, parseISO } from "date-fns";
+import { formatLicensePlate, formatCurrency } from "@/lib/format-utils";
+import { format, parseISO, differenceInDays } from "date-fns";
 
 interface ReservationListDialogProps {
   open: boolean;
@@ -90,12 +81,6 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     queryKey: ["/api/reservations"],
     enabled: open,
   });
-  
-  // Fetch vehicles
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-    enabled: open,
-  });
 
   // Split reservations into current and history
   const { currentReservations, historyReservations } = useMemo(() => {
@@ -132,17 +117,6 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     }));
   };
 
-  // Sort icon helper
-  const SortIcon = ({ column, sortState }: { column: string; sortState: { column: string; direction: 'asc' | 'desc' } }) => (
-    <span className="ml-1 inline-flex">
-      {sortState.column === column ? (
-        sortState.direction === 'asc' ? '↑' : '↓'
-      ) : (
-        <span className="text-gray-300">↕</span>
-      )}
-    </span>
-  );
-
   // Filter and sort current reservations
   const filteredCurrentReservations = useMemo(() => {
     let filtered = currentReservations.filter(res => {
@@ -162,24 +136,16 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     return filtered.sort((a, b) => {
       const dir = currentSort.direction === 'asc' ? 1 : -1;
       switch (currentSort.column) {
-        case 'id':
-          return dir * (a.id - b.id);
-        case 'plate':
-          return dir * (a.vehicle?.licensePlate || '').localeCompare(b.vehicle?.licensePlate || '');
-        case 'model':
-          return dir * (`${a.vehicle?.brand} ${a.vehicle?.model}` || '').localeCompare(`${b.vehicle?.brand} ${b.vehicle?.model}` || '');
-        case 'customer':
-          return dir * (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
-        case 'contract':
-          return dir * (a.contractNumber || '').localeCompare(b.contractNumber || '');
         case 'pickup':
           return dir * (new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
         case 'return':
           return dir * (new Date(a.endDate || 0).getTime() - new Date(b.endDate || 0).getTime());
-        case 'status':
-          return dir * (a.status || '').localeCompare(b.status || '');
+        case 'customer':
+          return dir * (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
+        case 'plate':
+          return dir * (a.vehicle?.licensePlate || '').localeCompare(b.vehicle?.licensePlate || '');
         default:
-          return 0;
+          return dir * (new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
       }
     });
   }, [currentReservations, currentSearch, currentSort]);
@@ -203,24 +169,16 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     return filtered.sort((a, b) => {
       const dir = historySort.direction === 'asc' ? 1 : -1;
       switch (historySort.column) {
-        case 'id':
-          return dir * (a.id - b.id);
-        case 'plate':
-          return dir * (a.vehicle?.licensePlate || '').localeCompare(b.vehicle?.licensePlate || '');
-        case 'model':
-          return dir * (`${a.vehicle?.brand} ${a.vehicle?.model}` || '').localeCompare(`${b.vehicle?.brand} ${b.vehicle?.model}` || '');
-        case 'customer':
-          return dir * (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
-        case 'contract':
-          return dir * (a.contractNumber || '').localeCompare(b.contractNumber || '');
         case 'pickup':
           return dir * (new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
         case 'return':
           return dir * (new Date(a.endDate || 0).getTime() - new Date(b.endDate || 0).getTime());
-        case 'status':
-          return dir * (a.status || '').localeCompare(b.status || '');
+        case 'customer':
+          return dir * (a.customer?.companyName || a.customer?.name || '').localeCompare(b.customer?.companyName || b.customer?.name || '');
+        case 'plate':
+          return dir * (a.vehicle?.licensePlate || '').localeCompare(b.vehicle?.licensePlate || '');
         default:
-          return 0;
+          return dir * (new Date(b.endDate || 0).getTime() - new Date(a.endDate || 0).getTime());
       }
     });
   }, [historyReservations, historySearch, historySort]);
@@ -228,17 +186,17 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'booked':
-        return <Badge className="bg-blue-100 text-blue-800 text-xs">Booked</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">Booked</Badge>;
       case 'picked_up':
-        return <Badge className="bg-green-100 text-green-800 text-xs">Picked Up</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Picked Up</Badge>;
       case 'returned':
-        return <Badge className="bg-yellow-100 text-yellow-800 text-xs">Returned</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">Returned</Badge>;
       case 'completed':
-        return <Badge className="bg-gray-100 text-gray-800 text-xs">Completed</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Completed</Badge>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 text-xs">Cancelled</Badge>;
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
       default:
-        return <Badge variant="secondary" className="text-xs">{status}</Badge>;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -264,6 +222,199 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (confirm(`Are you sure you want to delete reservation #${reservation.id}?`)) {
       deleteReservationMutation.mutate(reservation.id);
     }
+  };
+
+  const getDuration = (startDate: string | null, endDate: string | null) => {
+    if (!startDate || !endDate) return null;
+    const days = differenceInDays(parseISO(endDate), parseISO(startDate));
+    return days === 1 ? '1 day' : `${days} days`;
+  };
+
+  // Reservation Card Component
+  const ReservationCard = ({ reservation }: { reservation: Reservation }) => {
+    const duration = getDuration(reservation.startDate, reservation.endDate);
+    
+    return (
+      <div className="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow" data-testid={`reservation-card-${reservation.id}`}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 bg-gray-50 border-b rounded-t-lg">
+          <div className="flex items-center gap-3">
+            <span className="font-mono font-bold text-lg">#{reservation.id}</span>
+            {reservation.contractNumber && (
+              <span className="text-sm text-gray-600">
+                Contract: <span className="font-mono font-semibold">{reservation.contractNumber}</span>
+              </span>
+            )}
+            {getStatusBadge(reservation.status)}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleView(reservation)}
+              data-testid={`view-btn-${reservation.id}`}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEdit(reservation)}
+              data-testid={`edit-btn-${reservation.id}`}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => handleDelete(reservation)}
+              data-testid={`delete-btn-${reservation.id}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Grid */}
+        <div className="p-4 grid grid-cols-4 gap-4">
+          {/* Vehicle Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Car className="h-4 w-4" />
+              Vehicle
+            </div>
+            <div className="space-y-1">
+              <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono font-bold inline-block">
+                {formatLicensePlate(reservation.vehicle?.licensePlate || '-')}
+              </div>
+              <div className="text-sm">{reservation.vehicle?.brand} {reservation.vehicle?.model}</div>
+              {reservation.vehicle?.vehicleType && (
+                <div className="text-xs text-gray-500">{reservation.vehicle.vehicleType}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Customer Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <User className="h-4 w-4" />
+              Customer
+            </div>
+            <div className="space-y-1">
+              {reservation.customer?.companyName && (
+                <div className="flex items-center gap-1 text-sm">
+                  <Building className="h-3 w-3 text-gray-400" />
+                  <span className="font-medium">{reservation.customer.companyName}</span>
+                </div>
+              )}
+              <div className="text-sm font-medium">{reservation.customer?.name || '-'}</div>
+              {reservation.customer?.phone && (
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Phone className="h-3 w-3" />
+                  {reservation.customer.phone}
+                </div>
+              )}
+              {reservation.driver && (
+                <div className="text-xs text-gray-600 mt-1">
+                  Driver: {reservation.driver.firstName} {reservation.driver.lastName}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dates Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Calendar className="h-4 w-4" />
+              Rental Period
+            </div>
+            <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div className="text-xs text-gray-500">Pickup</div>
+                  <div className="font-medium">
+                    {reservation.startDate ? format(parseISO(reservation.startDate), 'dd MMM yyyy') : '-'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Return</div>
+                  <div className="font-medium">
+                    {reservation.endDate ? format(parseISO(reservation.endDate), 'dd MMM yyyy') : '-'}
+                  </div>
+                </div>
+              </div>
+              {duration && (
+                <div className="flex items-center gap-1 text-xs text-gray-600">
+                  <Clock className="h-3 w-3" />
+                  {duration}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Details Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <FileText className="h-4 w-4" />
+              Details
+            </div>
+            <div className="space-y-1 text-sm">
+              {/* Mileage */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="text-xs text-gray-500">KM Out</div>
+                  <div className="font-mono">{reservation.pickupMileage?.toLocaleString() || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">KM In</div>
+                  <div className="font-mono">{reservation.returnMileage?.toLocaleString() || '-'}</div>
+                </div>
+              </div>
+              
+              {/* Fuel */}
+              {(reservation.fuelLevelPickup || reservation.fuelLevelReturn) && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Fuel className="h-3 w-3 text-gray-400" />
+                  <span className="text-xs">
+                    {reservation.fuelLevelPickup || '-'} → {reservation.fuelLevelReturn || '-'}
+                  </span>
+                </div>
+              )}
+              
+              {/* Price */}
+              {reservation.totalPrice && (
+                <div className="mt-1">
+                  <span className="text-xs text-gray-500">Total: </span>
+                  <span className="font-semibold text-green-700">
+                    {formatCurrency(Number(reservation.totalPrice))}
+                  </span>
+                </div>
+              )}
+
+              {/* Delivery */}
+              {reservation.deliveryRequired && (
+                <div className="flex items-center gap-1 mt-1 text-xs text-orange-600">
+                  <MapPin className="h-3 w-3" />
+                  Delivery: {reservation.deliveryAddress || 'Yes'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        {reservation.notes && (
+          <div className="px-4 pb-3">
+            <div className="text-xs text-gray-500 bg-gray-50 rounded p-2 italic">
+              {reservation.notes}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -300,150 +451,53 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
                     className="flex-1 h-9"
                     data-testid="input-current-search"
                   />
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    Sort:
+                    <Button
+                      variant={currentSort.column === 'pickup' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleCurrentSort('pickup')}
+                    >
+                      Pickup {currentSort.column === 'pickup' && (currentSort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={currentSort.column === 'customer' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleCurrentSort('customer')}
+                    >
+                      Customer {currentSort.column === 'customer' && (currentSort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={currentSort.column === 'plate' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleCurrentSort('plate')}
+                    >
+                      Plate {currentSort.column === 'plate' && (currentSort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                  </div>
                 </div>
                 
                 <p className="text-sm text-muted-foreground">
                   Active reservations ({filteredCurrentReservations.length})
                 </p>
                 
-                <div className="border rounded-md overflow-hidden">
-                  <ScrollArea className="h-[450px]">
-                    <Table>
-                      <TableHeader className="bg-muted/50 sticky top-0">
-                        <TableRow className="border-b-2">
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('id')}
-                          >
-                            ID<SortIcon column="id" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('plate')}
-                          >
-                            License Plate<SortIcon column="plate" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('model')}
-                          >
-                            Vehicle<SortIcon column="model" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('customer')}
-                          >
-                            Customer<SortIcon column="customer" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('contract')}
-                          >
-                            Contract #<SortIcon column="contract" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('pickup')}
-                          >
-                            Pickup<SortIcon column="pickup" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('return')}
-                          >
-                            Return<SortIcon column="return" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleCurrentSort('status')}
-                          >
-                            Status<SortIcon column="status" sortState={currentSort} />
-                          </TableHead>
-                          <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {isLoadingReservations ? (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                              Loading reservations...
-                            </TableCell>
-                          </TableRow>
-                        ) : filteredCurrentReservations.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                              No active reservations found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredCurrentReservations.map((reservation) => (
-                            <TableRow key={reservation.id} className="border-b hover:bg-muted/30" data-testid={`current-reservation-row-${reservation.id}`}>
-                              <TableCell className="px-2 py-1 border-r font-mono text-sm whitespace-nowrap">
-                                #{reservation.id}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-sm font-mono">
-                                  {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.vehicle?.brand} {reservation.vehicle?.model}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                <span className="font-medium text-sm">{reservation.customer?.companyName || reservation.customer?.name || '-'}</span>
-                              </TableCell>
-                              <TableCell className="px-2 py-1 font-mono font-semibold border-r whitespace-nowrap">
-                                {reservation.contractNumber || '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.startDate ? format(parseISO(reservation.startDate), 'dd MMM yyyy') : '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.endDate ? format(parseISO(reservation.endDate), 'dd MMM yyyy') : '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                {getStatusBadge(reservation.status)}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 whitespace-nowrap">
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() => handleView(reservation)}
-                                    data-testid={`view-current-${reservation.id}`}
-                                  >
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() => handleEdit(reservation)}
-                                    data-testid={`edit-current-${reservation.id}`}
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => handleDelete(reservation)}
-                                    data-testid={`delete-current-${reservation.id}`}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-3 pr-4">
+                    {isLoadingReservations ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Loading reservations...
+                      </div>
+                    ) : filteredCurrentReservations.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No active reservations found
+                      </div>
+                    ) : (
+                      filteredCurrentReservations.map((reservation) => (
+                        <ReservationCard key={reservation.id} reservation={reservation} />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
             </TabsContent>
 
@@ -458,150 +512,53 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
                     className="flex-1 h-9"
                     data-testid="input-history-search"
                   />
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    Sort:
+                    <Button
+                      variant={historySort.column === 'return' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleHistorySort('return')}
+                    >
+                      Return {historySort.column === 'return' && (historySort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={historySort.column === 'customer' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleHistorySort('customer')}
+                    >
+                      Customer {historySort.column === 'customer' && (historySort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={historySort.column === 'plate' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleHistorySort('plate')}
+                    >
+                      Plate {historySort.column === 'plate' && (historySort.direction === 'asc' ? '↑' : '↓')}
+                    </Button>
+                  </div>
                 </div>
                 
                 <p className="text-sm text-muted-foreground">
                   Completed reservations ({filteredHistoryReservations.length})
                 </p>
                 
-                <div className="border rounded-md overflow-hidden">
-                  <ScrollArea className="h-[450px]">
-                    <Table>
-                      <TableHeader className="bg-muted/50 sticky top-0">
-                        <TableRow className="border-b-2">
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('id')}
-                          >
-                            ID<SortIcon column="id" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('plate')}
-                          >
-                            License Plate<SortIcon column="plate" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('model')}
-                          >
-                            Vehicle<SortIcon column="model" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('customer')}
-                          >
-                            Customer<SortIcon column="customer" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('contract')}
-                          >
-                            Contract #<SortIcon column="contract" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('pickup')}
-                          >
-                            Pickup<SortIcon column="pickup" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('return')}
-                          >
-                            Return<SortIcon column="return" sortState={historySort} />
-                          </TableHead>
-                          <TableHead 
-                            className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
-                            onClick={() => toggleHistorySort('status')}
-                          >
-                            Status<SortIcon column="status" sortState={historySort} />
-                          </TableHead>
-                          <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {isLoadingReservations ? (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                              Loading reservations...
-                            </TableCell>
-                          </TableRow>
-                        ) : filteredHistoryReservations.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                              No completed reservations found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredHistoryReservations.map((reservation) => (
-                            <TableRow key={reservation.id} className="border-b hover:bg-muted/30" data-testid={`history-reservation-row-${reservation.id}`}>
-                              <TableCell className="px-2 py-1 border-r font-mono text-sm whitespace-nowrap">
-                                #{reservation.id}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-sm font-mono">
-                                  {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.vehicle?.brand} {reservation.vehicle?.model}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                <span className="font-medium text-sm">{reservation.customer?.companyName || reservation.customer?.name || '-'}</span>
-                              </TableCell>
-                              <TableCell className="px-2 py-1 font-mono font-semibold border-r whitespace-nowrap">
-                                {reservation.contractNumber || '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.startDate ? format(parseISO(reservation.startDate), 'dd MMM yyyy') : '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r text-sm whitespace-nowrap">
-                                {reservation.endDate ? format(parseISO(reservation.endDate), 'dd MMM yyyy') : '-'}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 border-r whitespace-nowrap">
-                                {getStatusBadge(reservation.status)}
-                              </TableCell>
-                              <TableCell className="px-2 py-1 whitespace-nowrap">
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() => handleView(reservation)}
-                                    data-testid={`view-history-${reservation.id}`}
-                                  >
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2"
-                                    onClick={() => handleEdit(reservation)}
-                                    data-testid={`edit-history-${reservation.id}`}
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => handleDelete(reservation)}
-                                    data-testid={`delete-history-${reservation.id}`}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-3 pr-4">
+                    {isLoadingReservations ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Loading reservations...
+                      </div>
+                    ) : filteredHistoryReservations.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No completed reservations found
+                      </div>
+                    ) : (
+                      filteredHistoryReservations.map((reservation) => (
+                        <ReservationCard key={reservation.id} reservation={reservation} />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
             </TabsContent>
           </Tabs>
