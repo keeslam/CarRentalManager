@@ -46,6 +46,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const [selectedViewReservationId, setSelectedViewReservationId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
+  const [listWasOpen, setListWasOpen] = useState(false);
   const { toast } = useToast();
   
   // Delete reservation mutation
@@ -203,6 +204,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onViewReservation) {
       onViewReservation(reservation);
     } else {
+      setListWasOpen(true);
+      onOpenChange(false); // Close list first
       setSelectedViewReservationId(reservation.id);
       setViewDialogOpen(true);
     }
@@ -212,6 +215,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onEditReservation) {
       onEditReservation(reservation);
     } else {
+      setListWasOpen(true);
+      onOpenChange(false); // Close list first
       setSelectedEditReservationId(reservation.id);
       setEditDialogOpen(true);
     }
@@ -312,29 +317,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        // Don't close list dialog if view/edit dialogs are open
-        if (!isOpen && (viewDialogOpen || editDialogOpen)) {
-          return;
-        }
-        onOpenChange(isOpen);
-      }}>
-        <DialogContent 
-          className="w-[95vw] max-w-[95vw] max-h-[90vh]" 
-          data-testid="dialog-reservation-list"
-          onPointerDownOutside={(e) => {
-            // Prevent closing when clicking on child dialogs
-            if (viewDialogOpen || editDialogOpen) {
-              e.preventDefault();
-            }
-          }}
-          onInteractOutside={(e) => {
-            // Prevent closing when interacting with child dialogs
-            if (viewDialogOpen || editDialogOpen) {
-              e.preventDefault();
-            }
-          }}
-        >
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh]" data-testid="dialog-reservation-list">
           <DialogHeader>
             <DialogTitle>Reservations</DialogTitle>
             <DialogDescription>
@@ -474,11 +458,19 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation View Dialog */}
       <ReservationViewDialog
         open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
+        onOpenChange={(isOpen) => {
+          setViewDialogOpen(isOpen);
+          // Reopen list when view dialog closes
+          if (!isOpen && listWasOpen) {
+            setListWasOpen(false);
+            onOpenChange(true);
+          }
+        }}
         reservationId={selectedViewReservationId}
         onEdit={(reservationId) => {
           setSelectedEditReservationId(reservationId);
           setViewDialogOpen(false);
+          // Don't reopen list, going to edit
           setEditDialogOpen(true);
         }}
       />
@@ -486,7 +478,14 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation Edit Dialog */}
       <ReservationEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChange={(isOpen) => {
+          setEditDialogOpen(isOpen);
+          // Reopen list when edit dialog closes
+          if (!isOpen && listWasOpen) {
+            setListWasOpen(false);
+            onOpenChange(true);
+          }
+        }}
         reservationId={selectedEditReservationId}
         onSuccess={(updatedReservation) => {
           invalidateRelatedQueries('reservations', {
