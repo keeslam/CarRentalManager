@@ -67,8 +67,15 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   });
 
   // Fetch paper damage check documents for this reservation
-  const { data: reservationDocuments } = useQuery<any[]>({
+  const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<any[]>({
     queryKey: [`/api/documents/reservation/${reservation.id}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/reservation/${reservation.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && !!reservation.id,
   });
 
@@ -697,7 +704,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                               throw new Error('Upload failed');
                             }
                             
-                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            await refetchDocuments();
                             toast({
                               title: "Success",
                               description: "Paper damage check uploaded successfully",
@@ -781,7 +788,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                               throw new Error('Upload failed');
                             }
                             
-                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            await refetchDocuments();
                             toast({
                               title: "Success",
                               description: "Paper damage check uploaded successfully",
@@ -976,8 +983,15 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   });
 
   // Fetch paper damage check documents for this reservation
-  const { data: reservationDocuments } = useQuery<any[]>({
+  const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<any[]>({
     queryKey: [`/api/documents/reservation/${reservation.id}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/reservation/${reservation.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && !!reservation.id,
   });
 
@@ -1377,7 +1391,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                               throw new Error('Upload failed');
                             }
                             
-                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            await refetchDocuments();
                             toast({
                               title: "Success",
                               description: "Paper damage check uploaded successfully",
@@ -1460,7 +1474,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                               throw new Error('Upload failed');
                             }
                             
-                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            await refetchDocuments();
                             toast({
                               title: "Success",
                               description: "Paper damage check uploaded successfully",
