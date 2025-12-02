@@ -10,7 +10,7 @@ import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation } from "@shared/schema";
-import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2 } from "lucide-react";
+import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2, Upload } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
 
@@ -45,6 +45,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [overridePassword, setOverridePassword] = useState<string>("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
+  const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
 
   // Fetch available vehicles for TBD spare selection
   const { data: vehicles } = useQuery<any[]>({
@@ -573,19 +574,85 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                   <p className="text-sm text-muted-foreground">
                     Create an interactive damage check to document the vehicle's condition at pickup
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-white"
-                    onClick={() => {
-                      setEditingDamageCheckId(null);
-                      setDamageCheckDialogOpen(true);
-                    }}
-                    data-testid="button-open-pickup-damage-check"
-                  >
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Create Pickup Damage Check
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 bg-white"
+                      onClick={() => {
+                        setEditingDamageCheckId(null);
+                        setDamageCheckDialogOpen(true);
+                      }}
+                      data-testid="button-open-pickup-damage-check"
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Create Pickup Damage Check
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="bg-white"
+                      disabled={uploadingPaperDamageCheck}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        input.onchange = async (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (!file) return;
+                          
+                          setUploadingPaperDamageCheck(true);
+                          const formData = new FormData();
+                          const vehicleIdToUse = isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId;
+                          if (!vehicleIdToUse) {
+                            toast({
+                              title: "Error",
+                              description: "No vehicle selected",
+                              variant: "destructive",
+                            });
+                            setUploadingPaperDamageCheck(false);
+                            return;
+                          }
+                          formData.append('vehicleId', vehicleIdToUse.toString());
+                          formData.append('reservationId', reservation.id.toString());
+                          formData.append('documentType', 'Damage Check (Pickup - Paper)');
+                          formData.append('file', file);
+
+                          try {
+                            const response = await fetch('/api/documents', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include',
+                            });
+                            
+                            if (!response.ok) {
+                              throw new Error('Upload failed');
+                            }
+                            
+                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            toast({
+                              title: "Success",
+                              description: "Paper damage check uploaded successfully",
+                            });
+                          } catch (error) {
+                            console.error('Upload failed:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upload paper damage check",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setUploadingPaperDamageCheck(false);
+                          }
+                        };
+                        input.click();
+                      }}
+                      data-testid="button-upload-paper-damage-check"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadingPaperDamageCheck ? "Uploading..." : "Upload Paper Check"}
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
@@ -741,6 +808,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   const [returnNotes, setReturnNotes] = useState("");
   const [damageCheckDialogOpen, setDamageCheckDialogOpen] = useState(false);
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
+  const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
 
   // Fetch existing damage checks for this reservation
   const { data: damageChecks } = useQuery<any[]>({
@@ -1035,19 +1103,84 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                   <p className="text-sm text-muted-foreground">
                     Create an interactive damage check to document the vehicle's condition at return
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-white"
-                    onClick={() => {
-                      setEditingDamageCheckId(null);
-                      setDamageCheckDialogOpen(true);
-                    }}
-                    data-testid="button-open-return-damage-check"
-                  >
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Create Return Damage Check
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 bg-white"
+                      onClick={() => {
+                        setEditingDamageCheckId(null);
+                        setDamageCheckDialogOpen(true);
+                      }}
+                      data-testid="button-open-return-damage-check"
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Create Return Damage Check
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="bg-white"
+                      disabled={uploadingPaperDamageCheck}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.jpg,.jpeg,.png';
+                        input.onchange = async (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (!file) return;
+                          
+                          setUploadingPaperDamageCheck(true);
+                          const formData = new FormData();
+                          if (!reservation.vehicleId) {
+                            toast({
+                              title: "Error",
+                              description: "No vehicle associated with this reservation",
+                              variant: "destructive",
+                            });
+                            setUploadingPaperDamageCheck(false);
+                            return;
+                          }
+                          formData.append('vehicleId', reservation.vehicleId.toString());
+                          formData.append('reservationId', reservation.id.toString());
+                          formData.append('documentType', 'Damage Check (Return - Paper)');
+                          formData.append('file', file);
+
+                          try {
+                            const response = await fetch('/api/documents', {
+                              method: 'POST',
+                              body: formData,
+                              credentials: 'include',
+                            });
+                            
+                            if (!response.ok) {
+                              throw new Error('Upload failed');
+                            }
+                            
+                            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                            toast({
+                              title: "Success",
+                              description: "Paper damage check uploaded successfully",
+                            });
+                          } catch (error) {
+                            console.error('Upload failed:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upload paper damage check",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setUploadingPaperDamageCheck(false);
+                          }
+                        };
+                        input.click();
+                      }}
+                      data-testid="button-upload-paper-return-damage-check"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadingPaperDamageCheck ? "Uploading..." : "Upload Paper Check"}
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
