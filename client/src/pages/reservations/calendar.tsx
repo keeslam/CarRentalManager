@@ -3282,7 +3282,7 @@ export default function ReservationCalendarPage() {
                                         <span className="text-xs">
                                           <Badge variant="default" className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                           <span className="text-muted-foreground ml-1">
-                                            {damageCheck.date ? format(parseISO(damageCheck.date), 'dd MMM yy') : ''} {damageCheck.completedBy}
+                                            {damageCheck.date ? format(parseISO(damageCheck.date), 'dd MMM yyyy') : ''} {damageCheck.completedBy}
                                           </span>
                                         </span>
                                       ) : (
