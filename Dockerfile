@@ -31,10 +31,12 @@ COPY --from=builder /app/dist ./dist
 
 # Copy necessary runtime files
 COPY --from=builder /app/drizzle.config.ts ./
+COPY --from=builder /app/startup-migration.js ./
+COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/uploads ./uploads
 
-# Create uploads directory if it doesn't exist
-RUN mkdir -p /app/uploads
+# Create uploads directory structure if it doesn't exist
+RUN mkdir -p /app/uploads/vehicle-diagrams /app/uploads/documents /app/uploads/drivers
 
 # Expose port
 EXPOSE 5000
@@ -47,5 +49,5 @@ ENV PORT=5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application with migration
+CMD ["sh", "-c", "node startup-migration.js && npm start"]
