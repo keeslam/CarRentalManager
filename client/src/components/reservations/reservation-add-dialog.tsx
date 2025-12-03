@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,8 +9,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ReservationForm } from "@/components/reservations/reservation-form";
+import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Reservation } from "@shared/schema";
 
 interface ReservationAddDialogProps {
   initialVehicleId?: string;
@@ -33,6 +35,11 @@ export function ReservationAddDialog({
   // Use ref for synchronous access in event handlers (React state updates are async)
   const isPickupReturnDialogOpenRef = useRef(false);
   const { toast } = useToast();
+  
+  // Lift pickup/return dialog state up to this level to render outside parent Dialog
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [pendingDialogReservation, setPendingDialogReservation] = useState<Reservation | null>(null);
 
   const handleOpenChange = (newOpen: boolean) => {
     console.log('📦 ReservationAddDialog handleOpenChange called:', newOpen, 'isPickupReturnDialogOpen:', isPickupReturnDialogOpen, 'ref:', isPickupReturnDialogOpenRef.current);
@@ -66,6 +73,27 @@ export function ReservationAddDialog({
     isPickupReturnDialogOpenRef.current = isOpen;
     setIsPickupReturnDialogOpen(isOpen);
   };
+  
+  // Handler to trigger pickup dialog from ReservationForm - this receives the reservation data
+  // Strategy: Keep parent dialog open but render pickup dialog OUTSIDE the parent via lifted state
+  const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
+    console.log('📦 ReservationAddDialog triggering pickup dialog for reservation:', reservation.id);
+    // Set up ref FIRST for synchronous blocking
+    isPickupReturnDialogOpenRef.current = true;
+    setIsPickupReturnDialogOpen(true);
+    setPendingDialogReservation(reservation);
+    // Open pickup dialog immediately - it's rendered outside the parent Dialog
+    setPickupDialogOpen(true);
+  }, []);
+  
+  // Handler to trigger return dialog from ReservationForm
+  const handleTriggerReturnDialog = useCallback((reservation: Reservation) => {
+    console.log('📦 ReservationAddDialog triggering return dialog for reservation:', reservation.id);
+    isPickupReturnDialogOpenRef.current = true;
+    setIsPickupReturnDialogOpen(true);
+    setPendingDialogReservation(reservation);
+    setReturnDialogOpen(true);
+  }, []);
 
   // Custom trigger or default "New Reservation" button
   const trigger = children || (
@@ -76,7 +104,12 @@ export function ReservationAddDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <>
+    <Dialog 
+      open={open} 
+      onOpenChange={handleOpenChange}
+      modal={!pickupDialogOpen && !returnDialogOpen}
+    >
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
@@ -117,6 +150,8 @@ export function ReservationAddDialog({
             initialStartDate={initialStartDate}
             onPreviewModeChange={setIsInPreviewMode}
             onPickupReturnDialogChange={handlePickupReturnDialogChange}
+            onTriggerPickupDialog={handleTriggerPickupDialog}
+            onTriggerReturnDialog={handleTriggerReturnDialog}
             onSuccess={(reservation) => {
               console.log('📦 ReservationAddDialog onSuccess callback called');
               setIsInPreviewMode(false);
@@ -138,5 +173,87 @@ export function ReservationAddDialog({
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Render pickup/return dialogs OUTSIDE the parent Dialog to avoid focus/portal conflicts */}
+    {pendingDialogReservation && (
+      <PickupDialog
+        open={pickupDialogOpen}
+        onOpenChange={(dialogOpen) => {
+          setPickupDialogOpen(dialogOpen);
+          if (!dialogOpen) {
+            // Dialog closed/cancelled
+            setPendingDialogReservation(null);
+            isPickupReturnDialogOpenRef.current = false;
+            setIsPickupReturnDialogOpen(false);
+          }
+        }}
+        reservation={pendingDialogReservation}
+        onSuccess={async () => {
+          console.log('📦 ReservationAddDialog pickup success');
+          setPickupDialogOpen(false);
+          isPickupReturnDialogOpenRef.current = false;
+          setIsPickupReturnDialogOpen(false);
+          
+          // Close the parent dialog as well - pickup workflow is complete
+          setOpen(false);
+          
+          // Fetch updated reservation and call success callback
+          if (onSuccess && pendingDialogReservation) {
+            try {
+              const response = await fetch(`/api/reservations/${pendingDialogReservation.id}`, { credentials: 'include' });
+              if (response.ok) {
+                const updatedReservation = await response.json();
+                onSuccess(updatedReservation);
+              }
+            } catch (e) {
+              console.error('Failed to fetch updated reservation:', e);
+            }
+          }
+          
+          setPendingDialogReservation(null);
+        }}
+      />
+    )}
+    
+    {pendingDialogReservation && (
+      <ReturnDialog
+        open={returnDialogOpen}
+        onOpenChange={(dialogOpen) => {
+          setReturnDialogOpen(dialogOpen);
+          if (!dialogOpen) {
+            // Dialog closed/cancelled
+            setPendingDialogReservation(null);
+            isPickupReturnDialogOpenRef.current = false;
+            setIsPickupReturnDialogOpen(false);
+          }
+        }}
+        reservation={pendingDialogReservation}
+        onSuccess={async () => {
+          console.log('📦 ReservationAddDialog return success');
+          setReturnDialogOpen(false);
+          isPickupReturnDialogOpenRef.current = false;
+          setIsPickupReturnDialogOpen(false);
+          
+          // Close the parent dialog as well - return workflow is complete
+          setOpen(false);
+          
+          // Fetch updated reservation and call success callback
+          if (onSuccess && pendingDialogReservation) {
+            try {
+              const response = await fetch(`/api/reservations/${pendingDialogReservation.id}`, { credentials: 'include' });
+              if (response.ok) {
+                const updatedReservation = await response.json();
+                onSuccess(updatedReservation);
+              }
+            } catch (e) {
+              console.error('Failed to fetch updated reservation:', e);
+            }
+          }
+          
+          setPendingDialogReservation(null);
+        }}
+      />
+    )}
+    </>
   );
 }

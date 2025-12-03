@@ -170,6 +170,8 @@ interface ReservationFormProps {
   onCancel?: () => void;
   onPreviewModeChange?: (isPreviewMode: boolean) => void;
   onPickupReturnDialogChange?: (isOpen: boolean) => void;
+  onTriggerPickupDialog?: (reservation: Reservation) => void;
+  onTriggerReturnDialog?: (reservation: Reservation) => void;
 }
 
 export function ReservationForm({ 
@@ -181,7 +183,9 @@ export function ReservationForm({
   onSuccess,
   onCancel,
   onPreviewModeChange,
-  onPickupReturnDialogChange
+  onPickupReturnDialogChange,
+  onTriggerPickupDialog,
+  onTriggerReturnDialog
 }: ReservationFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -855,15 +859,26 @@ export function ReservationForm({
           customer: selectedCustomer || undefined,
         };
         
-        setPendingDialogReservation(reservationForDialog);
+        // Reset the pending status change ref first
+        pendingStatusChangeRef.current = null;
         
         if (pendingStatusChange === "picked_up") {
-          // Notify parent FIRST that a pickup/return dialog is open (before setting local state)
-          // This prevents the parent from closing while we're setting up the dialog
+          // Check if parent wants to handle pickup dialog (for nested dialog cases)
+          if (onTriggerPickupDialog) {
+            console.log('🔓 Delegating pickup dialog to parent');
+            toast({
+              title: "Opening Pickup Dialog",
+              description: "Please complete the pickup details (contract number, mileage, fuel level).",
+            });
+            onTriggerPickupDialog(reservationForDialog);
+            return; // Parent will handle the dialog
+          }
+          
+          // Fallback to local dialog management
+          setPendingDialogReservation(reservationForDialog);
           console.log('🔓 Notifying parent: pickup dialog opening');
           onPickupReturnDialogChange?.(true);
           
-          // Open the pickup dialog for proper data entry
           toast({
             title: "Opening Pickup Dialog",
             description: "Please complete the pickup details (contract number, mileage, fuel level).",
@@ -871,11 +886,22 @@ export function ReservationForm({
           setPickupDialogOpen(true);
           console.log('✅ pickupDialogOpen set to true');
         } else if (pendingStatusChange === "returned") {
-          // Notify parent FIRST that a pickup/return dialog is open
+          // Check if parent wants to handle return dialog
+          if (onTriggerReturnDialog) {
+            console.log('🔓 Delegating return dialog to parent');
+            toast({
+              title: "Opening Return Dialog",
+              description: "Please complete the return details (mileage, fuel level, damage check).",
+            });
+            onTriggerReturnDialog(reservationForDialog);
+            return; // Parent will handle the dialog
+          }
+          
+          // Fallback to local dialog management
+          setPendingDialogReservation(reservationForDialog);
           console.log('🔓 Notifying parent: return dialog opening');
           onPickupReturnDialogChange?.(true);
           
-          // Open the return dialog for proper data entry
           toast({
             title: "Opening Return Dialog",
             description: "Please complete the return details (mileage, fuel level, damage check).",
@@ -884,8 +910,6 @@ export function ReservationForm({
           console.log('✅ returnDialogOpen set to true');
         }
         
-        // Reset the pending status change ref
-        pendingStatusChangeRef.current = null;
         return; // Don't run the onSuccess callback or navigate yet - dialog will handle it
       }
       
