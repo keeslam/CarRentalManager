@@ -64,6 +64,7 @@ import { ReadonlyVehicleDisplay } from "@/components/ui/readonly-vehicle-display
 import { DriverDialog } from "@/components/customers/driver-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
+import { VehicleRemarksWarningDialog } from "@/components/vehicles/vehicle-remarks-warning-dialog";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -259,6 +260,10 @@ export function ReservationForm({
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [pendingDialogReservation, setPendingDialogReservation] = useState<Reservation | null>(null);
+  
+  // Vehicle remarks warning state - show warning when selecting a vehicle with remarks
+  const [vehicleRemarksWarningOpen, setVehicleRemarksWarningOpen] = useState(false);
+  const [pendingVehicleSelection, setPendingVehicleSelection] = useState<{vehicle: Vehicle, fieldOnChange: (value: string) => void} | null>(null);
   
   // Get recent selections from localStorage
   const getRecentSelections = (key: string): string[] => {
@@ -1341,9 +1346,18 @@ export function ReservationForm({
                               vehicles={vehiclesToShow}
                               value={field.value ? field.value.toString() : ''}
                               onChange={(value) => {
-                                field.onChange(value);
-                                if (value) {
-                                  saveToRecent('recentVehicles', value);
+                                // Check if the selected vehicle has remarks
+                                const vehicle = vehicles?.find(v => v.id.toString() === value);
+                                if (vehicle?.remarks && vehicle.remarks.trim() !== '') {
+                                  // Show warning dialog first
+                                  setPendingVehicleSelection({ vehicle, fieldOnChange: field.onChange });
+                                  setVehicleRemarksWarningOpen(true);
+                                } else {
+                                  // No remarks, proceed normally
+                                  field.onChange(value);
+                                  if (value) {
+                                    saveToRecent('recentVehicles', value);
+                                  }
                                 }
                               }}
                               placeholder="Search and select a vehicle..."
@@ -2749,6 +2763,26 @@ export function ReservationForm({
         }}
       />
     )}
+    
+    {/* Vehicle Remarks Warning Dialog - shown when selecting a vehicle with remarks */}
+    <VehicleRemarksWarningDialog
+      open={vehicleRemarksWarningOpen}
+      onOpenChange={setVehicleRemarksWarningOpen}
+      vehicle={pendingVehicleSelection?.vehicle ?? null}
+      context="reservation"
+      onAcknowledge={() => {
+        // User acknowledged, proceed with vehicle selection
+        if (pendingVehicleSelection) {
+          pendingVehicleSelection.fieldOnChange(pendingVehicleSelection.vehicle.id.toString());
+          saveToRecent('recentVehicles', pendingVehicleSelection.vehicle.id.toString());
+        }
+        setPendingVehicleSelection(null);
+      }}
+      onCancel={() => {
+        // User cancelled, don't select the vehicle
+        setPendingVehicleSelection(null);
+      }}
+    />
     </>
   );
 }
