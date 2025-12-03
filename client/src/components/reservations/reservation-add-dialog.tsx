@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,13 +30,15 @@ export function ReservationAddDialog({
   const [open, setOpen] = useState(false);
   const [isInPreviewMode, setIsInPreviewMode] = useState(false);
   const [isPickupReturnDialogOpen, setIsPickupReturnDialogOpen] = useState(false);
+  // Use ref for synchronous access in event handlers (React state updates are async)
+  const isPickupReturnDialogOpenRef = useRef(false);
   const { toast } = useToast();
 
   const handleOpenChange = (newOpen: boolean) => {
-    console.log('📦 ReservationAddDialog handleOpenChange called:', newOpen, 'isPickupReturnDialogOpen:', isPickupReturnDialogOpen);
+    console.log('📦 ReservationAddDialog handleOpenChange called:', newOpen, 'isPickupReturnDialogOpen:', isPickupReturnDialogOpen, 'ref:', isPickupReturnDialogOpenRef.current);
     
-    // Don't close if pickup/return dialog is open
-    if (!newOpen && isPickupReturnDialogOpen) {
+    // Don't close if pickup/return dialog is open (check both state and ref for sync issues)
+    if (!newOpen && (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current)) {
       console.log('🛑 Blocking close - pickup/return dialog is open');
       return;
     }
@@ -57,6 +59,13 @@ export function ReservationAddDialog({
       setIsInPreviewMode(false);
     }
   };
+  
+  // Handler for pickup/return dialog changes - updates both state and ref
+  const handlePickupReturnDialogChange = (isOpen: boolean) => {
+    console.log('📦 ReservationAddDialog pickup/return dialog change:', isOpen);
+    isPickupReturnDialogOpenRef.current = isOpen;
+    setIsPickupReturnDialogOpen(isOpen);
+  };
 
   // Custom trigger or default "New Reservation" button
   const trigger = children || (
@@ -71,7 +80,30 @@ export function ReservationAddDialog({
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking on nested dialog overlays (use ref for sync access)
+          if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
+            console.log('🛑 Blocking pointer down outside - pickup dialog is open');
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          // Prevent any interaction outside when pickup dialog is open (use ref for sync access)
+          if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
+            console.log('🛑 Blocking interact outside - pickup dialog is open');
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          // Prevent escape closing parent when pickup dialog is open
+          if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
+            console.log('🛑 Blocking escape key - pickup dialog is open');
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>New Reservation</DialogTitle>
           <DialogDescription>
@@ -84,9 +116,11 @@ export function ReservationAddDialog({
             initialCustomerId={initialCustomerId}
             initialStartDate={initialStartDate}
             onPreviewModeChange={setIsInPreviewMode}
-            onPickupReturnDialogChange={setIsPickupReturnDialogOpen}
+            onPickupReturnDialogChange={handlePickupReturnDialogChange}
             onSuccess={(reservation) => {
+              console.log('📦 ReservationAddDialog onSuccess callback called');
               setIsInPreviewMode(false);
+              isPickupReturnDialogOpenRef.current = false;
               setIsPickupReturnDialogOpen(false);
               setOpen(false);
               if (onSuccess) {
@@ -94,7 +128,9 @@ export function ReservationAddDialog({
               }
             }}
             onCancel={() => {
+              console.log('📦 ReservationAddDialog onCancel callback called');
               setIsInPreviewMode(false);
+              isPickupReturnDialogOpenRef.current = false;
               setIsPickupReturnDialogOpen(false);
               setOpen(false);
             }}
