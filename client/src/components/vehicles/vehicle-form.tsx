@@ -1838,8 +1838,22 @@ export function VehicleForm({
               <Button
                 type="button" 
                 disabled={createVehicleMutation.isPending}
-                onClick={() => {
-                  // Always trigger form validation and submission
+                onClick={async () => {
+                  // Debug: Log form state before submission
+                  console.log("🚗 Update Vehicle button clicked");
+                  console.log("🔍 Form values:", form.getValues());
+                  console.log("🔍 Form errors before validation:", form.formState.errors);
+                  
+                  // Trigger form validation first
+                  const isValid = await form.trigger();
+                  console.log("🔍 Form is valid:", isValid);
+                  
+                  if (!isValid) {
+                    console.log("❌ Form validation failed:", form.formState.errors);
+                    return;
+                  }
+                  
+                  // Form is valid, trigger submission
                   form.handleSubmit(onSubmit)();
                 }}
               >
