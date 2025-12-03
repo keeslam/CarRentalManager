@@ -10,6 +10,7 @@ import { Link, useLocation } from "wouter";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
+import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 import { DriverDialog } from "./driver-dialog";
 import { DriverViewDialog } from "./driver-view-dialog";
@@ -48,6 +49,10 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
   // Driver view dialog state
   const [viewDriverDialogOpen, setViewDriverDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  
+  // Vehicle view dialog state (for viewing blocked vehicles)
+  const [viewVehicleDialogOpen, setViewVehicleDialogOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   
   // Filter state
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -858,11 +863,18 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                           {entry.createdByUsername && ` by ${entry.createdByUsername}`}
                         </p>
                       </div>
-                      <Link href={`/vehicles/${entry.vehicleId}`}>
-                        <Button variant="ghost" size="sm" className="text-primary-600" data-testid={`button-view-blocked-vehicle-${entry.id}`}>
-                          View Vehicle
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-primary-600" 
+                        data-testid={`button-view-blocked-vehicle-${entry.id}`}
+                        onClick={() => {
+                          setSelectedVehicleId(entry.vehicleId);
+                          setViewVehicleDialogOpen(true);
+                        }}
+                      >
+                        View Vehicle
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1429,6 +1441,13 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         activeReservation={selectedDriverActiveReservation}
         open={viewDriverDialogOpen}
         onOpenChange={setViewDriverDialogOpen}
+      />
+      
+      {/* Vehicle View Dialog (for blocked vehicles) */}
+      <VehicleViewDialog
+        open={viewVehicleDialogOpen}
+        onOpenChange={setViewVehicleDialogOpen}
+        vehicleId={selectedVehicleId}
       />
     </div>
   );
