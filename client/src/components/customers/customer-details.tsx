@@ -101,6 +101,14 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
     staleTime: 0, // Always consider data stale
     refetchOnMount: 'always', // Always refetch when component mounts
   });
+
+  // Fetch blacklisted vehicles for this customer
+  const { 
+    data: blockedVehicles = [], 
+    isLoading: isLoadingBlockedVehicles
+  } = useQuery<any[]>({
+    queryKey: [`/api/customers/${customerId}/blacklist`],
+  });
   
   // Mutation for deleting drivers with optimistic updates
   const deleteDriverMutation = useMutation({
@@ -794,6 +802,71 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Blocked Vehicles Section */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                  </svg>
+                  Blocked Vehicles
+                </CardTitle>
+                <CardDescription>Vehicles this customer is not allowed to rent</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingBlockedVehicles ? (
+                <div className="flex justify-center p-6">
+                  <svg className="animate-spin h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : blockedVehicles.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <p>This customer is not blocked from any vehicles.</p>
+                  <p className="text-sm mt-1">They can rent all available vehicles.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {blockedVehicles.map((entry: any) => (
+                    <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg bg-red-50 dark:bg-red-900/10" data-testid={`blocked-vehicle-entry-${entry.id}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Car className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium">
+                            {entry.vehicle ? `${entry.vehicle.brand} ${entry.vehicle.model}` : 'Unknown Vehicle'}
+                          </span>
+                          {entry.vehicle?.licensePlate && (
+                            <Badge variant="outline" className="ml-2">
+                              {formatLicensePlate(entry.vehicle.licensePlate)}
+                            </Badge>
+                          )}
+                        </div>
+                        {entry.reason && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-medium">Reason:</span> {entry.reason}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          Added {entry.createdAt ? formatDate(entry.createdAt) : 'Unknown date'}
+                          {entry.createdByUsername && ` by ${entry.createdByUsername}`}
+                        </p>
+                      </div>
+                      <Link href={`/vehicles/${entry.vehicleId}`}>
+                        <Button variant="ghost" size="sm" className="text-primary-600" data-testid={`button-view-blocked-vehicle-${entry.id}`}>
+                          View Vehicle
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
