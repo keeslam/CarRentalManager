@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -249,7 +249,9 @@ export function ReservationForm({
   
   // Pickup/Return dialog workflow states - when user sets status to picked_up/returned, 
   // we save the reservation first and then open the appropriate dialog
-  const [pendingStatusChange, setPendingStatusChange] = useState<"picked_up" | "returned" | null>(null);
+  // NOTE: Using ref instead of state to avoid race condition where mutation's onSuccess
+  // runs before React applies the state update
+  const pendingStatusChangeRef = useRef<"picked_up" | "returned" | null>(null);
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [pendingDialogReservation, setPendingDialogReservation] = useState<Reservation | null>(null);
@@ -842,7 +844,8 @@ export function ReservationForm({
         }
       });
       
-      // Check if we need to trigger pickup/return dialog
+      // Check if we need to trigger pickup/return dialog (using ref for immediate access)
+      const pendingStatusChange = pendingStatusChangeRef.current;
       if (pendingStatusChange && data && data.id) {
         // Prepare the reservation data for the dialog
         const reservationForDialog: Reservation = {
@@ -873,8 +876,8 @@ export function ReservationForm({
           onPickupReturnDialogChange?.(true);
         }
         
-        // Reset the pending status change
-        setPendingStatusChange(null);
+        // Reset the pending status change ref
+        pendingStatusChangeRef.current = null;
         return; // Don't run the onSuccess callback or navigate yet - dialog will handle it
       }
       
@@ -974,8 +977,8 @@ export function ReservationForm({
         triggerDialog = "returned";
       }
       
-      // Store the pending status change for onSuccess to handle
-      setPendingStatusChange(triggerDialog);
+      // Store the pending status change for onSuccess to handle (using ref for immediate access)
+      pendingStatusChangeRef.current = triggerDialog;
       
       // Prepare submission data for both edit and create modes
       const submissionData: any = {
