@@ -895,7 +895,6 @@ export function ReservationViewDialog({
             {reservation?.status === 'booked' && (
               <Button 
                 onClick={() => {
-                  onOpenChange(false);
                   setPickupDialogOpen(true);
                 }}
                 data-testid="button-start-pickup-view"
@@ -911,7 +910,6 @@ export function ReservationViewDialog({
             {reservation?.status === 'picked_up' && (
               <Button 
                 onClick={() => {
-                  onOpenChange(false);
                   setReturnDialogOpen(true);
                 }}
                 data-testid="button-start-return-view"
