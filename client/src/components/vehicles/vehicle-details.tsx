@@ -717,7 +717,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     const startDate = parseISO(reservation.startDate);
     
     // Check if currently active - 'picked_up' is the status when vehicle is rented out
-    const activeStatuses = ['picked_up', 'rented', 'confirmed', 'pending'];
+    // 'booked' is also included to show upcoming/current bookings
+    const activeStatuses = ['picked_up', 'booked', 'rented', 'confirmed', 'pending'];
     if (activeStatuses.includes(reservation.status) && today >= startDate) {
       // For reservations with an end date, check if we're still within the range
       if (reservation.endDate) {
