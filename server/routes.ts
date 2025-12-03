@@ -1459,6 +1459,172 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ==================== VEHICLE-CUSTOMER BLACKLIST ROUTES ====================
+  // Get blacklisted customers for a vehicle
+  app.get("/api/vehicles/:id/blacklist", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.id);
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const blacklistEntries = await storage.getBlacklistedCustomersForVehicle(vehicleId);
+      
+      // Enrich with customer info
+      const enrichedEntries = await Promise.all(
+        blacklistEntries.map(async (entry) => {
+          const customer = await storage.getCustomer(entry.customerId);
+          const createdByUser = entry.createdBy ? await storage.getUser(entry.createdBy) : null;
+          return {
+            ...entry,
+            customer: customer ? { id: customer.id, name: customer.name, email: customer.email } : null,
+            createdByUsername: createdByUser?.username || null
+          };
+        })
+      );
+
+      res.json(enrichedEntries);
+    } catch (error) {
+      console.error("Error fetching blacklist for vehicle:", error);
+      res.status(500).json({ message: "Failed to fetch blacklist" });
+    }
+  });
+
+  // Get blacklisted vehicles for a customer
+  app.get("/api/customers/:id/blacklist", hasPermission(UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS), async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      const blacklistEntries = await storage.getBlacklistedVehiclesForCustomer(customerId);
+      
+      // Enrich with vehicle info
+      const enrichedEntries = await Promise.all(
+        blacklistEntries.map(async (entry) => {
+          const vehicle = await storage.getVehicle(entry.vehicleId);
+          const createdByUser = entry.createdBy ? await storage.getUser(entry.createdBy) : null;
+          return {
+            ...entry,
+            vehicle: vehicle ? { id: vehicle.id, licensePlate: vehicle.licensePlate, brand: vehicle.brand, model: vehicle.model } : null,
+            createdByUsername: createdByUser?.username || null
+          };
+        })
+      );
+
+      res.json(enrichedEntries);
+    } catch (error) {
+      console.error("Error fetching blacklist for customer:", error);
+      res.status(500).json({ message: "Failed to fetch blacklist" });
+    }
+  });
+
+  // Add customer to vehicle blacklist
+  app.post("/api/vehicles/:id/blacklist", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.id);
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+
+      const { customerId, reason } = req.body;
+      if (!customerId || isNaN(parseInt(customerId))) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      // Check if vehicle exists
+      const vehicle = await storage.getVehicle(vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // Check if customer exists
+      const customer = await storage.getCustomer(parseInt(customerId));
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Check if already blacklisted
+      const isBlacklisted = await storage.isCustomerBlacklistedForVehicle(vehicleId, parseInt(customerId));
+      if (isBlacklisted) {
+        return res.status(400).json({ message: "Customer is already blacklisted for this vehicle" });
+      }
+
+      const user = req.user;
+      const entry = await storage.addToBlacklist({
+        vehicleId,
+        customerId: parseInt(customerId),
+        reason: reason || null,
+        createdBy: user?.id || null
+      });
+
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error adding to blacklist:", error);
+      res.status(500).json({ message: "Failed to add to blacklist" });
+    }
+  });
+
+  // Remove from blacklist
+  app.delete("/api/blacklist/:id", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid blacklist entry ID" });
+      }
+
+      const deleted = await storage.removeFromBlacklist(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Blacklist entry not found" });
+      }
+
+      res.json({ success: true, message: "Customer removed from blacklist" });
+    } catch (error) {
+      console.error("Error removing from blacklist:", error);
+      res.status(500).json({ message: "Failed to remove from blacklist" });
+    }
+  });
+
+  // Check if customer is blacklisted for a vehicle
+  app.get("/api/vehicles/:vehicleId/blacklist/check/:customerId", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const customerId = parseInt(req.params.customerId);
+      
+      if (isNaN(vehicleId) || isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid vehicle or customer ID" });
+      }
+
+      const isBlacklisted = await storage.isCustomerBlacklistedForVehicle(vehicleId, customerId);
+      res.json({ isBlacklisted });
+    } catch (error) {
+      console.error("Error checking blacklist:", error);
+      res.status(500).json({ message: "Failed to check blacklist" });
+    }
+  });
+
+  // Get all blacklist entries (for filtering in reservation form)
+  app.get("/api/blacklist", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
+    try {
+      // Get all vehicles and their blacklisted customers
+      const vehicles = await storage.getAllVehicles();
+      const allBlacklistEntries: Array<{ vehicleId: number; customerId: number }> = [];
+      
+      for (const vehicle of vehicles) {
+        const entries = await storage.getBlacklistedCustomersForVehicle(vehicle.id);
+        for (const entry of entries) {
+          allBlacklistEntries.push({ vehicleId: entry.vehicleId, customerId: entry.customerId });
+        }
+      }
+
+      res.json(allBlacklistEntries);
+    } catch (error) {
+      console.error("Error fetching all blacklist entries:", error);
+      res.status(500).json({ message: "Failed to fetch blacklist entries" });
+    }
+  });
+
   // Lookup vehicle via RDW API
   app.get("/api/rdw/vehicle/:licensePlate", async (req, res) => {
     try {
