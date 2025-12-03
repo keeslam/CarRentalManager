@@ -1736,20 +1736,6 @@ export function VehicleForm({
                   
                   <FormField
                     control={form.control}
-                    name="contractNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contract Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contract number" {...field} value={handleFieldValue(field.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
                     name="returnMileage"
                     render={({ field: { onChange, ...restField } }) => (
                       <FormItem>
