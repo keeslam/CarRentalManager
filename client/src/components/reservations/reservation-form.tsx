@@ -846,6 +846,7 @@ export function ReservationForm({
       
       // Check if we need to trigger pickup/return dialog (using ref for immediate access)
       const pendingStatusChange = pendingStatusChangeRef.current;
+      console.log('🔍 Checking pendingStatusChange:', pendingStatusChange, 'data.id:', data?.id);
       if (pendingStatusChange && data && data.id) {
         // Prepare the reservation data for the dialog
         const reservationForDialog: Reservation = {
@@ -978,6 +979,7 @@ export function ReservationForm({
       }
       
       // Store the pending status change for onSuccess to handle (using ref for immediate access)
+      console.log('🔧 Setting pendingStatusChangeRef to:', triggerDialog);
       pendingStatusChangeRef.current = triggerDialog;
       
       // Prepare submission data for both edit and create modes
