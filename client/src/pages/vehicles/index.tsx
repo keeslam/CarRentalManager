@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { VehicleEditDialog } from "@/components/vehicles/vehicle-edit-dialog";
 import { VehicleDeleteDialog } from "@/components/vehicles/vehicle-delete-dialog";
@@ -20,6 +21,7 @@ import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
 import { Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,7 +29,10 @@ export default function VehiclesIndex() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [reservationViewDialogOpen, setReservationViewDialogOpen] = useState(false);
+  const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Debounce search query to prevent excessive filtering on every keystroke
   useEffect(() => {
@@ -174,7 +179,18 @@ export default function VehiclesIndex() {
               vehicleLicensePlate={vehicle.licensePlate}
               onSuccess={handleDialogSuccess}
             />
-            <ReservationAddDialog initialVehicleId={vehicle.id.toString()}>
+            <ReservationAddDialog 
+              initialVehicleId={vehicle.id.toString()}
+              onSuccess={(reservation) => {
+                handleDialogSuccess();
+                toast({
+                  title: "Reservation created",
+                  description: "Opening reservation to start pickup...",
+                });
+                setSelectedReservationId(reservation.id);
+                setReservationViewDialogOpen(true);
+              }}
+            >
               <Button 
                 variant="outline" 
                 size="sm"
@@ -386,6 +402,13 @@ export default function VehiclesIndex() {
         open={vehicleViewDialogOpen}
         onOpenChange={setVehicleViewDialogOpen}
         vehicleId={selectedVehicleId}
+      />
+      
+      {/* Reservation View Dialog - for starting pickup after creating reservation */}
+      <ReservationViewDialog
+        open={reservationViewDialogOpen}
+        onOpenChange={setReservationViewDialogOpen}
+        reservationId={selectedReservationId}
       />
       
       <div className="flex justify-between items-center">
