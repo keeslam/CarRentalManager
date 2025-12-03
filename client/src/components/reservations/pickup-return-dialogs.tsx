@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Reservation } from "@shared/schema";
-import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2, Upload } from "lucide-react";
+import type { Reservation, Vehicle } from "@shared/schema";
+import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
 import InteractiveDamageCheck from "@/pages/interactive-damage-check";
+import { VehicleRemarksWarningDialog } from "@/components/vehicles/vehicle-remarks-warning-dialog";
 
 interface PickupDialogProps {
   open: boolean;
@@ -47,6 +48,10 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
   const [uploadedPaperCheckIds, setUploadedPaperCheckIds] = useState<number[]>([]);
+  
+  // Vehicle remarks warning state - shown when vehicle has remarks before pickup
+  const [remarksWarningOpen, setRemarksWarningOpen] = useState(false);
+  const [remarksAcknowledged, setRemarksAcknowledged] = useState(false);
 
   // Cleanup function to delete uploaded paper checks on cancel
   const cleanupUploadedPaperChecks = async () => {
@@ -116,6 +121,17 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         setOverridePassword("");
         setPendingMileage(null);
         
+        // Reset remarks acknowledgement - require user to acknowledge again each time
+        setRemarksAcknowledged(false);
+        // Explicitly close any existing warning dialog first
+        setRemarksWarningOpen(false);
+        
+        // Check if vehicle has remarks and show warning (only for non-TBD reservations)
+        // For TBD spares, the warning will be shown when a vehicle is selected
+        if (!isTBDSpare && reservation.vehicle?.remarks && reservation.vehicle.remarks.trim() !== '') {
+          setRemarksWarningOpen(true);
+        }
+        
         // If reservation already has a contract number, use it
         if (reservation.contractNumber) {
           setContractNumber(reservation.contractNumber);
@@ -183,10 +199,24 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   }, [contractNumber, reservation.id, reservation.contractNumber]);
 
   // Update mileage and fuel when vehicle is selected for TBD spare
+  // Also reset remarks acknowledgement when a different vehicle is selected
   useEffect(() => {
     if (isTBDSpare && selectedVehicle) {
       setPickupMileage(selectedVehicle.currentMileage?.toString() || "");
       setFuelLevelPickup(selectedVehicle.currentFuelLevel || "Full");
+      // Reset remarks acknowledgement when vehicle changes - user must re-acknowledge
+      setRemarksAcknowledged(false);
+      // Close any existing warning dialog first
+      setRemarksWarningOpen(false);
+      // If the new vehicle has remarks, show the warning after a short delay
+      // (to ensure state has been cleared first)
+      if (selectedVehicle.remarks && selectedVehicle.remarks.trim() !== '') {
+        setTimeout(() => setRemarksWarningOpen(true), 0);
+      }
+    } else if (isTBDSpare && !selectedVehicle) {
+      // No vehicle selected - reset states
+      setRemarksAcknowledged(false);
+      setRemarksWarningOpen(false);
     }
   }, [selectedVehicleId, selectedVehicle, isTBDSpare]);
 
@@ -262,6 +292,22 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if vehicle has remarks that haven't been acknowledged
+    // For TBD spare, check the selected vehicle's remarks
+    // For regular reservations, check the reservation's vehicle remarks
+    const vehicleToCheck = isTBDSpare ? selectedVehicle : reservation.vehicle;
+    const vehicleHasRemarks = vehicleToCheck?.remarks && vehicleToCheck.remarks.trim() !== '';
+    if (vehicleHasRemarks && !remarksAcknowledged) {
+      // Show the remarks warning dialog
+      setRemarksWarningOpen(true);
+      toast({
+        variant: "destructive",
+        title: "Remarks Not Acknowledged",
+        description: "You must acknowledge the vehicle remarks before proceeding with pickup.",
+      });
+      return;
+    }
     
     // Validate contract number
     if (!contractNumber || contractNumber.trim() === "") {
@@ -375,36 +421,108 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                   />
                 </div>
                 {selectedVehicle && (
-                  <div className="bg-white rounded p-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span>Current Mileage: {selectedVehicle.currentMileage?.toLocaleString() || 'N/A'} km</span>
-                      <span>•</span>
-                      <span>Fuel: {selectedVehicle.currentFuelLevel || 'N/A'}</span>
+                  <div className="space-y-2">
+                    <div className="bg-white rounded p-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>Current Mileage: {selectedVehicle.currentMileage?.toLocaleString() || 'N/A'} km</span>
+                        <span>•</span>
+                        <span>Fuel: {selectedVehicle.currentFuelLevel || 'N/A'}</span>
+                      </div>
                     </div>
+                    
+                    {/* Remarks warning for TBD spare selected vehicle */}
+                    {selectedVehicle.remarks && selectedVehicle.remarks.trim() !== '' && (
+                      <div className={`rounded-md p-3 ${remarksAcknowledged ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                        <div className="flex items-start gap-2">
+                          {remarksAcknowledged ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <h4 className={`font-medium text-sm ${remarksAcknowledged ? 'text-green-800' : 'text-amber-800'}`}>
+                              {remarksAcknowledged ? 'Vehicle Remarks Acknowledged' : 'Vehicle Has Remarks'}
+                            </h4>
+                            <p className={`text-xs mt-1 ${remarksAcknowledged ? 'text-green-700' : 'text-amber-700'}`}>
+                              {selectedVehicle.remarks}
+                            </p>
+                            {!remarksAcknowledged && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 text-amber-700 border-amber-300 hover:bg-amber-100"
+                                onClick={() => setRemarksWarningOpen(true)}
+                                data-testid="button-review-spare-remarks"
+                              >
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Review & Acknowledge
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           ) : (
             /* Vehicle Information */
-            <div className="bg-muted/50 rounded-md p-3">
-              <div className="space-y-1">
-                <h3 className="font-medium text-sm">Vehicle Information</h3>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                  <div className="flex items-center">
-                    <span className="text-muted-foreground mr-1">License:</span>
-                    <span className="font-medium">{reservation.vehicle?.licensePlate}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-muted-foreground mr-1">Vehicle:</span>
-                    <span className="font-medium">{reservation.vehicle?.brand} {reservation.vehicle?.model}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-muted-foreground mr-1">Customer:</span>
-                    <span className="font-medium">{reservation.customer?.name}</span>
+            <div className="space-y-2">
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="space-y-1">
+                  <h3 className="font-medium text-sm">Vehicle Information</h3>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">License:</span>
+                      <span className="font-medium">{reservation.vehicle?.licensePlate}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Vehicle:</span>
+                      <span className="font-medium">{reservation.vehicle?.brand} {reservation.vehicle?.model}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Customer:</span>
+                      <span className="font-medium">{reservation.customer?.name}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              {/* Vehicle Remarks Warning - shown if vehicle has remarks */}
+              {reservation.vehicle?.remarks && reservation.vehicle.remarks.trim() !== '' && (
+                <div className={`rounded-md p-3 ${remarksAcknowledged ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                  <div className="flex items-start gap-2">
+                    {remarksAcknowledged ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <h4 className={`font-medium text-sm ${remarksAcknowledged ? 'text-green-800' : 'text-amber-800'}`}>
+                        {remarksAcknowledged ? 'Vehicle Remarks Acknowledged' : 'Vehicle Has Remarks'}
+                      </h4>
+                      <p className={`text-xs mt-1 ${remarksAcknowledged ? 'text-green-700' : 'text-amber-700'}`}>
+                        {reservation.vehicle.remarks}
+                      </p>
+                      {!remarksAcknowledged && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 text-amber-700 border-amber-300 hover:bg-amber-100"
+                          onClick={() => setRemarksWarningOpen(true)}
+                          data-testid="button-review-remarks"
+                        >
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Review & Acknowledge
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -968,6 +1086,21 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           />
         </DialogContent>
       </Dialog>
+      
+      {/* Vehicle Remarks Warning Dialog - shown when vehicle has remarks before pickup */}
+      <VehicleRemarksWarningDialog
+        open={remarksWarningOpen}
+        onOpenChange={setRemarksWarningOpen}
+        vehicle={(isTBDSpare ? selectedVehicle : reservation.vehicle) as Vehicle | null}
+        context="pickup"
+        onAcknowledge={() => {
+          setRemarksAcknowledged(true);
+        }}
+        onCancel={() => {
+          // User cancelled acknowledgement - close the pickup dialog
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }
