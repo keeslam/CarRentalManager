@@ -2226,7 +2226,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       Add to Blacklist
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[650px] md:max-w-[720px]">
                     <DialogHeader>
                       <DialogTitle>Add Customer to Blacklist</DialogTitle>
                       <DialogDescription>
@@ -2244,6 +2244,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                           searchPlaceholder="Search by name, phone, or city..."
                           emptyMessage="No customers found"
                           groups={false}
+                          className="w-full"
                           data-testid="select-blacklist-customer"
                         />
                       </div>
