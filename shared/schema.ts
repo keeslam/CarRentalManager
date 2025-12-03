@@ -1464,6 +1464,26 @@ export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
 
+// Vehicle-Customer Blacklist - Prevent specific customers from renting specific vehicles
+export const vehicleCustomerBlacklist = pgTable("vehicle_customer_blacklist", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  customerId: integer("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  reason: text("reason"), // Optional reason for blacklisting
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+}, (table) => ({
+  uniqueVehicleCustomer: uniqueIndex("vehicle_customer_blacklist_unique").on(table.vehicleId, table.customerId),
+}));
+
+export const insertVehicleCustomerBlacklistSchema = createInsertSchema(vehicleCustomerBlacklist).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type VehicleCustomerBlacklist = typeof vehicleCustomerBlacklist.$inferSelect;
+export type InsertVehicleCustomerBlacklist = z.infer<typeof insertVehicleCustomerBlacklistSchema>;
+
 // Legacy Session table (connect-pg-simple sessions)
 export const session = pgTable("session", {
   sid: varchar("sid").primaryKey(),
