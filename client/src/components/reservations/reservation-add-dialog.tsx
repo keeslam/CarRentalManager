@@ -29,9 +29,15 @@ export function ReservationAddDialog({
 }: ReservationAddDialogProps) {
   const [open, setOpen] = useState(false);
   const [isInPreviewMode, setIsInPreviewMode] = useState(false);
+  const [isPickupReturnDialogOpen, setIsPickupReturnDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleOpenChange = (newOpen: boolean) => {
+    // Don't close if pickup/return dialog is open
+    if (!newOpen && isPickupReturnDialogOpen) {
+      return;
+    }
+    
     if (!newOpen && isInPreviewMode) {
       toast({
         title: "Preview in Progress",
@@ -74,8 +80,10 @@ export function ReservationAddDialog({
             initialCustomerId={initialCustomerId}
             initialStartDate={initialStartDate}
             onPreviewModeChange={setIsInPreviewMode}
+            onPickupReturnDialogChange={setIsPickupReturnDialogOpen}
             onSuccess={(reservation) => {
               setIsInPreviewMode(false);
+              setIsPickupReturnDialogOpen(false);
               setOpen(false);
               if (onSuccess) {
                 onSuccess(reservation);
@@ -83,6 +91,7 @@ export function ReservationAddDialog({
             }}
             onCancel={() => {
               setIsInPreviewMode(false);
+              setIsPickupReturnDialogOpen(false);
               setOpen(false);
             }}
           />

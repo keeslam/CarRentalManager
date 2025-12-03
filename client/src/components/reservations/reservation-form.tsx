@@ -168,6 +168,8 @@ interface ReservationFormProps {
   initialStartDate?: string;
   onSuccess?: (reservation: Reservation) => void;
   onCancel?: () => void;
+  onPreviewModeChange?: (isPreviewMode: boolean) => void;
+  onPickupReturnDialogChange?: (isOpen: boolean) => void;
 }
 
 export function ReservationForm({ 
@@ -177,7 +179,9 @@ export function ReservationForm({
   initialCustomerId,
   initialStartDate,
   onSuccess,
-  onCancel
+  onCancel,
+  onPreviewModeChange,
+  onPickupReturnDialogChange
 }: ReservationFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -856,6 +860,8 @@ export function ReservationForm({
             description: "Please complete the pickup details (contract number, mileage, fuel level).",
           });
           setPickupDialogOpen(true);
+          // Notify parent that a pickup/return dialog is open
+          onPickupReturnDialogChange?.(true);
         } else if (pendingStatusChange === "returned") {
           // Open the return dialog for proper data entry
           toast({
@@ -863,6 +869,8 @@ export function ReservationForm({
             description: "Please complete the return details (mileage, fuel level, damage check).",
           });
           setReturnDialogOpen(true);
+          // Notify parent that a pickup/return dialog is open
+          onPickupReturnDialogChange?.(true);
         }
         
         // Reset the pending status change
@@ -2608,12 +2616,16 @@ export function ReservationForm({
             // Update form status back to booked since pickup was cancelled
             form.setValue("status", initialData?.status || "booked");
             setCurrentStatus(initialData?.status || "booked");
+            // Notify parent that pickup/return dialog is closed
+            onPickupReturnDialogChange?.(false);
           }
         }}
         reservation={pendingDialogReservation}
         onSuccess={async () => {
           // Pickup completed successfully
           setPickupDialogOpen(false);
+          // Notify parent that pickup/return dialog is closed
+          onPickupReturnDialogChange?.(false);
           
           // Update form status to picked_up
           form.setValue("status", "picked_up");
@@ -2659,12 +2671,16 @@ export function ReservationForm({
             // Update form status back to picked_up since return was cancelled
             form.setValue("status", initialData?.status || "picked_up");
             setCurrentStatus(initialData?.status || "picked_up");
+            // Notify parent that pickup/return dialog is closed
+            onPickupReturnDialogChange?.(false);
           }
         }}
         reservation={pendingDialogReservation}
         onSuccess={async () => {
           // Return completed successfully
           setReturnDialogOpen(false);
+          // Notify parent that pickup/return dialog is closed
+          onPickupReturnDialogChange?.(false);
           
           // Update form status to returned
           form.setValue("status", "returned");
