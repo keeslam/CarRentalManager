@@ -8,6 +8,7 @@ import { VehicleEditDialog } from "@/components/vehicles/vehicle-edit-dialog";
 import { VehicleDeleteDialog } from "@/components/vehicles/vehicle-delete-dialog";
 import { VehicleAddDialog } from "@/components/vehicles/vehicle-add-dialog";
 import { VehicleBulkImportDialog } from "@/components/vehicles/vehicle-bulk-import-dialog";
+import { VehicleRemarksWarningDialog } from "@/components/vehicles/vehicle-remarks-warning-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
@@ -36,6 +37,10 @@ export default function VehiclesIndex() {
   // Page-level pickup dialog state - survives table re-renders after reservation creation
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [pendingPickupReservation, setPendingPickupReservation] = useState<Reservation | null>(null);
+  
+  // Vehicle remarks warning dialog state
+  const [remarksWarningOpen, setRemarksWarningOpen] = useState(false);
+  const [pendingViewVehicle, setPendingViewVehicle] = useState<Vehicle | null>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -66,9 +71,25 @@ export default function VehiclesIndex() {
   });
   
   // Dialog handlers
-  const handleViewClick = (vehicleId: number) => {
-    setSelectedVehicleId(vehicleId);
-    setVehicleViewDialogOpen(true);
+  const handleViewClick = (vehicle: Vehicle) => {
+    // Check if vehicle has remarks - show warning first
+    if (vehicle.remarks && vehicle.remarks.trim() !== '') {
+      setPendingViewVehicle(vehicle);
+      setRemarksWarningOpen(true);
+    } else {
+      // No remarks, open directly
+      setSelectedVehicleId(vehicle.id);
+      setVehicleViewDialogOpen(true);
+    }
+  };
+  
+  // Handle remarks acknowledgement - proceed to view vehicle
+  const handleRemarksAcknowledged = () => {
+    if (pendingViewVehicle) {
+      setSelectedVehicleId(pendingViewVehicle.id);
+      setVehicleViewDialogOpen(true);
+      setPendingViewVehicle(null);
+    }
   };
   
   // Handle successful operations from dialogs
@@ -176,7 +197,7 @@ export default function VehiclesIndex() {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => handleViewClick(vehicle.id)}
+              onClick={() => handleViewClick(vehicle)}
               data-testid={`button-view-vehicle-${vehicle.id}`}
             >
               View
@@ -539,6 +560,16 @@ export default function VehiclesIndex() {
           }}
         />
       )}
+      
+      {/* Vehicle remarks warning dialog */}
+      <VehicleRemarksWarningDialog
+        open={remarksWarningOpen}
+        onOpenChange={setRemarksWarningOpen}
+        vehicle={pendingViewVehicle}
+        context="view"
+        onAcknowledge={handleRemarksAcknowledged}
+        onCancel={() => setPendingViewVehicle(null)}
+      />
     </div>
   );
 }
