@@ -858,23 +858,30 @@ export function ReservationForm({
         setPendingDialogReservation(reservationForDialog);
         
         if (pendingStatusChange === "picked_up") {
+          // Notify parent FIRST that a pickup/return dialog is open (before setting local state)
+          // This prevents the parent from closing while we're setting up the dialog
+          console.log('🔓 Notifying parent: pickup dialog opening');
+          onPickupReturnDialogChange?.(true);
+          
           // Open the pickup dialog for proper data entry
           toast({
             title: "Opening Pickup Dialog",
             description: "Please complete the pickup details (contract number, mileage, fuel level).",
           });
           setPickupDialogOpen(true);
-          // Notify parent that a pickup/return dialog is open
-          onPickupReturnDialogChange?.(true);
+          console.log('✅ pickupDialogOpen set to true');
         } else if (pendingStatusChange === "returned") {
+          // Notify parent FIRST that a pickup/return dialog is open
+          console.log('🔓 Notifying parent: return dialog opening');
+          onPickupReturnDialogChange?.(true);
+          
           // Open the return dialog for proper data entry
           toast({
             title: "Opening Return Dialog",
             description: "Please complete the return details (mileage, fuel level, damage check).",
           });
           setReturnDialogOpen(true);
-          // Notify parent that a pickup/return dialog is open
-          onPickupReturnDialogChange?.(true);
+          console.log('✅ returnDialogOpen set to true');
         }
         
         // Reset the pending status change ref
