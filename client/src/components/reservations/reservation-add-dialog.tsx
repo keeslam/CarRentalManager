@@ -33,8 +33,11 @@ export function ReservationAddDialog({
   const { toast } = useToast();
 
   const handleOpenChange = (newOpen: boolean) => {
+    console.log('📦 ReservationAddDialog handleOpenChange called:', newOpen, 'isPickupReturnDialogOpen:', isPickupReturnDialogOpen);
+    
     // Don't close if pickup/return dialog is open
     if (!newOpen && isPickupReturnDialogOpen) {
+      console.log('🛑 Blocking close - pickup/return dialog is open');
       return;
     }
     
@@ -47,6 +50,7 @@ export function ReservationAddDialog({
       return;
     }
     
+    console.log('✅ Allowing dialog state change to:', newOpen);
     setOpen(newOpen);
     
     if (!newOpen) {
