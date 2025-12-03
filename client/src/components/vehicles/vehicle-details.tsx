@@ -652,6 +652,90 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       });
     }
   });
+
+  // Blacklist state
+  const [isAddToBlacklistOpen, setIsAddToBlacklistOpen] = useState(false);
+  const [selectedBlacklistCustomerId, setSelectedBlacklistCustomerId] = useState<string>("");
+  const [blacklistReason, setBlacklistReason] = useState("");
+
+  // Fetch blacklisted customers for this vehicle
+  const { 
+    data: blacklistedCustomers = [], 
+    isLoading: isLoadingBlacklist,
+    refetch: refetchBlacklist 
+  } = useQuery<any[]>({
+    queryKey: [`/api/vehicles/${vehicleId}/blacklist`],
+  });
+
+  // Fetch all customers for the add blacklist dropdown
+  const { data: allCustomers = [] } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    enabled: isAddToBlacklistOpen,
+  });
+
+  // Filter out already blacklisted customers
+  const availableCustomersForBlacklist = useMemo(() => {
+    const blacklistedIds = new Set(blacklistedCustomers.map((b: any) => b.customerId));
+    return allCustomers.filter((c: any) => !blacklistedIds.has(c.id));
+  }, [allCustomers, blacklistedCustomers]);
+
+  // Add to blacklist mutation
+  const addToBlacklistMutation = useMutation({
+    mutationFn: async ({ customerId, reason }: { customerId: number; reason?: string }) => {
+      const response = await apiRequest('POST', `/api/vehicles/${vehicleId}/blacklist`, {
+        customerId,
+        reason
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add to blacklist');
+      }
+      return await response.json();
+    },
+    onSuccess: async () => {
+      await refetchBlacklist();
+      setIsAddToBlacklistOpen(false);
+      setSelectedBlacklistCustomerId("");
+      setBlacklistReason("");
+      toast({
+        title: "Customer blacklisted",
+        description: "The customer has been added to this vehicle's blacklist."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer to blacklist",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Remove from blacklist mutation
+  const removeFromBlacklistMutation = useMutation({
+    mutationFn: async (blacklistId: number) => {
+      const response = await apiRequest('DELETE', `/api/blacklist/${blacklistId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove from blacklist');
+      }
+      return await response.json();
+    },
+    onSuccess: async () => {
+      await refetchBlacklist();
+      toast({
+        title: "Customer removed from blacklist",
+        description: "The customer can now rent this vehicle again."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove from blacklist",
+        variant: "destructive"
+      });
+    }
+  });
   
   // Find the current active reservation (most recent confirmed or ongoing rental)
   const currentActiveReservation = useMemo(() => {
@@ -2084,6 +2168,176 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Blacklist Section */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                    </svg>
+                    Customer Blacklist
+                  </CardTitle>
+                  <CardDescription>Customers who are blocked from renting this vehicle</CardDescription>
+                </div>
+                <Dialog open={isAddToBlacklistOpen} onOpenChange={setIsAddToBlacklistOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="flex items-center gap-2" data-testid="button-add-to-blacklist">
+                      <Plus className="h-4 w-4" />
+                      Add to Blacklist
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Add Customer to Blacklist</DialogTitle>
+                      <DialogDescription>
+                        Select a customer to block from renting this vehicle.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="blacklist-customer">Customer</Label>
+                        <Select
+                          value={selectedBlacklistCustomerId}
+                          onValueChange={setSelectedBlacklistCustomerId}
+                        >
+                          <SelectTrigger data-testid="select-blacklist-customer">
+                            <SelectValue placeholder="Select a customer..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableCustomersForBlacklist.map((customer: any) => (
+                              <SelectItem key={customer.id} value={String(customer.id)}>
+                                {customer.name} {customer.email ? `(${customer.email})` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="blacklist-reason">Reason (optional)</Label>
+                        <Textarea
+                          id="blacklist-reason"
+                          placeholder="Enter a reason for blacklisting this customer..."
+                          value={blacklistReason}
+                          onChange={(e) => setBlacklistReason(e.target.value)}
+                          data-testid="input-blacklist-reason"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsAddToBlacklistOpen(false);
+                          setSelectedBlacklistCustomerId("");
+                          setBlacklistReason("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (selectedBlacklistCustomerId) {
+                            addToBlacklistMutation.mutate({
+                              customerId: parseInt(selectedBlacklistCustomerId),
+                              reason: blacklistReason || undefined
+                            });
+                          }
+                        }}
+                        disabled={!selectedBlacklistCustomerId || addToBlacklistMutation.isPending}
+                        data-testid="button-confirm-blacklist"
+                      >
+                        {addToBlacklistMutation.isPending ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Adding...
+                          </>
+                        ) : (
+                          'Add to Blacklist'
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingBlacklist ? (
+                <div className="flex justify-center p-6">
+                  <svg className="animate-spin h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : blacklistedCustomers.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <p>No customers are blacklisted for this vehicle.</p>
+                  <p className="text-sm mt-1">All customers can rent this vehicle.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {blacklistedCustomers.map((entry: any) => (
+                    <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg bg-red-50 dark:bg-red-900/10" data-testid={`blacklist-entry-${entry.id}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{entry.customer?.name || 'Unknown Customer'}</span>
+                          {entry.customer?.email && (
+                            <span className="text-sm text-gray-500">({entry.customer.email})</span>
+                          )}
+                        </div>
+                        {entry.reason && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-medium">Reason:</span> {entry.reason}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          Added {entry.createdAt ? formatDate(entry.createdAt) : 'Unknown date'}
+                          {entry.createdByUsername && ` by ${entry.createdByUsername}`}
+                        </p>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                            data-testid={`button-remove-blacklist-${entry.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove from Blacklist?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove <strong>{entry.customer?.name}</strong> from this vehicle's blacklist?
+                              They will be able to rent this vehicle again.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => removeFromBlacklistMutation.mutate(entry.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Remove from Blacklist
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
