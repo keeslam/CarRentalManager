@@ -138,7 +138,7 @@ export function SearchableCombobox({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[280px] md:w-[350px] max-h-[300px] overflow-auto"
+          className="w-[350px] md:w-[500px] lg:w-[600px] max-h-[300px] overflow-auto"
           align="start"
           side="bottom"
           sideOffset={4}
@@ -189,7 +189,7 @@ export function SearchableCombobox({
                             )}
                           </span>
                           {option.description && (
-                            <span className="text-xs text-muted-foreground mt-0.5 truncate max-w-[220px]">
+                            <span className="text-xs text-muted-foreground mt-0.5 truncate max-w-[400px] lg:max-w-[500px]">
                               {option.description}
                             </span>
                           )}
