@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
+import { PickupDialog } from "@/components/reservations/pickup-return-dialogs";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { VehicleEditDialog } from "@/components/vehicles/vehicle-edit-dialog";
 import { VehicleDeleteDialog } from "@/components/vehicles/vehicle-delete-dialog";
@@ -31,8 +32,20 @@ export default function VehiclesIndex() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [reservationViewDialogOpen, setReservationViewDialogOpen] = useState(false);
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
+  
+  // Page-level pickup dialog state - survives table re-renders after reservation creation
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [pendingPickupReservation, setPendingPickupReservation] = useState<Reservation | null>(null);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Handler to trigger page-level pickup dialog - called from ReservationAddDialog
+  const handleStartPickupFlow = useCallback((reservation: Reservation) => {
+    console.log('📦 VehiclesIndex: Starting pickup flow for reservation:', reservation.id);
+    setPendingPickupReservation(reservation);
+    setPickupDialogOpen(true);
+  }, []);
   
   // Debounce search query to prevent excessive filtering on every keystroke
   useEffect(() => {
@@ -181,14 +194,19 @@ export default function VehiclesIndex() {
             />
             <ReservationAddDialog 
               initialVehicleId={vehicle.id.toString()}
+              onStartPickupFlow={handleStartPickupFlow}
               onSuccess={(reservation) => {
                 handleDialogSuccess();
-                toast({
-                  title: "Reservation created",
-                  description: "Opening reservation to start pickup...",
-                });
-                setSelectedReservationId(reservation.id);
-                setReservationViewDialogOpen(true);
+                // Only show view dialog for non-pickup reservations
+                // Pickup reservations are handled by the page-level pickup dialog
+                if (reservation.status !== 'picked_up') {
+                  toast({
+                    title: "Reservation created",
+                    description: "Opening reservation details...",
+                  });
+                  setSelectedReservationId(reservation.id);
+                  setReservationViewDialogOpen(true);
+                }
               }}
             >
               <Button 
@@ -486,6 +504,41 @@ export default function VehiclesIndex() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Page-level pickup dialog - survives table re-renders */}
+      {pendingPickupReservation && (
+        <PickupDialog
+          open={pickupDialogOpen}
+          onOpenChange={(dialogOpen) => {
+            setPickupDialogOpen(dialogOpen);
+            if (!dialogOpen) {
+              setPendingPickupReservation(null);
+            }
+          }}
+          reservation={pendingPickupReservation}
+          onSuccess={async () => {
+            console.log('📦 VehiclesIndex: Pickup success');
+            setPickupDialogOpen(false);
+            
+            // Refresh data
+            queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+            
+            toast({
+              title: "Pickup Complete",
+              description: "The reservation has been picked up successfully.",
+            });
+            
+            // Open reservation view dialog to show the completed pickup
+            if (pendingPickupReservation) {
+              setSelectedReservationId(pendingPickupReservation.id);
+              setReservationViewDialogOpen(true);
+            }
+            
+            setPendingPickupReservation(null);
+          }}
+        />
+      )}
     </div>
   );
 }
