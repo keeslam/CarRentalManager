@@ -385,6 +385,18 @@ export function ReservationForm({
     queryKey: [`/api/customers/${customerIdWatch}/drivers`],
     enabled: !!customerIdWatch,
   });
+
+  // Fetch blacklisted vehicles for the selected customer (to filter from vehicle dropdown)
+  const { data: customerBlacklist = [] } = useQuery<any[]>({
+    queryKey: [`/api/customers/${customerIdWatch}/blacklist`],
+    enabled: !!customerIdWatch,
+  });
+
+  // Fetch blacklisted customers for the selected vehicle (to filter from customer dropdown)
+  const { data: vehicleBlacklist = [] } = useQuery<any[]>({
+    queryKey: [`/api/vehicles/${vehicleIdWatch}/blacklist`],
+    enabled: !!vehicleIdWatch,
+  });
   
   // Fetch recent damage checks for vehicle + customer (last 3)
   const { data: recentDamageChecks = [] } = useQuery<InteractiveDamageCheck[]>({
@@ -417,30 +429,51 @@ export function ReservationForm({
 
   // Determine which vehicles to show based on toggle and date selection
   const vehiclesToShow = useMemo(() => {
+    let vehicleList: Vehicle[] = [];
+    
     // If user explicitly wants to see all vehicles, show them
     if (showAllVehicles) {
-      return vehicles || [];
+      vehicleList = vehicles || [];
     }
-    
     // If no start date selected yet, show all vehicles (initial state)
-    if (!startDateWatch) {
-      return vehicles || [];
+    else if (!startDateWatch) {
+      vehicleList = vehicles || [];
     }
-    
     // Once dates are selected, default to showing only available vehicles
     // For open-ended rentals, use available vehicles with just start date
-    if (isOpenEndedWatch) {
-      return availableVehicles || [];
+    else if (isOpenEndedWatch) {
+      vehicleList = availableVehicles || [];
     }
-    
     // For date-ranged rentals, only show available vehicles if both dates are selected
-    if (startDateWatch && endDateWatch) {
-      return availableVehicles || [];
+    else if (startDateWatch && endDateWatch) {
+      vehicleList = availableVehicles || [];
+    }
+    // If start date is set but end date isn't (non-open-ended), show all vehicles temporarily
+    else {
+      vehicleList = vehicles || [];
     }
     
-    // If start date is set but end date isn't (non-open-ended), show all vehicles temporarily
-    return vehicles || [];
-  }, [vehicles, availableVehicles, showAllVehicles, startDateWatch, endDateWatch, isOpenEndedWatch]);
+    // Filter out vehicles that are blacklisted for the selected customer
+    if (customerBlacklist && customerBlacklist.length > 0) {
+      const blacklistedVehicleIds = new Set(customerBlacklist.map((b: any) => b.vehicleId));
+      vehicleList = vehicleList.filter(v => !blacklistedVehicleIds.has(v.id));
+    }
+    
+    return vehicleList;
+  }, [vehicles, availableVehicles, showAllVehicles, startDateWatch, endDateWatch, isOpenEndedWatch, customerBlacklist]);
+
+  // Filter customers to exclude those blacklisted for the selected vehicle
+  const customersToShow = useMemo(() => {
+    let customerList = customers || [];
+    
+    // Filter out customers that are blacklisted for the selected vehicle
+    if (vehicleBlacklist && vehicleBlacklist.length > 0) {
+      const blacklistedCustomerIds = new Set(vehicleBlacklist.map((b: any) => b.customerId));
+      customerList = customerList.filter(c => !blacklistedCustomerIds.has(c.id));
+    }
+    
+    return customerList;
+  }, [customers, vehicleBlacklist]);
 
   // Find the selected vehicle and customer
   const selectedVehicle = useMemo(() => {
@@ -582,10 +615,10 @@ export function ReservationForm({
     }
   }, [vehicleIdWatch, startDateWatch, endDateWatch, isOpenEndedWatch, initialData?.id]);
   
-  // Format customer options for searchable combobox
+  // Format customer options for searchable combobox (using filtered list)
   const customerOptions = useMemo(() => {
-    if (!customers) return [];
-    return customers.map(customer => {
+    if (!customersToShow) return [];
+    return customersToShow.map(customer => {
       // Build a detailed description like vehicles show license plate
       const contactInfo = [];
       if (customer.phone) contactInfo.push(customer.phone);
@@ -615,7 +648,7 @@ export function ReservationForm({
         tags: tags.length > 0 ? tags : undefined,
       };
     });
-  }, [customers]);
+  }, [customersToShow]);
   
   // Format vehicle options for searchable combobox
   const vehicleOptions = useMemo(() => {
