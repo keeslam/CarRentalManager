@@ -78,12 +78,17 @@ export function ReservationAddDialog({
   // Strategy: Keep parent dialog open but render pickup dialog OUTSIDE the parent via lifted state
   const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
     console.log('📦 ReservationAddDialog triggering pickup dialog for reservation:', reservation.id);
+    console.log('📦 Setting pendingDialogReservation and pickupDialogOpen to true');
     // Set up ref FIRST for synchronous blocking
     isPickupReturnDialogOpenRef.current = true;
     setIsPickupReturnDialogOpen(true);
+    // Set reservation first, then open dialog in next tick to ensure React has batched the update
     setPendingDialogReservation(reservation);
-    // Open pickup dialog immediately - it's rendered outside the parent Dialog
-    setPickupDialogOpen(true);
+    // Use setTimeout to ensure state is set before opening dialog
+    setTimeout(() => {
+      console.log('📦 Opening pickup dialog after state set');
+      setPickupDialogOpen(true);
+    }, 0);
   }, []);
   
   // Handler to trigger return dialog from ReservationForm
@@ -175,6 +180,8 @@ export function ReservationAddDialog({
     </Dialog>
     
     {/* Render pickup/return dialogs OUTSIDE the parent Dialog to avoid focus/portal conflicts */}
+    {/* Debug: always render but control with open prop */}
+    {pendingDialogReservation && pickupDialogOpen && console.log('📦 Rendering PickupDialog with open=', pickupDialogOpen, 'reservation=', pendingDialogReservation?.id)}
     {pendingDialogReservation && (
       <PickupDialog
         open={pickupDialogOpen}
