@@ -3063,17 +3063,17 @@ export default function ReservationCalendarPage() {
                       Vehicles currently out on rental ({sortedCurrent.length})
                     </p>
                     
-                    <div className="border rounded-md overflow-hidden">
+                    <div className="border rounded-md overflow-x-auto">
                       <ScrollArea className="h-[450px]">
-                        <Table>
+                        <Table className="min-w-full">
                           <TableHeader className="bg-muted/50 sticky top-0">
                             <TableRow className="border-b-2">
-                              <TableHead className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap">GPS</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">License Plate</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Make / Model</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Contract #</TableHead>
-                              <TableHead className="px-2 py-1 border-r font-semibold whitespace-nowrap">Company / Customer</TableHead>
-                              <TableHead className="px-2 py-1 font-semibold whitespace-nowrap">Pickup Date</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold text-center w-[60px]">GPS</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold w-[120px]">License Plate</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold w-[160px]">Make / Model</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold w-[100px]">Contract #</TableHead>
+                              <TableHead className="px-2 py-1 border-r font-semibold">Company / Customer</TableHead>
+                              <TableHead className="px-2 py-1 font-semibold w-[100px]">Pickup Date</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -3088,28 +3088,28 @@ export default function ReservationCalendarPage() {
                                 const vehicleData = rental.vehicle || vehicles?.find(v => v.id === rental.vehicleId);
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-current-row-${rental.id}`}>
-                                    <TableCell className="px-2 py-1 border-r text-center whitespace-nowrap">
+                                    <TableCell className="px-2 py-1 border-r text-center">
                                       {vehicleData?.imei ? (
                                         <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
                                       )}
                                     </TableCell>
-                                    <TableCell className="px-2 py-1 font-semibold border-r whitespace-nowrap">
+                                    <TableCell className="px-2 py-1 font-semibold border-r">
                                       <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-sm font-mono">
                                         {formatLicensePlate(vehicleData?.licensePlate || '')}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
+                                    <TableCell className="px-2 py-1 border-r">
                                       {vehicleData?.brand} {vehicleData?.model}
                                     </TableCell>
-                                    <TableCell className="px-2 py-1 font-mono font-semibold border-r whitespace-nowrap">
+                                    <TableCell className="px-2 py-1 font-mono font-semibold border-r">
                                       {rental.contractNumber || '-'}
                                     </TableCell>
-                                    <TableCell className="px-2 py-1 border-r whitespace-nowrap">
+                                    <TableCell className="px-2 py-1 border-r truncate max-w-[200px]">
                                       <span className="font-medium">{rental.customer?.companyName || rental.customer?.name || '-'}</span>
                                     </TableCell>
-                                    <TableCell className="px-2 py-1 whitespace-nowrap">
+                                    <TableCell className="px-2 py-1">
                                       {rental.startDate ? format(parseISO(rental.startDate), 'dd MMM yyyy') : '-'}
                                     </TableCell>
                                   </TableRow>
@@ -3258,67 +3258,67 @@ export default function ReservationCalendarPage() {
                       Completed rentals ({sortedHistory.length})
                     </p>
                     
-                    <div className="border rounded-md overflow-hidden">
+                    <div className="border rounded-md overflow-x-auto">
                       <ScrollArea className="h-[450px]">
-                        <Table>
+                        <Table className="min-w-[1200px]">
                           <TableHeader className="bg-muted/50 sticky top-0">
                             <TableRow className="border-b-2">
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold text-center whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold text-center w-[50px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('gps')}
                               >
                                 GPS<SortIcon column="gps" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[100px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('plate')}
                               >
-                                License Plate<SortIcon column="plate" />
+                                Plate<SortIcon column="plate" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[130px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('model')}
                               >
                                 Make / Model<SortIcon column="model" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[80px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('contract')}
                               >
-                                Contract #<SortIcon column="contract" />
+                                Contract<SortIcon column="contract" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('company')}
                               >
-                                Company / Customer<SortIcon column="company" />
+                                Company<SortIcon column="company" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[85px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('pickup')}
                               >
                                 Pickup<SortIcon column="pickup" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[85px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('return')}
                               >
                                 Return<SortIcon column="return" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[90px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('damage')}
                               >
-                                Damage Check<SortIcon column="damage" />
+                                Damage<SortIcon column="damage" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 border-r font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 border-r font-semibold w-[70px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('kmout')}
                               >
                                 KM Out<SortIcon column="kmout" />
                               </TableHead>
                               <TableHead 
-                                className="px-2 py-1 font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/80 select-none"
+                                className="px-2 py-1 font-semibold w-[70px] cursor-pointer hover:bg-muted/80 select-none"
                                 onClick={() => toggleSort('kmin')}
                               >
                                 KM In<SortIcon column="kmin" />
