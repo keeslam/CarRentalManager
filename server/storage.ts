@@ -18,7 +18,8 @@ import {
   auditLogs, type AuditLog, type InsertAuditLog,
   passwordHistory, type PasswordHistory, type InsertPasswordHistory,
   loginAttempts, type LoginAttempt, type InsertLoginAttempt,
-  activeSessions, type ActiveSession, type InsertActiveSession
+  activeSessions, type ActiveSession, type InsertActiveSession,
+  vehicleCustomerBlacklist, type VehicleCustomerBlacklist, type InsertVehicleCustomerBlacklist
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 
@@ -264,6 +265,13 @@ export interface IStorage {
   revokeSession(sessionId: string): Promise<boolean>;
   revokeUserSessions(userId: number, exceptSessionId?: string): Promise<number>;
   cleanExpiredSessions(): Promise<number>;
+  
+  // Vehicle-Customer Blacklist methods
+  getBlacklistedCustomersForVehicle(vehicleId: number): Promise<VehicleCustomerBlacklist[]>;
+  getBlacklistedVehiclesForCustomer(customerId: number): Promise<VehicleCustomerBlacklist[]>;
+  addToBlacklist(entry: InsertVehicleCustomerBlacklist): Promise<VehicleCustomerBlacklist>;
+  removeFromBlacklist(id: number): Promise<boolean>;
+  isCustomerBlacklistedForVehicle(vehicleId: number, customerId: number): Promise<boolean>;
   
 }
 
@@ -2004,6 +2012,27 @@ export class MemStorage implements IStorage {
   }
 
   async duplicateTemplate(templateId: number, newName: string, createdBy?: string): Promise<any> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  // Vehicle-Customer Blacklist methods
+  async getBlacklistedCustomersForVehicle(vehicleId: number): Promise<VehicleCustomerBlacklist[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async getBlacklistedVehiclesForCustomer(customerId: number): Promise<VehicleCustomerBlacklist[]> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async addToBlacklist(entry: InsertVehicleCustomerBlacklist): Promise<VehicleCustomerBlacklist> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async removeFromBlacklist(id: number): Promise<boolean> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async isCustomerBlacklistedForVehicle(vehicleId: number, customerId: number): Promise<boolean> {
     throw new Error('Not implemented in MemStorage');
   }
 }

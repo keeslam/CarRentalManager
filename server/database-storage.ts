@@ -21,7 +21,8 @@ import {
   damageCheckPdfTemplateVersions, type DamageCheckPdfTemplateVersion,
   damageCheckPdfTemplateThemes, type DamageCheckPdfTemplateTheme,
   damageCheckPdfSectionPresets, type DamageCheckPdfSectionPreset,
-  type TemplateSection
+  type TemplateSection,
+  vehicleCustomerBlacklist, type VehicleCustomerBlacklist, type InsertVehicleCustomerBlacklist
 } from "../shared/schema";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
@@ -3097,5 +3098,44 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     
     return duplicate;
+  }
+
+  // Vehicle-Customer Blacklist methods
+  async getBlacklistedCustomersForVehicle(vehicleId: number): Promise<VehicleCustomerBlacklist[]> {
+    return await db.select()
+      .from(vehicleCustomerBlacklist)
+      .where(eq(vehicleCustomerBlacklist.vehicleId, vehicleId))
+      .orderBy(desc(vehicleCustomerBlacklist.createdAt));
+  }
+
+  async getBlacklistedVehiclesForCustomer(customerId: number): Promise<VehicleCustomerBlacklist[]> {
+    return await db.select()
+      .from(vehicleCustomerBlacklist)
+      .where(eq(vehicleCustomerBlacklist.customerId, customerId))
+      .orderBy(desc(vehicleCustomerBlacklist.createdAt));
+  }
+
+  async addToBlacklist(entry: InsertVehicleCustomerBlacklist): Promise<VehicleCustomerBlacklist> {
+    const [blacklistEntry] = await db.insert(vehicleCustomerBlacklist)
+      .values(entry)
+      .returning();
+    return blacklistEntry;
+  }
+
+  async removeFromBlacklist(id: number): Promise<boolean> {
+    const result = await db.delete(vehicleCustomerBlacklist)
+      .where(eq(vehicleCustomerBlacklist.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async isCustomerBlacklistedForVehicle(vehicleId: number, customerId: number): Promise<boolean> {
+    const [entry] = await db.select()
+      .from(vehicleCustomerBlacklist)
+      .where(and(
+        eq(vehicleCustomerBlacklist.vehicleId, vehicleId),
+        eq(vehicleCustomerBlacklist.customerId, customerId)
+      ))
+      .limit(1);
+    return !!entry;
   }
 }
