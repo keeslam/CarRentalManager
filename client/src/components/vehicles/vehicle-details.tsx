@@ -679,6 +679,38 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
     return allCustomers.filter((c: any) => !blacklistedIds.has(c.id));
   }, [allCustomers, blacklistedCustomers]);
 
+  // Format available customers for SearchableCombobox
+  const blacklistCustomerOptions = useMemo(() => {
+    return availableCustomersForBlacklist.map((customer: any) => {
+      const contactInfo = [];
+      if (customer.phone) contactInfo.push(customer.phone);
+      if (customer.email) contactInfo.push(customer.email);
+      
+      const locationInfo = [];
+      if (customer.city) locationInfo.push(customer.city);
+      if (customer.postalCode) locationInfo.push(customer.postalCode);
+      
+      let description = contactInfo.join(' • ');
+      if (locationInfo.length > 0) {
+        description += description ? ` • ${locationInfo.join(' ')}` : locationInfo.join(' ');
+      }
+      
+      const tags = [];
+      if (customer.companyName) {
+        tags.push(customer.companyName);
+      } else if (customer.debtorNumber) {
+        tags.push(`#${customer.debtorNumber}`);
+      }
+      
+      return {
+        value: customer.id.toString(),
+        label: customer.name,
+        description: description || undefined,
+        tags: tags.length > 0 ? tags : undefined,
+      };
+    });
+  }, [availableCustomersForBlacklist]);
+
   // Add to blacklist mutation
   const addToBlacklistMutation = useMutation({
     mutationFn: async ({ customerId, reason }: { customerId: number; reason?: string }) => {
@@ -2204,21 +2236,16 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                     <div className="grid gap-4 py-4">
                       <div className="space-y-2">
                         <Label htmlFor="blacklist-customer">Customer</Label>
-                        <Select
+                        <SearchableCombobox
+                          options={blacklistCustomerOptions}
                           value={selectedBlacklistCustomerId}
-                          onValueChange={setSelectedBlacklistCustomerId}
-                        >
-                          <SelectTrigger data-testid="select-blacklist-customer">
-                            <SelectValue placeholder="Select a customer..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableCustomersForBlacklist.map((customer: any) => (
-                              <SelectItem key={customer.id} value={String(customer.id)}>
-                                {customer.name} {customer.email ? `(${customer.email})` : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={setSelectedBlacklistCustomerId}
+                          placeholder="Search and select a customer..."
+                          searchPlaceholder="Search by name, phone, or city..."
+                          emptyMessage="No customers found"
+                          groups={false}
+                          data-testid="select-blacklist-customer"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="blacklist-reason">Reason (optional)</Label>
