@@ -286,7 +286,7 @@ export function VehicleForm({
   // Fetch active reservation for this vehicle to suggest current renter name
   const { data: activeReservation } = useQuery<{
     id: number;
-    customer?: { firstName: string; lastName: string } | null;
+    customer?: { firstName: string; lastName: string; companyName?: string | null } | null;
     driver?: { firstName: string; lastName: string } | null;
   } | null>({
     queryKey: ['/api/vehicles', initialData?.id, 'active-reservation'],
@@ -306,11 +306,27 @@ export function VehicleForm({
   });
   
   // Get the current renter name from active reservation
-  const currentRenterName = activeReservation?.driver 
-    ? `${activeReservation.driver.firstName} ${activeReservation.driver.lastName}`
-    : activeReservation?.customer
-      ? `${activeReservation.customer.firstName} ${activeReservation.customer.lastName}`
-      : null;
+  // Priority: company name > driver name > customer name
+  const currentRenterName = (() => {
+    if (!activeReservation) return null;
+    
+    // First check for company name
+    if (activeReservation.customer?.companyName) {
+      return activeReservation.customer.companyName;
+    }
+    
+    // Then check for driver name
+    if (activeReservation.driver) {
+      return `${activeReservation.driver.firstName} ${activeReservation.driver.lastName}`;
+    }
+    
+    // Fall back to customer name
+    if (activeReservation.customer) {
+      return `${activeReservation.customer.firstName} ${activeReservation.customer.lastName}`;
+    }
+    
+    return null;
+  })();
   
   const createVehicleMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
