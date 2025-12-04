@@ -1206,8 +1206,8 @@ export default function ReservationCalendarPage() {
                                             })()
                                           ) : res.type === 'replacement' && res.replacementForReservationId ? (
                                             (() => {
-                                              // Find the original reservation to get vehicle details
-                                              const originalReservation = reservations?.find(r => r.id === res.replacementForReservationId);
+                                              // Find the original reservation to get vehicle details - search in ALL reservations (not filtered)
+                                              const originalReservation = allReservations?.find(r => r.id === res.replacementForReservationId);
                                               const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
                                               
                                               if (originalVehicle) {
@@ -1532,8 +1532,8 @@ export default function ReservationCalendarPage() {
                 {selectedReservation.type === 'replacement' && selectedReservation.replacementForReservationId && (
                   <Badge className="bg-orange-50 text-orange-800 border-orange-200" variant="outline">
                     {(() => {
-                      // Try to find the original reservation to get vehicle details
-                      const originalReservation = reservations?.find(r => r.id === selectedReservation.replacementForReservationId);
+                      // Try to find the original reservation to get vehicle details - search in ALL reservations (not filtered)
+                      const originalReservation = allReservations?.find(r => r.id === selectedReservation.replacementForReservationId);
                       const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
                       
                       if (originalVehicle) {
