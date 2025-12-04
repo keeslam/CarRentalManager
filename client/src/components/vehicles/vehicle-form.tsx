@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
@@ -282,6 +282,35 @@ export function VehicleForm({
       createdBy: "",
     },
   });
+  
+  // Fetch active reservation for this vehicle to suggest current renter name
+  const { data: activeReservation } = useQuery<{
+    id: number;
+    customer?: { firstName: string; lastName: string } | null;
+    driver?: { firstName: string; lastName: string } | null;
+  } | null>({
+    queryKey: ['/api/vehicles', initialData?.id, 'active-reservation'],
+    queryFn: async () => {
+      if (!initialData?.id) return null;
+      try {
+        const response = await fetch(`/api/reservations?vehicleId=${initialData.id}&status=picked_up`);
+        if (!response.ok) return null;
+        const reservations = await response.json();
+        // Return the first active (picked_up) reservation
+        return reservations.length > 0 ? reservations[0] : null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!initialData?.id && editMode,
+  });
+  
+  // Get the current renter name from active reservation
+  const currentRenterName = activeReservation?.driver 
+    ? `${activeReservation.driver.firstName} ${activeReservation.driver.lastName}`
+    : activeReservation?.customer
+      ? `${activeReservation.customer.firstName} ${activeReservation.customer.lastName}`
+      : null;
   
   const createVehicleMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
@@ -1320,11 +1349,25 @@ export function VehicleForm({
                             <FormItem className="ml-4 border-l-4 border-l-orange-400 pl-4">
                               <FormLabel>Customer Name</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="Enter customer name who has the spare key" 
-                                  {...field} 
-                                  value={field.value || ''} 
-                                />
+                                <div className="space-y-2">
+                                  <Input 
+                                    placeholder="Enter customer name who has the spare key" 
+                                    {...field} 
+                                    value={field.value || ''} 
+                                  />
+                                  {currentRenterName && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs"
+                                      onClick={() => form.setValue('spareKeyCustomerName', currentRenterName)}
+                                      data-testid="button-use-current-renter"
+                                    >
+                                      Use current renter: {currentRenterName}
+                                    </Button>
+                                  )}
+                                </div>
                               </FormControl>
                               <p className="text-xs text-muted-foreground">Name of the customer who currently has the spare key</p>
                               <FormMessage />
