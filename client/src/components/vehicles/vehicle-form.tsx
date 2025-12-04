@@ -286,18 +286,20 @@ export function VehicleForm({
   // Fetch active reservation for this vehicle to suggest current renter name
   const { data: activeReservation } = useQuery<{
     id: number;
-    customer?: { firstName: string; lastName: string; companyName?: string | null } | null;
+    status: string;
+    customer?: { name: string; companyName?: string | null; firstName?: string | null; lastName?: string | null } | null;
     driver?: { firstName: string; lastName: string } | null;
   } | null>({
-    queryKey: ['/api/vehicles', initialData?.id, 'active-reservation'],
+    queryKey: ['/api/reservations/vehicle', initialData?.id, 'active'],
     queryFn: async () => {
       if (!initialData?.id) return null;
       try {
-        const response = await fetch(`/api/reservations?vehicleId=${initialData.id}&status=picked_up`);
+        const response = await fetch(`/api/reservations/vehicle/${initialData.id}`);
         if (!response.ok) return null;
         const reservations = await response.json();
-        // Return the first active (picked_up) reservation
-        return reservations.length > 0 ? reservations[0] : null;
+        // Find the active (picked_up) reservation
+        const activeRes = reservations.find((r: any) => r.status === 'picked_up');
+        return activeRes || null;
       } catch {
         return null;
       }
@@ -306,23 +308,18 @@ export function VehicleForm({
   });
   
   // Get the current renter name from active reservation
-  // Priority: company name > driver name > customer name
+  // Priority: company name > customer name (which may contain the company or person name)
   const currentRenterName = (() => {
     if (!activeReservation) return null;
     
-    // First check for company name
+    // First check for company name field
     if (activeReservation.customer?.companyName) {
       return activeReservation.customer.companyName;
     }
     
-    // Then check for driver name
-    if (activeReservation.driver) {
-      return `${activeReservation.driver.firstName} ${activeReservation.driver.lastName}`;
-    }
-    
-    // Fall back to customer name
-    if (activeReservation.customer) {
-      return `${activeReservation.customer.firstName} ${activeReservation.customer.lastName}`;
+    // Fall back to the main name field (contains either company name or person name)
+    if (activeReservation.customer?.name) {
+      return activeReservation.customer.name;
     }
     
     return null;
