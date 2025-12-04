@@ -1398,7 +1398,7 @@ export function ScheduleMaintenanceDialog({
                                   <span className="text-sm font-medium text-blue-800">
                                     Spare rental: {formatDisplayDate(spareVehicleDurations[reservation.id].startDate)}
                                     {spareVehicleDurations[reservation.id].endDate 
-                                      ? ` - ${formatDisplayDate(spareVehicleDurations[reservation.id].endDate)}`
+                                      ? ` - ${formatDisplayDate(spareVehicleDurations[reservation.id].endDate!)}`
                                       : ' - Open-ended'}
                                   </span>
                                 </div>

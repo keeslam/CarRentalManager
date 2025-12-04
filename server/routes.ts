@@ -2576,7 +2576,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           // Format dates, handling open-ended spare rentals
           const startDateStr = overlapStart.toISOString().split('T')[0];
           const endDateStr = isOpenEnded || !overlapEnd ? null : overlapEnd.toISOString().split('T')[0];
-          const endDateNote = isOpenEnded || !overlapEnd ? 'open-ended' : endDateStr;
+          const originalEndNote = originalReservation.endDate || 'open-ended';
           
           // Create replacement reservation for overlap period ONLY  
           return await storage.createReservation({
@@ -2591,7 +2591,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Spare rental: ${startDateStr} to ${endDateNote}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalEndNote}.`
           });
         });
         
@@ -2632,7 +2632,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           // Format dates, handling open-ended spare rentals
           const startDateStr = overlapStart.toISOString().split('T')[0];
           const endDateStr = isOpenEnded || !overlapEnd ? null : overlapEnd.toISOString().split('T')[0];
-          const endDateNote = isOpenEnded || !overlapEnd ? 'open-ended' : endDateStr;
+          const originalEndNote = originalReservation.endDate || 'open-ended';
           
           return await storage.createReservation({
             vehicleId: spareVehicleId,
@@ -2646,7 +2646,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Spare rental: ${startDateStr} to ${endDateNote}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalEndNote}.`
           });
         });
         
