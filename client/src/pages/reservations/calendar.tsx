@@ -3089,7 +3089,7 @@ export default function ReservationCalendarPage() {
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-current-row-${rental.id}`}>
                                     <TableCell className="px-2 py-1 border-r text-center">
-                                      {vehicleData?.imei ? (
+                                      {vehicleData?.gps ? (
                                         <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
@@ -3339,7 +3339,7 @@ export default function ReservationCalendarPage() {
                                 return (
                                   <TableRow key={rental.id} className="border-b hover:bg-muted/30" data-testid={`admin-history-row-${rental.id}`}>
                                     <TableCell className="px-2 py-1 border-r text-center whitespace-nowrap">
-                                      {vehicleData?.imei ? (
+                                      {vehicleData?.gps ? (
                                         <Badge className="bg-green-100 text-green-800 text-xs">Yes</Badge>
                                       ) : (
                                         <Badge variant="secondary" className="text-xs">No</Badge>
