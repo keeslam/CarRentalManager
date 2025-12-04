@@ -340,9 +340,13 @@ async function runMigrations() {
         vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
         customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
         reason TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_by INTEGER REFERENCES users(id)
       )`
     );
+    
+    // Add created_by column if it doesn't exist (for existing tables)
+    await addColumnIfNotExists('vehicle_customer_blacklist', 'created_by', 'integer REFERENCES users(id)');
     
     // Add unique index if it doesn't exist
     const blacklistIndexCheck = await db.execute(sql`
