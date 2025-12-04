@@ -371,6 +371,10 @@ async function runMigrations() {
       console.log('✅ Unique index already exists on vehicle_customer_blacklist');
     }
     
+    // Add spare key tracking columns to vehicles table
+    await addColumnIfNotExists('vehicles', 'spare_key_with_customer', 'boolean');
+    await addColumnIfNotExists('vehicles', 'spare_key_customer_name', 'text');
+    
     // Update any NULL maintenance_status values
     console.log('🔄 Updating maintenance status defaults...');
     await db.execute(sql`UPDATE vehicles SET maintenance_status = 'ok' WHERE maintenance_status IS NULL`);

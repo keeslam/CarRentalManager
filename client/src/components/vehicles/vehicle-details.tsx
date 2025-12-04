@@ -1381,7 +1381,19 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-1">Spare Key</h4>
-                    <p className="text-base">{isTrueValue(vehicle.spareKey) ? "Yes" : "No"}</p>
+                    <p className="text-base">
+                      {isTrueValue(vehicle.spareKey) ? (
+                        isTrueValue(vehicle.spareKeyWithCustomer) ? (
+                          <span className="text-orange-600 font-medium">
+                            Yes (with customer: {vehicle.spareKeyCustomerName || 'Unknown'})
+                          </span>
+                        ) : (
+                          "Yes"
+                        )
+                      ) : (
+                        "No"
+                      )}
+                    </p>
                   </div>
                   
                   <div>

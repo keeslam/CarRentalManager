@@ -158,6 +158,8 @@ export const vehicles = pgTable("vehicles", {
   returnMileage: integer("return_mileage"),
   roadsideAssistance: boolean("roadside_assistance"),
   spareKey: boolean("spare_key"),
+  spareKeyWithCustomer: boolean("spare_key_with_customer"), // Is the spare key currently with a customer?
+  spareKeyCustomerName: text("spare_key_customer_name"), // Name of customer who has the spare key
   remarks: text("remarks"),
   winterTires: boolean("winter_tires"),
   tireSize: text("tire_size"),

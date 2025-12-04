@@ -213,6 +213,8 @@ export function VehicleForm({
     damageCheck: Boolean(initialData.damageCheck),
     roadsideAssistance: Boolean(initialData.roadsideAssistance),
     spareKey: Boolean(initialData.spareKey),
+    spareKeyWithCustomer: Boolean(initialData.spareKeyWithCustomer),
+    spareKeyCustomerName: initialData.spareKeyCustomerName || '',
     winterTires: Boolean(initialData.winterTires),
     wokNotification: Boolean(initialData.wokNotification),
     seatcovers: Boolean(initialData.seatcovers),
@@ -260,6 +262,8 @@ export function VehicleForm({
       damageCheckAttachmentDate: "",
       roadsideAssistance: false,
       spareKey: false,
+      spareKeyWithCustomer: false,
+      spareKeyCustomerName: '',
       remarks: "",
       winterTires: false,
       tireSize: "",
@@ -1265,12 +1269,71 @@ export function VehicleForm({
                         <FormControl>
                           <Switch
                             checked={field.value as boolean}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              // Clear the "with customer" fields if spare key is turned off
+                              if (!checked) {
+                                form.setValue('spareKeyWithCustomer', false);
+                                form.setValue('spareKeyCustomerName', '');
+                              }
+                            }}
                           />
                         </FormControl>
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Show "Spare Key with Customer" only when Spare Key is ON */}
+                  {form.watch('spareKey') && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="spareKeyWithCustomer"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-md border p-4 ml-4 border-l-4 border-l-orange-400">
+                            <div className="space-y-0.5">
+                              <FormLabel>Spare Key with Customer</FormLabel>
+                              <p className="text-xs text-muted-foreground">Is the spare key currently with a customer?</p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value as boolean}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  // Clear customer name if toggled off
+                                  if (!checked) {
+                                    form.setValue('spareKeyCustomerName', '');
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Show customer name input when "with customer" is ON */}
+                      {form.watch('spareKeyWithCustomer') && (
+                        <FormField
+                          control={form.control}
+                          name="spareKeyCustomerName"
+                          render={({ field }) => (
+                            <FormItem className="ml-4 border-l-4 border-l-orange-400 pl-4">
+                              <FormLabel>Customer Name</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter customer name who has the spare key" 
+                                  {...field} 
+                                  value={field.value || ''} 
+                                />
+                              </FormControl>
+                              <p className="text-xs text-muted-foreground">Name of the customer who currently has the spare key</p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </>
+                  )}
                   
                   <FormField
                     control={form.control}
