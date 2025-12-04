@@ -734,7 +734,8 @@ export function ScheduleMaintenanceDialog({
     // Check that all conflicting reservations have either a specific vehicle or TBD assigned
     const missingAssignments = conflictingReservations.filter(r => {
       const assignment = spareVehicleAssignments[r.id];
-      return !assignment; // No assignment at all (neither specific vehicle nor TBD)
+      // 'selecting' means user started but didn't pick a vehicle yet
+      return !assignment || assignment === 'selecting'; // No assignment at all (neither specific vehicle nor TBD)
     });
     
     if (missingAssignments.length > 0) {
@@ -751,7 +752,8 @@ export function ScheduleMaintenanceDialog({
     const invalidSpecificAssignments = conflictingReservations.filter(r => {
       const assignment = spareVehicleAssignments[r.id];
       // Valid assignments: TBD, customer_arranging, or a numeric vehicle ID
-      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && (!assignment || isNaN(Number(assignment)));
+      // 'selecting' is invalid as user hasn't picked a vehicle yet
+      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && assignment !== 'selecting' && (!assignment || isNaN(Number(assignment)));
     });
 
     if (invalidSpecificAssignments.length > 0) {
@@ -1362,10 +1364,12 @@ export function ScheduleMaintenanceDialog({
                         value="spare-now"
                         checked={Boolean(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd' && spareVehicleAssignments[reservation.id] !== 'customer_arranging')}
                         onChange={() => {
-                          // Trigger duration dialog with first available vehicle
-                          if (availableVehicles.length > 0) {
-                            handleSpareVehicleChange(reservation.id, availableVehicles[0].id.toString());
-                          }
+                          // Just mark as "selecting spare" - don't pre-select a vehicle or open dialog
+                          // Set a placeholder to show the vehicle selector
+                          setSpareVehicleAssignments(prev => ({
+                            ...prev,
+                            [reservation.id]: 'selecting' as any
+                          }));
                         }}
                         className="h-4 w-4 text-blue-600"
                         disabled={availableVehicles.length === 0}
@@ -1385,8 +1389,27 @@ export function ScheduleMaintenanceDialog({
                           <div className="mt-1 space-y-2" data-testid={`select-spare-vehicle-${reservation.id}`}>
                             <VehicleSelector
                               vehicles={availableVehicles}
-                              value={spareVehicleAssignments[reservation.id]?.toString() || ""}
-                              onChange={(value) => handleSpareVehicleChange(reservation.id, value)}
+                              value={spareVehicleAssignments[reservation.id] === 'selecting' ? '' : spareVehicleAssignments[reservation.id]?.toString() || ""}
+                              onChange={(value) => {
+                                const vehicleId = parseInt(value);
+                                const hasDurationSet = Boolean(spareVehicleDurations[reservation.id]);
+                                
+                                // Update the vehicle assignment
+                                setSpareVehicleAssignments(prev => ({
+                                  ...prev,
+                                  [reservation.id]: vehicleId
+                                }));
+                                
+                                // Only open duration dialog if duration not yet set
+                                if (!hasDurationSet) {
+                                  const defaultStartDate = maintenanceData?.startDate || new Date().toISOString().split('T')[0];
+                                  const defaultEndDate = maintenanceData?.endDate || '';
+                                  setTempDurationStartDate(defaultStartDate);
+                                  setTempDurationEndDate(defaultEndDate);
+                                  setCurrentDurationReservationId(reservation.id);
+                                  setShowDurationDialog(true);
+                                }
+                              }}
                               placeholder="Choose a spare vehicle..."
                               disabled={availableVehicles.length === 0}
                             />
