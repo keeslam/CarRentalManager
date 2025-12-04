@@ -98,6 +98,13 @@ export function ScheduleMaintenanceDialog({
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
   const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd' | 'customer_arranging'}>({});
   
+  // State for spare vehicle duration selection
+  const [spareVehicleDurations, setSpareVehicleDurations] = useState<{[reservationId: number]: { startDate: string; endDate: string | null }}>({});
+  const [showDurationDialog, setShowDurationDialog] = useState(false);
+  const [currentDurationReservationId, setCurrentDurationReservationId] = useState<number | null>(null);
+  const [tempDurationStartDate, setTempDurationStartDate] = useState("");
+  const [tempDurationEndDate, setTempDurationEndDate] = useState("");
+  
   // State for vehicle filtering
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [excludeMaintenanceVehicles, setExcludeMaintenanceVehicles] = useState(false);
@@ -436,7 +443,8 @@ export function ScheduleMaintenanceDialog({
     mutationFn: async (data: { 
       maintenanceData: any; 
       conflictingReservations: any[]; 
-      spareVehicleAssignments: {[reservationId: number]: number | 'tbd' | 'customer_arranging'} 
+      spareVehicleAssignments: {[reservationId: number]: number | 'tbd' | 'customer_arranging'};
+      spareVehicleDurations?: {[reservationId: number]: { startDate: string; endDate: string | null }};
     }) => {
       // Separate into three categories: TBD, specific assignments, and customer arranging
       const tbdAssignments: any[] = [];
@@ -445,20 +453,26 @@ export function ScheduleMaintenanceDialog({
 
       Object.entries(data.spareVehicleAssignments).forEach(([reservationId, assignment]) => {
         const reservation = data.conflictingReservations.find(r => r.id.toString() === reservationId);
+        const resId = parseInt(reservationId);
+        const duration = data.spareVehicleDurations?.[resId];
+        
         if (assignment === 'tbd') {
           tbdAssignments.push({
-            reservationId: parseInt(reservationId),
+            reservationId: resId,
             reservation
           });
         } else if (assignment === 'customer_arranging') {
           customerArrangingAssignments.push({
-            reservationId: parseInt(reservationId),
+            reservationId: resId,
             reservation
           });
         } else {
           specificAssignments.push({
-            reservationId: parseInt(reservationId),
-            spareVehicleId: assignment
+            reservationId: resId,
+            spareVehicleId: assignment,
+            // Include custom duration if available
+            startDate: duration?.startDate,
+            endDate: duration?.endDate
           });
         }
       });
@@ -587,6 +601,7 @@ export function ScheduleMaintenanceDialog({
       setConflictingReservations([]);
       setMaintenanceData(null);
       setSpareVehicleAssignments({});
+      setSpareVehicleDurations({});
       onOpenChange(false);
       
       // Call parent onSuccess if provided
@@ -749,13 +764,31 @@ export function ScheduleMaintenanceDialog({
       return;
     }
 
+    // Check that all specific assignments have durations set
+    const missingDurations = conflictingReservations.filter(r => {
+      const assignment = spareVehicleAssignments[r.id];
+      // Only check for specific vehicle assignments (not TBD or customer_arranging)
+      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && !spareVehicleDurations[r.id];
+    });
+
+    if (missingDurations.length > 0) {
+      console.log('❌ Missing durations for reservations:', missingDurations);
+      toast({
+        title: "Missing Spare Duration",
+        description: "Please set the rental duration for all spare vehicle assignments.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log('✅ All validations passed, creating placeholders...');
     
     try {
       await createMaintenanceWithSpareMutation.mutateAsync({
         maintenanceData,
         conflictingReservations,
-        spareVehicleAssignments
+        spareVehicleAssignments,
+        spareVehicleDurations
       });
       console.log('✅ Mutation completed successfully');
     } catch (error) {
@@ -765,10 +798,71 @@ export function ScheduleMaintenanceDialog({
   };
 
   const handleSpareVehicleChange = (reservationId: number, spareVehicleId: string | number) => {
-    setSpareVehicleAssignments(prev => ({
-      ...prev,
-      [reservationId]: spareVehicleId === 'tbd' ? 'tbd' : spareVehicleId === 'customer_arranging' ? 'customer_arranging' : parseInt(spareVehicleId as string)
-    }));
+    if (spareVehicleId === 'tbd' || spareVehicleId === 'customer_arranging') {
+      // For TBD or customer arranging, just set the assignment and clear any duration
+      setSpareVehicleAssignments(prev => ({
+        ...prev,
+        [reservationId]: spareVehicleId as 'tbd' | 'customer_arranging'
+      }));
+      setSpareVehicleDurations(prev => {
+        const newDurations = { ...prev };
+        delete newDurations[reservationId];
+        return newDurations;
+      });
+    } else {
+      // For specific vehicle selection, open the duration dialog
+      const vehicleId = parseInt(spareVehicleId as string);
+      setSpareVehicleAssignments(prev => ({
+        ...prev,
+        [reservationId]: vehicleId
+      }));
+      
+      // Get default dates from maintenance data
+      const defaultStartDate = maintenanceData?.startDate || new Date().toISOString().split('T')[0];
+      const defaultEndDate = maintenanceData?.endDate || '';
+      
+      // Set temp values for the dialog
+      setTempDurationStartDate(spareVehicleDurations[reservationId]?.startDate || defaultStartDate);
+      setTempDurationEndDate(spareVehicleDurations[reservationId]?.endDate || defaultEndDate);
+      setCurrentDurationReservationId(reservationId);
+      setShowDurationDialog(true);
+    }
+  };
+  
+  // Handle saving the duration from the dialog
+  const handleSaveDuration = () => {
+    if (currentDurationReservationId !== null) {
+      setSpareVehicleDurations(prev => ({
+        ...prev,
+        [currentDurationReservationId]: {
+          startDate: tempDurationStartDate,
+          endDate: tempDurationEndDate || null
+        }
+      }));
+    }
+    setShowDurationDialog(false);
+    setCurrentDurationReservationId(null);
+  };
+  
+  // Handle canceling the duration dialog
+  const handleCancelDuration = () => {
+    // Remove the vehicle assignment if no duration was set
+    if (currentDurationReservationId !== null && !spareVehicleDurations[currentDurationReservationId]) {
+      setSpareVehicleAssignments(prev => {
+        const newAssignments = { ...prev };
+        delete newAssignments[currentDurationReservationId];
+        return newAssignments;
+      });
+    }
+    setShowDurationDialog(false);
+    setCurrentDurationReservationId(null);
+  };
+  
+  // Helper to format date for display
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   };
 
   return (
@@ -1268,12 +1362,9 @@ export function ScheduleMaintenanceDialog({
                         value="spare-now"
                         checked={Boolean(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd' && spareVehicleAssignments[reservation.id] !== 'customer_arranging')}
                         onChange={() => {
-                          // Clear assignment to show dropdown
+                          // Trigger duration dialog with first available vehicle
                           if (availableVehicles.length > 0) {
-                            setSpareVehicleAssignments(prev => ({
-                              ...prev,
-                              [reservation.id]: availableVehicles[0].id
-                            }));
+                            handleSpareVehicleChange(reservation.id, availableVehicles[0].id.toString());
                           }
                         }}
                         className="h-4 w-4 text-blue-600"
@@ -1291,7 +1382,7 @@ export function ScheduleMaintenanceDialog({
                           <div className="text-xs text-gray-500 mt-1">No vehicles available for this date</div>
                         )}
                         {(spareVehicleAssignments[reservation.id] && spareVehicleAssignments[reservation.id] !== 'tbd' && spareVehicleAssignments[reservation.id] !== 'customer_arranging') && (
-                          <div className="mt-1" data-testid={`select-spare-vehicle-${reservation.id}`}>
+                          <div className="mt-1 space-y-2" data-testid={`select-spare-vehicle-${reservation.id}`}>
                             <VehicleSelector
                               vehicles={availableVehicles}
                               value={spareVehicleAssignments[reservation.id]?.toString() || ""}
@@ -1299,6 +1390,34 @@ export function ScheduleMaintenanceDialog({
                               placeholder="Choose a spare vehicle..."
                               disabled={availableVehicles.length === 0}
                             />
+                            {/* Show selected duration */}
+                            {spareVehicleDurations[reservation.id] && (
+                              <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                <Calendar className="w-4 h-4 text-blue-600" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-blue-800">
+                                    Spare rental: {formatDisplayDate(spareVehicleDurations[reservation.id].startDate)}
+                                    {spareVehicleDurations[reservation.id].endDate 
+                                      ? ` - ${formatDisplayDate(spareVehicleDurations[reservation.id].endDate)}`
+                                      : ' - Open-ended'}
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-blue-600 hover:text-blue-800"
+                                  onClick={() => {
+                                    setTempDurationStartDate(spareVehicleDurations[reservation.id].startDate);
+                                    setTempDurationEndDate(spareVehicleDurations[reservation.id].endDate || '');
+                                    setCurrentDurationReservationId(reservation.id);
+                                    setShowDurationDialog(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1358,6 +1477,7 @@ export function ScheduleMaintenanceDialog({
               setConflictingReservations([]);
               setMaintenanceData(null);
               setSpareVehicleAssignments({});
+              setSpareVehicleDurations({});
             }}
             disabled={createMaintenanceWithSpareMutation.isPending}
           >
@@ -1376,6 +1496,87 @@ export function ScheduleMaintenanceDialog({
             ) : (
               "Assign Spare Vehicles & Schedule Maintenance"
             )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Spare Vehicle Duration Selection Dialog */}
+    <Dialog open={showDurationDialog} onOpenChange={(open) => {
+      if (!open) handleCancelDuration();
+    }}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-blue-600" />
+            Set Spare Rental Duration
+          </DialogTitle>
+          <DialogDescription>
+            Set the start and end dates for the spare vehicle rental. Leave end date empty for an open-ended rental.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Start Date</label>
+            <Input
+              type="date"
+              value={tempDurationStartDate}
+              onChange={(e) => setTempDurationStartDate(e.target.value)}
+              data-testid="input-spare-start-date"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">End Date (optional)</label>
+            <Input
+              type="date"
+              value={tempDurationEndDate}
+              onChange={(e) => setTempDurationEndDate(e.target.value)}
+              data-testid="input-spare-end-date"
+            />
+            <p className="text-xs text-gray-500">Leave empty for open-ended rental</p>
+          </div>
+
+          {/* Quick actions */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTempDurationStartDate(maintenanceData?.startDate || '');
+                setTempDurationEndDate(maintenanceData?.endDate || '');
+              }}
+            >
+              Use Maintenance Dates
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setTempDurationEndDate('')}
+            >
+              Make Open-ended
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancelDuration}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSaveDuration}
+            disabled={!tempDurationStartDate}
+            data-testid="button-save-duration"
+          >
+            Save Duration
           </Button>
         </DialogFooter>
       </DialogContent>

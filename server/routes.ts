@@ -2429,71 +2429,100 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // PRE-VALIDATE ALL ASSIGNMENTS BEFORE ANY UPDATES (for atomicity)
       const validationPromises = spareVehicleAssignments.map(async (assignment: any) => {
-        const { reservationId, spareVehicleId } = assignment;
+        const { reservationId, spareVehicleId, startDate: customStartDate, endDate: customEndDate } = assignment;
         
         const originalReservation = await storage.getReservation(reservationId);
         if (!originalReservation) {
           throw new Error(`Reservation ${reservationId} not found`);
         }
         
-        // Compute overlap using maintenanceData (not yet persisted)
-        const maintenanceStart = new Date(maintenanceData.startDate);
-        const maintenanceEnd = new Date(maintenanceData.endDate);
-        const rentalStart = new Date(originalReservation.startDate);
-        
-        // Validate dates are valid and maintenance period is valid
-        if (isNaN(maintenanceStart.getTime()) || isNaN(maintenanceEnd.getTime()) || isNaN(rentalStart.getTime())) {
-          throw new Error(`Invalid date format in maintenance or rental ${reservationId}`);
-        }
-        
-        if (maintenanceStart > maintenanceEnd) {
-          throw new Error(`Invalid maintenance period: end date cannot be before start date`);
-        }
-        
         let overlapStart: Date;
         let overlapEnd: Date;
+        let isOpenEnded = false;
         
-        // Handle open-ended rentals (endDate is null, undefined, or "undefined")
-        if (!originalReservation.endDate || originalReservation.endDate === "undefined" || originalReservation.endDate === null) {
-          // For open-ended rentals, customer has vehicle indefinitely
-          // Spare vehicle assignment covers the entire maintenance period
-          overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
-          overlapEnd = maintenanceEnd; // Spare vehicle for entire maintenance period
+        // Use custom dates if provided, otherwise calculate from maintenance period
+        if (customStartDate) {
+          // Custom dates provided from the duration dialog
+          overlapStart = new Date(customStartDate);
           
-          // Validate overlap for open-ended rentals too (allow same-day overlaps)
-          if (overlapStart > overlapEnd) {
-            throw new Error(`No overlap between maintenance and open-ended rental ${reservationId}: rental starts after maintenance ends`);
+          if (customEndDate) {
+            overlapEnd = new Date(customEndDate);
+          } else {
+            // Open-ended spare rental - no end date
+            isOpenEnded = true;
+            // For validation, use maintenance end date as a reasonable horizon
+            // But we'll store null as the actual end date
+            overlapEnd = new Date(maintenanceData.endDate || customStartDate);
+          }
+          
+          if (isNaN(overlapStart.getTime())) {
+            throw new Error(`Invalid custom start date for reservation ${reservationId}`);
+          }
+          if (!isOpenEnded && isNaN(overlapEnd.getTime())) {
+            throw new Error(`Invalid custom end date for reservation ${reservationId}`);
+          }
+          if (!isOpenEnded && overlapStart > overlapEnd) {
+            throw new Error(`Invalid spare rental period: end date cannot be before start date for reservation ${reservationId}`);
           }
         } else {
-          // For regular rentals with end dates
-          const rentalEnd = new Date(originalReservation.endDate);
+          // Calculate overlap from maintenance period (legacy behavior)
+          const maintenanceStart = new Date(maintenanceData.startDate);
+          const maintenanceEnd = new Date(maintenanceData.endDate);
+          const rentalStart = new Date(originalReservation.startDate);
           
-          if (isNaN(rentalEnd.getTime())) {
-            throw new Error(`Invalid end date format in rental ${reservationId}`);
+          // Validate dates are valid and maintenance period is valid
+          if (isNaN(maintenanceStart.getTime()) || isNaN(maintenanceEnd.getTime()) || isNaN(rentalStart.getTime())) {
+            throw new Error(`Invalid date format in maintenance or rental ${reservationId}`);
           }
           
-          overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
-          overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
+          if (maintenanceStart > maintenanceEnd) {
+            throw new Error(`Invalid maintenance period: end date cannot be before start date`);
+          }
           
-          // Allow same-day overlaps (overlapStart can equal overlapEnd)
-          if (overlapStart > overlapEnd) {
-            throw new Error(`No overlap between maintenance and rental ${reservationId}`);
+          // Handle open-ended rentals (endDate is null, undefined, or "undefined")
+          if (!originalReservation.endDate || originalReservation.endDate === "undefined" || originalReservation.endDate === null) {
+            // For open-ended rentals, customer has vehicle indefinitely
+            // Spare vehicle assignment covers the entire maintenance period
+            overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
+            overlapEnd = maintenanceEnd; // Spare vehicle for entire maintenance period
+            
+            // Validate overlap for open-ended rentals too (allow same-day overlaps)
+            if (overlapStart > overlapEnd) {
+              throw new Error(`No overlap between maintenance and open-ended rental ${reservationId}: rental starts after maintenance ends`);
+            }
+          } else {
+            // For regular rentals with end dates
+            const rentalEnd = new Date(originalReservation.endDate);
+            
+            if (isNaN(rentalEnd.getTime())) {
+              throw new Error(`Invalid end date format in rental ${reservationId}`);
+            }
+            
+            overlapStart = new Date(Math.max(maintenanceStart.getTime(), rentalStart.getTime()));
+            overlapEnd = new Date(Math.min(maintenanceEnd.getTime(), rentalEnd.getTime()));
+            
+            // Allow same-day overlaps (overlapStart can equal overlapEnd)
+            if (overlapStart > overlapEnd) {
+              throw new Error(`No overlap between maintenance and rental ${reservationId}`);
+            }
           }
         }
         
-        // Pre-validate spare vehicle availability
-        const spareConflicts = await storage.checkReservationConflicts(
-          spareVehicleId,
-          overlapStart.toISOString().split('T')[0],
-          overlapEnd.toISOString().split('T')[0],
-          null
-        );
-        
-        if (spareConflicts.length > 0) {
-          throw new Error(`Spare vehicle ${spareVehicleId} is not available during overlap period`);
+        // Pre-validate spare vehicle availability (skip for open-ended as we can't check infinite period)
+        if (!isOpenEnded) {
+          const spareConflicts = await storage.checkReservationConflicts(
+            spareVehicleId,
+            overlapStart.toISOString().split('T')[0],
+            overlapEnd.toISOString().split('T')[0],
+            null
+          );
+          
+          if (spareConflicts.length > 0) {
+            throw new Error(`Spare vehicle ${spareVehicleId} is not available during the specified period`);
+          }
         }
         
-        return { originalReservation, overlapStart, overlapEnd, spareVehicleId };
+        return { originalReservation, overlapStart, overlapEnd: isOpenEnded ? null : overlapEnd, spareVehicleId, isOpenEnded };
       });
       
       // Execute all validations (will throw if any fail)
@@ -2531,7 +2560,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         // CREATE REPLACEMENTS FIRST for true atomicity
         const replacementPromises = validatedAssignments.map(async (validated) => {
-          const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
+          const { originalReservation, overlapStart, overlapEnd, spareVehicleId, isOpenEnded } = validated;
           
           // Get vehicle details for better notes
           const spareVehicle = await storage.getVehicle(spareVehicleId);
@@ -2544,12 +2573,17 @@ export async function registerRoutes(app: Express): Promise<void> {
             `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})` : 
             `vehicle ${spareVehicleId}`;
           
+          // Format dates, handling open-ended spare rentals
+          const startDateStr = overlapStart.toISOString().split('T')[0];
+          const endDateStr = isOpenEnded || !overlapEnd ? null : overlapEnd.toISOString().split('T')[0];
+          const endDateNote = isOpenEnded || !overlapEnd ? 'open-ended' : endDateStr;
+          
           // Create replacement reservation for overlap period ONLY  
           return await storage.createReservation({
             vehicleId: spareVehicleId,
             customerId: originalReservation.customerId,
-            startDate: overlapStart.toISOString().split('T')[0],
-            endDate: overlapEnd.toISOString().split('T')[0],
+            startDate: startDateStr,
+            endDate: endDateStr,
             type: 'replacement',
             replacementForReservationId: originalReservation.id,
             placeholderSpare: false,
@@ -2557,7 +2591,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate || 'open-ended'}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Spare rental: ${startDateStr} to ${endDateNote}.`
           });
         });
         
@@ -2582,7 +2616,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         // Create replacement reservations using pre-validated data
         const updatePromises = validatedAssignments.map(async (validated) => {
-          const { originalReservation, overlapStart, overlapEnd, spareVehicleId } = validated;
+          const { originalReservation, overlapStart, overlapEnd, spareVehicleId, isOpenEnded } = validated;
           
           // Get vehicle details for better notes
           const spareVehicle = await storage.getVehicle(spareVehicleId);
@@ -2595,11 +2629,16 @@ export async function registerRoutes(app: Express): Promise<void> {
             `${spareVehicle.licensePlate} (${spareVehicle.brand} ${spareVehicle.model})` : 
             `vehicle ${spareVehicleId}`;
           
+          // Format dates, handling open-ended spare rentals
+          const startDateStr = overlapStart.toISOString().split('T')[0];
+          const endDateStr = isOpenEnded || !overlapEnd ? null : overlapEnd.toISOString().split('T')[0];
+          const endDateNote = isOpenEnded || !overlapEnd ? 'open-ended' : endDateStr;
+          
           return await storage.createReservation({
             vehicleId: spareVehicleId,
             customerId: originalReservation.customerId,
-            startDate: overlapStart.toISOString().split('T')[0],
-            endDate: overlapEnd.toISOString().split('T')[0],
+            startDate: startDateStr,
+            endDate: endDateStr,
             type: 'replacement',
             replacementForReservationId: originalReservation.id,
             placeholderSpare: false,
@@ -2607,7 +2646,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             totalPrice: 0,
             createdBy: user ? user.username : null,
             updatedBy: user ? user.username : null,
-            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Original rental: ${originalReservation.startDate} to ${originalReservation.endDate}.`
+            notes: `Spare vehicle ${spareVehicleDesc} for reservation #${originalReservation.id} during maintenance of ${originalVehicleDesc}. Spare rental: ${startDateStr} to ${endDateNote}.`
           });
         });
         
