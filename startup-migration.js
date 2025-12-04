@@ -332,6 +332,41 @@ async function runMigrations() {
       )`
     );
     
+    // Create vehicle_customer_blacklist table if it doesn't exist
+    await createTableIfNotExists(
+      'vehicle_customer_blacklist',
+      `CREATE TABLE vehicle_customer_blacklist (
+        id SERIAL PRIMARY KEY,
+        vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+        customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        reason TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`
+    );
+    
+    // Add unique index if it doesn't exist
+    const blacklistIndexCheck = await db.execute(sql`
+      SELECT indexname 
+      FROM pg_indexes 
+      WHERE tablename = 'vehicle_customer_blacklist' 
+      AND indexname = 'vehicle_customer_blacklist_unique'
+    `);
+    
+    if (blacklistIndexCheck.rows.length === 0) {
+      console.log('📝 Adding unique index to vehicle_customer_blacklist...');
+      try {
+        await db.execute(sql`
+          CREATE UNIQUE INDEX vehicle_customer_blacklist_unique 
+          ON vehicle_customer_blacklist(vehicle_id, customer_id)
+        `);
+        console.log('✅ Added unique index to vehicle_customer_blacklist');
+      } catch (error) {
+        console.log('⚠️ Unique index may already exist:', error.message);
+      }
+    } else {
+      console.log('✅ Unique index already exists on vehicle_customer_blacklist');
+    }
+    
     // Update any NULL maintenance_status values
     console.log('🔄 Updating maintenance status defaults...');
     await db.execute(sql`UPDATE vehicles SET maintenance_status = 'ok' WHERE maintenance_status IS NULL`);
