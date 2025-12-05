@@ -96,7 +96,7 @@ export function ScheduleMaintenanceDialog({
   const [showSpareDialog, setShowSpareDialog] = useState(false);
   const [conflictingReservations, setConflictingReservations] = useState<any[]>([]);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
-  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd' | 'customer_arranging'}>({});
+  const [spareVehicleAssignments, setSpareVehicleAssignments] = useState<{[reservationId: number]: number | 'tbd' | 'customer_arranging' | 'selecting'}>({});
   
   // State for spare vehicle duration selection
   const [spareVehicleDurations, setSpareVehicleDurations] = useState<{[reservationId: number]: { startDate: string; endDate: string | null }}>({});
@@ -769,8 +769,8 @@ export function ScheduleMaintenanceDialog({
     // Check that all specific assignments have durations set
     const missingDurations = conflictingReservations.filter(r => {
       const assignment = spareVehicleAssignments[r.id];
-      // Only check for specific vehicle assignments (not TBD or customer_arranging)
-      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && !spareVehicleDurations[r.id];
+      // Only check for specific vehicle assignments (not TBD, customer_arranging, or 'selecting')
+      return assignment && assignment !== 'tbd' && assignment !== 'customer_arranging' && assignment !== 'selecting' && !spareVehicleDurations[r.id];
     });
 
     if (missingDurations.length > 0) {
@@ -785,11 +785,19 @@ export function ScheduleMaintenanceDialog({
 
     console.log('✅ All validations passed, creating placeholders...');
     
+    // Filter out 'selecting' entries before sending to API (they're already validated as invalid above)
+    const validAssignments: {[reservationId: number]: number | 'tbd' | 'customer_arranging'} = {};
+    for (const [key, value] of Object.entries(spareVehicleAssignments)) {
+      if (value !== 'selecting') {
+        validAssignments[Number(key)] = value;
+      }
+    }
+    
     try {
       await createMaintenanceWithSpareMutation.mutateAsync({
         maintenanceData,
         conflictingReservations,
-        spareVehicleAssignments,
+        spareVehicleAssignments: validAssignments,
         spareVehicleDurations
       });
       console.log('✅ Mutation completed successfully');

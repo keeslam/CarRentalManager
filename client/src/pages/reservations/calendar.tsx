@@ -526,6 +526,22 @@ export default function ReservationCalendarPage() {
     );
   }, [allReservations]);
   
+  // Fetch ALL reservations for building lookup maps (includes completed reservations outside calendar range)
+  const { data: allReservationsForLookup = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations'],
+  });
+  
+  // Build a lookup map: reservationId -> vehicleId (for finding original vehicles of spare assignments)
+  const reservationVehicleLookup = useMemo(() => {
+    const map = new Map<number, number>();
+    allReservationsForLookup.forEach(r => {
+      if (r.vehicleId) {
+        map.set(r.id, r.vehicleId);
+      }
+    });
+    return map;
+  }, [allReservationsForLookup]);
+  
   // Fetch completed/returned rentals separately for the completed list with vehicle data
   const { data: completedRentals = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations', vehicles?.length],
@@ -1206,9 +1222,9 @@ export default function ReservationCalendarPage() {
                                             })()
                                           ) : res.type === 'replacement' && res.replacementForReservationId ? (
                                             (() => {
-                                              // Find the original reservation to get vehicle details - search in ALL reservations (not filtered)
-                                              const originalReservation = allReservations?.find(r => r.id === res.replacementForReservationId);
-                                              const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
+                                              // Find the original vehicle using the lookup map (works even if original reservation is outside calendar range)
+                                              const originalVehicleId = reservationVehicleLookup.get(res.replacementForReservationId);
+                                              const originalVehicle = originalVehicleId ? vehicles?.find(v => v.id === originalVehicleId) : null;
                                               
                                               if (originalVehicle) {
                                                 return (
@@ -1532,9 +1548,9 @@ export default function ReservationCalendarPage() {
                 {selectedReservation.type === 'replacement' && selectedReservation.replacementForReservationId && (
                   <Badge className="bg-orange-50 text-orange-800 border-orange-200" variant="outline">
                     {(() => {
-                      // Try to find the original reservation to get vehicle details - search in ALL reservations (not filtered)
-                      const originalReservation = allReservations?.find(r => r.id === selectedReservation.replacementForReservationId);
-                      const originalVehicle = originalReservation?.vehicle || vehicles?.find(v => v.id === originalReservation?.vehicleId);
+                      // Find the original vehicle using the lookup map (works even if original reservation is outside calendar range)
+                      const originalVehicleId = reservationVehicleLookup.get(selectedReservation.replacementForReservationId);
+                      const originalVehicle = originalVehicleId ? vehicles?.find(v => v.id === originalVehicleId) : null;
                       
                       if (originalVehicle) {
                         return `Spare for ${formatLicensePlate(originalVehicle.licensePlate)} (${originalVehicle.brand} ${originalVehicle.model})`;
