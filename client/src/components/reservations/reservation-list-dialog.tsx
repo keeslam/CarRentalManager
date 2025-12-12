@@ -205,21 +205,27 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     }
   };
 
-  const handleView = (reservation: Reservation) => {
+  const handleView = (e: React.MouseEvent, reservation: Reservation) => {
+    // Stop propagation to prevent parent dialog from closing
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (onViewReservation) {
       onViewReservation(reservation);
     } else {
-      // Keep parent dialog open, child will appear on top
       setSelectedViewReservationId(reservation.id);
       setViewDialogOpen(true);
     }
   };
 
-  const handleEdit = (reservation: Reservation) => {
+  const handleEdit = (e: React.MouseEvent, reservation: Reservation) => {
+    // Stop propagation to prevent parent dialog from closing
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (onEditReservation) {
       onEditReservation(reservation);
     } else {
-      // Keep parent dialog open, child will appear on top
       setSelectedEditReservationId(reservation.id);
       setEditDialogOpen(true);
     }
@@ -296,10 +302,10 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
 
           {/* Actions */}
           <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleView(reservation)} data-testid={`view-btn-${reservation.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => handleView(e, reservation)} data-testid={`view-btn-${reservation.id}`}>
               <Eye className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(reservation)} data-testid={`edit-btn-${reservation.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => handleEdit(e, reservation)} data-testid={`edit-btn-${reservation.id}`}>
               <Edit className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(reservation)} data-testid={`delete-btn-${reservation.id}`}>
@@ -457,7 +463,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
                                   </div>
                                 </div>
                                 <div className="flex gap-1">
-                                  <Button size="sm" variant="outline" onClick={() => handleView(reservation)}>
+                                  <Button size="sm" variant="outline" onClick={(e) => handleView(e, reservation)}>
                                     <Eye className="h-3 w-3 mr-1" />
                                     View
                                   </Button>
