@@ -40,14 +40,18 @@ export function ApkExpirationWidget() {
   });
   
   // Function to check if a vehicle should be excluded from the APK widget
-  // Exclude if: registeredTo is BV (false), and been in BV status for over 2 months
-  // BV vehicles don't have road tax/insurance, so APK alerts are not relevant after 2 months
+  // Exclude if: registeredTo is BV (false), APK is expired, and been in BV status for over 2 months
+  // BV vehicles with expired APK that have been BV for a long time don't need alerts
   const shouldExcludeVehicle = (vehicle: Vehicle): boolean => {
     // Only apply this logic to BV registered vehicles
     // registeredTo = 'false' means BV (company), 'true' means Opnaam (personal)
     if (vehicle.registeredTo !== 'false') return false;
     
-    // Check if been in BV status for more than 2 months
+    // Check if APK is expired (days until expiration is negative)
+    const daysUntilExpiration = getDaysUntil(vehicle.apkDate || '');
+    if (daysUntilExpiration >= 0) return false; // APK not expired yet, don't exclude
+    
+    // APK is expired - now check if been in BV status for more than 2 months
     // If no date recorded, assume it's been BV for a long time (legacy data)
     if (!vehicle.registeredToDate) {
       return true; // No date means it's been BV for a while, exclude
@@ -57,7 +61,7 @@ export function ApkExpirationWidget() {
     const twoMonthsAgo = new Date();
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
     
-    // If registered to BV more than 2 months ago, exclude from APK alerts
+    // If registered to BV more than 2 months ago and APK is expired, exclude from APK alerts
     return registeredDate < twoMonthsAgo;
   };
   
