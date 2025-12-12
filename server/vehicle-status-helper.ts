@@ -15,6 +15,7 @@ export interface VehicleStatusContext {
   hasPickedUpReservation: boolean;
   hasBookedReservation: boolean;
   hasMaintenanceBlock: boolean;
+  overdueReservations: Reservation[];
 }
 
 export function getVehicleStatusContext(
@@ -31,13 +32,22 @@ export function getVehicleStatusContext(
     r.status !== 'returned'
   );
   
+  // Find overdue reservations: picked_up but past end date (customer still has the car!)
+  const overdueReservations = vehicleReservations.filter(r => {
+    if (r.type === 'maintenance_block') return false;
+    return r.status === 'picked_up' && r.endDate && r.endDate < today;
+  });
+  
+  // Active reservations: currently within date range OR overdue but still picked up
   const activeReservations = vehicleReservations.filter(r => {
     if (r.type === 'maintenance_block') return false;
     const started = r.startDate <= today;
     const notEnded = !r.endDate || r.endDate >= today;
-    return started && notEnded;
+    const isOverduePickedUp = r.status === 'picked_up' && r.endDate && r.endDate < today;
+    return (started && notEnded) || isOverduePickedUp;
   });
   
+  // Has picked up includes both current and overdue
   const hasPickedUpReservation = activeReservations.some(r => r.status === 'picked_up');
   const hasBookedReservation = activeReservations.some(r => r.status === 'booked');
   
@@ -56,7 +66,8 @@ export function getVehicleStatusContext(
     activeReservations,
     hasPickedUpReservation,
     hasBookedReservation,
-    hasMaintenanceBlock
+    hasMaintenanceBlock,
+    overdueReservations
   };
 }
 

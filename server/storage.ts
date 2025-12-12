@@ -61,6 +61,7 @@ export interface IStorage {
   getUpcomingMaintenanceReservations(): Promise<Reservation[]>;
   getReservationsByVehicle(vehicleId: number): Promise<Reservation[]>;
   getReservationsByCustomer(customerId: number): Promise<Reservation[]>;
+  getAllOverdueReservations(): Promise<Reservation[]>;
   checkReservationConflicts(vehicleId: number, startDate: string, endDate: string, excludeReservationId: number | null, isMaintenanceBlock?: boolean): Promise<Reservation[]>;
   pickupReservation(reservationId: number, pickupData: {
     pickupMileage: number;
@@ -980,6 +981,25 @@ export class MemStorage implements IStorage {
     
     // Populate vehicle and customer data
     return reservations.map(reservation => ({
+      ...reservation,
+      vehicle: this.vehicles.get(reservation.vehicleId),
+      customer: this.customers.get(reservation.customerId)
+    }));
+  }
+
+  async getAllOverdueReservations(): Promise<Reservation[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const overdueReservations = Array.from(this.reservations.values())
+      .filter(r => 
+        !r.deletedAt &&
+        r.status === 'picked_up' &&
+        r.endDate &&
+        r.endDate < today
+      )
+      .sort((a, b) => (b.endDate || '').localeCompare(a.endDate || ''));
+    
+    return overdueReservations.map(reservation => ({
       ...reservation,
       vehicle: this.vehicles.get(reservation.vehicleId),
       customer: this.customers.get(reservation.customerId)

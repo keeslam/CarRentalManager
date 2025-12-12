@@ -1928,6 +1928,21 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(reservations);
   });
 
+  // Get ALL overdue reservations (picked_up but past end date - customer still has the vehicle)
+  app.get("/api/reservations/overdue", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    try {
+      const overdueReservations = await storage.getAllOverdueReservations();
+      res.json(overdueReservations);
+    } catch (error) {
+      console.error("Error fetching all overdue reservations:", error);
+      res.status(500).json({ message: "Failed to fetch overdue reservations" });
+    }
+  });
+
   // Get overdue reservations for a vehicle (ended 3+ days ago, not completed)
   app.get("/api/reservations/overdue/:vehicleId", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);

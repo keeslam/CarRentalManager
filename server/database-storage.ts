@@ -975,6 +975,36 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  // Get ALL overdue reservations: picked_up status but past end date (customer still has the vehicle)
+  async getAllOverdueReservations(): Promise<Reservation[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const result = await db
+      .select({
+        reservation: reservations,
+        vehicle: vehicles,
+        customer: customers,
+      })
+      .from(reservations)
+      .leftJoin(vehicles, eq(reservations.vehicleId, vehicles.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
+      .where(
+        and(
+          isNull(reservations.deletedAt),
+          eq(reservations.status, 'picked_up'),
+          sql`${reservations.endDate} IS NOT NULL`,
+          sql`${reservations.endDate} < ${today}`
+        )
+      )
+      .orderBy(desc(reservations.endDate));
+    
+    return result.map(row => ({
+      ...row.reservation,
+      vehicle: row.vehicle,
+      customer: row.customer,
+    }));
+  }
+
   // Get overdue reservations for a vehicle (end date is 3+ days in the past, status NOT completed)
   async getOverdueReservationsByVehicle(vehicleId: number, daysOverdue: number = 3): Promise<Reservation[]> {
     const cutoffDate = new Date();
