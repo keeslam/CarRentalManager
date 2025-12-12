@@ -163,11 +163,25 @@ app.use(attachCsrfToken);
 
 // Real-time WebSocket event system
 function setupSocketIO(server: any) {
+  // Determine allowed origins for CORS
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProduction 
+    ? [
+        process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined,
+        process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : undefined,
+        'https://*.replit.app',
+        'https://*.replit.dev'
+      ].filter(Boolean)
+    : "*"; // Allow all origins in development
+  
   io = new SocketIOServer(server, {
     cors: {
-      origin: "*", // In production, restrict to your domain
-      methods: ["GET", "POST", "PATCH", "DELETE"]
-    }
+      origin: allowedOrigins,
+      methods: ["GET", "POST", "PATCH", "DELETE"],
+      credentials: true
+    },
+    pingTimeout: 60000, // Increase ping timeout for stability
+    pingInterval: 25000
   });
 
   // Set the socket instance for the realtime-events module
