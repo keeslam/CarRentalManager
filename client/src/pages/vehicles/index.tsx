@@ -217,14 +217,33 @@ export default function VehiclesIndex() {
             {(() => {
               const isRented = vehicle.availabilityStatus === 'rented';
               const isNotForRental = vehicle.availabilityStatus === 'not_for_rental';
-              const isDisabled = isRented || isNotForRental;
-              const tooltipText = isRented 
-                ? "Vehicle is currently rented" 
-                : isNotForRental 
-                  ? "Vehicle is not available for rental" 
-                  : "";
               
-              if (isDisabled) {
+              // For rented vehicles, show "View Reservation" button
+              if (isRented) {
+                const activeReservation = reservations?.find(r => 
+                  r.vehicleId === vehicle.id && 
+                  r.status === 'picked_up'
+                );
+                
+                if (activeReservation) {
+                  return (
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedReservationId(activeReservation.id);
+                        setReservationViewDialogOpen(true);
+                      }}
+                      data-testid={`button-view-reservation-vehicle-${vehicle.id}`}
+                    >
+                      View Rental
+                    </Button>
+                  );
+                }
+              }
+              
+              // For not-for-rental vehicles, show disabled button with tooltip
+              if (isNotForRental) {
                 return (
                   <TooltipProvider>
                     <Tooltip>
@@ -242,13 +261,14 @@ export default function VehiclesIndex() {
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{tooltipText}</p>
+                        <p>Vehicle is not available for rental</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 );
               }
               
+              // For available vehicles, show Reserve button
               return (
                 <ReservationAddDialog 
                   initialVehicleId={vehicle.id.toString()}
