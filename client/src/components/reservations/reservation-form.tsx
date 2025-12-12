@@ -204,7 +204,7 @@ export function ReservationForm({
     initialStartDate || preSelectedStartDate || format(new Date(), "yyyy-MM-dd")
   );
   const [isOpenEnded, setIsOpenEnded] = useState<boolean>(
-    initialData?.endDate === null || initialData?.endDate === undefined || false
+    !initialData?.endDate
   );
   const [deliveryRequired, setDeliveryRequired] = useState<boolean>(
     initialData?.deliveryRequired || false
@@ -352,11 +352,12 @@ export function ReservationForm({
   
   // Setup form with react-hook-form and zod validation
   // When editing (initialData exists), compute isOpenEnded from endDate since API doesn't return it
+  // endDate can be null, undefined, or "" (empty string) for open-ended rentals
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       ...initialData,
-      isOpenEnded: initialData.endDate === null || initialData.endDate === undefined,
+      isOpenEnded: !initialData.endDate,
     } : {
       vehicleId: initialVehicleId || preSelectedVehicleId || "",
       customerId: initialCustomerId || preSelectedCustomerId || "",
@@ -534,8 +535,8 @@ export function ReservationForm({
   useEffect(() => {
     if (initialData) {
       // CRITICAL: Sync isOpenEnded form value from endDate when editing
-      // The API doesn't return isOpenEnded - it's computed from endDate being null
-      const isOpenEndedFromData = initialData.endDate === null || initialData.endDate === undefined;
+      // The API doesn't return isOpenEnded - it's computed from endDate being falsy (null, undefined, or "")
+      const isOpenEndedFromData = !initialData.endDate;
       form.setValue("isOpenEnded", isOpenEndedFromData);
       setIsOpenEnded(isOpenEndedFromData);
       
