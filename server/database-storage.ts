@@ -96,7 +96,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, id));
       
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
   
   async setMileageOverridePassword(id: number, hashedPassword: string | null): Promise<boolean> {
@@ -108,7 +108,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, id));
       
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
   
   async getMileageOverridePasswordHash(id: number): Promise<string | null> {
@@ -123,7 +123,7 @@ export class DatabaseStorage implements IStorage {
   async deleteUser(id: number): Promise<boolean> {
     try {
       const result = await db.delete(users).where(eq(users.id, id));
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     } catch (error) {
       console.error('Error deleting user:', error);
       return false;
@@ -606,7 +606,7 @@ export class DatabaseStorage implements IStorage {
       .delete(customers)
       .where(eq(customers.id, id));
     
-    return deletedRows.rowCount > 0;
+    return (deletedRows.rowCount ?? 0) > 0;
   }
 
   // Reservation methods
@@ -681,17 +681,18 @@ export class DatabaseStorage implements IStorage {
     // Fetch vehicle and customer data for each reservation
     for (const reservation of reservationsData) {
       // Handle null vehicleId for placeholder spare reservations
-      let vehicle = null;
+      let vehicle: Vehicle | undefined = undefined;
       if (reservation.vehicleId !== null) {
-        [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+        const [v] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+        vehicle = v ?? undefined;
       }
       
-      const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
+      const [c] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
       
       result.push({
         ...reservation,
         vehicle,
-        customer
+        customer: c ?? undefined
       });
     }
     
@@ -706,17 +707,18 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Handle null vehicleId for placeholder spare reservations
-    let vehicle = null;
+    let vehicle: Vehicle | undefined = undefined;
     if (reservation.vehicleId !== null) {
-      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      const [v] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      vehicle = v ?? undefined;
     }
     
-    const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
+    const [c] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
     
     return {
       ...reservation,
       vehicle,
-      customer
+      customer: c ?? undefined
     };
   }
 
@@ -733,17 +735,18 @@ export class DatabaseStorage implements IStorage {
     const [reservation] = await db.insert(reservations).values(dataToInsert).returning();
     
     // Handle null vehicleId for placeholder spare reservations
-    let vehicle = null;
+    let vehicle: Vehicle | undefined = undefined;
     if (reservation.vehicleId !== null) {
-      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      const [v] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+      vehicle = v ?? undefined;
     }
     
-    const [customer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
+    const [c] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
     
     return {
       ...reservation,
       vehicle,
-      customer
+      customer: c ?? undefined
     };
   }
 
@@ -790,17 +793,18 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Handle null vehicleId for placeholder spare reservations
-    let vehicle = null;
+    let vehicle: Vehicle | undefined = undefined;
     if (updatedReservation.vehicleId !== null) {
-      [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, updatedReservation.vehicleId));
+      const [v] = await db.select().from(vehicles).where(eq(vehicles.id, updatedReservation.vehicleId));
+      vehicle = v ?? undefined;
     }
     
-    const [customer] = await db.select().from(customers).where(eq(customers.id, updatedReservation.customerId));
+    const [c] = await db.select().from(customers).where(eq(customers.id, updatedReservation.customerId));
     
     return {
       ...updatedReservation,
       vehicle,
-      customer
+      customer: c ?? undefined
     };
   }
   
@@ -828,13 +832,14 @@ export class DatabaseStorage implements IStorage {
     // Fetch vehicle, customer, and driver data for each reservation
     for (const reservation of reservationsData) {
       // Handle null vehicleId for placeholder spare reservations
-      let vehicle = null;
+      let vehicle: Vehicle | undefined = undefined;
       if (reservation.vehicleId !== null) {
-        [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+        const [v] = await db.select().from(vehicles).where(eq(vehicles.id, reservation.vehicleId));
+        vehicle = v ?? undefined;
       }
       
-      let customer = null;
-      let driver = null;
+      let customer: Customer | undefined = undefined;
+      let driver: Driver | undefined = undefined;
       
       // For maintenance blocks, try to find customer from active open-ended rental
       if (reservation.type === 'maintenance_block' && !reservation.customerId && reservation.vehicleId) {
@@ -856,7 +861,7 @@ export class DatabaseStorage implements IStorage {
         
         if (activeRental && activeRental.customerId) {
           const [rentalCustomer] = await db.select().from(customers).where(eq(customers.id, activeRental.customerId));
-          customer = rentalCustomer;
+          customer = rentalCustomer ?? undefined;
           console.log(`✅ Found customer from active rental:`, customer?.name);
         } else {
           console.log(`❌ No active rental found for vehicle ${reservation.vehicleId}`);
@@ -864,13 +869,13 @@ export class DatabaseStorage implements IStorage {
       } else if (reservation.customerId) {
         // Normal reservation with direct customer assignment
         const [directCustomer] = await db.select().from(customers).where(eq(customers.id, reservation.customerId));
-        customer = directCustomer;
+        customer = directCustomer ?? undefined;
       }
       
       // Fetch driver data if driverId is present
       if (reservation.driverId) {
         const [driverData] = await db.select().from(drivers).where(eq(drivers.id, reservation.driverId));
-        driver = driverData;
+        driver = driverData ?? undefined;
       }
       
       result.push({
@@ -911,8 +916,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 
@@ -941,8 +946,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 
@@ -961,8 +966,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 
@@ -981,8 +986,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 
@@ -1013,8 +1018,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 
@@ -1049,8 +1054,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.reservation,
-      vehicle: row.vehicle,
-      customer: row.customer,
+      vehicle: row.vehicle ?? undefined,
+      customer: row.customer ?? undefined,
     }));
   }
 

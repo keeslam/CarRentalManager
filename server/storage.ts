@@ -285,6 +285,7 @@ export class MemStorage implements IStorage {
   private documents: Map<number, Document>;
   private pdfTemplates: Map<number, PdfTemplate>;
   private customNotifications: Map<number, CustomNotification>;
+  private drivers: Map<number, Driver>;
   
   private userId: number;
   private vehicleId: number;
@@ -294,6 +295,7 @@ export class MemStorage implements IStorage {
   private documentId: number;
   private pdfTemplateId: number;
   private customNotificationId: number;
+  private driverId: number;
 
   constructor() {
     this.users = new Map();
@@ -304,6 +306,7 @@ export class MemStorage implements IStorage {
     this.documents = new Map();
     this.pdfTemplates = new Map();
     this.customNotifications = new Map();
+    this.drivers = new Map();
     
     this.userId = 1;
     this.vehicleId = 1;
@@ -313,6 +316,7 @@ export class MemStorage implements IStorage {
     this.documentId = 1;
     this.pdfTemplateId = 1;
     this.customNotificationId = 1;
+    this.driverId = 1;
     
     // Initialize with sample data for demo
     this.initializeSampleData();
@@ -424,8 +428,9 @@ export class MemStorage implements IStorage {
       startDate: today.toISOString().split('T')[0],
       endDate: nextDay.toISOString().split('T')[0],
       status: "confirmed",
-      totalPrice: 120,
-      notes: "Sample reservation"
+      totalPrice: "120",
+      notes: "Sample reservation",
+      placeholderSpare: false
     });
     
     this.createReservation({
@@ -434,8 +439,9 @@ export class MemStorage implements IStorage {
       startDate: weekLater.toISOString().split('T')[0],
       endDate: nextMonth.toISOString().split('T')[0],
       status: "pending",
-      totalPrice: 1200,
-      notes: "Long-term rental"
+      totalPrice: "1200",
+      notes: "Long-term rental",
+      placeholderSpare: false
     });
     
     // Sample expenses
@@ -592,6 +598,7 @@ export class MemStorage implements IStorage {
       role: insertUser.role ?? 'user',
       permissions: insertUser.permissions ?? [],
       active: insertUser.active ?? true,
+      mileageOverridePasswordHash: insertUser.mileageOverridePasswordHash ?? null,
       createdAt: now,
       updatedAt: now,
       createdBy: insertUser.createdBy ?? null,
@@ -799,7 +806,52 @@ export class MemStorage implements IStorage {
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
     const id = this.customerId++;
     const now = new Date();
-    const customer: Customer = { ...customerData, id, createdAt: now, updatedAt: now };
+    const customer: Customer = { 
+      ...customerData, 
+      id, 
+      createdAt: now, 
+      updatedAt: now,
+      createdBy: customerData.createdBy ?? null,
+      updatedBy: customerData.updatedBy ?? null,
+      createdByUser: null,
+      updatedByUser: null,
+      email: customerData.email ?? null,
+      status: customerData.status ?? null,
+      debtorNumber: customerData.debtorNumber ?? null,
+      phone: customerData.phone ?? null,
+      address: customerData.address ?? null,
+      postalCode: customerData.postalCode ?? null,
+      city: customerData.city ?? null,
+      country: customerData.country ?? null,
+      dateOfBirth: customerData.dateOfBirth ?? null,
+      nationalId: customerData.nationalId ?? null,
+      notes: customerData.notes ?? null,
+      driverLicenseNumber: customerData.driverLicenseNumber ?? null,
+      driverLicenseExpiry: customerData.driverLicenseExpiry ?? null,
+      driverLicenseIssueDate: customerData.driverLicenseIssueDate ?? null,
+      driverLicenseCountry: customerData.driverLicenseCountry ?? null,
+      driverLicenseFrontPath: customerData.driverLicenseFrontPath ?? null,
+      driverLicenseBackPath: customerData.driverLicenseBackPath ?? null,
+      customerType: customerData.customerType ?? null,
+      companyName: customerData.companyName ?? null,
+      companyRegistration: customerData.companyRegistration ?? null,
+      vatNumber: customerData.vatNumber ?? null,
+      billingContactName: customerData.billingContactName ?? null,
+      billingContactEmail: customerData.billingContactEmail ?? null,
+      billingContactPhone: customerData.billingContactPhone ?? null,
+      preferredContactMethod: customerData.preferredContactMethod ?? null,
+      preferredLanguage: customerData.preferredLanguage ?? null,
+      referralSource: customerData.referralSource ?? null,
+      internalNotes: customerData.internalNotes ?? null,
+      blacklisted: customerData.blacklisted ?? null,
+      blacklistReason: customerData.blacklistReason ?? null,
+      corporateDiscount: customerData.corporateDiscount ?? null,
+      paymentTermDays: customerData.paymentTermDays ?? null,
+      creditLimit: customerData.creditLimit ?? null,
+      whatsappOptIn: customerData.whatsappOptIn ?? null,
+      emergencyContactName: customerData.emergencyContactName ?? null,
+      emergencyContactPhone: customerData.emergencyContactPhone ?? null
+    };
     this.customers.set(id, customer);
     return customer;
   }
@@ -851,7 +903,50 @@ export class MemStorage implements IStorage {
   async createReservation(reservationData: InsertReservation): Promise<Reservation> {
     const id = this.reservationId++;
     const now = new Date();
-    const reservation: Reservation = { ...reservationData, id, createdAt: now, updatedAt: now };
+    const reservation: Reservation = { 
+      ...reservationData, 
+      id, 
+      createdAt: now, 
+      updatedAt: now,
+      createdBy: reservationData.createdBy ?? null,
+      updatedBy: reservationData.updatedBy ?? null,
+      createdByUser: null,
+      updatedByUser: null,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByUser: null,
+      type: reservationData.type ?? 'standard',
+      status: reservationData.status ?? 'pending',
+      contractNumber: reservationData.contractNumber ?? null,
+      returnMileage: reservationData.returnMileage ?? null,
+      endDate: reservationData.endDate ?? null,
+      vehicleId: reservationData.vehicleId ?? null,
+      customerId: reservationData.customerId ?? null,
+      driverId: reservationData.driverId ?? null,
+      notes: reservationData.notes ?? null,
+      totalPrice: reservationData.totalPrice ?? null,
+      paidAmount: reservationData.paidAmount ?? null,
+      pickupMileage: reservationData.pickupMileage ?? null,
+      pickupDate: reservationData.pickupDate ?? null,
+      pickupTime: reservationData.pickupTime ?? null,
+      returnDate: reservationData.returnDate ?? null,
+      returnTime: reservationData.returnTime ?? null,
+      fuelLevelPickup: reservationData.fuelLevelPickup ?? null,
+      fuelLevelReturn: reservationData.fuelLevelReturn ?? null,
+      fuelCost: reservationData.fuelCost ?? null,
+      maintenanceStatus: reservationData.maintenanceStatus ?? null,
+      workshopName: reservationData.workshopName ?? null,
+      repairDescription: reservationData.repairDescription ?? null,
+      maintenanceAmount: reservationData.maintenanceAmount ?? null,
+      maintenancePaidBy: reservationData.maintenancePaidBy ?? null,
+      replacementForReservationId: reservationData.replacementForReservationId ?? null,
+      pickupNotes: reservationData.pickupNotes ?? null,
+      returnNotes: reservationData.returnNotes ?? null,
+      requiresDelivery: reservationData.requiresDelivery ?? null,
+      deliveryAddress: reservationData.deliveryAddress ?? null,
+      deliveryFee: reservationData.deliveryFee ?? null,
+      deliveryNotes: reservationData.deliveryNotes ?? null
+    };
     this.reservations.set(id, reservation);
     
     // Return with populated data
@@ -1083,7 +1178,24 @@ export class MemStorage implements IStorage {
   async createExpense(expenseData: InsertExpense): Promise<Expense> {
     const id = this.expenseId++;
     const now = new Date();
-    const expense: Expense = { ...expenseData, id, createdAt: now, updatedAt: now };
+    const expense: Expense = { 
+      ...expenseData, 
+      id, 
+      createdAt: now, 
+      updatedAt: now,
+      createdBy: expenseData.createdBy ?? null,
+      updatedBy: expenseData.updatedBy ?? null,
+      createdByUser: null,
+      updatedByUser: null,
+      description: expenseData.description ?? null,
+      receiptUrl: expenseData.receiptUrl ?? null,
+      receiptPath: expenseData.receiptPath ?? null,
+      receiptFilename: expenseData.receiptFilename ?? null,
+      receiptContentType: expenseData.receiptContentType ?? null,
+      paymentMethod: expenseData.paymentMethod ?? null,
+      paidBy: expenseData.paidBy ?? null,
+      invoiceNumber: expenseData.invoiceNumber ?? null
+    };
     this.expenses.set(id, expense);
     
     // Return with populated data
@@ -1154,7 +1266,17 @@ export class MemStorage implements IStorage {
   async createDocument(documentData: InsertDocument): Promise<Document> {
     const id = this.documentId++;
     const now = new Date();
-    const document: Document = { ...documentData, id, uploadDate: now };
+    const document: Document = { 
+      ...documentData, 
+      id, 
+      uploadDate: now,
+      createdBy: documentData.createdBy ?? null,
+      updatedBy: documentData.updatedBy ?? null,
+      createdByUser: null,
+      updatedByUser: null,
+      notes: documentData.notes ?? null,
+      reservationId: documentData.reservationId ?? null
+    };
     this.documents.set(id, document);
     return document;
   }
