@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,9 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
   const { toast } = useToast();
+  
+  // Ref to track if we're opening a child dialog - this is checked synchronously
+  const isOpeningChildDialogRef = useRef(false);
   
   // Delete reservation mutation
   const deleteReservationMutation = useMutation({
@@ -206,28 +209,34 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   };
 
   const handleView = (e: React.MouseEvent, reservation: Reservation) => {
-    // Stop propagation to prevent parent dialog from closing
     e.stopPropagation();
     e.preventDefault();
     
     if (onViewReservation) {
       onViewReservation(reservation);
     } else {
+      // Set ref BEFORE state to prevent parent from closing
+      isOpeningChildDialogRef.current = true;
       setSelectedViewReservationId(reservation.id);
       setViewDialogOpen(true);
+      // Reset after a tick
+      setTimeout(() => { isOpeningChildDialogRef.current = false; }, 100);
     }
   };
 
   const handleEdit = (e: React.MouseEvent, reservation: Reservation) => {
-    // Stop propagation to prevent parent dialog from closing
     e.stopPropagation();
     e.preventDefault();
     
     if (onEditReservation) {
       onEditReservation(reservation);
     } else {
+      // Set ref BEFORE state to prevent parent from closing
+      isOpeningChildDialogRef.current = true;
       setSelectedEditReservationId(reservation.id);
       setEditDialogOpen(true);
+      // Reset after a tick
+      setTimeout(() => { isOpeningChildDialogRef.current = false; }, 100);
     }
   };
 
@@ -327,9 +336,9 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   return (
     <>
       <Dialog open={open} onOpenChange={(isOpen) => {
-        // Only allow closing if no child dialogs are open
-        if (!isOpen && (viewDialogOpen || editDialogOpen || statusDialogOpen)) {
-          return; // Prevent closing when child dialog is open
+        // Prevent closing if we're opening a child dialog or if one is already open
+        if (!isOpen && (isOpeningChildDialogRef.current || viewDialogOpen || editDialogOpen || statusDialogOpen)) {
+          return;
         }
         onOpenChange(isOpen);
       }}>
