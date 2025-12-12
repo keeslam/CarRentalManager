@@ -987,6 +987,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Get ALL overdue reservations: picked_up status but past end date (customer still has the vehicle)
+  // Excludes open-ended rentals (null or empty endDate) since they have no defined return date
   async getAllOverdueReservations(): Promise<Reservation[]> {
     const today = new Date().toISOString().split('T')[0];
     
@@ -1004,6 +1005,7 @@ export class DatabaseStorage implements IStorage {
           isNull(reservations.deletedAt),
           eq(reservations.status, 'picked_up'),
           sql`${reservations.endDate} IS NOT NULL`,
+          sql`${reservations.endDate} != ''`,
           sql`${reservations.endDate} < ${today}`
         )
       )
@@ -1017,6 +1019,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Get overdue reservations for a vehicle (end date is 3+ days in the past, status NOT completed)
+  // Excludes open-ended rentals (null or empty endDate) since they have no defined return date
   async getOverdueReservationsByVehicle(vehicleId: number, daysOverdue: number = 3): Promise<Reservation[]> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOverdue);
@@ -1036,6 +1039,7 @@ export class DatabaseStorage implements IStorage {
           eq(reservations.vehicleId, vehicleId),
           isNull(reservations.deletedAt),
           sql`${reservations.endDate} IS NOT NULL`,
+          sql`${reservations.endDate} != ''`,
           sql`${reservations.endDate} < ${cutoffDateStr}`,
           sql`${reservations.status} != 'completed'`,
           sql`${reservations.status} != 'cancelled'`
