@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Fuel, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { invalidateVehicleData } from "@/lib/cache-utils";
 
 interface FuelStatusUpdateDialogProps {
   vehicleId: number;
@@ -94,9 +95,8 @@ export function FuelStatusUpdateDialog({
         description: "Fuel status updated successfully",
       });
       
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles', vehicleId] });
+      // Use comprehensive cache invalidation
+      invalidateVehicleData(vehicleId);
       
       // Reset form
       setFuelLevel(currentFuelLevel || "");

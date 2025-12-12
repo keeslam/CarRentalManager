@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { io, Socket } from 'socket.io-client';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { invalidateVehicleData, invalidateReservationData } from '@/lib/cache-utils';
 
 interface SocketContextValue {
   socket: Socket | null;
@@ -85,7 +86,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
 // Smart cache invalidation based on entity type and action
 function invalidateQueries(entityType: string, action: string, data?: any) {
-  console.log(`🔄 Invalidating cache for ${entityType} ${action}`);
+  console.log(`🔄 Invalidating cache for ${entityType} ${action}`, data);
 
   switch (entityType) {
     case 'users':
@@ -96,33 +97,8 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       break;
 
     case 'vehicles':
-      // Force immediate refetch of ALL vehicle queries including specific vehicle pages
-      queryClient.refetchQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith('/api/vehicles');
-        },
-        type: 'active' // Only refetch currently active queries
-      });
-      
-      // Also invalidate (not just refetch) so inactive queries refresh when they become active
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles-with-reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/filtered-vehicles'] });
-      
-      // Refresh reservation data since vehicle availability may have changed
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/reservations'],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/vehicles/available'],
-        type: 'active'
-      });
-      
-      if (data?.id) {
-        queryClient.refetchQueries({ queryKey: [`/api/vehicles/${data.id}`], type: 'active' });
-      }
+      // Use centralized invalidation helper for comprehensive cache refresh
+      invalidateVehicleData(data?.id);
       break;
 
     case 'customers':
@@ -131,51 +107,13 @@ function invalidateQueries(entityType: string, action: string, data?: any) {
       if (data?.id) {
         queryClient.invalidateQueries({ queryKey: ['/api/customers', data.id] });
       }
+      // Also invalidate reservation-related data
+      invalidateReservationData();
       break;
 
     case 'reservations':
-      // Force immediate refetch of ALL reservation queries including calendar range queries
-      queryClient.refetchQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith('/api/reservations');
-        },
-        type: 'active' // Only refetch currently active queries
-      });
-      
-      // Also invalidate (not just refetch) maintenance and upcoming reservations so they refresh even when not visible
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming-maintenance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations/upcoming'] });
-      
-      // Also refetch these specific queries that depend on reservation data
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/vehicles-with-reservations'],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/filtered-vehicles'],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/vehicles/available'],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/vehicles/apk-expiring'],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ['/api/vehicles/warranty-expiring'],
-        type: 'active'
-      });
-      
-      if (data?.id) {
-        queryClient.refetchQueries({ queryKey: ['/api/reservations', data.id], type: 'active' });
-      }
-      // Also invalidate related vehicles data
-      if (data?.vehicleId) {
-        queryClient.refetchQueries({ queryKey: ['/api/vehicles', data.vehicleId], type: 'active' });
-      }
+      // Use centralized invalidation helper for comprehensive cache refresh
+      invalidateReservationData(data?.id, data?.vehicleId);
       break;
 
     case 'expenses':
