@@ -46,7 +46,6 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const [selectedViewReservationId, setSelectedViewReservationId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
-  const [listWasOpen, setListWasOpen] = useState(false);
   const { toast } = useToast();
   
   // Delete reservation mutation
@@ -210,8 +209,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onViewReservation) {
       onViewReservation(reservation);
     } else {
-      setListWasOpen(true);
-      onOpenChange(false); // Close list first
+      // Keep parent dialog open, child will appear on top
       setSelectedViewReservationId(reservation.id);
       setViewDialogOpen(true);
     }
@@ -221,8 +219,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onEditReservation) {
       onEditReservation(reservation);
     } else {
-      setListWasOpen(true);
-      onOpenChange(false); // Close list first
+      // Keep parent dialog open, child will appear on top
       setSelectedEditReservationId(reservation.id);
       setEditDialogOpen(true);
     }
@@ -545,15 +542,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation View Dialog */}
       <ReservationViewDialog
         open={viewDialogOpen}
-        onOpenChange={(isOpen) => {
-          setViewDialogOpen(isOpen);
-          // Reopen list when view dialog closes
-          if (!isOpen && listWasOpen) {
-            setListWasOpen(false);
-            // Use setTimeout to ensure the view dialog fully closes before reopening list
-            setTimeout(() => onOpenChange(true), 50);
-          }
-        }}
+        onOpenChange={setViewDialogOpen}
         reservationId={selectedViewReservationId}
         onEdit={(reservationId) => {
           setSelectedEditReservationId(reservationId);
@@ -566,15 +555,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation Edit Dialog */}
       <ReservationEditDialog
         open={editDialogOpen}
-        onOpenChange={(isOpen) => {
-          setEditDialogOpen(isOpen);
-          // Reopen list when edit dialog closes
-          if (!isOpen && listWasOpen) {
-            setListWasOpen(false);
-            // Use setTimeout to ensure the edit dialog fully closes before reopening list
-            setTimeout(() => onOpenChange(true), 50);
-          }
-        }}
+        onOpenChange={setEditDialogOpen}
         reservationId={selectedEditReservationId}
         onSuccess={(updatedReservation) => {
           invalidateRelatedQueries('reservations', {
