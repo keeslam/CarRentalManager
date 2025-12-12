@@ -2182,15 +2182,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined> {
+    // Get current vehicle to check its status
+    const currentVehicle = await this.getVehicle(vehicleId);
+    if (!currentVehicle) {
+      return undefined;
+    }
+    
+    const updateData: any = {
+      maintenanceStatus,
+      maintenanceNote: maintenanceNote || null,
+      updatedAt: new Date()
+    };
+    
+    // Update availability status based on maintenance status
+    // Only update if vehicle is not currently rented (preserve rental status)
+    const currentAvailability = currentVehicle.availabilityStatus || 'available';
+    
+    if (maintenanceStatus === 'in_service' || maintenanceStatus === 'scheduled') {
+      // Set to needs_fixing only if not currently rented
+      if (currentAvailability !== 'rented') {
+        updateData.availabilityStatus = 'needs_fixing';
+        console.log(`[Vehicle Status] Vehicle ${vehicleId} marked for service - setting to 'needs_fixing'`);
+      } else {
+        console.log(`[Vehicle Status] Vehicle ${vehicleId} marked for service but currently rented - preserving 'rented' status`);
+      }
+    } else if (maintenanceStatus === 'ok' || maintenanceStatus === 'completed') {
+      // Restore to available only if currently needs_fixing
+      if (currentAvailability === 'needs_fixing') {
+        updateData.availabilityStatus = 'available';
+        console.log(`[Vehicle Status] Vehicle ${vehicleId} service completed - setting to 'available'`);
+      }
+    }
+    
     const [updatedVehicle] = await db
       .update(vehicles)
-      .set({
-        maintenanceStatus,
-        maintenanceNote: maintenanceNote || null,
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(vehicles.id, vehicleId))
       .returning();
+    
+    // Sync vehicle availability after maintenance status change
+    await this.syncVehicleAvailabilityWithReservations();
 
     return updatedVehicle || undefined;
   }
