@@ -2,6 +2,7 @@ import { VehicleAvailabilityWidget } from "@/components/dashboard/vehicle-availa
 import { ApkExpirationWidget } from "@/components/dashboard/apk-expiration-widget";
 import { WarrantyExpirationWidget } from "@/components/dashboard/warranty-expiration-widget";
 import { SpareVehicleAssignmentsWidget } from "@/components/dashboard/spare-vehicle-assignments-widget";
+import { OverdueReservationsWidget } from "@/components/dashboard/overdue-reservations-widget";
 import { UpcomingReservations } from "@/components/dashboard/upcoming-reservations";
 import { RecentExpenses } from "@/components/dashboard/recent-expenses";
 import { ReservationCalendar } from "@/components/dashboard/reservation-calendar";
@@ -10,6 +11,9 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 export default function Dashboard() {
   return (
     <div className="space-y-6">
+      {/* Overdue Rentals Alert - Top Priority */}
+      <OverdueReservationsWidget />
+      
       {/* Quick Actions */}
       <QuickActions />
       
