@@ -88,14 +88,26 @@ export function SpareVehicleAssignmentsWidget() {
     };
   }, [pendingAssignments]);
 
-  // Filter all reservations for assigned spare vehicles (not yet picked up)
+  // Filter all reservations for assigned spare vehicles with upcoming pickup dates
+  // Only show pickups within the next 7 days or overdue (start date has passed)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sevenDaysFromNow = new Date(today);
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  
   const upcomingAssigned = [...(allReservations ?? [])]
-    .filter(spare => 
-      spare.type === 'replacement' &&  // Must be a replacement reservation
-      spare.vehicleId &&  // Must have a vehicle assigned (not TBD anymore)
-      spare.status !== 'cancelled' && 
-      (!spare.spareVehicleStatus || spare.spareVehicleStatus === 'assigned' || spare.spareVehicleStatus === 'ready')
-    )
+    .filter(spare => {
+      if (spare.type !== 'replacement') return false; // Must be a replacement reservation
+      if (!spare.vehicleId) return false; // Must have a vehicle assigned (not TBD anymore)
+      if (spare.status === 'cancelled') return false;
+      // Only show assigned or ready status (not picked_up or returned)
+      if (spare.spareVehicleStatus && spare.spareVehicleStatus !== 'assigned' && spare.spareVehicleStatus !== 'ready') return false;
+      
+      // Only show if pickup date is within 7 days or already past (overdue)
+      const startDate = new Date(spare.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      return startDate <= sevenDaysFromNow;
+    })
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
   // Update spare vehicle status
@@ -255,7 +267,7 @@ export function SpareVehicleAssignmentsWidget() {
             
             <TabsContent value="assigned" className="p-4 space-y-3">
               <div className="text-sm text-gray-600 mb-3">
-                Assigned spare vehicles awaiting pickup
+                Spare vehicles to be picked up within the next 7 days
               </div>
               
               <div className="space-y-2 max-h-64 overflow-y-auto">
