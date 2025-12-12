@@ -529,6 +529,12 @@ export function ReservationForm({
   // Sync pickup/return data when initialData changes (e.g., after pickup dialog)
   useEffect(() => {
     if (initialData) {
+      // CRITICAL: Sync isOpenEnded form value from endDate when editing
+      // The API doesn't return isOpenEnded - it's computed from endDate being null
+      const isOpenEndedFromData = initialData.endDate === null || initialData.endDate === undefined;
+      form.setValue("isOpenEnded", isOpenEndedFromData);
+      setIsOpenEnded(isOpenEndedFromData);
+      
       // Update mileage states
       if (initialData.pickupMileage !== undefined && initialData.pickupMileage !== startMileage) {
         setStartMileage(initialData.pickupMileage);
@@ -567,15 +573,43 @@ export function ReservationForm({
     }
   }, [isOpenEndedWatch]);
 
+  // Track previous open-ended state to detect user toggle
+  const prevIsOpenEndedRef = useRef<boolean | undefined>(undefined);
+  
   // Update end date when open-ended status changes
   useEffect(() => {
+    const wasOpenEnded = prevIsOpenEndedRef.current;
+    prevIsOpenEndedRef.current = isOpenEndedWatch;
+    
     if (isOpenEndedWatch) {
+      // Switching TO open-ended: clear the end date
       form.setValue("endDate", "");
-    } else if (!form.getValues("endDate")) {
-      // Set default end date if not open-ended and no end date set
-      form.setValue("endDate", format(addDays(parseISO(startDateWatch || selectedStartDate), 3), "yyyy-MM-dd"));
+    } else if (!form.getValues("endDate") || wasOpenEnded === true) {
+      // Switching FROM open-ended to dated, or no end date set
+      // Smart auto-populate: consider current date and start date
+      const today = new Date();
+      const startDate = parseISO(startDateWatch || selectedStartDate);
+      
+      let suggestedEndDate: Date;
+      
+      if (editMode && wasOpenEnded === true) {
+        // User is converting an active open-ended rental to dated
+        // Suggest today if rental already started, otherwise 3 days from start
+        if (startDate <= today) {
+          // Rental already started - suggest today as end date
+          suggestedEndDate = today;
+        } else {
+          // Future rental - suggest 3 days from start
+          suggestedEndDate = addDays(startDate, 3);
+        }
+      } else {
+        // New reservation or initializing - default 3 days from start
+        suggestedEndDate = addDays(startDate, 3);
+      }
+      
+      form.setValue("endDate", format(suggestedEndDate, "yyyy-MM-dd"));
     }
-  }, [isOpenEndedWatch, form, startDateWatch, selectedStartDate]);
+  }, [isOpenEndedWatch, form, startDateWatch, selectedStartDate, editMode]);
   
   useEffect(() => {
     if (vehicleIdWatch && startDateWatch) {
