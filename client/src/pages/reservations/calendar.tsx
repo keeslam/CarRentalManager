@@ -330,6 +330,7 @@ export default function ReservationCalendarPage() {
       // Refetch calendar data to show updated reservation
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reservations/overdue"] });
       
       toast({
         title: "Success",
@@ -2395,8 +2396,9 @@ export default function ReservationCalendarPage() {
               onSuccess={async () => {
                 // Close the edit dialog
                 setEditDialogOpen(false);
-                // Refresh calendar data
+                // Refresh calendar data and overdue list
                 await queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+                await queryClient.invalidateQueries({ queryKey: ["/api/reservations/overdue"] });
                 
                 // Fetch fresh reservation data and reopen view dialog
                 try {
@@ -2666,8 +2668,9 @@ export default function ReservationCalendarPage() {
               }}
               onSuccess={(reservation) => {
                 // Keep the dialog open after creating reservation
-                // Refresh calendar data
+                // Refresh calendar data and overdue list
                 queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/reservations/overdue"] });
               }}
             />
           </div>
@@ -2932,6 +2935,7 @@ export default function ReservationCalendarPage() {
                                   });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
                                   queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/reservations/overdue'] });
                                   toast({
                                     title: "Rental Reverted",
                                     description: "Rental has been marked as picked up (return data cleared)"
@@ -2982,6 +2986,7 @@ export default function ReservationCalendarPage() {
                                         await apiRequest('DELETE', `/api/reservations/${rental.id}`);
                                         queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
                                         queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations/overdue'] });
                                         toast({
                                           title: "Rental Deleted",
                                           description: "The rental record has been permanently deleted"
