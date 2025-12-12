@@ -51,7 +51,7 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search, FileText, Building, MapPin, Clock, History } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search, FileText, Building, MapPin, Clock, History, AlertTriangle, Phone } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -193,6 +193,9 @@ export default function ReservationCalendarPage() {
   const [completedRentalsDialogOpen, setCompletedRentalsDialogOpen] = useState(false);
   const [completedRentalsSearch, setCompletedRentalsSearch] = useState('');
   const [completedRentalsDateFilter, setCompletedRentalsDateFilter] = useState<'all' | '7days' | '30days' | '90days' | 'year'>('all');
+  
+  // Overdue rentals dialog
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   
   // Administration dialog for external invoicing
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
@@ -564,6 +567,12 @@ export default function ReservationCalendarPage() {
     enabled: !!vehicles
   });
 
+  // Fetch overdue reservations (picked_up but past end date)
+  const { data: overdueReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations/overdue'],
+    refetchInterval: 60000,
+  });
+
   // Fetch documents for selected reservation
   const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
     queryKey: [`/api/documents/reservation/${selectedReservation?.id}`],
@@ -843,6 +852,12 @@ export default function ReservationCalendarPage() {
             </svg>
             View Completed ({completedRentals.length})
           </Button>
+          {overdueReservations.length > 0 && (
+            <Button variant="destructive" onClick={() => setOverdueDialogOpen(true)} data-testid="button-view-overdue">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              {overdueReservations.length} Overdue
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setAdminDialogOpen(true)} data-testid="button-administration">
             <FileText className="h-4 w-4 mr-2" />
             Administration
@@ -2985,6 +3000,88 @@ export default function ReservationCalendarPage() {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Overdue Rentals Dialog */}
+      <Dialog open={overdueDialogOpen} onOpenChange={setOverdueDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Overdue Rentals
+            </DialogTitle>
+            <DialogDescription>
+              These vehicles should have been returned but customer still has them. Contact them to arrange return.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {overdueReservations.map((reservation) => {
+              const daysOverdue = reservation.endDate 
+                ? differenceInDays(new Date(), parseISO(reservation.endDate))
+                : 0;
+              
+              return (
+                <div 
+                  key={reservation.id}
+                  className="flex items-start justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800"
+                  data-testid={`overdue-reservation-${reservation.id}`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span>{reservation.customer?.name || "Unknown Customer"}</span>
+                      {reservation.customer?.phone && (
+                        <>
+                          <Phone className="h-3 w-3 ml-2" />
+                          <a 
+                            href={`tel:${reservation.customer.phone}`}
+                            className="text-blue-600 hover:underline"
+                            data-testid={`phone-link-${reservation.id}`}
+                          >
+                            {reservation.customer.phone}
+                          </a>
+                        </>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        Should have returned: {reservation.endDate ? format(parseISO(reservation.endDate), 'MMM d, yyyy') : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="destructive" className="shrink-0">
+                      {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        handleViewReservation(reservation);
+                        setOverdueDialogOpen(false);
+                      }}
+                      data-testid={`button-view-overdue-${reservation.id}`}
+                    >
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </DialogContent>
       </Dialog>
       {/* Administration Dialog for External Invoicing */}
