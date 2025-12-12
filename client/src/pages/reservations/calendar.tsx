@@ -2314,6 +2314,12 @@ export default function ReservationCalendarPage() {
                   variant="destructive"
                   onClick={() => {
                     setViewDialogOpen(false);
+                    setSelectedReservation(null);
+                    // Return to list if opened from there
+                    if (openedFromListView) {
+                      setListDialogOpen(true);
+                      setOpenedFromListView(false);
+                    }
                     handleDeleteReservation(selectedReservation);
                   }}
                   data-testid="button-delete-reservation-dialog"
@@ -2322,7 +2328,15 @@ export default function ReservationCalendarPage() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => setViewDialogOpen(false)}
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    setSelectedReservation(null);
+                    // Return to list if opened from there
+                    if (openedFromListView) {
+                      setListDialogOpen(true);
+                      setOpenedFromListView(false);
+                    }
+                  }}
                   data-testid="button-close-view-dialog"
                 >
                   Close
