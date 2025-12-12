@@ -14,10 +14,36 @@ declare global {
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Neon serverless databases require SSL and benefit from specific pool settings
+// Determine SSL configuration based on environment
+// - DATABASE_SSL=false disables SSL entirely (for local/Coolify PostgreSQL without SSL)
+// - DATABASE_SSL=true or not set uses SSL with rejectUnauthorized: false (for Neon/cloud databases)
+// - Also check DATABASE_URL for sslmode parameter
+function getSslConfig(): boolean | { rejectUnauthorized: boolean } {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const sslEnv = process.env.DATABASE_SSL?.toLowerCase();
+  
+  // Explicit disable via environment variable
+  if (sslEnv === 'false' || sslEnv === '0' || sslEnv === 'disable') {
+    console.log('🔐 SSL disabled via DATABASE_SSL environment variable');
+    return false;
+  }
+  
+  // Check for sslmode=disable in connection string
+  if (dbUrl.includes('sslmode=disable')) {
+    console.log('🔐 SSL disabled via sslmode=disable in DATABASE_URL');
+    return false;
+  }
+  
+  // Default: enable SSL with relaxed verification (works with Neon and most cloud databases)
+  return { rejectUnauthorized: false };
+}
+
+const sslConfig = getSslConfig();
+
+// Database pool configuration
 const pool = global.dbPool || new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Enable SSL for Neon
+  ssl: sslConfig,
   max: 10, // Reduce max connections for serverless (Neon has limits)
   min: 0,  // Allow pool to shrink to 0 when idle (serverless-friendly)
   idleTimeoutMillis: 20000, // Close idle connections after 20s
