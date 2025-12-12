@@ -550,7 +550,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
           // Reopen list when view dialog closes
           if (!isOpen && listWasOpen) {
             setListWasOpen(false);
-            onOpenChange(true);
+            // Use setTimeout to ensure the view dialog fully closes before reopening list
+            setTimeout(() => onOpenChange(true), 50);
           }
         }}
         reservationId={selectedViewReservationId}
@@ -570,7 +571,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
           // Reopen list when edit dialog closes
           if (!isOpen && listWasOpen) {
             setListWasOpen(false);
-            onOpenChange(true);
+            // Use setTimeout to ensure the edit dialog fully closes before reopening list
+            setTimeout(() => onOpenChange(true), 50);
           }
         }}
         reservationId={selectedEditReservationId}
