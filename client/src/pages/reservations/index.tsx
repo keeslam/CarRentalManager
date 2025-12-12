@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ColumnDef } from "@tanstack/react-table";
 import { TabsFilter } from "@/components/ui/tabs-filter";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertTriangle, Phone, Calendar, Car, User } from "lucide-react";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
@@ -46,7 +48,14 @@ export default function ReservationsIndex() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch overdue reservations
+  const { data: overdueReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations/overdue'],
+    refetchInterval: 60000,
+  });
   
   // Get current date
   const today = new Date();
@@ -168,9 +177,16 @@ export default function ReservationsIndex() {
         (customer?.phone?.toLowerCase().includes(searchLower))
       );
       
-      // Status filter
-      const matchesStatus = statusFilter === "all" || 
-        reservation.status.toLowerCase() === statusFilter.toLowerCase();
+      // Status filter - handle "overdue" as a special case
+      let matchesStatus = false;
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "overdue") {
+        // Check if this reservation is in the overdue list
+        matchesStatus = overdueReservations.some(r => r.id === reservation.id);
+      } else {
+        matchesStatus = reservation.status.toLowerCase() === statusFilter.toLowerCase();
+      }
       
       // Vehicle type filter
       const matchesVehicleType = vehicleTypeFilter === "all" || 
@@ -263,7 +279,7 @@ export default function ReservationsIndex() {
       
       return matchesSearch && matchesStatus && matchesVehicleType && matchesDateRange;
     });
-  }, [reservations, searchQuery, statusFilter, vehicleTypeFilter, dateRangeFilter, today]);
+  }, [reservations, searchQuery, statusFilter, vehicleTypeFilter, dateRangeFilter, today, overdueReservations]);
   
   // Create groups based on the selected grouping
   const reservationGroups = useMemo(() => {
@@ -668,6 +684,7 @@ export default function ReservationsIndex() {
     { id: "returned", label: "Returned", count: getStatusCounts.returned },
     { id: "completed", label: "Completed", count: getStatusCounts.completed },
     { id: "cancelled", label: "Cancelled", count: getStatusCounts.cancelled },
+    { id: "overdue", label: "Overdue", count: overdueReservations.length, variant: overdueReservations.length > 0 ? "destructive" : undefined },
   ];
   
   // Date range tabs
@@ -702,10 +719,90 @@ export default function ReservationsIndex() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Reservations</CardTitle>
-          <CardDescription>
-            Manage all your vehicle reservations and rental contracts.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Reservations</CardTitle>
+              <CardDescription>
+                Manage all your vehicle reservations and rental contracts.
+              </CardDescription>
+            </div>
+            {overdueReservations.length > 0 && (
+              <Dialog open={overdueDialogOpen} onOpenChange={setOverdueDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="flex items-center gap-2" data-testid="button-view-overdue">
+                    <AlertTriangle className="h-4 w-4" />
+                    {overdueReservations.length} Overdue Rental{overdueReservations.length !== 1 ? 's' : ''}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-red-600">
+                      <AlertTriangle className="h-5 w-5" />
+                      Overdue Rentals
+                    </DialogTitle>
+                    <DialogDescription>
+                      These vehicles should have been returned but customer still has them. Contact them to arrange return.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 mt-4">
+                    {overdueReservations.map((reservation) => {
+                      const daysOverdue = reservation.endDate 
+                        ? differenceInDays(new Date(), parseISO(reservation.endDate))
+                        : 0;
+                      
+                      return (
+                        <div 
+                          key={reservation.id}
+                          className="flex items-start justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800"
+                          data-testid={`overdue-reservation-${reservation.id}`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Car className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">
+                                {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span>{reservation.customer?.name || "Unknown Customer"}</span>
+                              {reservation.customer?.phone && (
+                                <>
+                                  <Phone className="h-3 w-3 ml-2" />
+                                  <a 
+                                    href={`tel:${reservation.customer.phone}`}
+                                    className="text-blue-600 hover:underline"
+                                    data-testid={`phone-link-${reservation.id}`}
+                                  >
+                                    {reservation.customer.phone}
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Should have returned: {reservation.endDate ? format(parseISO(reservation.endDate), 'MMM d, yyyy') : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <Badge variant="destructive" className="shrink-0">
+                            {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {/* Status Filter Tabs */}

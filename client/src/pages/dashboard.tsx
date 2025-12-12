@@ -6,14 +6,10 @@ import { UpcomingReservations } from "@/components/dashboard/upcoming-reservatio
 import { RecentExpenses } from "@/components/dashboard/recent-expenses";
 import { ReservationCalendar } from "@/components/dashboard/reservation-calendar";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { OverdueReservationsWidget } from "@/components/dashboard/overdue-reservations-widget";
 
 export default function Dashboard() {
   return (
     <div className="space-y-6">
-      {/* Overdue Rentals Alert - Shows at top when there are overdue reservations */}
-      <OverdueReservationsWidget />
-      
       {/* Quick Actions */}
       <QuickActions />
       
