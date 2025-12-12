@@ -8,12 +8,15 @@ import { Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { useState, useEffect } from "react";
 import { SpareVehicleAssignmentDialog } from "@/components/reservations/spare-vehicle-assignment-dialog";
+import { PickupDialog } from "@/components/reservations/pickup-return-dialogs";
 import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export function SpareVehicleAssignmentsWidget() {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState<Reservation | null>(null);
+  const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
+  const [selectedSpareForPickup, setSelectedSpareForPickup] = useState<Reservation | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -131,6 +134,19 @@ export function SpareVehicleAssignmentsWidget() {
 
   const handleStatusChange = (reservationId: number, status: string) => {
     updateStatusMutation.mutate({ reservationId, status });
+  };
+
+  const handleStartPickup = (spare: Reservation) => {
+    // Enrich the spare reservation with vehicle data for the pickup dialog
+    const vehicleData = spare.vehicleId ? vehicleMap[spare.vehicleId] : null;
+    const enrichedSpare = vehicleData ? { ...spare, vehicle: vehicleData } : spare;
+    setSelectedSpareForPickup(enrichedSpare);
+    setPickupDialogOpen(true);
+  };
+
+  const handlePickupDialogClose = (open: boolean) => {
+    setPickupDialogOpen(open);
+    if (!open) setSelectedSpareForPickup(null);
   };
 
   const getStatusIcon = (status?: string) => {
@@ -290,11 +306,12 @@ export function SpareVehicleAssignmentsWidget() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleStatusChange(spare.id, 'ready')}
+                              onClick={() => handleStartPickup(spare)}
                               disabled={updateStatusMutation.isPending}
                               className="text-xs"
+                              data-testid="button-start-pickup-spare"
                             >
-                              Mark Ready
+                              Start Pickup
                             </Button>
                           )}
                           {spare.spareVehicleStatus === 'ready' && (
@@ -336,6 +353,18 @@ export function SpareVehicleAssignmentsWidget() {
           open={assignmentDialogOpen}
           onOpenChange={handleDialogClose}
           placeholderReservations={[selectedPlaceholder]}
+        />
+      )}
+
+      {/* Pickup Dialog for Spare Vehicles */}
+      {selectedSpareForPickup && (
+        <PickupDialog
+          open={pickupDialogOpen}
+          onOpenChange={handlePickupDialogClose}
+          reservation={selectedSpareForPickup}
+          onSuccess={() => {
+            invalidateRelatedQueries('reservations');
+          }}
         />
       )}
     </>
