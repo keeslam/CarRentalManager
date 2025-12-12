@@ -45,7 +45,10 @@ export function getVehicleStatusContext(
     if (r.type !== 'maintenance_block') return false;
     const started = r.startDate <= today;
     const notEnded = !r.endDate || r.endDate >= today;
-    return started && notEnded && (r.maintenanceStatus === 'scheduled' || r.maintenanceStatus === 'in');
+    const activeMaintenanceStatus = r.maintenanceStatus === 'scheduled' || 
+                                     r.maintenanceStatus === 'in' || 
+                                     r.maintenanceStatus === 'in_service';
+    return started && notEnded && activeMaintenanceStatus;
   });
   
   return {
@@ -85,6 +88,22 @@ export function validateManualStatusChange(
         allowed: true,
         newStatus,
         warning: `Vehicle has an active rental. It will be marked as "not for rental" after the current rental ends.`
+      };
+    }
+  }
+  
+  if (context.hasMaintenanceBlock) {
+    if (newStatus === 'available') {
+      return {
+        allowed: false,
+        error: `Cannot set vehicle to "available" while it has an active maintenance block. Please close the maintenance first.`
+      };
+    }
+    if (newStatus === 'not_for_rental') {
+      return {
+        allowed: true,
+        newStatus,
+        warning: `Vehicle has active maintenance. It will be marked as "not for rental" after maintenance is complete.`
       };
     }
   }
