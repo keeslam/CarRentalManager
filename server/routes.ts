@@ -34,6 +34,11 @@ import { ObjectStorageService } from "./objectStorage";
 import { realtimeEvents } from "./realtime-events";
 import { hasPermission, requireAdmin } from "./middleware/permissions.js";
 import { clearEmailConfigCache, sendEmail } from "./utils/email-service";
+import { 
+  getVehicleStatusContext, 
+  validateManualStatusChange, 
+  VehicleAvailabilityStatus 
+} from "./vehicle-status-helper";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -1115,6 +1120,31 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       // Parse the sanitized merged data
       const vehicleData = insertVehicleSchema.parse(mergedData);
+      
+      // Validate status change if availability status is being updated
+      if (sanitizedData.availabilityStatus && 
+          sanitizedData.availabilityStatus !== existingVehicle.availabilityStatus) {
+        const currentStatus = (existingVehicle.availabilityStatus || 'available') as VehicleAvailabilityStatus;
+        const newStatus = sanitizedData.availabilityStatus as VehicleAvailabilityStatus;
+        
+        // Get all reservations to build context
+        const allReservations = await storage.getAllReservations();
+        const context = getVehicleStatusContext(existingVehicle, allReservations);
+        
+        const validation = validateManualStatusChange(currentStatus, newStatus, context);
+        
+        if (!validation.allowed) {
+          return res.status(400).json({ 
+            message: validation.error || 'Status change not allowed',
+            field: 'availabilityStatus'
+          });
+        }
+        
+        // Include warning in response if present
+        if (validation.warning) {
+          console.log(`[Vehicle Status] Warning for vehicle ${id}: ${validation.warning}`);
+        }
+      }
       
       // Preserve the registration specific tracking fields
       const { registeredToBy, companyBy } = existingVehicle;
