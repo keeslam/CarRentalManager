@@ -24,6 +24,12 @@ import {
   type TemplateSection,
   vehicleCustomerBlacklist, type VehicleCustomerBlacklist, type InsertVehicleCustomerBlacklist
 } from "../shared/schema";
+import {
+  getVehicleStatusContext,
+  getStatusOnPickup,
+  getStatusOnReturn,
+  VehicleAvailabilityStatus
+} from "./vehicle-status-helper";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
@@ -1119,8 +1125,15 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date()
     };
 
-    if (vehicle.availabilityStatus === 'available') {
-      vehicleUpdate.availabilityStatus = 'rented';
+    const currentStatus = (vehicle.availabilityStatus || 'available') as VehicleAvailabilityStatus;
+    const pickupStatusResult = getStatusOnPickup(currentStatus);
+    
+    if (!pickupStatusResult.allowed) {
+      throw new Error(pickupStatusResult.error || 'Cannot pickup vehicle with current status');
+    }
+    
+    if (pickupStatusResult.newStatus && pickupStatusResult.newStatus !== currentStatus) {
+      vehicleUpdate.availabilityStatus = pickupStatusResult.newStatus;
     }
 
     await db
@@ -1187,7 +1200,11 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date()
     };
 
-    if (vehicle.availabilityStatus === 'rented') {
+    const currentStatus = (vehicle.availabilityStatus || 'available') as VehicleAvailabilityStatus;
+    
+    if (currentStatus === 'needs_fixing' || currentStatus === 'not_for_rental') {
+      console.log(`[Vehicle Status] Vehicle ${vehicle.id} returning with manual status "${currentStatus}" - preserving status`);
+    } else {
       vehicleUpdate.availabilityStatus = 'available';
     }
 
@@ -1195,6 +1212,8 @@ export class DatabaseStorage implements IStorage {
       .update(vehicles)
       .set(vehicleUpdate)
       .where(eq(vehicles.id, reservation.vehicleId));
+    
+    await this.syncVehicleAvailabilityWithReservations();
 
     return this.getReservation(reservationId);
   }
