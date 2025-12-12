@@ -1086,9 +1086,11 @@ export function ReservationForm({
       pendingStatusChangeRef.current = triggerDialog;
       
       // Prepare submission data for both edit and create modes
+      // IMPORTANT: Use null (not undefined) for open-ended rentals
+      // undefined values are omitted from JSON, so backend wouldn't receive the update
       const submissionData: any = {
         ...data,
-        endDate: data.isOpenEnded ? undefined : data.endDate,
+        endDate: data.isOpenEnded ? null : (data.endDate || null),
         status: statusForSave,
       };
       delete submissionData.isOpenEnded;
