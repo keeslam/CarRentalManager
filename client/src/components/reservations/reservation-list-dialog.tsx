@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
-import { Eye, Edit, Trash2, Car, History, User, Calendar, FileText, Fuel, MapPin, Phone, Building, Clock } from "lucide-react";
+import { Eye, Edit, Trash2, Car, History, User, Calendar, FileText, Fuel, MapPin, Phone, Building, Clock, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -79,6 +79,12 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   // Fetch reservations
   const { data: reservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
     queryKey: ["/api/reservations"],
+    enabled: open,
+  });
+
+  // Fetch overdue reservations
+  const { data: overdueReservations = [] } = useQuery<Reservation[]>({
+    queryKey: ['/api/reservations/overdue'],
     enabled: open,
   });
 
@@ -327,10 +333,14 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
           </DialogHeader>
 
           <Tabs defaultValue="current" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="current" className="flex items-center gap-2">
                 <Car className="h-4 w-4" />
                 Current ({currentReservations.length})
+              </TabsTrigger>
+              <TabsTrigger value="overdue" className="flex items-center gap-2">
+                <AlertTriangle className={`h-4 w-4 ${overdueReservations.length > 0 ? 'text-red-500' : ''}`} />
+                Overdue ({overdueReservations.length})
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2">
                 <History className="h-4 w-4" />
@@ -376,6 +386,83 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
                         filteredCurrentReservations.map((reservation) => (
                           <ReservationCard key={reservation.id} reservation={reservation} />
                         ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Overdue Tab */}
+            <TabsContent value="overdue" className="mt-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-sm text-red-600 font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Vehicles that should have been returned but customer still has them
+                  </span>
+                </div>
+                
+                <div className="border rounded-md overflow-hidden">
+                  <ScrollArea className="h-[calc(70vh-180px)]">
+                    <div className="divide-y">
+                      {overdueReservations.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No overdue reservations</div>
+                      ) : (
+                        overdueReservations.map((reservation) => {
+                          const daysOverdue = reservation.endDate 
+                            ? differenceInDays(new Date(), parseISO(reservation.endDate))
+                            : 0;
+                          
+                          return (
+                            <div 
+                              key={reservation.id}
+                              className="p-3 bg-red-50 hover:bg-red-100 transition-colors"
+                              data-testid={`overdue-item-${reservation.id}`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium">
+                                      {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
+                                    </span>
+                                    <span className="text-sm text-gray-600">
+                                      {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                                    </span>
+                                    <Badge variant="destructive" className="text-xs">
+                                      {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    <span className="flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      {reservation.customer?.name || 'Unknown'}
+                                    </span>
+                                    {reservation.customer?.phone && (
+                                      <a 
+                                        href={`tel:${reservation.customer.phone}`}
+                                        className="flex items-center gap-1 text-blue-600 hover:underline"
+                                      >
+                                        <Phone className="h-3 w-3" />
+                                        {reservation.customer.phone}
+                                      </a>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      Due: {reservation.endDate ? format(parseISO(reservation.endDate), 'MMM d') : 'N/A'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="outline" onClick={() => handleView(reservation)}>
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    View
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </ScrollArea>
