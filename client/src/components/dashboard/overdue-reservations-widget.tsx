@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Car, User, Calendar, Phone } from "lucide-react";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatLicensePlate } from "@/lib/format-utils";
+import { differenceInDays, parseISO } from "date-fns";
 
 interface OverdueReservation {
   id: number;
@@ -13,101 +12,76 @@ interface OverdueReservation {
   customer?: { name: string; phone?: string | null };
 }
 
+function getUrgencyClass(days: number): string {
+  if (days >= 7) return "bg-danger-50 text-danger-500";
+  if (days >= 3) return "bg-warning-50 text-warning-500";
+  return "bg-primary-100 text-primary-600";
+}
+
 export function OverdueReservationsWidget() {
   const { data: overdueReservations = [], isLoading } = useQuery<OverdueReservation[]>({
     queryKey: ['/api/reservations/overdue'],
     refetchInterval: 60000,
   });
 
-  if (isLoading) {
-    return (
-      <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-            <AlertTriangle className="h-5 w-5" />
-            Overdue Rentals
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (overdueReservations.length === 0) {
-    return null;
-  }
-
   const today = new Date();
+  
+  const reservationsWithDays = overdueReservations.map(reservation => ({
+    ...reservation,
+    daysOverdue: reservation.endDate 
+      ? differenceInDays(today, parseISO(reservation.endDate))
+      : 0
+  })).sort((a, b) => b.daysOverdue - a.daysOverdue);
 
   return (
-    <Card className="border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertTriangle className="h-5 w-5 animate-pulse" />
-          Overdue Rentals ({overdueReservations.length})
-        </CardTitle>
-        <CardDescription className="text-red-600 dark:text-red-400">
-          These vehicles should have been returned but customer still has them
-        </CardDescription>
+    <Card className="overflow-hidden h-full">
+      <CardHeader className="bg-danger-500 py-3 px-4 flex-row justify-between items-center space-y-0">
+        <CardTitle className="text-base font-medium text-white">Overdue Rentals</CardTitle>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle text-white">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" x2="12" y1="8" y2="12" />
+          <line x1="12" x2="12.01" y1="16" y2="16" />
+        </svg>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {overdueReservations.map((reservation) => {
-          const daysOverdue = reservation.endDate 
-            ? differenceInDays(today, parseISO(reservation.endDate))
-            : 0;
-          
-          return (
-            <div 
-              key={reservation.id}
-              className="flex items-start justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800"
-              data-testid={`overdue-reservation-${reservation.id}`}
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Car className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {reservation.vehicle?.make} {reservation.vehicle?.model}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {reservation.vehicle?.licensePlate}
-                  </Badge>
+      <CardContent className="p-4">
+        <div className="mb-3">
+          <div className="text-xl font-semibold">{isLoading ? "-" : reservationsWithDays?.length || 0}</div>
+          <p className="text-xs text-gray-500">Vehicles not returned on time</p>
+        </div>
+        <div className="space-y-2 max-h-72 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex justify-center p-4">
+              <svg className="animate-spin h-5 w-5 text-danger-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          ) : reservationsWithDays?.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">No overdue rentals</div>
+          ) : (
+            reservationsWithDays?.map(reservation => (
+              <div key={reservation.id} className="flex items-center p-2 border rounded-md hover:bg-gray-50" data-testid={`overdue-reservation-${reservation.id}`}>
+                <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md ${getUrgencyClass(reservation.daysOverdue)}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
                 </div>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  <span>{reservation.customer?.name || "Unknown Customer"}</span>
-                  {reservation.customer?.phone && (
-                    <>
-                      <Phone className="h-3 w-3 ml-2" />
-                      <a 
-                        href={`tel:${reservation.customer.phone}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {reservation.customer.phone}
-                      </a>
-                    </>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    Should have returned: {reservation.endDate ? format(parseISO(reservation.endDate), 'MMM d, yyyy') : 'N/A'}
-                  </span>
+                <div className="ml-3 flex-grow min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {formatLicensePlate(reservation.vehicle?.licensePlate || '')}
+                  </div>
+                  <div className="flex items-center">
+                    <div className="text-xs text-gray-500 truncate">{reservation.customer?.name || 'Unknown'}</div>
+                    <div className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${getUrgencyClass(reservation.daysOverdue)}`}>
+                      {reservation.daysOverdue}d late
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <Badge 
-                variant="destructive" 
-                className="shrink-0"
-              >
-                {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue
-              </Badge>
-            </div>
-          );
-        })}
+            ))
+          )}
+        </div>
       </CardContent>
     </Card>
   );
