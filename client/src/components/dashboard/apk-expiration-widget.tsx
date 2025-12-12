@@ -39,11 +39,35 @@ export function ApkExpirationWidget() {
     queryKey: ["/api/vehicles/apk-expiring"],
   });
   
-  // Add daysUntilExpiration to each vehicle
-  const vehiclesWithDays = vehicles?.map(vehicle => ({
-    ...vehicle,
-    daysUntilExpiration: getDaysUntil(vehicle.apkDate || '')
-  })).sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
+  // Function to check if a vehicle should be excluded from the APK widget
+  // Exclude if: registeredTo is "BV", APK is expired, and been in BV status for over 2 months
+  const shouldExcludeVehicle = (vehicle: Vehicle): boolean => {
+    // Only apply this logic to BV registered vehicles
+    if (vehicle.registeredTo !== 'BV') return false;
+    
+    // Check if APK is expired (days until expiration is negative)
+    const daysUntilExpiration = getDaysUntil(vehicle.apkDate || '');
+    if (daysUntilExpiration >= 0) return false; // Not expired, don't exclude
+    
+    // Check if been in BV status for more than 2 months
+    if (!vehicle.registeredToDate) return false; // No date recorded, don't exclude
+    
+    const registeredDate = new Date(vehicle.registeredToDate);
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    
+    // If registered to BV more than 2 months ago and APK expired, exclude
+    return registeredDate < twoMonthsAgo;
+  };
+  
+  // Add daysUntilExpiration to each vehicle and filter out excluded vehicles
+  const vehiclesWithDays = vehicles
+    ?.filter(vehicle => !shouldExcludeVehicle(vehicle))
+    .map(vehicle => ({
+      ...vehicle,
+      daysUntilExpiration: getDaysUntil(vehicle.apkDate || '')
+    }))
+    .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
   
   // Function to handle clicking on a vehicle to schedule APK inspection
   const handleScheduleClick = (vehicle: Vehicle) => {
