@@ -320,7 +320,13 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        // Only allow closing if no child dialogs are open
+        if (!isOpen && (viewDialogOpen || editDialogOpen || statusDialogOpen)) {
+          return; // Prevent closing when child dialog is open
+        }
+        onOpenChange(isOpen);
+      }}>
         <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh]" data-testid="dialog-reservation-list">
           <DialogHeader>
             <DialogTitle>Reservations</DialogTitle>
