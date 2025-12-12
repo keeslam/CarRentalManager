@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle, Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
@@ -213,31 +214,67 @@ export default function VehiclesIndex() {
               vehicleLicensePlate={vehicle.licensePlate}
               onSuccess={handleDialogSuccess}
             />
-            <ReservationAddDialog 
-              initialVehicleId={vehicle.id.toString()}
-              onStartPickupFlow={handleStartPickupFlow}
-              onSuccess={(reservation) => {
-                handleDialogSuccess();
-                // Only show view dialog for non-pickup reservations
-                // Pickup reservations are handled by the page-level pickup dialog
-                if (reservation.status !== 'picked_up') {
-                  toast({
-                    title: "Reservation created",
-                    description: "Opening reservation details...",
-                  });
-                  setSelectedReservationId(reservation.id);
-                  setReservationViewDialogOpen(true);
-                }
-              }}
-            >
-              <Button 
-                variant="outline" 
-                size="sm"
-                data-testid={`button-reserve-vehicle-${vehicle.id}`}
-              >
-                Reserve
-              </Button>
-            </ReservationAddDialog>
+            {(() => {
+              const isRented = vehicle.availabilityStatus === 'rented';
+              const isNotForRental = vehicle.availabilityStatus === 'not_for_rental';
+              const isDisabled = isRented || isNotForRental;
+              const tooltipText = isRented 
+                ? "Vehicle is currently rented" 
+                : isNotForRental 
+                  ? "Vehicle is not available for rental" 
+                  : "";
+              
+              if (isDisabled) {
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            disabled
+                            className="opacity-50 cursor-not-allowed"
+                            data-testid={`button-reserve-vehicle-${vehicle.id}`}
+                          >
+                            Reserve
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{tooltipText}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+              
+              return (
+                <ReservationAddDialog 
+                  initialVehicleId={vehicle.id.toString()}
+                  onStartPickupFlow={handleStartPickupFlow}
+                  onSuccess={(reservation) => {
+                    handleDialogSuccess();
+                    if (reservation.status !== 'picked_up') {
+                      toast({
+                        title: "Reservation created",
+                        description: "Opening reservation details...",
+                      });
+                      setSelectedReservationId(reservation.id);
+                      setReservationViewDialogOpen(true);
+                    }
+                  }}
+                >
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    data-testid={`button-reserve-vehicle-${vehicle.id}`}
+                  >
+                    Reserve
+                  </Button>
+                </ReservationAddDialog>
+              );
+            })()}
           </div>
         );
       },
