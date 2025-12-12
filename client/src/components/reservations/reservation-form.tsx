@@ -351,9 +351,13 @@ export function ReservationForm({
   const defaultEndDate = !isOpenEnded ? format(addDays(parseISO(selectedStartDate), 3), "yyyy-MM-dd") : "";
   
   // Setup form with react-hook-form and zod validation
+  // When editing (initialData exists), compute isOpenEnded from endDate since API doesn't return it
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      isOpenEnded: initialData.endDate === null || initialData.endDate === undefined,
+    } : {
       vehicleId: initialVehicleId || preSelectedVehicleId || "",
       customerId: initialCustomerId || preSelectedCustomerId || "",
       driverId: null,
