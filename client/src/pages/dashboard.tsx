@@ -15,19 +15,21 @@ export default function Dashboard() {
       <QuickActions />
       
       {/* Dashboard Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <VehicleAvailabilityWidget />
         <ApkExpirationWidget />
         <OverdueReservationsWidget />
         <WarrantyExpirationWidget />
-        <SpareVehicleAssignmentsWidget />
       </div>
       
-      {/* Reservations and Expenses */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <UpcomingReservations />
+      {/* Spare Vehicles and Expenses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SpareVehicleAssignmentsWidget />
         <RecentExpenses />
       </div>
+      
+      {/* Upcoming Reservations */}
+      <UpcomingReservations />
       
       {/* Calendar */}
       <ReservationCalendar />
