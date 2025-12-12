@@ -238,8 +238,8 @@ export function ReservationViewDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-reservation-view">
+      <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-[60]" data-testid="dialog-reservation-view">
           <DialogHeader>
             <DialogTitle>Reservation Details</DialogTitle>
             <p className="text-gray-500">Reservation #{reservationId}</p>

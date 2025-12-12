@@ -46,8 +46,8 @@ export function ReservationEditDialog({
   if (!reservationId) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-reservation-edit">
+    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-[60]" data-testid="dialog-reservation-edit">
         <DialogHeader>
           <DialogTitle>Edit Reservation</DialogTitle>
           <DialogDescription>
