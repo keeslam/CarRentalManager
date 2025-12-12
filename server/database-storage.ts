@@ -163,6 +163,7 @@ export class DatabaseStorage implements IStorage {
     const thirtyDaysDate = thirtyDaysFromNow.toISOString().split('T')[0];
     
     // Get all vehicles with active reservations (currently rented - covers today)
+    // INCLUDES: reservations within date range OR overdue picked_up reservations (customer still has vehicle)
     const activeReservations = await db
       .select({ vehicleId: reservations.vehicleId })
       .from(reservations)
@@ -174,10 +175,20 @@ export class DatabaseStorage implements IStorage {
           sql`${reservations.type} != 'maintenance_block'`, // Exclude maintenance
           isNull(reservations.deletedAt),
           sql`${reservations.vehicleId} IS NOT NULL`,
-          sql`${reservations.startDate} <= ${today}`,
           or(
-            sql`${reservations.endDate} >= ${today}`,
-            isNull(reservations.endDate) // Include open-ended rentals
+            // Normal active: started and not ended
+            and(
+              sql`${reservations.startDate} <= ${today}`,
+              or(
+                sql`${reservations.endDate} >= ${today}`,
+                isNull(reservations.endDate) // Include open-ended rentals
+              )
+            ),
+            // Overdue: past end date but still picked_up (customer still has the car!)
+            and(
+              sql`${reservations.status} = 'picked_up'`,
+              sql`${reservations.endDate} < ${today}`
+            )
           )
         )
       );

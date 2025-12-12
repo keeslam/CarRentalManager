@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AlertTriangle, Car, User, Calendar, Phone } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
-import type { Reservation } from "@shared/schema";
 
-interface OverdueReservation extends Reservation {
+interface OverdueReservation {
+  id: number;
+  endDate: string | null;
+  startDate: string;
+  status: string;
   vehicle?: { make: string; model: string; licensePlate: string };
   customer?: { name: string; phone?: string | null };
 }
