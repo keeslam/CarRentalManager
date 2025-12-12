@@ -48,8 +48,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
   const { toast } = useToast();
   
-  // Ref to track if we're opening a child dialog - this is checked synchronously
-  const isOpeningChildDialogRef = useRef(false);
+  // Track if child was opened from this list - used to reopen list when child closes
+  const openedFromListRef = useRef(false);
   
   // Delete reservation mutation
   const deleteReservationMutation = useMutation({
@@ -215,12 +215,11 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onViewReservation) {
       onViewReservation(reservation);
     } else {
-      // Set ref BEFORE state to prevent parent from closing
-      isOpeningChildDialogRef.current = true;
+      // Close parent list, mark that we opened from list, then open child
+      openedFromListRef.current = true;
+      onOpenChange(false);
       setSelectedViewReservationId(reservation.id);
       setViewDialogOpen(true);
-      // Reset after a tick
-      setTimeout(() => { isOpeningChildDialogRef.current = false; }, 100);
     }
   };
 
@@ -231,12 +230,11 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
     if (onEditReservation) {
       onEditReservation(reservation);
     } else {
-      // Set ref BEFORE state to prevent parent from closing
-      isOpeningChildDialogRef.current = true;
+      // Close parent list, mark that we opened from list, then open child
+      openedFromListRef.current = true;
+      onOpenChange(false);
       setSelectedEditReservationId(reservation.id);
       setEditDialogOpen(true);
-      // Reset after a tick
-      setTimeout(() => { isOpeningChildDialogRef.current = false; }, 100);
     }
   };
 
@@ -335,13 +333,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        // Prevent closing if we're opening a child dialog or if one is already open
-        if (!isOpen && (isOpeningChildDialogRef.current || viewDialogOpen || editDialogOpen || statusDialogOpen)) {
-          return;
-        }
-        onOpenChange(isOpen);
-      }}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh]" data-testid="dialog-reservation-list">
           <DialogHeader>
             <DialogTitle>Reservations</DialogTitle>
@@ -563,12 +555,19 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation View Dialog */}
       <ReservationViewDialog
         open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
+        onOpenChange={(isOpen) => {
+          setViewDialogOpen(isOpen);
+          // Reopen parent list when child closes (if opened from list)
+          if (!isOpen && openedFromListRef.current) {
+            openedFromListRef.current = false;
+            setTimeout(() => onOpenChange(true), 50);
+          }
+        }}
         reservationId={selectedViewReservationId}
         onEdit={(reservationId) => {
+          // Keep the flag set since we're going to edit
           setSelectedEditReservationId(reservationId);
           setViewDialogOpen(false);
-          // Don't reopen list, going to edit
           setEditDialogOpen(true);
         }}
       />
@@ -576,7 +575,14 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
       {/* Reservation Edit Dialog */}
       <ReservationEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChange={(isOpen) => {
+          setEditDialogOpen(isOpen);
+          // Reopen parent list when child closes (if opened from list)
+          if (!isOpen && openedFromListRef.current) {
+            openedFromListRef.current = false;
+            setTimeout(() => onOpenChange(true), 50);
+          }
+        }}
         reservationId={selectedEditReservationId}
         onSuccess={(updatedReservation) => {
           invalidateRelatedQueries('reservations', {
