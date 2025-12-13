@@ -18,7 +18,6 @@ export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Get user's initials for avatar
   const getUserInitials = () => {
     if (!user) return "?";
     
@@ -33,7 +32,6 @@ export function UserMenu() {
     return user.username[0].toUpperCase();
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -47,8 +45,6 @@ export function UserMenu() {
     };
   }, [menuRef]);
 
-
-
   const handleLogout = () => {
     logoutMutation.mutate();
   };
@@ -60,6 +56,7 @@ export function UserMenu() {
       <button 
         className="flex items-center space-x-1 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
         onClick={() => setIsOpen(!isOpen)}
+        data-testid="user-menu-button"
       >
         <Avatar className="h-8 w-8 border border-gray-200">
           <AvatarFallback>{getUserInitials()}</AvatarFallback>
@@ -82,6 +79,7 @@ export function UserMenu() {
               href="/profile"
               onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+              data-testid="menu-profile"
             >
               <User className="mr-2 h-4 w-4" />
               Profile
@@ -91,13 +89,12 @@ export function UserMenu() {
               href="/profile/edit"
               onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+              data-testid="menu-edit-profile"
             >
               <Settings className="mr-2 h-4 w-4" />
               Edit Profile
             </Link>
 
-
-            {/* Admin-only menu items */}
             {user.role === UserRole.ADMIN && (
               <>
                 <div className="px-3 py-1 border-t border-gray-100">
@@ -107,6 +104,7 @@ export function UserMenu() {
                   href="/users"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                  data-testid="menu-users"
                 >
                   <UserCog className="mr-2 h-4 w-4" />
                   Users
@@ -115,6 +113,7 @@ export function UserMenu() {
                   href="/admin/backup"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                  data-testid="menu-backup"
                 >
                   <Database className="mr-2 h-4 w-4" />
                   Backup Management
@@ -123,6 +122,7 @@ export function UserMenu() {
                   href="/settings"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
+                  data-testid="menu-settings"
                 >
                   <Globe className="mr-2 h-4 w-4" />
                   App Settings
@@ -135,6 +135,7 @@ export function UserMenu() {
             <button
               className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
               onClick={handleLogout}
+              data-testid="menu-logout"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
