@@ -100,11 +100,11 @@ const formSchema = insertReservationSchemaBase.extend({
   ]).nullish(),
   damageCheckFile: z.instanceof(File).optional(),
   departureMileage: z.union([
-    z.number().nullish(),
+    z.number().min(0, "Mileage cannot be negative").nullish(),
     z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
   ]).nullish(),
   startMileage: z.union([
-    z.number().nullish(),
+    z.number().min(0, "Mileage cannot be negative").nullish(),
     z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
   ]).nullish(),
   fuelLevelPickup: z.string().nullish(),
@@ -123,6 +123,15 @@ const formSchema = insertReservationSchemaBase.extend({
   return true;
 }, {
   message: "End date is required for non-open-ended rentals",
+  path: ["endDate"],
+}).refine((data) => {
+  // End date must be >= start date (when not open-ended)
+  if (!data.isOpenEnded && data.startDate && data.endDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true;
+}, {
+  message: "End date cannot be before start date",
   path: ["endDate"],
 });
 

@@ -54,17 +54,19 @@ export const formSchema = insertVehicleSchema.extend({
   // Make these fields truly optional
   registeredTo: z.boolean().optional(),
   company: z.boolean().optional(),
-  // Make mileage fields optional
+  // Make mileage fields optional with non-negative validation
   departureMileage: z.union([
     z.string().optional(),
     z.number().optional(),
     z.null()
-  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val)),
+  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val))
+    .refine(val => val === null || val === undefined || val >= 0, { message: "Mileage cannot be negative" }),
   returnMileage: z.union([
     z.string().optional(),
     z.number().optional(),
     z.null()
-  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val)),
+  ]).optional().transform(val => val === '' ? null : val === null ? null : Number(val))
+    .refine(val => val === null || val === undefined || val >= 0, { message: "Mileage cannot be negative" }),
 });
 
 // Vehicle types

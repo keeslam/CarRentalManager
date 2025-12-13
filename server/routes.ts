@@ -25,7 +25,9 @@ import {
   assignVehicleToPlaceholderSchema,
   Reservation,
   UserRole,
-  UserPermission
+  UserPermission,
+  isValidReservationTransition,
+  isValidSpareTransition
 } from "../shared/schema";
 import multer from "multer";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -2837,6 +2839,28 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
       
+      // Validate status transition (skip for reversion flows handled below)
+      const currentStatus = existingReservation.status;
+      const newStatus = status.toLowerCase();
+      if (!isValidReservationTransition(currentStatus, newStatus)) {
+        // Allow certain reversion flows that are explicitly handled
+        const isAllowedReversion = 
+          (currentStatus === 'picked_up' && newStatus === 'booked') ||
+          (currentStatus === 'returned' && newStatus === 'picked_up') ||
+          (currentStatus === 'completed' && ['picked_up', 'booked'].includes(newStatus));
+        
+        if (!isAllowedReversion) {
+          return res.status(400).json({ 
+            message: `Invalid status transition from '${currentStatus}' to '${newStatus}'`,
+            details: {
+              currentStatus,
+              requestedStatus: newStatus,
+              hint: "Check valid transitions: booked → picked_up → completed"
+            }
+          });
+        }
+      }
+      
       // If status is "completed", check mileage validation
       if (status === "completed" && existingReservation.vehicleId && req.body.departureMileage) {
         const vehicle = await storage.getVehicle(existingReservation.vehicleId);
@@ -3435,6 +3459,25 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!spareVehicleStatus || !validStatuses.includes(spareVehicleStatus)) {
         return res.status(400).json({ 
           message: "Invalid spare vehicle status. Must be one of: " + validStatuses.join(', ') 
+        });
+      }
+
+      // Get current reservation to validate transition
+      const existingReservation = await storage.getReservation(reservationId);
+      if (!existingReservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Validate spare vehicle status transition
+      const currentSpareStatus = existingReservation.spareVehicleStatus;
+      if (!isValidSpareTransition(currentSpareStatus, spareVehicleStatus)) {
+        return res.status(400).json({ 
+          message: `Invalid spare status transition from '${currentSpareStatus || 'none'}' to '${spareVehicleStatus}'`,
+          details: {
+            currentStatus: currentSpareStatus,
+            requestedStatus: spareVehicleStatus,
+            hint: "Valid transitions: assigned → ready → picked_up → returned"
+          }
         });
       }
 
