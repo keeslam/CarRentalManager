@@ -15,7 +15,7 @@ export function SidebarNav() {
   const isAdmin = user?.role === UserRole.ADMIN;
 
   const navItems: NavItem[] = [
-    { href: "/", label: "Dashboard", icon: "dashboard" },
+    { href: "/", label: "Dashboard", icon: "dashboard", permissions: [UserPermission.VIEW_DASHBOARD] },
     { href: "/vehicles", label: "Vehicles", icon: "directions_car", permissions: [UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES] },
     { href: "/customers", label: "Customers", icon: "people", permissions: [UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS] },
     { href: "/reservations", label: "Reservations", icon: "event", permissions: [UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS] },
