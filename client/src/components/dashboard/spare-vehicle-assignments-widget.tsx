@@ -439,9 +439,7 @@ export function SpareVehicleAssignmentsWidget() {
                     No active spare vehicles
                   </div>
                 ) : (
-                  activeSpares.map(spare => {
-                    const parentInfo = getParentReservationInfo(spare);
-                    return (
+                  activeSpares.map(spare => (
                     <div key={spare.id} className="p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-md">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-3">
@@ -458,21 +456,6 @@ export function SpareVehicleAssignmentsWidget() {
                                 </span>
                               )}
                             </div>
-                            {parentInfo && (
-                              <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span className="font-medium">{parentInfo.customer?.name || 'Unknown'}</span>
-                                {parentInfo.vehicle && (
-                                  <>
-                                    <ArrowRight className="w-3 h-3 mx-1" />
-                                    <span className="text-gray-500">
-                                      replacing {parentInfo.vehicle.brand} {parentInfo.vehicle.model}
-                                      {parentInfo.vehicle.licensePlate && ` (${formatLicensePlate(parentInfo.vehicle.licensePlate)})`}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            )}
                             <div className="text-xs text-gray-500">
                               In use since: {formatDate(spare.startDate)}
                               {spare.endDate && ` • Expected return: ${formatDate(spare.endDate)}`}
@@ -497,7 +480,7 @@ export function SpareVehicleAssignmentsWidget() {
                         </Button>
                       </div>
                     </div>
-                  );})
+                  ))
                 )}
               </div>
             </TabsContent>
