@@ -14,14 +14,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@shared/schema";
 import { BackupDialog } from "@/components/dialogs/backup-dialog";
 import { UsersDialog } from "@/components/dialogs/users-dialog";
-import { SettingsDialog } from "@/components/dialogs/settings-dialog";
 
 export function UserMenu() {
   const { user, logoutMutation } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [backupDialogOpen, setBackupDialogOpen] = useState(false);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const getUserInitials = () => {
@@ -63,11 +61,6 @@ export function UserMenu() {
   const handleOpenBackupDialog = () => {
     setIsOpen(false);
     setBackupDialogOpen(true);
-  };
-
-  const handleOpenSettingsDialog = () => {
-    setIsOpen(false);
-    setSettingsDialogOpen(true);
   };
 
   if (!user) return null;
@@ -138,14 +131,15 @@ export function UserMenu() {
                     <Database className="mr-2 h-4 w-4" />
                     Backup Management
                   </button>
-                  <button
-                    onClick={handleOpenSettingsDialog}
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsOpen(false)}
                     className="flex w-full items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-100 text-left font-medium"
                     data-testid="menu-settings"
                   >
                     <Globe className="mr-2 h-4 w-4" />
                     App Settings
-                  </button>
+                  </Link>
                 </>
               )}
             </div>
@@ -166,7 +160,6 @@ export function UserMenu() {
 
       <BackupDialog open={backupDialogOpen} onOpenChange={setBackupDialogOpen} />
       <UsersDialog open={usersDialogOpen} onOpenChange={setUsersDialogOpen} />
-      <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
     </>
   );
 }
