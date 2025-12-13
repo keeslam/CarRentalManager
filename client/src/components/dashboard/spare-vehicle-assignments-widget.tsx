@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, Car, Clock, CheckCircle, Truck, AlertCircle } from "lucide-react";
+import { CalendarDays, Car, Clock, CheckCircle, Truck, AlertCircle, User, ArrowRight } from "lucide-react";
 import { Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { useState, useEffect } from "react";
@@ -36,11 +36,40 @@ export function SpareVehicleAssignmentsWidget() {
     queryKey: ["/api/vehicles"],
   });
 
+  // Get all customers for displaying customer info
+  const { data: allCustomers } = useQuery<any[]>({
+    queryKey: ["/api/customers"],
+  });
+
   // Create a map of vehicles by ID for easy lookup
   const vehicleMap = (allVehicles ?? []).reduce((map: any, vehicle: any) => {
     map[vehicle.id] = vehicle;
     return map;
   }, {});
+
+  // Create a map of customers by ID for easy lookup
+  const customerMap = (allCustomers ?? []).reduce((map: any, customer: any) => {
+    map[customer.id] = customer;
+    return map;
+  }, {});
+
+  // Create a map of reservations by ID for looking up parent reservations
+  const reservationMap = (allReservations ?? []).reduce((map: any, reservation: any) => {
+    map[reservation.id] = reservation;
+    return map;
+  }, {});
+
+  // Helper to get parent reservation info (the rental being replaced)
+  const getParentReservationInfo = (spare: Reservation) => {
+    if (!spare.replacementForReservationId) return null;
+    const parentRes = reservationMap[spare.replacementForReservationId];
+    if (!parentRes) return null;
+    
+    const customer = parentRes.customerId ? customerMap[parentRes.customerId] : null;
+    const vehicle = parentRes.vehicleId ? vehicleMap[parentRes.vehicleId] : null;
+    
+    return { parentRes, customer, vehicle };
+  };
 
   // Sort pending assignments by start date (closest first)
   const sortedPending = [...(pendingAssignments ?? [])].sort((a, b) => 
@@ -302,7 +331,9 @@ export function SpareVehicleAssignmentsWidget() {
                     No upcoming pickups needed
                   </div>
                 ) : (
-                  upcomingAssigned.map(spare => (
+                  upcomingAssigned.map(spare => {
+                    const parentInfo = getParentReservationInfo(spare);
+                    return (
                     <div key={spare.id} className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-md">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-3">
@@ -319,6 +350,21 @@ export function SpareVehicleAssignmentsWidget() {
                                 </span>
                               )}
                             </div>
+                            {parentInfo && (
+                              <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                <span className="font-medium">{parentInfo.customer?.name || 'Unknown'}</span>
+                                {parentInfo.vehicle && (
+                                  <>
+                                    <ArrowRight className="w-3 h-3 mx-1" />
+                                    <span className="text-gray-500">
+                                      replacing {parentInfo.vehicle.brand} {parentInfo.vehicle.model}
+                                      {parentInfo.vehicle.licensePlate && ` (${formatLicensePlate(parentInfo.vehicle.licensePlate)})`}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-500">
                               Service dates: {formatDate(spare.startDate)}
                               {spare.endDate && ` - ${formatDate(spare.endDate)}`}
@@ -369,7 +415,7 @@ export function SpareVehicleAssignmentsWidget() {
                         </div>
                       )}
                     </div>
-                  ))
+                  );})
                 )}
               </div>
             </TabsContent>
@@ -393,7 +439,9 @@ export function SpareVehicleAssignmentsWidget() {
                     No active spare vehicles
                   </div>
                 ) : (
-                  activeSpares.map(spare => (
+                  activeSpares.map(spare => {
+                    const parentInfo = getParentReservationInfo(spare);
+                    return (
                     <div key={spare.id} className="p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-md">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-3">
@@ -410,6 +458,21 @@ export function SpareVehicleAssignmentsWidget() {
                                 </span>
                               )}
                             </div>
+                            {parentInfo && (
+                              <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                <span className="font-medium">{parentInfo.customer?.name || 'Unknown'}</span>
+                                {parentInfo.vehicle && (
+                                  <>
+                                    <ArrowRight className="w-3 h-3 mx-1" />
+                                    <span className="text-gray-500">
+                                      replacing {parentInfo.vehicle.brand} {parentInfo.vehicle.model}
+                                      {parentInfo.vehicle.licensePlate && ` (${formatLicensePlate(parentInfo.vehicle.licensePlate)})`}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-500">
                               In use since: {formatDate(spare.startDate)}
                               {spare.endDate && ` • Expected return: ${formatDate(spare.endDate)}`}
@@ -434,7 +497,7 @@ export function SpareVehicleAssignmentsWidget() {
                         </Button>
                       </div>
                     </div>
-                  ))
+                  );})
                 )}
               </div>
             </TabsContent>
