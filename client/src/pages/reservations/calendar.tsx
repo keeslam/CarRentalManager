@@ -67,6 +67,9 @@ import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 import { EmailDocumentDialog } from "@/components/documents/email-document-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
+import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
+import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
 
 // Holiday names for display
 const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
@@ -227,6 +230,11 @@ export default function ReservationCalendarPage() {
   const [adminCurrentSearch, setAdminCurrentSearch] = useState('');
   const [adminCurrentSort, setAdminCurrentSort] = useState<'pickup' | 'plate' | 'company' | 'contract'>('pickup');
   const [adminHistorySort, setAdminHistorySort] = useState<{ column: string; direction: 'asc' | 'desc' }>({ column: 'return', direction: 'desc' });
+  
+  // Service dialogs state
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isSpareDialogOpen, setIsSpareDialogOpen] = useState(false);
+  const [isReturnFromServiceDialogOpen, setIsReturnFromServiceDialogOpen] = useState(false);
   
   // Drag and drop state
   const [draggedReservation, setDraggedReservation] = useState<Reservation | null>(null);
@@ -2408,6 +2416,16 @@ export default function ReservationCalendarPage() {
                   <ClipboardEdit className="mr-2 h-4 w-4" />
                   Status
                 </Button>
+                {selectedReservation.status === 'picked_up' && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsServiceDialogOpen(true)}
+                    data-testid="button-send-to-service"
+                  >
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Service
+                  </Button>
+                )}
                 <Button 
                   variant="destructive"
                   onClick={() => {
@@ -2444,6 +2462,41 @@ export default function ReservationCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Service-related dialogs */}
+      {selectedReservation && (
+        <>
+          <ServiceVehicleDialog
+            open={isServiceDialogOpen}
+            onOpenChange={setIsServiceDialogOpen}
+            reservationId={selectedReservation.id}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${selectedReservation?.vehicleId}`] });
+              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              setIsServiceDialogOpen(false);
+            }}
+          />
+          <SpareVehicleDialog
+            open={isSpareDialogOpen}
+            onOpenChange={setIsSpareDialogOpen}
+            originalReservation={selectedReservation}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              setIsSpareDialogOpen(false);
+            }}
+          />
+          <ReturnFromServiceDialog
+            open={isReturnFromServiceDialogOpen}
+            onOpenChange={setIsReturnFromServiceDialogOpen}
+            originalReservation={selectedReservation}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
+              setIsReturnFromServiceDialogOpen(false);
+            }}
+          />
+        </>
+      )}
+      
       {/* Interactive Damage Check Dialog */}
       {damageCheckDialogOpen && selectedReservation?.vehicleId && (
         <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
