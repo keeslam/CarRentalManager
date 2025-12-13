@@ -65,6 +65,22 @@ import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 import { EmailDocumentDialog } from "@/components/documents/email-document-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Holiday names for display
+const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
+  nieuwjaarsdag: "Nieuwjaarsdag",
+  goede_vrijdag: "Goede Vrijdag",
+  eerste_paasdag: "Eerste Paasdag",
+  tweede_paasdag: "Tweede Paasdag",
+  koningsdag: "Koningsdag",
+  bevrijdingsdag: "Bevrijdingsdag",
+  hemelvaartsdag: "Hemelvaartsdag",
+  eerste_pinksterdag: "Eerste Pinksterdag",
+  tweede_pinksterdag: "Tweede Pinksterdag",
+  eerste_kerstdag: "Eerste Kerstdag",
+  tweede_kerstdag: "Tweede Kerstdag",
+};
 
 // Calendar view options
 type CalendarView = "month";
@@ -598,6 +614,62 @@ export default function ReservationCalendarPage() {
     enabled: adminDialogOpen
   });
 
+  // Fetch calendar settings for holiday/blocked date display
+  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings", "calendar_settings"],
+  });
+
+  // Helper function to check if a date is a holiday or blocked
+  const getDateStatus = useMemo(() => {
+    return (day: Date): { isHoliday: boolean; isBlocked: boolean; holidayName?: string; blockedReason?: string } => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      let isHoliday = false;
+      let isBlocked = false;
+      let holidayName: string | undefined;
+      let blockedReason: string | undefined;
+      
+      if (calendarSettings?.value) {
+        const dutchHolidays = calendarSettings.value.dutchHolidays;
+        if (dutchHolidays) {
+          for (const [key, value] of Object.entries(dutchHolidays)) {
+            if (typeof value === 'object' && value !== null && 'enabled' in value && 'date' in value) {
+              const holiday = value as { enabled: boolean; date: string };
+              if (holiday.enabled && holiday.date === dateStr) {
+                isHoliday = true;
+                holidayName = DUTCH_HOLIDAY_NAMES[key] || key;
+                break;
+              }
+            }
+          }
+        }
+        
+        const customHolidays = calendarSettings.value.holidays;
+        if (customHolidays && Array.isArray(customHolidays)) {
+          for (const holiday of customHolidays) {
+            if (holiday.date === dateStr) {
+              isHoliday = true;
+              holidayName = holiday.name;
+              break;
+            }
+          }
+        }
+        
+        const blockedDates = calendarSettings.value.blockedDates;
+        if (blockedDates && Array.isArray(blockedDates)) {
+          for (const blocked of blockedDates) {
+            if (dateStr >= blocked.startDate && dateStr <= blocked.endDate) {
+              isBlocked = true;
+              blockedReason = blocked.reason;
+              break;
+            }
+          }
+        }
+      }
+      
+      return { isHoliday, isBlocked, holidayName, blockedReason };
+    };
+  }, [calendarSettings]);
+
   // Auto-open reservation dialog from sessionStorage (from notifications)
   useEffect(() => {
     if (!reservations) return;
@@ -973,6 +1045,7 @@ export default function ReservationCalendarPage() {
                   {week.map((day, dayIndex) => {
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
+                    const dateStatus = getDateStatus(day);
                     
                     // Only get reservations starting or ending on this day
                     // Filter reservations based on selected vehicles
@@ -1008,10 +1081,18 @@ export default function ReservationCalendarPage() {
                     
                     const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
                     
+                    // Build background class based on status
+                    let bgClass = '';
+                    if (!isCurrentMonth) bgClass = 'bg-gray-50';
+                    else if (isDropTarget) bgClass = 'bg-green-100 ring-2 ring-green-500';
+                    else if (dateStatus.isBlocked) bgClass = 'bg-red-50';
+                    else if (dateStatus.isHoliday) bgClass = 'bg-orange-50';
+                    else if (isToday) bgClass = 'bg-blue-50';
+                    
                     return (
                       <div
                         key={dayIndex}
-                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} ${isDropTarget ? 'bg-green-100 ring-2 ring-green-500' : ''} relative group cursor-pointer transition-colors`}
+                        className={`min-h-[140px] p-3 ${bgClass} relative group cursor-pointer transition-colors`}
                         onDragOver={(e) => {
                           if (draggedReservation && isCurrentMonth) {
                             e.preventDefault();
@@ -1096,6 +1177,34 @@ export default function ReservationCalendarPage() {
                             <span className={`text-base font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}`}>
                               {safeFormat(day, "d", "?")}
                             </span>
+                            {dateStatus.isHoliday && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 text-xs px-1.5 py-0">
+                                      🎉
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{dateStatus.holidayName || 'Holiday'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {dateStatus.isBlocked && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300 text-xs px-1.5 py-0">
+                                      🚫
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{dateStatus.blockedReason || 'Blocked'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                           {dayReservations.length > 0 && (
                             <Badge variant="outline" className="text-sm font-medium">
