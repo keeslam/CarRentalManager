@@ -27,6 +27,7 @@ export default function UserView() {
   const [_, navigate] = useLocation();
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const canManageUsers = isAdmin || currentUser?.permissions?.includes(UserPermission.MANAGE_USERS);
   
   // Check if viewing self (different UI treatment)
   const isSelf = currentUser?.id === userId;
@@ -38,7 +39,7 @@ export default function UserView() {
   } = useQuery({
     queryKey: [`/api/users/${userId}`],
     queryFn: async () => {
-      if (!isAdmin && !isSelf) return null;
+      if (!canManageUsers && !isSelf) return null;
       
       const response = await fetch(`/api/users/${userId}`);
       if (!response.ok) {
@@ -46,10 +47,10 @@ export default function UserView() {
       }
       return await response.json();
     },
-    enabled: isAdmin || isSelf,
+    enabled: canManageUsers || isSelf,
   });
 
-  if (!isAdmin && !isSelf) {
+  if (!canManageUsers && !isSelf) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -61,7 +62,7 @@ export default function UserView() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              Only administrators can view user details. Please contact an administrator if you need assistance.
+              You need the "Manage Users" permission to view user details. Please contact an administrator if you need assistance.
             </p>
             <Link href="/">
               <Button variant="default">
@@ -96,9 +97,9 @@ export default function UserView() {
             <p className="mb-4">
               {error instanceof Error ? error.message : "User not found or you don't have permission to view this user."}
             </p>
-            <Link href={isAdmin ? "/users" : "/"}>
+            <Link href={canManageUsers ? "/users" : "/"}>
               <Button variant="default">
-                {isAdmin ? "Back to Users" : "Return to Dashboard"}
+                {canManageUsers ? "Back to Users" : "Return to Dashboard"}
               </Button>
             </Link>
           </CardContent>
@@ -116,7 +117,7 @@ export default function UserView() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">User Details: {user.username}</h1>
         <div className="flex gap-2">
-          {isAdmin && !isSelf && (
+          {canManageUsers && !isSelf && (
             <Link href={`/users/${userId}/edit`}>
               <Button>
                 <Edit className="h-4 w-4 mr-2" />
@@ -181,8 +182,18 @@ export default function UserView() {
                     <Badge variant="destructive">Administrator</Badge>
                   ) : user.role === UserRole.MANAGER ? (
                     <Badge>Manager</Badge>
+                  ) : user.role === UserRole.USER ? (
+                    <Badge variant="outline">User</Badge>
+                  ) : user.role === UserRole.CLEANER ? (
+                    <Badge variant="secondary">Cleaner</Badge>
+                  ) : user.role === UserRole.VIEWER ? (
+                    <Badge variant="secondary">Viewer</Badge>
+                  ) : user.role === UserRole.ACCOUNTANT ? (
+                    <Badge variant="secondary">Accountant</Badge>
+                  ) : user.role === UserRole.MAINTENANCE ? (
+                    <Badge variant="secondary">Maintenance</Badge>
                   ) : (
-                    <Badge variant="outline">Regular User</Badge>
+                    <Badge variant="outline">{user.role}</Badge>
                   )}
                 </div>
               </div>
@@ -278,11 +289,63 @@ export default function UserView() {
                       <li>Cannot manage users or system settings</li>
                     </ul>
                   </div>
+                ) : user.role === UserRole.CLEANER ? (
+                  <div className="text-sm">
+                    <h3 className="font-medium text-base">Cleaner</h3>
+                    <p className="my-2">
+                      Cleaners have limited access focused on vehicle preparation:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 pl-4">
+                      <li>View vehicle information and status</li>
+                      <li>View reservation schedules</li>
+                      <li>Update cleaning status</li>
+                      <li>Additional permissions as granted by administrators</li>
+                    </ul>
+                  </div>
+                ) : user.role === UserRole.VIEWER ? (
+                  <div className="text-sm">
+                    <h3 className="font-medium text-base">Viewer</h3>
+                    <p className="my-2">
+                      Viewers have read-only access to the system:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 pl-4">
+                      <li>View vehicles and customer information</li>
+                      <li>View reservations and schedules</li>
+                      <li>View reports and analytics</li>
+                      <li>Cannot create, modify, or delete any records</li>
+                    </ul>
+                  </div>
+                ) : user.role === UserRole.ACCOUNTANT ? (
+                  <div className="text-sm">
+                    <h3 className="font-medium text-base">Accountant</h3>
+                    <p className="my-2">
+                      Accountants have access focused on financial data:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 pl-4">
+                      <li>Full access to financial reports</li>
+                      <li>Manage expenses and invoices</li>
+                      <li>View reservation financial details</li>
+                      <li>Limited access to customer and vehicle management</li>
+                    </ul>
+                  </div>
+                ) : user.role === UserRole.MAINTENANCE ? (
+                  <div className="text-sm">
+                    <h3 className="font-medium text-base">Maintenance Staff</h3>
+                    <p className="my-2">
+                      Maintenance staff have access focused on vehicle upkeep:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 pl-4">
+                      <li>View and update vehicle maintenance records</li>
+                      <li>Create maintenance tasks and expenses</li>
+                      <li>View vehicle status and schedules</li>
+                      <li>Limited access to reservation information</li>
+                    </ul>
+                  </div>
                 ) : (
                   <div className="text-sm">
-                    <h3 className="font-medium text-base">Regular User</h3>
+                    <h3 className="font-medium text-base">User</h3>
                     <p className="my-2">
-                      Regular users have limited access to the system:
+                      Regular users have standard access to the system:
                     </p>
                     <ul className="list-disc list-inside space-y-1 pl-4">
                       <li>View vehicles and customer information</li>

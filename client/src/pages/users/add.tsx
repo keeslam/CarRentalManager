@@ -1,6 +1,6 @@
 import { UserForm } from "@/components/users/user-form";
 import { useAuth } from "@/hooks/use-auth";
-import { UserRole } from "@shared/schema";
+import { UserRole, UserPermission } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -8,8 +8,9 @@ import { Link } from "wouter";
 export default function UserAdd() {
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.ADMIN;
+  const canManageUsers = isAdmin || user?.permissions?.includes(UserPermission.MANAGE_USERS);
 
-  if (!isAdmin) {
+  if (!canManageUsers) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -21,7 +22,7 @@ export default function UserAdd() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              Only administrators can add new users. Please contact an administrator if you need assistance.
+              You need the "Manage Users" permission to add new users. Please contact an administrator if you need assistance.
             </p>
             <Link href="/">
               <Button variant="default">

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColumnDef } from "@tanstack/react-table";
-import { User, UserRole } from "@shared/schema";
+import { User, UserRole, UserPermission } from "@shared/schema";
 import { Shield, ShieldCheck, User as UserIcon, UserX, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -30,15 +30,16 @@ export default function UserManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Only admins should be able to view this page
+  // Check if user can manage users (Admin role OR has MANAGE_USERS permission)
   const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const canManageUsers = isAdmin || currentUser?.permissions?.includes(UserPermission.MANAGE_USERS);
   
   // Fetch users
   const { data: users = [], isLoading } = useQuery<Omit<User, "password">[]>({
     queryKey: ["/api/users"],
     queryFn: async () => {
-      // Only fetch if user is admin
-      if (!isAdmin) return [];
+      // Only fetch if user can manage users
+      if (!canManageUsers) return [];
       
       const response = await fetch("/api/users");
       if (!response.ok) {
@@ -46,7 +47,7 @@ export default function UserManagement() {
       }
       return response.json();
     },
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: canManageUsers, // Only fetch if user can manage users
   });
   
   // Delete user mutation
@@ -225,8 +226,8 @@ export default function UserManagement() {
     },
   ];
   
-  // If not admin, show access denied
-  if (!isAdmin) {
+  // If user cannot manage users, show access denied
+  if (!canManageUsers) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -238,7 +239,7 @@ export default function UserManagement() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              Only administrators can manage users. Please contact an administrator if you need assistance.
+              You need the "Manage Users" permission to access this page. Please contact an administrator if you need assistance.
             </p>
             <Link href="/">
               <Button variant="default">

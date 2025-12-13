@@ -4,7 +4,7 @@ import { useParams, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { UserForm } from "@/components/users/user-form";
 import { useAuth } from "@/hooks/use-auth";
-import { UserRole } from "@shared/schema";
+import { UserRole, UserPermission } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +15,14 @@ export default function UserEdit() {
   const [_, navigate] = useLocation();
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const canManageUsers = isAdmin || currentUser?.permissions?.includes(UserPermission.MANAGE_USERS);
   
   // Prevent editing yourself through this page
   const isSelf = currentUser?.id === userId;
   
-  // If not admin, redirect to dashboard
+  // If user cannot manage users, redirect to dashboard
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canManageUsers) {
       navigate("/");
     }
     
@@ -29,7 +30,7 @@ export default function UserEdit() {
     if (isSelf) {
       navigate("/profile");
     }
-  }, [isAdmin, isSelf, navigate]);
+  }, [canManageUsers, isSelf, navigate]);
 
   const {
     data: user,
@@ -38,7 +39,7 @@ export default function UserEdit() {
   } = useQuery({
     queryKey: [`/api/users/${userId}`],
     queryFn: async () => {
-      if (!isAdmin || isSelf) return null;
+      if (!canManageUsers || isSelf) return null;
       
       const response = await fetch(`/api/users/${userId}`);
       if (!response.ok) {
@@ -46,10 +47,10 @@ export default function UserEdit() {
       }
       return await response.json();
     },
-    enabled: isAdmin && !isSelf && !isNaN(userId),
+    enabled: canManageUsers && !isSelf && !isNaN(userId),
   });
 
-  if (!isAdmin) {
+  if (!canManageUsers) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -61,7 +62,7 @@ export default function UserEdit() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              Only administrators can edit users. Please contact an administrator if you need assistance.
+              You need the "Manage Users" permission to edit users. Please contact an administrator if you need assistance.
             </p>
             <Link href="/">
               <Button variant="default">
