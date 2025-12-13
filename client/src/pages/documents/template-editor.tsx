@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface TemplateField {
   id: string;
@@ -122,6 +123,9 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
   const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
   const [isBackgroundLibraryOpen, setIsBackgroundLibraryOpen] = useState(false);
   const [backgroundName, setBackgroundName] = useState('');
+  const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
+  const [deleteBackgroundDialogOpen, setDeleteBackgroundDialogOpen] = useState(false);
+  const [backgroundToDelete, setBackgroundToDelete] = useState<TemplateBackground | null>(null);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
@@ -1087,9 +1091,12 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
 
   const handleDeleteTemplate = () => {
     if (!currentTemplate || !currentTemplate.id) return;
-    if (confirm("Are you sure you want to delete this template?")) {
-      deleteTemplateMutation.mutate(currentTemplate.id);
-    }
+    setDeleteTemplateDialogOpen(true);
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (!currentTemplate || !currentTemplate.id) return;
+    deleteTemplateMutation.mutate(currentTemplate.id);
   };
 
   const handleSetDefaultTemplate = () => {
@@ -2135,12 +2142,8 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!currentTemplate) return;
-                          if (confirm(`Delete "${bg.name}"?`)) {
-                            deleteBackgroundMutation.mutate({
-                              templateId: currentTemplate.id,
-                              backgroundId: bg.id
-                            });
-                          }
+                          setBackgroundToDelete(bg);
+                          setDeleteBackgroundDialogOpen(true);
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -2209,6 +2212,38 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
           }
         }}
         style={{ display: 'none' }}
+      />
+
+      {/* Delete Template Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteTemplateDialogOpen}
+        onOpenChange={setDeleteTemplateDialogOpen}
+        title="Delete Template"
+        description="Are you sure you want to delete this template? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteTemplate}
+      />
+
+      {/* Delete Background Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteBackgroundDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteBackgroundDialogOpen(open);
+          if (!open) setBackgroundToDelete(null);
+        }}
+        title="Delete Background"
+        description={`Are you sure you want to delete "${backgroundToDelete?.name}"?`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          if (currentTemplate && backgroundToDelete) {
+            deleteBackgroundMutation.mutate({
+              templateId: currentTemplate.id,
+              backgroundId: backgroundToDelete.id
+            });
+          }
+        }}
       />
     </div>
   );
