@@ -144,8 +144,23 @@ export default function UserManagement() {
           case UserRole.MANAGER:
             badge = <Badge variant="default">Manager</Badge>;
             break;
-          default:
+          case UserRole.USER:
             badge = <Badge variant="outline">User</Badge>;
+            break;
+          case UserRole.CLEANER:
+            badge = <Badge variant="secondary">Cleaner</Badge>;
+            break;
+          case UserRole.VIEWER:
+            badge = <Badge variant="secondary">Viewer</Badge>;
+            break;
+          case UserRole.ACCOUNTANT:
+            badge = <Badge variant="secondary">Accountant</Badge>;
+            break;
+          case UserRole.MAINTENANCE:
+            badge = <Badge variant="secondary">Maintenance</Badge>;
+            break;
+          default:
+            badge = <Badge variant="outline">{role}</Badge>;
         }
         
         return (
