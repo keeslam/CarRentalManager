@@ -13,6 +13,7 @@ import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
+import { ReservationSelector } from "@/components/ui/reservation-selector";
 
 interface DamageMarker {
   id: string;
@@ -1151,28 +1152,13 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
             <div>
               <Label>Reservation (Optional)</Label>
-              <Select 
-                value={selectedReservationId?.toString() || "none"} 
-                onValueChange={(val) => setSelectedReservationId(val === "none" ? null : parseInt(val))}
-              >
-                <SelectTrigger data-testid="select-reservation">
-                  <SelectValue placeholder="Link to reservation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Reservation</SelectItem>
-                  {reservations.map(reservation => {
-                    const customerName = reservation.customer?.name || 'Unknown Customer';
-                    const vehicleInfo = reservation.vehicle 
-                      ? `${reservation.vehicle.brand} ${reservation.vehicle.model} (${displayLicensePlate(reservation.vehicle.licensePlate)})` 
-                      : 'No Vehicle';
-                    return (
-                      <SelectItem key={reservation.id} value={reservation.id.toString()}>
-                        #{reservation.id} - {customerName} - {vehicleInfo}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <ReservationSelector
+                reservations={reservations}
+                value={selectedReservationId}
+                onChange={setSelectedReservationId}
+                placeholder="Link to reservation"
+                allowNone={true}
+              />
             </div>
 
             <div>
