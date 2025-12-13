@@ -375,6 +375,11 @@ async function runMigrations() {
     await addColumnIfNotExists('vehicles', 'spare_key_with_customer', 'boolean');
     await addColumnIfNotExists('vehicles', 'spare_key_customer_name', 'text');
     
+    // Mileage decrease tracking columns (admin-only visibility)
+    await addColumnIfNotExists('vehicles', 'mileage_decreased_by', 'text');
+    await addColumnIfNotExists('vehicles', 'mileage_decreased_at', 'timestamp');
+    await addColumnIfNotExists('vehicles', 'previous_mileage', 'integer');
+    
     // Update any NULL maintenance_status values
     console.log('🔄 Updating maintenance status defaults...');
     await db.execute(sql`UPDATE vehicles SET maintenance_status = 'ok' WHERE maintenance_status IS NULL`);
