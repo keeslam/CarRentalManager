@@ -319,6 +319,11 @@ export function ReservationForm({
     queryKey: ["/api/vehicles"],
   });
   
+  // Fetch business rules settings to get default fuel policy
+  const { data: businessRulesSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings", "business_rules"],
+  });
+  
   // Fetch documents for the reservation (in edit mode or after creation)
   const activeReservationId = createdReservationId ?? initialData?.id ?? null;
   const { data: reservationDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
@@ -428,6 +433,31 @@ export function ReservationForm({
       }
     }
   }, [customerIdWatch, drivers, driverIdWatch, form]);
+  
+  // Apply default fuel policy from settings when creating a new reservation
+  // Track if we've already applied the default to avoid overwriting user changes
+  const [fuelPolicyApplied, setFuelPolicyApplied] = useState(false);
+  useEffect(() => {
+    // Only apply for new reservations (not edit mode, not already created, and not already applied)
+    if (!editMode && !createdReservationId && !initialData && !fuelPolicyApplied && businessRulesSettings?.value) {
+      const policy = businessRulesSettings.value.defaultFuelPolicy || "full-to-full";
+      
+      if (policy === "full-to-full") {
+        // Full to Full: Both pickup and return default to "Full"
+        form.setValue("fuelLevelPickup", "Full");
+        form.setValue("fuelLevelReturn", "Full");
+        setFuelLevelPickup("Full");
+        setFuelLevelReturn("Full");
+      } else if (policy === "prepaid") {
+        // Prepaid Full Tank: Pickup is "Full", return level doesn't matter
+        form.setValue("fuelLevelPickup", "Full");
+        setFuelLevelPickup("Full");
+      }
+      // For "same-to-same", leave undefined - user sets at pickup time
+      
+      setFuelPolicyApplied(true);
+    }
+  }, [businessRulesSettings, editMode, createdReservationId, initialData, fuelPolicyApplied, form]);
   
   // Flag to hide duplicate date fields in section 3 (dates are already handled in section 1)
   const SHOW_DUPLICATE_DATES = false;
