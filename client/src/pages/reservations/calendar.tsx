@@ -1108,7 +1108,8 @@ export default function ReservationCalendarPage() {
                         key={dayIndex}
                         className={`min-h-[140px] p-3 ${bgClass} relative group cursor-pointer transition-colors`}
                         onDragOver={(e) => {
-                          if (draggedReservation && isCurrentMonth) {
+                          if (draggedReservation) {
+                            // Allow dropping on any visible date (including prev/next month dates)
                             e.preventDefault();
                             e.dataTransfer.dropEffect = 'move';
                             setDropTargetDate(day);
@@ -1143,28 +1144,26 @@ export default function ReservationCalendarPage() {
                           setDropTargetDate(null);
                         }}
                         onClick={(e) => {
-                          if (isCurrentMonth) {
-                            const allDayReservations = getReservationsForDate(day);
-                            // Filter out maintenance blocks - they shouldn't prevent adding new reservations
-                            const rentalReservations = allDayReservations.filter(r => r.type !== 'maintenance_block');
-                            
-                            if (rentalReservations.length > 0) {
-                              // If there are rental reservations, show them in dialog
-                              console.log('Date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
-                              openDayDialog(day);
-                            } else {
-                              // If no rental reservations (only maintenance or empty), open new reservation dialog
-                              const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
-                              console.log('Date box clicked - no rental reservations, opening add dialog');
-                              setSelectedDate(formattedDate);
-                              setAddDialogOpen(true);
-                            }
+                          // Allow clicking on any visible date (including prev/next month dates shown grayed out)
+                          const allDayReservations = getReservationsForDate(day);
+                          // Filter out maintenance blocks - they shouldn't prevent adding new reservations
+                          const rentalReservations = allDayReservations.filter(r => r.type !== 'maintenance_block');
+                          
+                          if (rentalReservations.length > 0) {
+                            // If there are rental reservations, show them in dialog
+                            console.log('Date box clicked - opening day dialog for:', safeFormat(day, 'yyyy-MM-dd', 'invalid-date'));
+                            openDayDialog(day);
+                          } else {
+                            // If no rental reservations (only maintenance or empty), open new reservation dialog
+                            const formattedDate = safeFormat(day, "yyyy-MM-dd", '1970-01-01');
+                            console.log('Date box clicked - no rental reservations, opening add dialog');
+                            setSelectedDate(formattedDate);
+                            setAddDialogOpen(true);
                           }
                         }}
                       >
-                        {/* Quick add button - only shows on hover for current month days, positioned at top center */}
-                        {isCurrentMonth && (
-                          <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        {/* Quick add button - shows on hover for all visible days, positioned at top center */}
+                        <div className="absolute top-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                             <Button 
                               size="icon" 
                               variant="ghost" 
@@ -1182,7 +1181,6 @@ export default function ReservationCalendarPage() {
                               </svg>
                             </Button>
                           </div>
-                        )}
                         <div className="flex justify-between items-center mb-3">
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-gray-500 font-medium">
