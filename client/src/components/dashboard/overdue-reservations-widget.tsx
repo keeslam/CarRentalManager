@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { differenceInDays, parseISO } from "date-fns";
+import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 
 interface OverdueReservation {
   id: number;
@@ -19,6 +23,8 @@ function getUrgencyClass(days: number): string {
 }
 
 export function OverdueReservationsWidget() {
+  const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
+  
   const { data: overdueReservations = [], isLoading, error } = useQuery<OverdueReservation[]>({
     queryKey: ['/api/reservations/overdue'],
     refetchInterval: 60000,
@@ -80,11 +86,28 @@ export function OverdueReservationsWidget() {
                     </div>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-shrink-0 ml-2 h-8 w-8 p-0"
+                  onClick={() => setSelectedReservationId(reservation.id)}
+                  data-testid={`button-view-reservation-${reservation.id}`}
+                >
+                  <Eye className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                </Button>
               </div>
             ))
           )}
         </div>
       </CardContent>
+      
+      {selectedReservationId && (
+        <ReservationViewDialog
+          reservationId={selectedReservationId}
+          open={!!selectedReservationId}
+          onOpenChange={(open) => !open && setSelectedReservationId(null)}
+        />
+      )}
     </Card>
   );
 }
