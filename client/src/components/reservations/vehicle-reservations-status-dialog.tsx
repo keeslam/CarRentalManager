@@ -140,7 +140,7 @@ export function VehicleReservationsStatusDialog({
       )}
       
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl fixed top-[10vh] translate-y-0">
+        <DialogContent className="max-w-3xl fixed top-[10vh] translate-y-0 max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Change Reservation Status by Vehicle</DialogTitle>
             <DialogDescription>
