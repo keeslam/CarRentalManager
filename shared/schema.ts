@@ -219,6 +219,11 @@ export const vehicles = pgTable("vehicles", {
   lastServiceDate: text("last_service_date"),
   lastServiceMileage: integer("last_service_mileage"),
   
+  // Mileage decrease tracking (admin-only visibility)
+  mileageDecreasedBy: text("mileage_decreased_by"), // Username who decreased the mileage
+  mileageDecreasedAt: timestamp("mileage_decreased_at"), // When mileage was decreased
+  previousMileage: integer("previous_mileage"), // Mileage before the decrease
+  
   // Fuel level tracking (independent of reservations)
   currentFuelLevel: varchar("current_fuel_level"), // 'empty' | '1/4' | '1/2' | '3/4' | 'full'
   fuelRefillCost: numeric("fuel_refill_cost", { precision: 10, scale: 2 }), // Cost of last refill

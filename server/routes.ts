@@ -1154,13 +1154,23 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Add user tracking information for updates
       const user = req.user;
-      const dataWithTracking = {
+      const dataWithTracking: Record<string, any> = {
         ...vehicleData,
         updatedBy: user ? user.username : null,
         // Preserve the registration tracking fields
         registeredToBy,
         companyBy
       };
+      
+      // Track mileage decrease (admin-only visibility)
+      const newMileage = sanitizedData.currentMileage !== undefined ? parseInt(sanitizedData.currentMileage) : null;
+      const oldMileage = existingVehicle.currentMileage;
+      if (newMileage !== null && !isNaN(newMileage) && oldMileage !== null && newMileage < oldMileage) {
+        dataWithTracking.mileageDecreasedBy = user ? user.username : 'unknown';
+        dataWithTracking.mileageDecreasedAt = new Date();
+        dataWithTracking.previousMileage = oldMileage;
+        console.log(`[Mileage Decrease] Vehicle ${id}: ${oldMileage} -> ${newMileage} by ${user?.username || 'unknown'}`);
+      }
       
       const vehicle = await storage.updateVehicle(id, dataWithTracking);
       
@@ -1231,13 +1241,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         // Add user tracking information
         const user = req.user;
-        const dataWithTracking = {
+        const dataWithTracking: Record<string, any> = {
           ...updateData,
           updatedBy: user ? user.username : null,
           // Preserve the registration tracking fields
           registeredToBy,
           companyBy
         };
+        
+        // Track mileage decrease (admin-only visibility)
+        const newMileage = updateData.currentMileage;
+        const oldMileage = vehicle.currentMileage;
+        if (newMileage !== undefined && oldMileage !== null && newMileage < oldMileage) {
+          dataWithTracking.mileageDecreasedBy = user ? user.username : 'unknown';
+          dataWithTracking.mileageDecreasedAt = new Date();
+          dataWithTracking.previousMileage = oldMileage;
+          console.log(`[Mileage Decrease] Vehicle ${id}: ${oldMileage} -> ${newMileage} by ${user?.username || 'unknown'}`);
+        }
         
         const updatedVehicle = await storage.updateVehicle(id, dataWithTracking);
         
