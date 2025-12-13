@@ -77,6 +77,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { format, addDays, parseISO } from "date-fns";
 import { useMemo } from "react";
 
@@ -110,6 +111,13 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [interactiveDamageCheckDialogOpen, setInteractiveDamageCheckDialogOpen] = useState(false);
   const [editingCheckId, setEditingCheckId] = useState<number | null>(null);
   const [expenseCategoryPages, setExpenseCategoryPages] = useState<Record<string, number>>({});
+  
+  // Delete confirmation dialog states
+  const [deleteDamageCheckDialogOpen, setDeleteDamageCheckDialogOpen] = useState(false);
+  const [damageCheckToDelete, setDamageCheckToDelete] = useState<{ id: number; checkType: string; checkDate: string } | null>(null);
+  const [deleteDocumentDialogOpen, setDeleteDocumentDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<{ id: number; fileName: string } | null>(null);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -1749,34 +1757,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={async () => {
-                                if (window.confirm(`Are you sure you want to delete this ${check.checkType} damage check from ${new Date(check.checkDate).toLocaleDateString()}?`)) {
-                                  try {
-                                    const response = await fetch(`/api/interactive-damage-checks/${check.id}`, {
-                                      method: 'DELETE',
-                                      credentials: 'include',
-                                    });
-                                    
-                                    if (!response.ok) {
-                                      throw new Error('Failed to delete damage check');
-                                    }
-                                    
-                                    queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
-                                    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                                    
-                                    toast({ 
-                                      title: "Damage Check Deleted", 
-                                      description: "The damage check has been deleted successfully" 
-                                    });
-                                  } catch (error) {
-                                    console.error('Error deleting damage check:', error);
-                                    toast({ 
-                                      title: "Error", 
-                                      description: "Failed to delete damage check", 
-                                      variant: "destructive" 
-                                    });
-                                  }
-                                }
+                              onClick={() => {
+                                setDamageCheckToDelete({ id: check.id, checkType: check.checkType, checkDate: check.checkDate });
+                                setDeleteDamageCheckDialogOpen(true);
                               }}
                               data-testid={`button-delete-${check.id}`}
                             >
@@ -2019,33 +2002,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                                       <button 
                                         className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1 transition-colors"
                                         data-testid={`button-delete-document-${document.id}`}
-                                        onClick={async () => {
-                                          if (window.confirm(`Are you sure you want to delete the document "${document.fileName}"?`)) {
-                                            try {
-                                              const response = await fetch(`/api/documents/${document.id}`, {
-                                                method: 'DELETE',
-                                              });
-                                              
-                                              if (response.ok) {
-                                                queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-                                                queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                                                toast({
-                                                  title: "Document deleted",
-                                                  description: "The document has been deleted successfully.",
-                                                });
-                                              } else {
-                                                const errorData = await response.json();
-                                                throw new Error(errorData.message || "Failed to delete document");
-                                              }
-                                            } catch (error) {
-                                              console.error("Error deleting document:", error);
-                                              toast({
-                                                title: "Error",
-                                                description: error instanceof Error ? error.message : "Failed to delete document",
-                                                variant: "destructive",
-                                              });
-                                            }
-                                          }
+                                        onClick={() => {
+                                          setDocumentToDelete({ id: document.id, fileName: document.fileName });
+                                          setDeleteDocumentDialogOpen(true);
                                         }}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
@@ -3246,6 +3205,87 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Damage Check Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDamageCheckDialogOpen}
+        onOpenChange={setDeleteDamageCheckDialogOpen}
+        title="Delete Damage Check"
+        description={damageCheckToDelete ? `Are you sure you want to delete this ${damageCheckToDelete.checkType} damage check from ${new Date(damageCheckToDelete.checkDate).toLocaleDateString()}? This action cannot be undone.` : "Are you sure you want to delete this damage check?"}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (damageCheckToDelete) {
+            try {
+              const response = await fetch(`/api/interactive-damage-checks/${damageCheckToDelete.id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete damage check');
+              }
+              
+              queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
+              queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+              
+              toast({ 
+                title: "Damage Check Deleted", 
+                description: "The damage check has been deleted successfully" 
+              });
+            } catch (error) {
+              console.error('Error deleting damage check:', error);
+              toast({ 
+                title: "Error", 
+                description: "Failed to delete damage check", 
+                variant: "destructive" 
+              });
+            }
+          }
+          setDamageCheckToDelete(null);
+        }}
+        onCancel={() => setDamageCheckToDelete(null)}
+      />
+
+      {/* Delete Document Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDocumentDialogOpen}
+        onOpenChange={setDeleteDocumentDialogOpen}
+        title="Delete Document"
+        description={documentToDelete ? `Are you sure you want to delete the document "${documentToDelete.fileName}"? This action cannot be undone.` : "Are you sure you want to delete this document?"}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (documentToDelete) {
+            try {
+              const response = await fetch(`/api/documents/${documentToDelete.id}`, {
+                method: 'DELETE',
+              });
+              
+              if (response.ok) {
+                queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                toast({
+                  title: "Document deleted",
+                  description: "The document has been deleted successfully.",
+                });
+              } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to delete document");
+              }
+            } catch (error) {
+              console.error("Error deleting document:", error);
+              toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to delete document",
+                variant: "destructive",
+              });
+            }
+          }
+          setDocumentToDelete(null);
+        }}
+        onCancel={() => setDocumentToDelete(null)}
+      />
     </div>
   );
 }

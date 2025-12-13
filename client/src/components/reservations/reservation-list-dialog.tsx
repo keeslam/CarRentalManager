@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { ReservationEditDialog } from "@/components/reservations/reservation-edit-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eye, Edit, Trash2, Car, History, User, Calendar, FileText, Fuel, MapPin, Phone, Building, Clock, AlertTriangle } from "lucide-react";
 import {
   Dialog,
@@ -46,6 +47,8 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   const [selectedViewReservationId, setSelectedViewReservationId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEditReservationId, setSelectedEditReservationId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
   const { toast } = useToast();
   
   // Track if child was opened from this list - used to reopen list when child closes
@@ -239,9 +242,15 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
   };
 
   const handleDelete = (reservation: Reservation) => {
-    if (confirm(`Are you sure you want to delete reservation #${reservation.id}?`)) {
-      deleteReservationMutation.mutate(reservation.id);
+    setReservationToDelete(reservation);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (reservationToDelete) {
+      deleteReservationMutation.mutate(reservationToDelete.id);
     }
+    setReservationToDelete(null);
   };
 
   const getDuration = (startDate: string | null, endDate: string | null) => {
@@ -595,6 +604,18 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
             description: "The reservation has been successfully updated",
           });
         }}
+      />
+
+      {/* Delete Reservation Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Reservation"
+        description={`Are you sure you want to delete reservation #${reservationToDelete?.id}? This action cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setReservationToDelete(null)}
       />
     </>
   );

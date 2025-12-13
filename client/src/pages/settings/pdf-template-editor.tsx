@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,6 +54,7 @@ const PDFTemplateEditor = () => {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [previewReservationId, setPreviewReservationId] = useState<string>('');
   const [reservations, setReservations] = useState<any[]>([]);
+  const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -290,7 +292,11 @@ const PDFTemplateEditor = () => {
 
   const handleDeleteTemplate = () => {
     if (!currentTemplate || !currentTemplate.id) return;
-    if (confirm("Are you sure you want to delete this template?")) {
+    setDeleteTemplateDialogOpen(true);
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (currentTemplate && currentTemplate.id) {
       deleteTemplateMutation.mutate(currentTemplate.id);
     }
   };
@@ -793,6 +799,16 @@ const PDFTemplateEditor = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteTemplateDialogOpen}
+        onOpenChange={setDeleteTemplateDialogOpen}
+        title="Delete Template"
+        description="Are you sure you want to delete this template? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteTemplate}
+      />
     </MainLayout>
   );
 };

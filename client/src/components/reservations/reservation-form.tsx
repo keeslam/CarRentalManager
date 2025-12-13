@@ -65,6 +65,7 @@ import { DriverDialog } from "@/components/customers/driver-dialog";
 import { ReservationViewDialog } from "@/components/reservations/reservation-view-dialog";
 import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 import { VehicleRemarksWarningDialog } from "@/components/vehicles/vehicle-remarks-warning-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Extended schema with validation
 const formSchema = insertReservationSchemaBase.extend({
@@ -252,6 +253,8 @@ export function ReservationForm({
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
+  const [deleteDocDialogOpen, setDeleteDocDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   
   // Overdue reservations detection states
   const [overdueReservations, setOverdueReservations] = useState<Reservation[]>([]);
@@ -2321,33 +2324,10 @@ export function ReservationForm({
                               </Button>
                               <button
                                 type="button"
-                                onClick={async (e) => {
+                                onClick={(e) => {
                                   e.stopPropagation();
-                                  if (window.confirm(`Delete ${doc.documentType}?`)) {
-                                    try {
-                                      const response = await fetch(`/api/documents/${doc.id}`, {
-                                        method: 'DELETE',
-                                        credentials: 'include',
-                                      });
-                                      
-                                      if (!response.ok) {
-                                        throw new Error('Delete failed');
-                                      }
-                                      
-                                      queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
-                                      toast({
-                                        title: "Success",
-                                        description: "Document deleted successfully",
-                                      });
-                                    } catch (error) {
-                                      console.error('Delete failed:', error);
-                                      toast({
-                                        title: "Error",
-                                        description: "Failed to delete document",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  }
+                                  setDocumentToDelete(doc);
+                                  setDeleteDocDialogOpen(true);
                                 }}
                                 className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
                                 title="Delete document"
@@ -2895,6 +2875,43 @@ export function ReservationForm({
         // User cancelled, don't select the vehicle
         setPendingVehicleSelection(null);
       }}
+    />
+
+    <ConfirmDialog
+      open={deleteDocDialogOpen}
+      onOpenChange={setDeleteDocDialogOpen}
+      title="Delete Document"
+      description={`Are you sure you want to delete ${documentToDelete?.documentType}? This action cannot be undone.`}
+      variant="danger"
+      confirmLabel="Delete"
+      onConfirm={async () => {
+        if (!documentToDelete) return;
+        try {
+          const response = await fetch(`/api/documents/${documentToDelete.id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          
+          if (!response.ok) {
+            throw new Error('Delete failed');
+          }
+          
+          queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
+          toast({
+            title: "Success",
+            description: "Document deleted successfully",
+          });
+        } catch (error) {
+          console.error('Delete failed:', error);
+          toast({
+            title: "Error",
+            description: "Failed to delete document",
+            variant: "destructive",
+          });
+        }
+        setDocumentToDelete(null);
+      }}
+      onCancel={() => setDocumentToDelete(null)}
     />
     </>
   );

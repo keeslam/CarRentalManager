@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Reservation, Vehicle } from "@shared/schema";
@@ -52,6 +53,12 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   // Vehicle remarks warning state - shown when vehicle has remarks before pickup
   const [remarksWarningOpen, setRemarksWarningOpen] = useState(false);
   const [remarksAcknowledged, setRemarksAcknowledged] = useState(false);
+  
+  // Delete confirmation dialog states
+  const [deletePickupDamageCheckDialogOpen, setDeletePickupDamageCheckDialogOpen] = useState(false);
+  const [pickupDamageCheckToDelete, setPickupDamageCheckToDelete] = useState<number | null>(null);
+  const [deletePickupPaperCheckDialogOpen, setDeletePickupPaperCheckDialogOpen] = useState(false);
+  const [pickupPaperCheckToDelete, setPickupPaperCheckToDelete] = useState<number | null>(null);
 
   // Cleanup function to delete uploaded paper checks on cancel
   const cleanupUploadedPaperChecks = async () => {
@@ -694,23 +701,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                               type="button"
                               size="sm"
                               variant="ghost"
-                              onClick={async () => {
-                                if (confirm('Delete this pickup damage check? This cannot be undone.')) {
-                                  try {
-                                    await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
-                                    queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
-                                    toast({
-                                      title: "Deleted",
-                                      description: "Pickup damage check deleted successfully",
-                                    });
-                                  } catch (error) {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Error",
-                                      description: "Failed to delete damage check",
-                                    });
-                                  }
-                                }
+                              onClick={() => {
+                                setPickupDamageCheckToDelete(check.id);
+                                setDeletePickupDamageCheckDialogOpen(true);
                               }}
                               title="Delete damage check"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -752,23 +745,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
                             type="button"
                             size="sm"
                             variant="ghost"
-                            onClick={async () => {
-                              if (confirm('Delete this paper damage check? This cannot be undone.')) {
-                                try {
-                                  await apiRequest('DELETE', `/api/documents/${doc.id}`, {});
-                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
-                                  toast({
-                                    title: "Deleted",
-                                    description: "Paper damage check deleted successfully",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "Failed to delete paper damage check",
-                                  });
-                                }
-                              }
+                            onClick={() => {
+                              setPickupPaperCheckToDelete(doc.id);
+                              setDeletePickupPaperCheckDialogOpen(true);
                             }}
                             title="Delete paper damage check"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1101,6 +1080,66 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           onOpenChange(false);
         }}
       />
+
+      {/* Delete Pickup Damage Check Confirmation Dialog */}
+      <ConfirmDialog
+        open={deletePickupDamageCheckDialogOpen}
+        onOpenChange={setDeletePickupDamageCheckDialogOpen}
+        title="Delete Pickup Damage Check"
+        description="Are you sure you want to delete this pickup damage check? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (pickupDamageCheckToDelete) {
+            try {
+              await apiRequest('DELETE', `/api/interactive-damage-checks/${pickupDamageCheckToDelete}`, {});
+              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              toast({
+                title: "Deleted",
+                description: "Pickup damage check deleted successfully",
+              });
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to delete damage check",
+              });
+            }
+          }
+          setPickupDamageCheckToDelete(null);
+        }}
+        onCancel={() => setPickupDamageCheckToDelete(null)}
+      />
+
+      {/* Delete Pickup Paper Damage Check Confirmation Dialog */}
+      <ConfirmDialog
+        open={deletePickupPaperCheckDialogOpen}
+        onOpenChange={setDeletePickupPaperCheckDialogOpen}
+        title="Delete Paper Damage Check"
+        description="Are you sure you want to delete this paper damage check? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (pickupPaperCheckToDelete) {
+            try {
+              await apiRequest('DELETE', `/api/documents/${pickupPaperCheckToDelete}`, {});
+              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+              toast({
+                title: "Deleted",
+                description: "Paper damage check deleted successfully",
+              });
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to delete paper damage check",
+              });
+            }
+          }
+          setPickupPaperCheckToDelete(null);
+        }}
+        onCancel={() => setPickupPaperCheckToDelete(null)}
+      />
     </Dialog>
   );
 }
@@ -1126,6 +1165,12 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   const [editingDamageCheckId, setEditingDamageCheckId] = useState<number | null>(null);
   const [uploadingPaperDamageCheck, setUploadingPaperDamageCheck] = useState(false);
   const [uploadedPaperCheckIds, setUploadedPaperCheckIds] = useState<number[]>([]);
+  
+  // Delete confirmation dialog states
+  const [deleteReturnDamageCheckDialogOpen, setDeleteReturnDamageCheckDialogOpen] = useState(false);
+  const [returnDamageCheckToDelete, setReturnDamageCheckToDelete] = useState<number | null>(null);
+  const [deleteReturnPaperCheckDialogOpen, setDeleteReturnPaperCheckDialogOpen] = useState(false);
+  const [returnPaperCheckToDelete, setReturnPaperCheckToDelete] = useState<number | null>(null);
 
   // Cleanup function to delete uploaded paper checks on cancel
   const cleanupUploadedPaperChecks = async () => {
@@ -1421,23 +1466,9 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                               type="button"
                               size="sm"
                               variant="ghost"
-                              onClick={async () => {
-                                if (confirm('Delete this return damage check? This cannot be undone.')) {
-                                  try {
-                                    await apiRequest('DELETE', `/api/interactive-damage-checks/${check.id}`, {});
-                                    queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
-                                    toast({
-                                      title: "Deleted",
-                                      description: "Return damage check deleted successfully",
-                                    });
-                                  } catch (error) {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Error",
-                                      description: "Failed to delete damage check",
-                                    });
-                                  }
-                                }
+                              onClick={() => {
+                                setReturnDamageCheckToDelete(check.id);
+                                setDeleteReturnDamageCheckDialogOpen(true);
                               }}
                               title="Delete damage check"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1479,23 +1510,9 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
                             type="button"
                             size="sm"
                             variant="ghost"
-                            onClick={async () => {
-                              if (confirm('Delete this paper damage check? This cannot be undone.')) {
-                                try {
-                                  await apiRequest('DELETE', `/api/documents/${doc.id}`, {});
-                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
-                                  toast({
-                                    title: "Deleted",
-                                    description: "Paper damage check deleted successfully",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "Failed to delete paper damage check",
-                                  });
-                                }
-                              }
+                            onClick={() => {
+                              setReturnPaperCheckToDelete(doc.id);
+                              setDeleteReturnPaperCheckDialogOpen(true);
                             }}
                             title="Delete paper damage check"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1746,6 +1763,66 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Return Damage Check Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteReturnDamageCheckDialogOpen}
+        onOpenChange={setDeleteReturnDamageCheckDialogOpen}
+        title="Delete Return Damage Check"
+        description="Are you sure you want to delete this return damage check? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (returnDamageCheckToDelete) {
+            try {
+              await apiRequest('DELETE', `/api/interactive-damage-checks/${returnDamageCheckToDelete}`, {});
+              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              toast({
+                title: "Deleted",
+                description: "Return damage check deleted successfully",
+              });
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to delete damage check",
+              });
+            }
+          }
+          setReturnDamageCheckToDelete(null);
+        }}
+        onCancel={() => setReturnDamageCheckToDelete(null)}
+      />
+
+      {/* Delete Return Paper Damage Check Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteReturnPaperCheckDialogOpen}
+        onOpenChange={setDeleteReturnPaperCheckDialogOpen}
+        title="Delete Paper Damage Check"
+        description="Are you sure you want to delete this paper damage check? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (returnPaperCheckToDelete) {
+            try {
+              await apiRequest('DELETE', `/api/documents/${returnPaperCheckToDelete}`, {});
+              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+              toast({
+                title: "Deleted",
+                description: "Paper damage check deleted successfully",
+              });
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to delete paper damage check",
+              });
+            }
+          }
+          setReturnPaperCheckToDelete(null);
+        }}
+        onCancel={() => setReturnPaperCheckToDelete(null)}
+      />
     </Dialog>
   );
 }

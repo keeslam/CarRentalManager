@@ -66,6 +66,7 @@ import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 import { EmailDocumentDialog } from "@/components/documents/email-document-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Holiday names for display
 const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
@@ -215,6 +216,12 @@ export default function ReservationCalendarPage() {
   
   // Administration dialog for external invoicing
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [deleteDamageCheckDialogOpen, setDeleteDamageCheckDialogOpen] = useState(false);
+  const [damageCheckToDelete, setDamageCheckToDelete] = useState<number | null>(null);
+  const [deleteReservationDialogOpen, setDeleteReservationDialogOpen] = useState(false);
+  const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null);
+  const [deleteDocDialogOpen, setDeleteDocDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [adminHistorySearch, setAdminHistorySearch] = useState('');
   const [adminHistoryDateFilter, setAdminHistoryDateFilter] = useState<'all' | '7days' | '30days' | '90days'>('all');
   const [adminCurrentSearch, setAdminCurrentSearch] = useState('');
@@ -277,13 +284,16 @@ export default function ReservationCalendarPage() {
     }
   };
 
-  const handleDeleteDamageCheck = async (checkId: number) => {
-    if (!window.confirm('Are you sure you want to delete this damage check? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteDamageCheck = (checkId: number) => {
+    setDamageCheckToDelete(checkId);
+    setDeleteDamageCheckDialogOpen(true);
+  };
 
+  const confirmDeleteDamageCheck = async () => {
+    if (!damageCheckToDelete) return;
+    
     try {
-      const response = await fetch(`/api/interactive-damage-checks/${checkId}`, {
+      const response = await fetch(`/api/interactive-damage-checks/${damageCheckToDelete}`, {
         method: 'DELETE',
       });
 
@@ -307,6 +317,7 @@ export default function ReservationCalendarPage() {
         variant: "destructive",
       });
     }
+    setDamageCheckToDelete(null);
   };
   
   const handleStatusChange = (reservation: Reservation) => {
@@ -437,9 +448,15 @@ export default function ReservationCalendarPage() {
   });
   
   const handleDeleteReservation = (reservation: Reservation) => {
-    if (window.confirm(`Are you sure you want to delete this reservation for ${reservation.customer?.name || 'this customer'}?`)) {
-      deleteReservationMutation.mutate(reservation.id);
+    setReservationToDelete(reservation);
+    setDeleteReservationDialogOpen(true);
+  };
+
+  const confirmDeleteReservation = () => {
+    if (reservationToDelete) {
+      deleteReservationMutation.mutate(reservationToDelete.id);
     }
+    setReservationToDelete(null);
   };
   
   // Day dialog handlers
@@ -2180,33 +2197,10 @@ export default function ReservationCalendarPage() {
                             </div>
                           </Button>
                           <button
-                            onClick={async (e) => {
+                            onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm(`Delete ${doc.documentType}?`)) {
-                                try {
-                                  const response = await fetch(`/api/documents/${doc.id}`, {
-                                    method: 'DELETE',
-                                    credentials: 'include',
-                                  });
-                                  
-                                  if (!response.ok) {
-                                    throw new Error('Delete failed');
-                                  }
-                                  
-                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation?.id}`] });
-                                  toast({
-                                    title: "Success",
-                                    description: "Document deleted successfully",
-                                  });
-                                } catch (error) {
-                                  console.error('Delete failed:', error);
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to delete document",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }
+                              setDocumentToDelete(doc);
+                              setDeleteDocDialogOpen(true);
                             }}
                             className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
                             title="Delete document"
@@ -3698,6 +3692,65 @@ export default function ReservationCalendarPage() {
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={deleteDamageCheckDialogOpen}
+        onOpenChange={setDeleteDamageCheckDialogOpen}
+        title="Delete Damage Check"
+        description="Are you sure you want to delete this damage check? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteDamageCheck}
+        onCancel={() => setDamageCheckToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteReservationDialogOpen}
+        onOpenChange={setDeleteReservationDialogOpen}
+        title="Delete Reservation"
+        description={`Are you sure you want to delete this reservation for ${reservationToDelete?.customer?.name || 'this customer'}? This action cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteReservation}
+        onCancel={() => setReservationToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteDocDialogOpen}
+        onOpenChange={setDeleteDocDialogOpen}
+        title="Delete Document"
+        description={`Are you sure you want to delete ${documentToDelete?.documentType}? This action cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!documentToDelete) return;
+          try {
+            const response = await fetch(`/api/documents/${documentToDelete.id}`, {
+              method: 'DELETE',
+              credentials: 'include',
+            });
+            
+            if (!response.ok) {
+              throw new Error('Delete failed');
+            }
+            
+            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${selectedReservation?.id}`] });
+            toast({
+              title: "Success",
+              description: "Document deleted successfully",
+            });
+          } catch (error) {
+            console.error('Delete failed:', error);
+            toast({
+              title: "Error",
+              description: "Failed to delete document",
+              variant: "destructive",
+            });
+          }
+          setDocumentToDelete(null);
+        }}
+        onCancel={() => setDocumentToDelete(null)}
+      />
     </div>
   );
 }

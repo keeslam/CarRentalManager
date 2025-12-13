@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -78,6 +79,8 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("business");
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [editingEmail, setEditingEmail] = useState<EmailSetting | null>(null);
+  const [deleteEmailDialogOpen, setDeleteEmailDialogOpen] = useState(false);
+  const [emailConfigToDelete, setEmailConfigToDelete] = useState<number | null>(null);
   
   // Email form state
   const [fromEmail, setFromEmail] = useState("");
@@ -516,13 +519,16 @@ export default function Settings() {
     saveEmailSetting.mutate(emailData);
   };
 
-  const handleDeleteEmailConfig = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this email configuration? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteEmailConfig = (id: number) => {
+    setEmailConfigToDelete(id);
+    setDeleteEmailDialogOpen(true);
+  };
 
+  const confirmDeleteEmailConfig = async () => {
+    if (!emailConfigToDelete) return;
+    
     try {
-      await apiRequest('DELETE', `/api/app-settings/${id}`);
+      await apiRequest('DELETE', `/api/app-settings/${emailConfigToDelete}`);
       queryClient.invalidateQueries({ queryKey: ['/api/app-settings/email'] });
       toast({ 
         title: "Success", 
@@ -535,6 +541,7 @@ export default function Settings() {
         variant: "destructive"
       });
     }
+    setEmailConfigToDelete(null);
   };
 
   // Holiday management
@@ -2195,6 +2202,17 @@ function ContractNumberSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteEmailDialogOpen}
+        onOpenChange={setDeleteEmailDialogOpen}
+        title="Delete Email Configuration"
+        description="Are you sure you want to delete this email configuration? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteEmailConfig}
+        onCancel={() => setEmailConfigToDelete(null)}
+      />
     </div>
   );
 }
