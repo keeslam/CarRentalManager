@@ -33,7 +33,6 @@ import {
   DollarSign,
   Clock,
   Trash2,
-  MessageCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -99,11 +98,9 @@ export default function Settings() {
   
   // Business Rules state
   const [defaultRentalDuration, setDefaultRentalDuration] = useState("7");
-  const [minRentalPeriod, setMinRentalPeriod] = useState("1");
-  const [maxRentalPeriod, setMaxRentalPeriod] = useState("365");
   const [defaultFuelPolicy, setDefaultFuelPolicy] = useState("full-to-full");
-  const [lateReturnFee, setLateReturnFee] = useState("50");
-  const [securityDeposit, setSecurityDeposit] = useState("500");
+  const [eigenrisicoBinnenland, setEigenrisicoBinnenland] = useState("500");
+  const [eigenrisicoBuitenland, setEigenrisicoBuitenland] = useState("1000");
   
   // Notification Preferences state
   const [apkReminderDays, setApkReminderDays] = useState("60");
@@ -120,24 +117,41 @@ export default function Settings() {
   const [invoiceStartingNumber, setInvoiceStartingNumber] = useState("1001");
   const [contractTerms, setContractTerms] = useState("");
   const [invoiceFooter, setInvoiceFooter] = useState("");
-  const [autoGenerateContract, setAutoGenerateContract] = useState(true);
-  const [autoGenerateInvoice, setAutoGenerateInvoice] = useState(false);
   
   // Calendar Settings state  
   const [holidays, setHolidays] = useState<Array<{date: string, name: string}>>([]);
   const [newHolidayDate, setNewHolidayDate] = useState("");
   
-  // WhatsApp Settings state
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState("");
-  const [twilioAccountSid, setTwilioAccountSid] = useState("");
-  const [twilioAuthToken, setTwilioAuthToken] = useState("");
-  const [whatsappAutoNotifications, setWhatsappAutoNotifications] = useState(false);
-  const [whatsappNotifyOnReservationCreated, setWhatsappNotifyOnReservationCreated] = useState(false);
-  const [whatsappNotifyOnPickupReminder, setWhatsappNotifyOnPickupReminder] = useState(false);
-  const [whatsappNotifyOnReturnReminder, setWhatsappNotifyOnReturnReminder] = useState(false);
-  const [whatsappNotifyOnPaymentDue, setWhatsappNotifyOnPaymentDue] = useState(false);
   const [newHolidayName, setNewHolidayName] = useState("");
+  
+  // Dutch holidays with toggles
+  const [dutchHolidays, setDutchHolidays] = useState<Record<string, boolean>>({
+    nieuwjaarsdag: true,
+    goede_vrijdag: true,
+    eerste_paasdag: true,
+    tweede_paasdag: true,
+    koningsdag: true,
+    bevrijdingsdag: true,
+    hemelvaartsdag: true,
+    eerste_pinksterdag: true,
+    tweede_pinksterdag: true,
+    eerste_kerstdag: true,
+    tweede_kerstdag: true,
+  });
+  
+  const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
+    nieuwjaarsdag: "Nieuwjaarsdag",
+    goede_vrijdag: "Goede Vrijdag",
+    eerste_paasdag: "Eerste Paasdag",
+    tweede_paasdag: "Tweede Paasdag",
+    koningsdag: "Koningsdag",
+    bevrijdingsdag: "Bevrijdingsdag",
+    hemelvaartsdag: "Hemelvaartsdag",
+    eerste_pinksterdag: "Eerste Pinksterdag",
+    tweede_pinksterdag: "Tweede Pinksterdag",
+    eerste_kerstdag: "Eerste Kerstdag",
+    tweede_kerstdag: "Tweede Kerstdag",
+  };
   const [blockedDates, setBlockedDates] = useState<Array<{startDate: string, endDate: string, reason: string}>>([]);
   const [newBlockedStart, setNewBlockedStart] = useState("");
   const [newBlockedEnd, setNewBlockedEnd] = useState("");
@@ -197,11 +211,9 @@ export default function Settings() {
     const businessRules = appSettings.find(s => s.key === 'business_rules');
     if (businessRules?.value) {
       setDefaultRentalDuration(businessRules.value.defaultRentalDuration || "7");
-      setMinRentalPeriod(businessRules.value.minRentalPeriod || "1");
-      setMaxRentalPeriod(businessRules.value.maxRentalPeriod || "365");
       setDefaultFuelPolicy(businessRules.value.defaultFuelPolicy || "full-to-full");
-      setLateReturnFee(businessRules.value.lateReturnFee || "50");
-      setSecurityDeposit(businessRules.value.securityDeposit || "500");
+      setEigenrisicoBinnenland(businessRules.value.eigenrisicoBinnenland || "500");
+      setEigenrisicoBuitenland(businessRules.value.eigenrisicoBuitenland || "1000");
     }
     
     // Notification Preferences
@@ -224,8 +236,6 @@ export default function Settings() {
       setInvoiceStartingNumber(docSettings.value.invoiceStartingNumber || "1001");
       setContractTerms(docSettings.value.contractTerms || "");
       setInvoiceFooter(docSettings.value.invoiceFooter || "");
-      setAutoGenerateContract(docSettings.value.autoGenerateContract ?? true);
-      setAutoGenerateInvoice(docSettings.value.autoGenerateInvoice ?? false);
     }
     
     // Calendar Settings
@@ -235,6 +245,9 @@ export default function Settings() {
       setBlockedDates(calSettings.value.blockedDates || []);
       setDefaultMaintenanceDuration(calSettings.value.defaultMaintenanceDuration || "1");
       setReservationReminderHours(calSettings.value.reservationReminderHours || "24");
+      if (calSettings.value.dutchHolidays) {
+        setDutchHolidays(calSettings.value.dutchHolidays);
+      }
     }
     
     // GPS Settings
@@ -266,11 +279,9 @@ export default function Settings() {
         category: 'business',
         value: {
           defaultRentalDuration,
-          minRentalPeriod,
-          maxRentalPeriod,
           defaultFuelPolicy,
-          lateReturnFee,
-          securityDeposit,
+          eigenrisicoBinnenland,
+          eigenrisicoBuitenland,
         }
       };
       await apiRequest('POST', '/api/app-settings', data);
@@ -315,8 +326,6 @@ export default function Settings() {
           invoiceStartingNumber,
           contractTerms,
           invoiceFooter,
-          autoGenerateContract,
-          autoGenerateInvoice,
         }
       };
       await apiRequest('POST', '/api/app-settings', data);
@@ -335,6 +344,7 @@ export default function Settings() {
         value: {
           holidays,
           blockedDates,
+          dutchHolidays,
           defaultMaintenanceDuration,
           reservationReminderHours,
         }
@@ -586,7 +596,7 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="defaultDuration">Default Rental Duration (days)</Label>
                   <Input
@@ -599,33 +609,6 @@ export default function Settings() {
                   />
                   <p className="text-xs text-gray-500 mt-1">Default duration when creating new rentals</p>
                 </div>
-                <div>
-                  <Label htmlFor="minPeriod">Minimum Rental Period (days)</Label>
-                  <Input
-                    id="minPeriod"
-                    type="number"
-                    min="1"
-                    value={minRentalPeriod}
-                    onChange={(e) => setMinRentalPeriod(e.target.value)}
-                    data-testid="input-min-rental-period"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Shortest allowed rental period</p>
-                </div>
-                <div>
-                  <Label htmlFor="maxPeriod">Maximum Rental Period (days)</Label>
-                  <Input
-                    id="maxPeriod"
-                    type="number"
-                    min="1"
-                    value={maxRentalPeriod}
-                    onChange={(e) => setMaxRentalPeriod(e.target.value)}
-                    data-testid="input-max-rental-period"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Longest allowed rental period</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="fuelPolicy">Default Fuel Policy</Label>
                   <select
@@ -641,31 +624,34 @@ export default function Settings() {
                   </select>
                   <p className="text-xs text-gray-500 mt-1">Standard fuel return policy</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="lateReturnFee">Late Return Fee (€)</Label>
+                  <Label htmlFor="eigenrisicoBinnenland">Eigenrisico Binnenland (€)</Label>
                   <Input
-                    id="lateReturnFee"
+                    id="eigenrisicoBinnenland"
                     type="number"
                     min="0"
                     step="0.01"
-                    value={lateReturnFee}
-                    onChange={(e) => setLateReturnFee(e.target.value)}
-                    data-testid="input-late-return-fee"
+                    value={eigenrisicoBinnenland}
+                    onChange={(e) => setEigenrisicoBinnenland(e.target.value)}
+                    data-testid="input-eigenrisico-binnenland"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Fee charged for late vehicle returns</p>
+                  <p className="text-xs text-gray-500 mt-1">Damage deposit for domestic rentals</p>
                 </div>
                 <div>
-                  <Label htmlFor="securityDeposit">Security Deposit (€)</Label>
+                  <Label htmlFor="eigenrisicoBuitenland">Eigenrisico Buitenland (€)</Label>
                   <Input
-                    id="securityDeposit"
+                    id="eigenrisicoBuitenland"
                     type="number"
                     min="0"
                     step="0.01"
-                    value={securityDeposit}
-                    onChange={(e) => setSecurityDeposit(e.target.value)}
-                    data-testid="input-security-deposit"
+                    value={eigenrisicoBuitenland}
+                    onChange={(e) => setEigenrisicoBuitenland(e.target.value)}
+                    data-testid="input-eigenrisico-buitenland"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Standard security deposit amount</p>
+                  <p className="text-xs text-gray-500 mt-1">Damage deposit for international rentals</p>
                 </div>
               </div>
 
@@ -885,34 +871,6 @@ export default function Settings() {
                   className="font-mono text-sm"
                 />
                 <p className="text-xs text-gray-500 mt-1">This appears at the bottom of all invoices</p>
-              </div>
-
-              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-sm">Auto-generation Options</h4>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto-generate Contracts</Label>
-                    <p className="text-sm text-gray-500">Automatically create contract when reservation confirmed</p>
-                  </div>
-                  <Switch
-                    checked={autoGenerateContract}
-                    onCheckedChange={setAutoGenerateContract}
-                    data-testid="switch-auto-generate-contract"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto-generate Invoices</Label>
-                    <p className="text-sm text-gray-500">Automatically create invoice when rental completed</p>
-                  </div>
-                  <Switch
-                    checked={autoGenerateInvoice}
-                    onCheckedChange={setAutoGenerateInvoice}
-                    data-testid="switch-auto-generate-invoice"
-                  />
-                </div>
               </div>
 
               <Button 
@@ -1263,9 +1221,29 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Holidays */}
+              {/* Dutch National Holidays */}
               <div>
-                <h4 className="font-medium text-sm mb-3">Public Holidays</h4>
+                <h4 className="font-medium text-sm mb-3">Dutch National Holidays</h4>
+                <p className="text-xs text-gray-500 mb-4">Toggle which Dutch holidays to recognize in the calendar</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {Object.entries(DUTCH_HOLIDAY_NAMES).map(([key, name]) => (
+                    <div key={key} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50">
+                      <Label htmlFor={`holiday-${key}`} className="font-medium cursor-pointer">
+                        {name}
+                      </Label>
+                      <Switch
+                        id={`holiday-${key}`}
+                        checked={dutchHolidays[key] ?? true}
+                        onCheckedChange={(checked) => setDutchHolidays(prev => ({ ...prev, [key]: checked }))}
+                        data-testid={`switch-holiday-${key}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-medium text-sm mb-3">Custom Holidays</h4>
                 <div className="space-y-2 mb-4">
                   {holidays.map((holiday, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
