@@ -8400,6 +8400,18 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get app setting by key (returns single setting or null)
+  app.get("/api/app-settings/key/:key", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { key } = req.params;
+      const setting = await storage.getAppSettingByKey(key);
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching app setting by key:", error);
+      res.status(500).json({ message: "Error fetching app setting" });
+    }
+  });
+
   // Get app settings by category
   app.get("/api/app-settings/:category", requireAuth, async (req: Request, res: Response) => {
     try {

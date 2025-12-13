@@ -615,8 +615,8 @@ export default function ReservationCalendarPage() {
   });
 
   // Fetch calendar settings for holiday/blocked date display
-  const { data: calendarSettings } = useQuery<{ key: string; value: any }[] | null>({
-    queryKey: ["/api/app-settings/calendar_settings"],
+  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings/key/calendar_settings"],
   });
 
   // Helper function to check if a date is a holiday or blocked
@@ -628,8 +628,8 @@ export default function ReservationCalendarPage() {
       let holidayName: string | undefined;
       let blockedReason: string | undefined;
       
-      // Get settings value from array response
-      const settings = Array.isArray(calendarSettings) ? calendarSettings[0]?.value : calendarSettings?.value;
+      // Get settings value from single object response
+      const settings = calendarSettings?.value;
       
       if (settings) {
         const dutchHolidays = settings.dutchHolidays;

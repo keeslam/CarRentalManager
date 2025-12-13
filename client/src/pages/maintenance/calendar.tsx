@@ -403,8 +403,8 @@ export default function MaintenanceCalendar() {
   });
 
   // Fetch calendar settings for holidays and blocked dates
-  const { data: calendarSettings } = useQuery<{ key: string; value: any }[] | null>({
-    queryKey: ["/api/app-settings/calendar_settings"],
+  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings/key/calendar_settings"],
   });
 
   // Helper to check if a date is a holiday or blocked
@@ -416,8 +416,8 @@ export default function MaintenanceCalendar() {
       let holidayName: string | undefined;
       let blockedReason: string | undefined;
       
-      // Get settings value from array response
-      const settings = Array.isArray(calendarSettings) ? calendarSettings[0]?.value : calendarSettings?.value;
+      // Get settings value from single object response
+      const settings = calendarSettings?.value;
       
       if (settings) {
         // Check Dutch holidays
