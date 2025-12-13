@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import {
   User,
   LogOut,
-  Settings,
   UserCog,
   ChevronDown,
   Database,
@@ -14,12 +13,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@shared/schema";
 import { BackupDialog } from "@/components/dialogs/backup-dialog";
 import { UsersDialog } from "@/components/dialogs/users-dialog";
+import { ProfileDialog } from "@/components/dialogs/profile-dialog";
 
 export function UserMenu() {
   const { user, logoutMutation } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [backupDialogOpen, setBackupDialogOpen] = useState(false);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const getUserInitials = () => {
@@ -63,6 +64,11 @@ export function UserMenu() {
     setBackupDialogOpen(true);
   };
 
+  const handleOpenProfileDialog = () => {
+    setIsOpen(false);
+    setProfileDialogOpen(true);
+  };
+
   if (!user) return null;
 
   return (
@@ -90,25 +96,14 @@ export function UserMenu() {
             </div>
             
             <div className="py-1">
-              <Link 
-                href="/profile"
-                onClick={() => setIsOpen(false)}
+              <button
+                onClick={handleOpenProfileDialog}
                 className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
                 data-testid="menu-profile"
               >
                 <User className="mr-2 h-4 w-4" />
                 Profile
-              </Link>
-              
-              <Link 
-                href="/profile/edit"
-                onClick={() => setIsOpen(false)}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
-                data-testid="menu-edit-profile"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Profile
-              </Link>
+              </button>
 
               {user.role === UserRole.ADMIN && (
                 <>
@@ -160,6 +155,7 @@ export function UserMenu() {
 
       <BackupDialog open={backupDialogOpen} onOpenChange={setBackupDialogOpen} />
       <UsersDialog open={usersDialogOpen} onOpenChange={setUsersDialogOpen} />
+      <ProfileDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
     </>
   );
 }
