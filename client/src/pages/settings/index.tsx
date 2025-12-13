@@ -255,7 +255,20 @@ export default function Settings() {
       if (calSettings.value.dutchHolidays) {
         // API now returns auto-calculated holidays with format:
         // { enabled, date, isOverridden, calculatedDate }
-        setDutchHolidays(calSettings.value.dutchHolidays);
+        // Merge with initial defaults to ensure all holidays have dates
+        const initialDefaults = getInitialDutchHolidays();
+        const merged: Record<string, { enabled: boolean; date: string; isOverridden?: boolean; calculatedDate?: string }> = {};
+        for (const key of Object.keys(initialDefaults)) {
+          const apiValue = calSettings.value.dutchHolidays[key];
+          const defaultValue = initialDefaults[key];
+          merged[key] = {
+            ...defaultValue,
+            ...apiValue,
+            // Ensure date always has a value
+            date: apiValue?.date || defaultValue.date,
+          };
+        }
+        setDutchHolidays(merged);
       }
     }
     
@@ -1299,10 +1312,21 @@ export default function Settings() {
                           <Switch
                             id={`holiday-${key}`}
                             checked={holiday?.enabled ?? true}
-                            onCheckedChange={(checked) => setDutchHolidays(prev => ({
-                              ...prev,
-                              [key]: { ...prev[key], enabled: checked }
-                            }))}
+                            onCheckedChange={(checked) => setDutchHolidays(prev => {
+                              // Get calculated defaults to preserve date if current entry is missing
+                              const calculated = calculateDutchHolidays(currentYear);
+                              const defaultDate = calculated[key as keyof typeof calculated] || '';
+                              const existingEntry = prev[key] || { 
+                                enabled: true, 
+                                date: defaultDate, 
+                                isOverridden: false, 
+                                calculatedDate: defaultDate 
+                              };
+                              return {
+                                ...prev,
+                                [key]: { ...existingEntry, enabled: checked }
+                              };
+                            })}
                             data-testid={`switch-holiday-${key}`}
                           />
                         </div>
