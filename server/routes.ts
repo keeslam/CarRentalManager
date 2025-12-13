@@ -44,7 +44,8 @@ import {
 import { calculateDutchHolidays, mergeHolidaysWithOverrides } from "../shared/holidays";
 import { 
   createSecureMulterFilter, 
-  validateAfterUpload, 
+  validateAfterUpload,
+  validateFileBuffer,
   isDangerousExtension,
   sanitizeFilename 
 } from "./utils/security/fileUploadSecurity";
@@ -140,7 +141,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       cb(null, diagramsDir);
     },
     filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
+      const sanitizedOriginal = sanitizeFilename(file.originalname);
+      const ext = path.extname(sanitizedOriginal);
       const timestamp = Date.now();
       const randomSuffix = Math.round(Math.random() * 1E9);
       cb(null, `diagram-${timestamp}-${randomSuffix}${ext}`);
@@ -190,7 +192,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       try {
         const timestamp = Date.now();
         const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        const extension = path.extname(file.originalname) || '.pdf';
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal) || '.pdf';
         
         // Get vehicle license plate
         const vehicleId = parseInt(req.body.vehicleId || req.params.id);
@@ -213,7 +216,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         // Fallback to simple timestamped name if there's an error
         const timestamp = Date.now();
         const dateString = new Date().toISOString().split('T')[0];
-        const extension = path.extname(file.originalname) || '.pdf';
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal) || '.pdf';
         const fallbackName = `fuel_receipt_${dateString}_${timestamp}${extension}`;
         console.log(`Using fallback fuel receipt filename: ${fallbackName}`);
         cb(null, fallbackName);
@@ -1429,6 +1433,17 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Handle receipt upload
       if (req.file) {
+        // Post-upload validation - verify file content matches declared type
+        const validation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!validation.valid) {
+          return res.status(400).json({ message: validation.error });
+        }
+        
         const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
         const relativePath = path.join(sanitizedPlate, 'fuel_receipt', req.file.filename);
         updateData.fuelRefillReceipt = `uploads/${relativePath}`;
@@ -2107,7 +2122,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       try {
         const timestamp = Date.now();
         const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        const extension = path.extname(file.originalname);
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal);
         const startDate = req.body.startDate || dateString;
         
         // Get vehicle license plate
@@ -2127,7 +2143,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         cb(null, fileName);
       } catch (error) {
         console.error("Error creating filename for damage check:", error);
-        const fallbackName = `damage_check_${Date.now()}${path.extname(file.originalname)}`;
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const fallbackName = `damage_check_${Date.now()}${path.extname(sanitizedOriginal)}`;
         cb(null, fallbackName);
       }
     }
@@ -4021,8 +4038,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       try {
         const timestamp = Date.now();
         const dateString = req.body.date || new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        const category = req.body.category || 'unknown';
-        const extension = path.extname(file.originalname) || '.pdf'; // Default to .pdf if no extension
+        const category = sanitizeFilename(req.body.category || 'unknown');
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal) || '.pdf'; // Default to .pdf if no extension
         
         // Get vehicle license plate
         const vehicleId = parseInt(req.body.vehicleId);
@@ -4045,8 +4063,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         // Fallback to simple timestamped name if there's an error - match document pattern
         const timestamp = Date.now();
         const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        const category = req.body.category || 'unknown';
-        const extension = path.extname(file.originalname) || '.pdf'; // Default to .pdf if no extension
+        const category = sanitizeFilename(req.body.category || 'unknown');
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal) || '.pdf'; // Default to .pdf if no extension
         const fallbackName = `receipt_${category.toLowerCase().replace(/\s+/g, '_')}_${dateString}_${timestamp}${extension}`;
         console.log(`Using fallback receipt filename: ${fallbackName}`);
         cb(null, fallbackName);
@@ -4272,6 +4291,19 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Create expense with receipt upload
   app.post("/api/expenses", hasPermission(UserPermission.MANAGE_EXPENSES), expenseReceiptUpload.single('receiptFile'), async (req: Request, res: Response) => {
     try {
+      // Post-upload validation if file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ message: fileValidation.error });
+        }
+      }
+      
       // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       // We don't convert amount because the schema now handles both string and number
@@ -4314,6 +4346,19 @@ export async function registerRoutes(app: Express): Promise<void> {
       console.log("Handling expense with receipt upload");
       console.log("Request body:", req.body);
       console.log("File info:", req.file);
+      
+      // Post-upload validation if file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ message: fileValidation.error });
+        }
+      }
       
       // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
@@ -4369,6 +4414,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Invalid expense ID" });
       }
 
+      // Post-upload validation if file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ message: fileValidation.error });
+        }
+      }
+
       // Convert vehicleId to number, but leave amount as string for schema validation
       if (req.body.vehicleId) req.body.vehicleId = parseInt(req.body.vehicleId);
       // We don't convert amount because the schema now handles both string and number
@@ -4418,6 +4476,19 @@ export async function registerRoutes(app: Express): Promise<void> {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid expense ID" });
+      }
+
+      // Post-upload validation if file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ message: fileValidation.error });
+        }
       }
 
       // Convert vehicleId to number, but leave amount as string for schema validation
@@ -4601,8 +4672,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       try {
         const timestamp = Date.now();
         const dateString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        const extension = path.extname(file.originalname);
-        const documentType = req.body.documentType || 'document';
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal);
+        const documentType = sanitizeFilename(req.body.documentType || 'document');
         
         // Get vehicle license plate
         const vehicleId = parseInt(req.body.vehicleId);
@@ -4636,8 +4708,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         console.error("Error creating filename:", error);
         // Fallback to simple timestamped name if there's an error
         const timestamp = Date.now();
-        const extension = path.extname(file.originalname);
-        const documentType = req.body.documentType || 'document';
+        const sanitizedOriginal = sanitizeFilename(file.originalname);
+        const extension = path.extname(sanitizedOriginal);
+        const documentType = sanitizeFilename(req.body.documentType || 'document');
         const fallbackName = `${documentType.replace(/\s+/g, '_')}_${timestamp}${extension}`;
         cb(null, fallbackName);
       }
@@ -4718,6 +4791,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Post-upload validation - verify file content matches declared type
+      const fileValidation = await validateAfterUpload(
+        req.file.path,
+        req.file.originalname,
+        req.file.mimetype,
+        'document'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ message: fileValidation.error });
       }
 
       // Convert vehicleId and reservationId to numbers
@@ -6286,6 +6370,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Template not found" });
       }
 
+      // Post-upload validation for memory-based upload - validate buffer before saving
+      const bufferValidation = await validateFileBuffer(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname,
+        'document'
+      );
+      if (!bufferValidation.valid) {
+        return res.status(400).json({ message: bufferValidation.error });
+      }
+
       // ALWAYS use filesystem storage (same as contract PDFs)
       // Works reliably on both Replit and Coolify/Docker
       console.log('💾 Saving template background to local filesystem');
@@ -6474,6 +6569,17 @@ export async function registerRoutes(app: Express): Promise<void> {
       const template = await storage.getPdfTemplate(templateId);
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Post-upload validation for memory-based upload - validate buffer before saving
+      const bufferValidation = await validateFileBuffer(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname,
+        'document'
+      );
+      if (!bufferValidation.valid) {
+        return res.status(400).json({ message: bufferValidation.error });
       }
 
       // Save file to filesystem (same pattern as regular background upload)
@@ -6861,11 +6967,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       const file = req.file;
       const vehicleId = req.body.vehicleId ? parseInt(req.body.vehicleId) : null;
 
-      // Validate file type (PDF only for now)
-      if (!file.originalname.toLowerCase().endsWith('.pdf')) {
-        // Clean up uploaded file
-        fs.unlinkSync(file.path);
-        return res.status(400).json({ message: "Only PDF files are supported" });
+      // Post-upload validation - verify file content is actually a PDF
+      const fileValidation = await validateAfterUpload(
+        file.path,
+        file.originalname,
+        file.mimetype,
+        'pdf'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ message: fileValidation.error });
       }
 
       // Validate vehicle ID if provided
@@ -7174,6 +7284,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: 'No backup file uploaded' });
       }
 
+      // Post-upload validation - verify file content matches backup type
+      const fileValidation = await validateAfterUpload(
+        req.file.path,
+        req.file.originalname,
+        req.file.mimetype,
+        'backup'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ error: fileValidation.error });
+      }
+
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
       const os = await import('os');
@@ -7265,6 +7386,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No backup file uploaded' });
+      }
+
+      // Post-upload validation - verify file content matches backup type
+      const fileValidation = await validateAfterUpload(
+        req.file.path,
+        req.file.originalname,
+        req.file.mimetype,
+        'backup'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ error: fileValidation.error });
       }
 
       const { exec } = await import('child_process');
@@ -7372,6 +7504,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No backup file uploaded' });
+      }
+
+      // Post-upload validation - verify file content matches backup type
+      const fileValidation = await validateAfterUpload(
+        req.file.path,
+        req.file.originalname,
+        req.file.mimetype,
+        'backup'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ error: fileValidation.error });
       }
 
       const { exec } = await import('child_process');
@@ -7594,6 +7737,17 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const file = req.file;
       const backupType = req.body.type; // 'database' or 'files'
+
+      // Post-upload validation - verify file content matches backup type
+      const fileValidation = await validateAfterUpload(
+        file.path,
+        file.originalname,
+        file.mimetype,
+        'backup'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ error: fileValidation.error });
+      }
 
       // Validate backup type
       if (!backupType || !['database', 'files'].includes(backupType)) {
@@ -8009,9 +8163,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       cb(null, driversDir);
     },
     filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
+      const sanitizedOriginal = sanitizeFilename(file.originalname);
+      const ext = path.extname(sanitizedOriginal);
       const timestamp = Date.now();
-      const customerId = req.params.customerId || 'unknown';
+      const rawCustomerId = req.params.customerId || 'unknown';
+      const customerId = rawCustomerId.replace(/[^a-zA-Z0-9]/g, '');
       cb(null, `license_customer${customerId}_${timestamp}${ext}`);
     }
   });
@@ -8081,6 +8237,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Invalid customer ID" });
       }
 
+      // Post-upload validation if license file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ error: fileValidation.error });
+        }
+      }
+
       // Handle JSON data that comes through multer middleware
       let bodyData = req.body;
       if (req.body.body && typeof req.body.body === 'string') {
@@ -8128,6 +8297,19 @@ export async function registerRoutes(app: Express): Promise<void> {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid driver ID" });
+      }
+
+      // Post-upload validation if license file was uploaded
+      if (req.file) {
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'document'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ error: fileValidation.error });
+        }
       }
 
       // Handle JSON data that comes through multer middleware
@@ -9553,6 +9735,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: "Diagram image is required" });
       }
       
+      // Post-upload validation - verify file content is actually an image
+      const fileValidation = await validateAfterUpload(
+        req.file.path,
+        req.file.originalname,
+        req.file.mimetype,
+        'image'
+      );
+      if (!fileValidation.valid) {
+        return res.status(400).json({ message: fileValidation.error });
+      }
+      
       const user = req.user;
       
       // Multer already saved the file to disk - just get the relative path
@@ -9599,6 +9792,17 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // If a new diagram file was uploaded, handle it
       if (req.file) {
+        // Post-upload validation - verify file content is actually an image
+        const fileValidation = await validateAfterUpload(
+          req.file.path,
+          req.file.originalname,
+          req.file.mimetype,
+          'image'
+        );
+        if (!fileValidation.valid) {
+          return res.status(400).json({ message: fileValidation.error });
+        }
+        
         const uploadsDir = path.join(process.cwd(), 'uploads');
         const diagramsDir = path.join(uploadsDir, 'vehicle-diagrams');
         
