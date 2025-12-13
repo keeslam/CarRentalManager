@@ -53,6 +53,22 @@ import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { getCustomMaintenanceStyle, getCustomMaintenanceStyleObject } from "@/lib/calendar-styling";
 import { ChevronLeft, ChevronRight, Calendar, Car, Wrench, AlertTriangle, Clock, Plus, Eye, Edit, Trash2, Palette } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Holiday names for display
+const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
+  nieuwjaarsdag: "Nieuwjaarsdag",
+  goede_vrijdag: "Goede Vrijdag",
+  eerste_paasdag: "Eerste Paasdag",
+  tweede_paasdag: "Tweede Paasdag",
+  koningsdag: "Koningsdag",
+  bevrijdingsdag: "Bevrijdingsdag",
+  hemelvaartsdag: "Hemelvaartsdag",
+  eerste_pinksterdag: "Eerste Pinksterdag",
+  tweede_pinksterdag: "Tweede Pinksterdag",
+  eerste_kerstdag: "Eerste Kerstdag",
+  tweede_kerstdag: "Tweede Kerstdag",
+};
 
 // Calendar view options
 type CalendarView = "month";
@@ -385,6 +401,66 @@ export default function MaintenanceCalendar() {
     select: (reservations: Reservation[]) => 
       reservations.filter(r => r.type === 'maintenance_block' && r.maintenanceStatus === 'out') // Only completed maintenance
   });
+
+  // Fetch calendar settings for holidays and blocked dates
+  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings", "calendar_settings"],
+  });
+
+  // Helper to check if a date is a holiday or blocked
+  const getDateStatus = useMemo(() => {
+    return (day: Date): { isHoliday: boolean; isBlocked: boolean; holidayName?: string; blockedReason?: string } => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      let isHoliday = false;
+      let isBlocked = false;
+      let holidayName: string | undefined;
+      let blockedReason: string | undefined;
+      
+      if (calendarSettings?.value) {
+        // Check Dutch holidays
+        const dutchHolidays = calendarSettings.value.dutchHolidays;
+        if (dutchHolidays) {
+          for (const [key, value] of Object.entries(dutchHolidays)) {
+            // Handle both old format (boolean) and new format (object with enabled+date)
+            if (typeof value === 'object' && value !== null && 'enabled' in value && 'date' in value) {
+              const holiday = value as { enabled: boolean; date: string };
+              if (holiday.enabled && holiday.date === dateStr) {
+                isHoliday = true;
+                holidayName = DUTCH_HOLIDAY_NAMES[key] || key;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Check custom holidays
+        const customHolidays = calendarSettings.value.holidays;
+        if (customHolidays && Array.isArray(customHolidays)) {
+          for (const holiday of customHolidays) {
+            if (holiday.date === dateStr) {
+              isHoliday = true;
+              holidayName = holiday.name;
+              break;
+            }
+          }
+        }
+        
+        // Check blocked dates
+        const blockedDates = calendarSettings.value.blockedDates;
+        if (blockedDates && Array.isArray(blockedDates)) {
+          for (const blocked of blockedDates) {
+            if (dateStr >= blocked.startDate && dateStr <= blocked.endDate) {
+              isBlocked = true;
+              blockedReason = blocked.reason;
+              break;
+            }
+          }
+        }
+      }
+      
+      return { isHoliday, isBlocked, holidayName, blockedReason };
+    };
+  }, [calendarSettings]);
 
   // Helper function to shift weekend dates to next Monday
   const shiftWeekendToMonday = (date: Date): { shiftedDate: Date; wasShifted: boolean } => {
@@ -973,14 +1049,25 @@ export default function MaintenanceCalendar() {
                   {week.map((day, dayIndex) => {
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
+                    const dateStatus = getDateStatus(day);
                     
                     // Get maintenance events for this day with filters applied
                     const dayEvents = getMaintenanceEventsForDate(day);
                     
+                    // Determine background color based on status
+                    let bgClass = isCurrentMonth ? '' : 'bg-gray-50';
+                    if (dateStatus.isBlocked) {
+                      bgClass = 'bg-red-50';
+                    } else if (dateStatus.isHoliday) {
+                      bgClass = 'bg-orange-50';
+                    } else if (isToday) {
+                      bgClass = 'bg-blue-50';
+                    }
+                    
                     return (
                       <div
                         key={dayIndex}
-                        className={`min-h-[140px] p-3 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group cursor-pointer`}
+                        className={`min-h-[140px] p-3 ${bgClass} relative group cursor-pointer`}
                         onClick={(e) => {
                           if (isCurrentMonth) {
                             const allDayEvents = getMaintenanceEventsForDate(day);
@@ -1025,11 +1112,41 @@ export default function MaintenanceCalendar() {
                               {safeFormat(day, "d", "?")}
                             </span>
                           </div>
-                          {dayEvents.length > 0 && (
-                            <Badge variant="outline" className="text-sm font-medium">
-                              {dayEvents.length}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {dateStatus.isHoliday && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 bg-orange-100 text-orange-700 border-orange-300">
+                                      🎉
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">{dateStatus.holidayName}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {dateStatus.isBlocked && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-100 text-red-700 border-red-300">
+                                      🚫
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Blocked: {dateStatus.blockedReason || 'Company closure'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {dayEvents.length > 0 && (
+                              <Badge variant="outline" className="text-sm font-medium">
+                                {dayEvents.length}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         
                         {/* Events for this day */}

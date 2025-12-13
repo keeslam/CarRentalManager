@@ -124,19 +124,20 @@ export default function Settings() {
   
   const [newHolidayName, setNewHolidayName] = useState("");
   
-  // Dutch holidays with toggles
-  const [dutchHolidays, setDutchHolidays] = useState<Record<string, boolean>>({
-    nieuwjaarsdag: true,
-    goede_vrijdag: true,
-    eerste_paasdag: true,
-    tweede_paasdag: true,
-    koningsdag: true,
-    bevrijdingsdag: true,
-    hemelvaartsdag: true,
-    eerste_pinksterdag: true,
-    tweede_pinksterdag: true,
-    eerste_kerstdag: true,
-    tweede_kerstdag: true,
+  // Dutch holidays with toggles AND dates (dates are editable since movable holidays change yearly)
+  const currentYear = new Date().getFullYear();
+  const [dutchHolidays, setDutchHolidays] = useState<Record<string, { enabled: boolean; date: string }>>({
+    nieuwjaarsdag: { enabled: true, date: `${currentYear}-01-01` },
+    goede_vrijdag: { enabled: true, date: `${currentYear}-04-18` },
+    eerste_paasdag: { enabled: true, date: `${currentYear}-04-20` },
+    tweede_paasdag: { enabled: true, date: `${currentYear}-04-21` },
+    koningsdag: { enabled: true, date: `${currentYear}-04-26` },
+    bevrijdingsdag: { enabled: true, date: `${currentYear}-05-05` },
+    hemelvaartsdag: { enabled: true, date: `${currentYear}-05-29` },
+    eerste_pinksterdag: { enabled: true, date: `${currentYear}-06-08` },
+    tweede_pinksterdag: { enabled: true, date: `${currentYear}-06-09` },
+    eerste_kerstdag: { enabled: true, date: `${currentYear}-12-25` },
+    tweede_kerstdag: { enabled: true, date: `${currentYear}-12-26` },
   });
   
   const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
@@ -246,7 +247,36 @@ export default function Settings() {
       setDefaultMaintenanceDuration(calSettings.value.defaultMaintenanceDuration || "1");
       setReservationReminderHours(calSettings.value.reservationReminderHours || "24");
       if (calSettings.value.dutchHolidays) {
-        setDutchHolidays(calSettings.value.dutchHolidays);
+        // Handle backward compatibility: convert old format (boolean) to new format (object with enabled+date)
+        const savedHolidays = calSettings.value.dutchHolidays;
+        const convertedHolidays: Record<string, { enabled: boolean; date: string }> = {};
+        
+        // Default dates for 2025 (used when migrating from old format)
+        const defaultDates: Record<string, string> = {
+          nieuwjaarsdag: `${currentYear}-01-01`,
+          goede_vrijdag: `${currentYear}-04-18`,
+          eerste_paasdag: `${currentYear}-04-20`,
+          tweede_paasdag: `${currentYear}-04-21`,
+          koningsdag: `${currentYear}-04-26`,
+          bevrijdingsdag: `${currentYear}-05-05`,
+          hemelvaartsdag: `${currentYear}-05-29`,
+          eerste_pinksterdag: `${currentYear}-06-08`,
+          tweede_pinksterdag: `${currentYear}-06-09`,
+          eerste_kerstdag: `${currentYear}-12-25`,
+          tweede_kerstdag: `${currentYear}-12-26`,
+        };
+        
+        for (const [key, value] of Object.entries(savedHolidays)) {
+          if (typeof value === 'boolean') {
+            // Old format: just a boolean - convert to new format with default date
+            convertedHolidays[key] = { enabled: value, date: defaultDates[key] || `${currentYear}-01-01` };
+          } else if (typeof value === 'object' && value !== null && 'enabled' in value) {
+            // New format: object with enabled and date
+            convertedHolidays[key] = value as { enabled: boolean; date: string };
+          }
+        }
+        
+        setDutchHolidays(convertedHolidays);
       }
     }
     
@@ -1224,17 +1254,30 @@ export default function Settings() {
               {/* Dutch National Holidays */}
               <div>
                 <h4 className="font-medium text-sm mb-3">Dutch National Holidays</h4>
-                <p className="text-xs text-gray-500 mb-4">Toggle which Dutch holidays to recognize in the calendar</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <p className="text-xs text-gray-500 mb-4">Toggle which Dutch holidays to recognize and set their dates (some holidays change each year)</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {Object.entries(DUTCH_HOLIDAY_NAMES).map(([key, name]) => (
-                    <div key={key} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50">
-                      <Label htmlFor={`holiday-${key}`} className="font-medium cursor-pointer">
+                    <div key={key} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 gap-3">
+                      <Label htmlFor={`holiday-${key}`} className="font-medium cursor-pointer flex-shrink-0 min-w-[140px]">
                         {name}
                       </Label>
+                      <Input
+                        type="date"
+                        value={dutchHolidays[key]?.date || ''}
+                        onChange={(e) => setDutchHolidays(prev => ({
+                          ...prev,
+                          [key]: { ...prev[key], date: e.target.value }
+                        }))}
+                        className="w-[150px] flex-shrink-0"
+                        data-testid={`input-holiday-date-${key}`}
+                      />
                       <Switch
                         id={`holiday-${key}`}
-                        checked={dutchHolidays[key] ?? true}
-                        onCheckedChange={(checked) => setDutchHolidays(prev => ({ ...prev, [key]: checked }))}
+                        checked={dutchHolidays[key]?.enabled ?? true}
+                        onCheckedChange={(checked) => setDutchHolidays(prev => ({
+                          ...prev,
+                          [key]: { ...prev[key], enabled: checked }
+                        }))}
                         data-testid={`switch-holiday-${key}`}
                       />
                     </div>

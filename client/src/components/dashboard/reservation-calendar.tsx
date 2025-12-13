@@ -46,6 +46,21 @@ import { SpareVehicleAssignmentDialog } from "@/components/reservations/spare-ve
 // Days of the week abbreviations
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Holiday names for display
+const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
+  nieuwjaarsdag: "Nieuwjaarsdag",
+  goede_vrijdag: "Goede Vrijdag",
+  eerste_paasdag: "Eerste Paasdag",
+  tweede_paasdag: "Tweede Paasdag",
+  koningsdag: "Koningsdag",
+  bevrijdingsdag: "Bevrijdingsdag",
+  hemelvaartsdag: "Hemelvaartsdag",
+  eerste_pinksterdag: "Eerste Pinksterdag",
+  tweede_pinksterdag: "Tweede Pinksterdag",
+  eerste_kerstdag: "Eerste Kerstdag",
+  tweede_kerstdag: "Tweede Kerstdag",
+};
+
 export function ReservationCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [_, navigate] = useLocation();
@@ -146,6 +161,66 @@ export function ReservationCalendar() {
       ['booked', 'picked_up', 'returned'].includes(r.status || '')
     );
   }, [allReservations]);
+  
+  // Fetch calendar settings for holidays and blocked dates
+  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
+    queryKey: ["/api/app-settings", "calendar_settings"],
+  });
+  
+  // Helper to check if a date is a holiday or blocked
+  const getDateStatus = useMemo(() => {
+    return (day: Date): { isHoliday: boolean; isBlocked: boolean; holidayName?: string; blockedReason?: string } => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      let isHoliday = false;
+      let isBlocked = false;
+      let holidayName: string | undefined;
+      let blockedReason: string | undefined;
+      
+      if (calendarSettings?.value) {
+        // Check Dutch holidays
+        const dutchHolidays = calendarSettings.value.dutchHolidays;
+        if (dutchHolidays) {
+          for (const [key, value] of Object.entries(dutchHolidays)) {
+            // Handle both old format (boolean) and new format (object with enabled+date)
+            if (typeof value === 'object' && value !== null && 'enabled' in value && 'date' in value) {
+              const holiday = value as { enabled: boolean; date: string };
+              if (holiday.enabled && holiday.date === dateStr) {
+                isHoliday = true;
+                holidayName = DUTCH_HOLIDAY_NAMES[key] || key;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Check custom holidays
+        const customHolidays = calendarSettings.value.holidays;
+        if (customHolidays && Array.isArray(customHolidays)) {
+          for (const holiday of customHolidays) {
+            if (holiday.date === dateStr) {
+              isHoliday = true;
+              holidayName = holiday.name;
+              break;
+            }
+          }
+        }
+        
+        // Check blocked dates
+        const blockedDates = calendarSettings.value.blockedDates;
+        if (blockedDates && Array.isArray(blockedDates)) {
+          for (const blocked of blockedDates) {
+            if (dateStr >= blocked.startDate && dateStr <= blocked.endDate) {
+              isBlocked = true;
+              blockedReason = blocked.reason;
+              break;
+            }
+          }
+        }
+      }
+      
+      return { isHoliday, isBlocked, holidayName, blockedReason };
+    };
+  }, [calendarSettings]);
   
   // Navigation functions
   const navigatePrevious = () => {
@@ -276,6 +351,7 @@ export function ReservationCalendar() {
                 {week.map((day, dayIndex) => {
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isToday = isSameDay(day, new Date());
+                  const dateStatus = getDateStatus(day);
                   
                   // Only get reservations starting or ending on this day
                   const dayReservations = reservations?.filter(res => {
@@ -287,20 +363,60 @@ export function ReservationCalendar() {
                     );
                   }) || [];
                   
+                  // Determine background color based on status
+                  let bgClass = isCurrentMonth ? '' : 'bg-gray-50';
+                  if (dateStatus.isBlocked) {
+                    bgClass = 'bg-red-50';
+                  } else if (dateStatus.isHoliday) {
+                    bgClass = 'bg-orange-50';
+                  } else if (isToday) {
+                    bgClass = 'bg-blue-50';
+                  }
+                  
                   return (
                     <div
                       key={dayIndex}
-                      className={`min-h-[85px] p-2 ${isCurrentMonth ? '' : 'bg-gray-50'} ${isToday ? 'bg-blue-50' : ''} relative group`}
+                      className={`min-h-[85px] p-2 ${bgClass} relative group`}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className={`text-xs font-medium ${isToday ? 'bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
                           {safeFormat(day, "d", "?")}
                         </span>
-                        {dayReservations.length > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {dayReservations.length}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {dateStatus.isHoliday && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 bg-orange-100 text-orange-700 border-orange-300">
+                                    🎉
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">{dateStatus.holidayName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {dateStatus.isBlocked && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-100 text-red-700 border-red-300">
+                                    🚫
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Blocked: {dateStatus.blockedReason || 'Company closure'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {dayReservations.length > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              {dayReservations.length}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Add reservation button - positioned at top center */}
