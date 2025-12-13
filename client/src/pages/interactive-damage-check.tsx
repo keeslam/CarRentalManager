@@ -1379,8 +1379,8 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           {diagramTemplate ? (
             <div 
               ref={containerRef} 
-              className="relative bg-white border rounded-lg overflow-auto" 
-              style={{ maxHeight: 'calc(100vh - 400px)', touchAction: isDrawing ? 'none' : 'auto' }}
+              className="relative bg-white border rounded-lg" 
+              style={{ touchAction: isDrawing ? 'none' : 'auto' }}
             >
               <div className="relative w-full" style={{ touchAction: isDrawing ? 'none' : 'auto' }}>
                 <img 
