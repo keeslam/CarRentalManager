@@ -403,8 +403,8 @@ export default function MaintenanceCalendar() {
   });
 
   // Fetch calendar settings for holidays and blocked dates
-  const { data: calendarSettings } = useQuery<{ key: string; value: any } | null>({
-    queryKey: ["/api/app-settings", "calendar_settings"],
+  const { data: calendarSettings } = useQuery<{ key: string; value: any }[] | null>({
+    queryKey: ["/api/app-settings/calendar_settings"],
   });
 
   // Helper to check if a date is a holiday or blocked
@@ -416,9 +416,12 @@ export default function MaintenanceCalendar() {
       let holidayName: string | undefined;
       let blockedReason: string | undefined;
       
-      if (calendarSettings?.value) {
+      // Get settings value from array response
+      const settings = Array.isArray(calendarSettings) ? calendarSettings[0]?.value : calendarSettings?.value;
+      
+      if (settings) {
         // Check Dutch holidays
-        const dutchHolidays = calendarSettings.value.dutchHolidays;
+        const dutchHolidays = settings.dutchHolidays;
         if (dutchHolidays) {
           for (const [key, value] of Object.entries(dutchHolidays)) {
             // Handle both old format (boolean) and new format (object with enabled+date)
@@ -434,7 +437,7 @@ export default function MaintenanceCalendar() {
         }
         
         // Check custom holidays
-        const customHolidays = calendarSettings.value.holidays;
+        const customHolidays = settings.holidays;
         if (customHolidays && Array.isArray(customHolidays)) {
           for (const holiday of customHolidays) {
             if (holiday.date === dateStr) {
@@ -446,7 +449,7 @@ export default function MaintenanceCalendar() {
         }
         
         // Check blocked dates
-        const blockedDates = calendarSettings.value.blockedDates;
+        const blockedDates = settings.blockedDates;
         if (blockedDates && Array.isArray(blockedDates)) {
           for (const blocked of blockedDates) {
             if (dateStr >= blocked.startDate && dateStr <= blocked.endDate) {
