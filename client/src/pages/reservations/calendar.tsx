@@ -1181,32 +1181,14 @@ export default function ReservationCalendarPage() {
                               {safeFormat(day, "d", "?")}
                             </span>
                             {dateStatus.isHoliday && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 text-xs px-1.5 py-0">
-                                      🎉
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{dateStatus.holidayName || 'Holiday'}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 text-xs px-1.5 py-0">
+                                🎉 {dateStatus.holidayName || 'Holiday'}
+                              </Badge>
                             )}
                             {dateStatus.isBlocked && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300 text-xs px-1.5 py-0">
-                                      🚫
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{dateStatus.blockedReason || 'Blocked'}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300 text-xs px-1.5 py-0">
+                                🚫 {dateStatus.blockedReason || 'Blocked'}
+                              </Badge>
                             )}
                           </div>
                           {dayReservations.length > 0 && (

@@ -387,32 +387,14 @@ export function ReservationCalendar() {
                         </span>
                         <div className="flex items-center gap-1">
                           {dateStatus.isHoliday && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 bg-orange-100 text-orange-700 border-orange-300">
-                                    🎉
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">{dateStatus.holidayName}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-orange-100 text-orange-700 border-orange-300">
+                              🎉 {dateStatus.holidayName || 'Holiday'}
+                            </Badge>
                           )}
                           {dateStatus.isBlocked && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-100 text-red-700 border-red-300">
-                                    🚫
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Blocked: {dateStatus.blockedReason || 'Company closure'}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-100 text-red-700 border-red-300">
+                              🚫 {dateStatus.blockedReason || 'Blocked'}
+                            </Badge>
                           )}
                           {dayReservations.length > 0 && (
                             <Badge variant="outline" className="text-xs">
