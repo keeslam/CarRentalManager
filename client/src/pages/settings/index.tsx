@@ -1801,8 +1801,12 @@ export default function Settings() {
 // Contract Number Settings Component
 function ContractNumberSettings() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [contractNumberStart, setContractNumberStart] = useState("");
   const [nextContractNumber, setNextContractNumber] = useState("");
+  const [overrideInput, setOverrideInput] = useState("");
+  const [conflictWarning, setConflictWarning] = useState<{ count: number; conflicts: string[] } | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Fetch settings
   const { data: settings, isLoading } = useQuery({
@@ -1815,7 +1819,7 @@ function ContractNumberSettings() {
   });
 
   // Fetch next contract number
-  const { data: nextNumber } = useQuery({
+  const { data: nextNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["/api/settings/next-contract-number"],
     queryFn: async () => {
       const response = await fetch("/api/settings/next-contract-number");
@@ -1847,7 +1851,70 @@ function ContractNumberSettings() {
     },
   });
 
-  const queryClient = useQueryClient();
+  // Check conflicts mutation
+  const checkConflicts = useMutation({
+    mutationFn: async (proposedNumber: number) => {
+      const response = await fetch(`/api/settings/contract-number-conflicts/${proposedNumber}`);
+      if (!response.ok) throw new Error("Failed to check conflicts");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.hasConflicts) {
+        setConflictWarning({ count: data.count, conflicts: data.conflicts.slice(0, 5) });
+      } else {
+        setConflictWarning(null);
+      }
+    },
+  });
+
+  // Set override mutation
+  const setOverride = useMutation({
+    mutationFn: async (overrideNumber: number) => {
+      return apiRequest("POST", "/api/settings/contract-number-override", { overrideNumber });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Override Set",
+        description: data.message || `Next contract number is now ${data.nextContractNumber}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+      setOverrideInput("");
+      setConflictWarning(null);
+      setShowConfirmDialog(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to set override. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error setting override:", error);
+    },
+  });
+
+  // Clear override mutation
+  const clearOverride = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/settings/contract-number-override");
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Override Cleared",
+        description: data.message || "Now using automatic contract numbering",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to clear override. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error clearing override:", error);
+    },
+  });
 
   // Set initial values when data loads
   useEffect(() => {
@@ -1862,6 +1929,19 @@ function ContractNumberSettings() {
     }
   }, [nextNumber]);
 
+  // Check for conflicts when override input changes
+  useEffect(() => {
+    const num = parseInt(overrideInput, 10);
+    if (!isNaN(num) && num > 0) {
+      const timer = setTimeout(() => {
+        checkConflicts.mutate(num);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setConflictWarning(null);
+    }
+  }, [overrideInput]);
+
   const handleSave = () => {
     const startNum = parseInt(contractNumberStart);
     if (isNaN(startNum) || startNum < 1) {
@@ -1875,12 +1955,38 @@ function ContractNumberSettings() {
     updateSettings.mutate({ contractNumberStart: startNum });
   };
 
+  const handleSetOverride = () => {
+    const num = parseInt(overrideInput, 10);
+    if (isNaN(num) || num < 1) {
+      toast({
+        title: "Invalid Value",
+        description: "Please enter a valid positive number.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // If there are conflicts, show confirmation dialog
+    if (conflictWarning && conflictWarning.count > 0) {
+      setShowConfirmDialog(true);
+    } else {
+      setOverride.mutate(num);
+    }
+  };
+
+  const handleConfirmOverride = () => {
+    const num = parseInt(overrideInput, 10);
+    setOverride.mutate(num);
+  };
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading...</div>;
   }
 
+  const hasActiveOverride = settings?.contractNumberOverride !== null && settings?.contractNumberOverride !== undefined;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="contractNumberStart">Starting Contract Number</Label>
@@ -1899,19 +2005,18 @@ function ContractNumberSettings() {
         </div>
         <div>
           <Label>Next Contract Number</Label>
-          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center">
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center justify-between">
             <span className="font-medium">{nextContractNumber || "Loading..."}</span>
+            {hasActiveOverride && (
+              <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">
+                Override Active
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
             This will be assigned to the next new reservation
           </p>
         </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Contract numbers are generated sequentially. The system will always use the highest existing contract number + 1, regardless of the starting number set here.
-        </p>
       </div>
 
       <Button
@@ -1920,8 +2025,104 @@ function ContractNumberSettings() {
         className="w-full md:w-auto"
         data-testid="button-save-contract-settings"
       >
-        {updateSettings.isPending ? "Saving..." : "Save Contract Number Settings"}
+        {updateSettings.isPending ? "Saving..." : "Save Starting Number"}
       </Button>
+
+      {/* Smart Override Section */}
+      <div className="border-t pt-6">
+        <h4 className="font-medium mb-4">Smart Override</h4>
+        <p className="text-sm text-gray-600 mb-4">
+          Manually set the next contract number. The system will warn you if this conflicts with existing contract numbers.
+        </p>
+        
+        <div className="flex gap-2 items-start">
+          <div className="flex-1">
+            <Input
+              type="number"
+              min="1"
+              value={overrideInput}
+              onChange={(e) => setOverrideInput(e.target.value)}
+              placeholder="Enter new contract number..."
+              data-testid="input-contract-override"
+            />
+          </div>
+          <Button
+            onClick={handleSetOverride}
+            disabled={!overrideInput || setOverride.isPending}
+            data-testid="button-set-override"
+          >
+            {setOverride.isPending ? "Setting..." : "Set Override"}
+          </Button>
+          {hasActiveOverride && (
+            <Button
+              variant="outline"
+              onClick={() => clearOverride.mutate()}
+              disabled={clearOverride.isPending}
+              data-testid="button-clear-override"
+            >
+              {clearOverride.isPending ? "Clearing..." : "Clear Override"}
+            </Button>
+          )}
+        </div>
+
+        {/* Conflict Warning */}
+        {conflictWarning && conflictWarning.count > 0 && (
+          <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-800 font-medium">
+              Warning: {conflictWarning.count} existing contract number{conflictWarning.count > 1 ? 's' : ''} may conflict
+            </p>
+            <p className="text-sm text-yellow-700 mt-1">
+              Numbers that are equal or higher: {conflictWarning.conflicts.join(", ")}
+              {conflictWarning.count > 5 ? ` and ${conflictWarning.count - 5} more...` : ""}
+            </p>
+            <p className="text-sm text-yellow-700 mt-2">
+              You can still set this override, but future automatic numbering may create duplicates.
+            </p>
+          </div>
+        )}
+
+        {/* No conflicts message */}
+        {overrideInput && !checkConflicts.isPending && !conflictWarning && parseInt(overrideInput, 10) > 0 && (
+          <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">
+              No conflicts found. This number is safe to use.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>Note:</strong> Contract numbers are generated sequentially. Without an override, the system uses the highest existing contract number + 1.
+        </p>
+      </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Override</DialogTitle>
+            <DialogDescription>
+              There are {conflictWarning?.count} existing contract numbers that may conflict with this value.
+              Are you sure you want to set the next contract number to {overrideInput}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 my-4">
+            <p className="text-sm text-yellow-800">
+              Conflicting numbers: {conflictWarning?.conflicts.join(", ")}
+              {(conflictWarning?.count || 0) > 5 ? ` and ${(conflictWarning?.count || 0) - 5} more...` : ""}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmOverride} disabled={setOverride.isPending}>
+              {setOverride.isPending ? "Setting..." : "Override Anyway"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

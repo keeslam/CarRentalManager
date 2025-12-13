@@ -3589,6 +3589,22 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
+      // Auto-clear contract number override if this contract number matches the override
+      // This makes the override a "one-shot" feature
+      try {
+        const settings = await storage.getSettings();
+        if (settings?.contractNumberOverride) {
+          const usedNumber = parseInt(contractNumber.trim(), 10);
+          if (!isNaN(usedNumber) && usedNumber === settings.contractNumberOverride) {
+            await storage.clearContractNumberOverride('System (auto-clear after use)');
+            console.log(`🔄 Auto-cleared contract number override after using ${usedNumber}`);
+          }
+        }
+      } catch (overrideError) {
+        console.error('Warning: Failed to auto-clear contract number override:', overrideError);
+        // Don't fail the pickup if override clear fails
+      }
+
       let contractDocument = null;
       try {
         const { generateRentalContractFromTemplate } = await import('./utils/pdf-generator');
@@ -7896,6 +7912,71 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error checking contract number:", error);
       res.status(500).json({ message: "Error checking contract number" });
+    }
+  });
+
+  // Get conflicting contract numbers for a proposed override
+  app.get("/api/settings/contract-number-conflicts/:proposedNumber", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const proposedNumber = parseInt(req.params.proposedNumber, 10);
+      if (isNaN(proposedNumber) || proposedNumber < 1) {
+        return res.status(400).json({ message: "Invalid proposed number" });
+      }
+      const conflicts = await storage.getConflictingContractNumbers(proposedNumber);
+      res.json({ conflicts, hasConflicts: conflicts.length > 0, count: conflicts.length });
+    } catch (error) {
+      console.error("Error checking contract number conflicts:", error);
+      res.status(500).json({ message: "Error checking conflicts" });
+    }
+  });
+
+  // Set contract number override (smart override feature)
+  app.post("/api/settings/contract-number-override", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { overrideNumber } = req.body;
+      
+      if (overrideNumber !== null && (typeof overrideNumber !== 'number' || overrideNumber < 1)) {
+        return res.status(400).json({ message: "Invalid override number. Must be a positive integer or null to clear." });
+      }
+      
+      const username = req.user?.username || 'Unknown';
+      const updatedSettings = await storage.setContractNumberOverride(overrideNumber, username);
+      
+      if (!updatedSettings) {
+        return res.status(500).json({ message: "Failed to set override" });
+      }
+      
+      // Return the updated settings along with the new next contract number
+      const nextNumber = await storage.getNextContractNumber();
+      
+      res.json({ 
+        success: true, 
+        settings: updatedSettings,
+        nextContractNumber: nextNumber,
+        message: overrideNumber ? `Next contract number set to ${overrideNumber}` : 'Override cleared'
+      });
+    } catch (error) {
+      console.error("Error setting contract number override:", error);
+      res.status(500).json({ message: "Error setting override" });
+    }
+  });
+
+  // Clear contract number override
+  app.delete("/api/settings/contract-number-override", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const username = req.user?.username || 'Unknown';
+      const updatedSettings = await storage.clearContractNumberOverride(username);
+      const nextNumber = await storage.getNextContractNumber();
+      
+      res.json({ 
+        success: true, 
+        settings: updatedSettings,
+        nextContractNumber: nextNumber,
+        message: 'Override cleared - using automatic numbering'
+      });
+    } catch (error) {
+      console.error("Error clearing contract number override:", error);
+      res.status(500).json({ message: "Error clearing override" });
     }
   });
 

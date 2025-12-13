@@ -2400,6 +2400,11 @@ export class DatabaseStorage implements IStorage {
     const settingsRecord = await this.getSettings();
     const startNumber = settingsRecord?.contractNumberStart || 1;
     
+    // Check if there's a manual override set
+    if (settingsRecord?.contractNumberOverride) {
+      return String(settingsRecord.contractNumberOverride);
+    }
+    
     // Find the highest contract number by checking all reservations
     const allReservations = await db.select({ contractNumber: reservations.contractNumber })
       .from(reservations);
@@ -2417,6 +2422,59 @@ export class DatabaseStorage implements IStorage {
     }
     
     return String(maxNumber + 1);
+  }
+  
+  async getConflictingContractNumbers(proposedNumber: number): Promise<string[]> {
+    // Find all contract numbers that are >= proposedNumber
+    const allReservations = await db.select({ contractNumber: reservations.contractNumber })
+      .from(reservations);
+    
+    const conflicting: string[] = [];
+    
+    for (const res of allReservations) {
+      if (res.contractNumber) {
+        const num = parseInt(res.contractNumber, 10);
+        if (!isNaN(num) && num >= proposedNumber) {
+          conflicting.push(res.contractNumber);
+        }
+      }
+    }
+    
+    // Sort numerically
+    return conflicting.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  }
+  
+  async setContractNumberOverride(overrideNumber: number | null, updatedBy?: string): Promise<Settings | undefined> {
+    const existingSettings = await this.getSettings();
+    
+    const updateData = {
+      contractNumberOverride: overrideNumber,
+      updatedAt: new Date(),
+      updatedBy: updatedBy || null
+    };
+    
+    if (existingSettings) {
+      const [updatedSettings] = await db
+        .update(settings)
+        .set(updateData)
+        .where(eq(settings.id, existingSettings.id))
+        .returning();
+      return updatedSettings || undefined;
+    } else {
+      // Create new record if none exists
+      const [newSettings] = await db
+        .insert(settings)
+        .values({ 
+          contractNumberStart: 1,
+          contractNumberOverride: overrideNumber
+        })
+        .returning();
+      return newSettings;
+    }
+  }
+  
+  async clearContractNumberOverride(updatedBy?: string): Promise<Settings | undefined> {
+    return this.setContractNumberOverride(null, updatedBy);
   }
 
   async checkContractNumberExists(contractNumber: string): Promise<boolean> {

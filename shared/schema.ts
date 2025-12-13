@@ -1530,6 +1530,7 @@ export type InsertActiveSession = z.infer<typeof insertActiveSessionSchema>;
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   contractNumberStart: integer("contract_number_start").notNull().default(1),
+  contractNumberOverride: integer("contract_number_override"), // Manual override for next contract number
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   updatedBy: text("updated_by"),
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
@@ -1543,6 +1544,7 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 
 export const updateSettingsSchema = createInsertSchema(settings).pick({
   contractNumberStart: true,
+  contractNumberOverride: true,
   updatedBy: true,
 }).partial();
 

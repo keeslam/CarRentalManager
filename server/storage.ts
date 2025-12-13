@@ -150,6 +150,9 @@ export interface IStorage {
   updateSettings(settingData: UpdateSettings): Promise<Settings | undefined>;
   getNextContractNumber(): Promise<string>;
   checkContractNumberExists(contractNumber: string): Promise<boolean>;
+  getConflictingContractNumbers(proposedNumber: number): Promise<string[]>;
+  setContractNumberOverride(overrideNumber: number | null, updatedBy?: string): Promise<Settings | undefined>;
+  clearContractNumberOverride(updatedBy?: string): Promise<Settings | undefined>;
   
   // Driver methods
   getAllDrivers(): Promise<Driver[]>;
