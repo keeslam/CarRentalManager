@@ -313,7 +313,7 @@ const CustomNotificationsPage = () => {
               <Plus className="mr-2 h-4 w-4" /> Add Notification
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Custom Notification</DialogTitle>
               <DialogDescription>
@@ -458,7 +458,7 @@ const CustomNotificationsPage = () => {
 
       {/* Edit Notification Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Notification</DialogTitle>
             <DialogDescription>
@@ -598,7 +598,7 @@ const CustomNotificationsPage = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>

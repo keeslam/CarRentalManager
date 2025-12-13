@@ -343,7 +343,7 @@ const PDFTemplateEditor = () => {
                   New Template
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Template</DialogTitle>
                   <DialogDescription>
@@ -498,7 +498,7 @@ const PDFTemplateEditor = () => {
                                 Add Field
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Add New Field</DialogTitle>
                                 <DialogDescription>

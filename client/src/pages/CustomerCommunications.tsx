@@ -2192,7 +2192,7 @@ export default function CustomerCommunications() {
 
       {/* Delete Template Confirmation Dialog */}
       <Dialog open={!!templateToDelete} onOpenChange={() => setTemplateToDelete(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Delete Template</DialogTitle>
             <DialogDescription>

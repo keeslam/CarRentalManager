@@ -1506,7 +1506,7 @@ export default function Settings() {
                       Add Email Config
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {editingEmail ? 'Edit Email Configuration' : 'Add Email Configuration'}
@@ -2178,7 +2178,7 @@ function ContractNumberSettings() {
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Override</DialogTitle>
             <DialogDescription>

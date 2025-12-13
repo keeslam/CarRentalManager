@@ -178,7 +178,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   if (!isAdmin) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Access Denied</DialogTitle>
           </DialogHeader>

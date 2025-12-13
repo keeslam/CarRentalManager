@@ -346,7 +346,7 @@ export default function ReportBuilder() {
       )}
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent data-testid="dialog-save-report">
+        <DialogContent className="max-h-[90vh] overflow-y-auto" data-testid="dialog-save-report">
           <DialogHeader>
             <DialogTitle>Save Report</DialogTitle>
             <DialogDescription>Give your report a name and description</DialogDescription>
