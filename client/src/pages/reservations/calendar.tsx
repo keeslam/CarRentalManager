@@ -68,7 +68,7 @@ import { EmailDocumentDialog } from "@/components/documents/email-document-dialo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
-import { ServiceVehicleDialog } from "@/components/reservations/service-vehicle-dialog";
+import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { ReturnFromServiceDialog } from "@/components/reservations/return-from-service-dialog";
 
 // Holiday names for display
@@ -2466,10 +2466,11 @@ export default function ReservationCalendarPage() {
       {/* Service-related dialogs */}
       {selectedReservation && (
         <>
-          <ServiceVehicleDialog
+          <ScheduleMaintenanceDialog
             open={isServiceDialogOpen}
             onOpenChange={setIsServiceDialogOpen}
-            reservationId={selectedReservation.id}
+            initialVehicleId={selectedReservation.vehicleId || undefined}
+            initialDate={new Date().toISOString().split('T')[0]}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${selectedReservation?.vehicleId}`] });
               queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
