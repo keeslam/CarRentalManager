@@ -8402,18 +8402,18 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get app setting by key (returns single setting or null)
-  // For calendar_settings, auto-calculates Dutch holidays and merges with overrides
+  // For calendar_settings, auto-calculates Dutch holidays for multiple years and merges with overrides
   app.get("/api/app-settings/key/:key", requireAuth, async (req: Request, res: Response) => {
     try {
       const { key } = req.params;
       const setting = await storage.getAppSettingByKey(key);
       
-      // Special handling for calendar_settings: auto-calculate Dutch holidays
+      // Special handling for calendar_settings: auto-calculate Dutch holidays for multiple years
       if (key === 'calendar_settings' && setting?.value) {
         const currentYear = new Date().getFullYear();
         const storedDutchHolidays = setting.value.dutchHolidays || {};
         
-        // Convert stored format to override format and merge with calculated dates
+        // Convert stored format to override format
         const overrides: Record<string, { enabled: boolean; overrideDate?: string }> = {};
         for (const [holidayKey, value] of Object.entries(storedDutchHolidays)) {
           if (typeof value === 'object' && value !== null && 'enabled' in value) {
@@ -8428,16 +8428,53 @@ export async function registerRoutes(app: Express): Promise<void> {
           }
         }
         
-        // Merge calculated holidays with overrides
-        const mergedHolidays = mergeHolidaysWithOverrides(currentYear, overrides);
+        // Calculate holidays for current year and next 2 years (to support calendar navigation)
+        const yearsToCalculate = [currentYear, currentYear + 1, currentYear + 2];
+        const dutchHolidaysByYear: Record<number, Record<string, { enabled: boolean; date: string; isOverridden: boolean; calculatedDate: string }>> = {};
         
-        // Return enhanced setting with auto-calculated dates
+        // Also build a flat list of all holiday dates for easy lookup
+        const allHolidayDates: Record<string, { enabled: boolean; date: string; holidayKey: string; year: number }> = {};
+        
+        for (const year of yearsToCalculate) {
+          // Only apply date overrides to current year - future years get pure calculated dates
+          // But enabled/disabled state applies to all years
+          const yearOverrides: Record<string, { enabled: boolean; overrideDate?: string }> = {};
+          for (const [holidayKey, override] of Object.entries(overrides)) {
+            yearOverrides[holidayKey] = {
+              enabled: override.enabled,
+              // Only include overrideDate for current year
+              overrideDate: year === currentYear ? override.overrideDate : undefined
+            };
+          }
+          
+          const mergedHolidays = mergeHolidaysWithOverrides(year, yearOverrides);
+          dutchHolidaysByYear[year] = mergedHolidays;
+          
+          // Add each holiday to the flat lookup map (keyed by date)
+          for (const [holidayKey, holidayData] of Object.entries(mergedHolidays)) {
+            if (holidayData.enabled) {
+              allHolidayDates[holidayData.date] = {
+                enabled: holidayData.enabled,
+                date: holidayData.date,
+                holidayKey,
+                year
+              };
+            }
+          }
+        }
+        
+        // Return enhanced setting with multi-year auto-calculated dates
+        // dutchHolidays remains for backward compatibility (current year)
+        // dutchHolidaysByYear contains all years
+        // allHolidayDates is a flat lookup for calendar rendering
         res.json({
           ...setting,
           value: {
             ...setting.value,
-            dutchHolidays: mergedHolidays,
-            calculatedYear: currentYear
+            dutchHolidays: dutchHolidaysByYear[currentYear],
+            dutchHolidaysByYear,
+            allHolidayDates,
+            calculatedYears: yearsToCalculate
           }
         });
         return;

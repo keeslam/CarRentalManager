@@ -180,17 +180,27 @@ export function ReservationCalendar() {
       const settings = calendarSettings?.value;
       
       if (settings) {
-        // Check Dutch holidays
-        const dutchHolidays = settings.dutchHolidays;
-        if (dutchHolidays) {
-          for (const [key, value] of Object.entries(dutchHolidays)) {
-            // Handle both old format (boolean) and new format (object with enabled+date)
-            if (typeof value === 'object' && value !== null && 'enabled' in value && 'date' in value) {
-              const holiday = value as { enabled: boolean; date: string };
-              if (holiday.enabled && holiday.date === dateStr) {
-                isHoliday = true;
-                holidayName = DUTCH_HOLIDAY_NAMES[key] || key;
-                break;
+        // Use allHolidayDates for efficient O(1) multi-year holiday lookup
+        const allHolidayDates = settings.allHolidayDates;
+        if (allHolidayDates && allHolidayDates[dateStr]) {
+          const holiday = allHolidayDates[dateStr];
+          if (holiday.enabled) {
+            isHoliday = true;
+            holidayName = DUTCH_HOLIDAY_NAMES[holiday.holidayKey] || holiday.holidayKey;
+          }
+        } else {
+          // Fallback to dutchHolidays for backward compatibility
+          const dutchHolidays = settings.dutchHolidays;
+          if (dutchHolidays) {
+            for (const [key, value] of Object.entries(dutchHolidays)) {
+              // Handle both old format (boolean) and new format (object with enabled+date)
+              if (typeof value === 'object' && value !== null && 'enabled' in value && 'date' in value) {
+                const holiday = value as { enabled: boolean; date: string };
+                if (holiday.enabled && holiday.date === dateStr) {
+                  isHoliday = true;
+                  holidayName = DUTCH_HOLIDAY_NAMES[key] || key;
+                  break;
+                }
               }
             }
           }
