@@ -29,6 +29,45 @@ export const ReservationStatus = {
   COMPLETED: 'completed',     // Fully processed and closed
 } as const;
 
+// Spare Vehicle Status enum
+export const SpareVehicleStatus = {
+  ASSIGNED: 'assigned',       // Spare vehicle assigned to reservation
+  READY: 'ready',             // Vehicle prepared and ready for pickup
+  PICKED_UP: 'picked_up',     // Customer has picked up spare vehicle
+  RETURNED: 'returned',       // Spare vehicle returned
+} as const;
+
+// Valid status transitions for reservations
+export const VALID_RESERVATION_TRANSITIONS: Record<string, string[]> = {
+  'booked': ['picked_up', 'cancelled'],
+  'picked_up': ['completed', 'cancelled'],
+  'completed': [], // Final state
+  'cancelled': [], // Final state
+  'returned': ['completed'], // Legacy state - can transition to completed
+};
+
+// Valid status transitions for spare vehicles
+export const VALID_SPARE_TRANSITIONS: Record<string, string[]> = {
+  'assigned': ['ready', 'cancelled'],
+  'ready': ['picked_up', 'cancelled'],
+  'picked_up': ['returned'],
+  'returned': [], // Final state
+  'cancelled': [], // Final state
+};
+
+// Validation helper: check if a status transition is valid
+export function isValidReservationTransition(currentStatus: string | null, newStatus: string): boolean {
+  if (!currentStatus) return newStatus === 'booked'; // New reservations start as booked
+  const validNext = VALID_RESERVATION_TRANSITIONS[currentStatus] || [];
+  return validNext.includes(newStatus) || currentStatus === newStatus; // Allow same status (idempotent)
+}
+
+export function isValidSpareTransition(currentStatus: string | null, newStatus: string): boolean {
+  if (!currentStatus) return newStatus === 'assigned'; // New spare assignments start as assigned
+  const validNext = VALID_SPARE_TRANSITIONS[currentStatus] || [];
+  return validNext.includes(newStatus) || currentStatus === newStatus; // Allow same status (idempotent)
+}
+
 // Permissions
 export const UserPermission = {
   // User Management
@@ -525,6 +564,51 @@ export const insertReservationSchema = insertReservationSchemaBase
 }, {
   message: "Non-placeholder reservations must have a vehicleId",
   path: ["vehicleId"]
+})
+.refine((data) => {
+  // Date validation: endDate must be >= startDate (when endDate is provided)
+  if (data.endDate && data.startDate) {
+    return data.endDate >= data.startDate;
+  }
+  return true; // Open-ended rentals (no endDate) are valid
+}, {
+  message: "End date must be on or after start date",
+  path: ["endDate"]
+});
+
+// ============= MILEAGE & FUEL VALIDATION HELPERS =============
+
+// Validates that mileage is non-negative
+export const mileageSchema = z.coerce.number().min(0, "Mileage cannot be negative").optional().or(z.null());
+
+// Validates that fuel level is between 0 and 100 (percentage) or valid fuel amount
+export const fuelLevelSchema = z.coerce.number().min(0, "Fuel level cannot be negative").optional().or(z.null());
+
+// Validates that fuel cost is non-negative
+export const fuelCostSchema = z.coerce.number().min(0, "Fuel cost cannot be negative").optional().or(z.null());
+
+// Pickup validation schema
+export const pickupValidationSchema = z.object({
+  contractNumber: z.string().min(1, "Contract number is required for pickup"),
+  pickupMileage: z.coerce.number().min(0, "Mileage cannot be negative"),
+  pickupFuelLevel: z.coerce.number().min(0, "Fuel level cannot be negative").optional(),
+});
+
+// Return validation schema with mileage comparison
+export const returnValidationSchema = z.object({
+  returnMileage: z.coerce.number().min(0, "Mileage cannot be negative"),
+  pickupMileage: z.coerce.number().optional(), // For comparison
+  returnFuelLevel: z.coerce.number().min(0, "Fuel level cannot be negative").optional(),
+  fuelCost: z.coerce.number().min(0, "Fuel cost cannot be negative").optional(),
+}).refine((data) => {
+  // Return mileage must be >= pickup mileage (when both are provided)
+  if (data.returnMileage !== undefined && data.pickupMileage !== undefined) {
+    return data.returnMileage >= data.pickupMileage;
+  }
+  return true;
+}, {
+  message: "Return mileage cannot be less than pickup mileage",
+  path: ["returnMileage"]
 });
 
 // ============= PLACEHOLDER SPARE VEHICLE SCHEMAS =============
