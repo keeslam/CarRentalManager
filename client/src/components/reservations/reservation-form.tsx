@@ -100,13 +100,13 @@ const formSchema = insertReservationSchemaBase.extend({
   ]).nullish(),
   damageCheckFile: z.instanceof(File).optional(),
   departureMileage: z.union([
-    z.number().min(0, "Mileage cannot be negative").nullish(),
+    z.number().nullish(),
     z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
-  ]).nullish(),
+  ]).nullish().refine(val => val === null || val === undefined || val >= 0, { message: "Mileage cannot be negative" }),
   startMileage: z.union([
-    z.number().min(0, "Mileage cannot be negative").nullish(),
+    z.number().nullish(),
     z.string().transform(val => val === "" || val === null ? null : parseInt(val) || null),
-  ]).nullish(),
+  ]).nullish().refine(val => val === null || val === undefined || val >= 0, { message: "Mileage cannot be negative" }),
   fuelLevelPickup: z.string().nullish(),
   fuelLevelReturn: z.string().nullish(),
   fuelCost: z.union([
