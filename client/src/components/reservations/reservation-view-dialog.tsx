@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatDate, formatCurrency, formatLicensePlate, formatReservationStatus } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer, Driver, Document } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
-import { Wrench, Car, ArrowRightLeft, Trash2, Edit, FileText, Upload, FileCheck, X, Camera } from "lucide-react";
+import { Wrench, Car, ArrowRightLeft, Trash2, Edit, FileText, Upload, FileCheck, X, Camera, AlertCircle } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { 
   AlertDialog,
@@ -263,7 +263,7 @@ export function ReservationViewDialog({
               <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex gap-2 mt-1 flex-wrap">
                     <Badge className={`${getStatusStyle(reservation.status)}`}>
                       {formatReservationStatus(reservation.status)}
                     </Badge>
@@ -276,6 +276,13 @@ export function ReservationViewDialog({
                         </Badge>
                       ) : null;
                     })()}
+                    {reservation.status === 'picked_up' && reservation.endDate && 
+                      differenceInDays(new Date(), parseISO(reservation.endDate)) > 0 && (
+                        <Badge className="bg-red-100 text-red-800 border-red-200 flex items-center gap-1" data-testid="badge-overdue">
+                          <AlertCircle className="w-3 h-3" />
+                          {differenceInDays(new Date(), parseISO(reservation.endDate))}d Overdue
+                        </Badge>
+                    )}
                   </div>
                 </div>
                 <div>
