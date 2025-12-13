@@ -479,7 +479,7 @@ export default function Settings() {
     }
 
     try {
-      await apiRequest('DELETE', `/api/settings/${id}`);
+      await apiRequest('DELETE', `/api/app-settings/${id}`);
       queryClient.invalidateQueries({ queryKey: ['/api/app-settings/email'] });
       toast({ 
         title: "Success", 
