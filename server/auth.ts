@@ -81,9 +81,9 @@ export function setupAuth(app: Express) {
     store: createSessionStore(useDatabase),
     cookie: {
       maxAge: 15 * 60 * 1000, // 15 minutes inactivity timeout
-      secure: process.env.SECURE_COOKIES === 'true', // Only use secure cookies when explicitly set (requires HTTPS)
+      secure: process.env.NODE_ENV === 'production' || process.env.SECURE_COOKIES === 'true', // Auto-enable in production
       httpOnly: true, // Prevent XSS attacks
-      sameSite: 'lax' // CSRF protection while allowing normal navigation
+      sameSite: 'strict' // Strict CSRF protection - blocks all cross-site requests
     }
   };
 
@@ -266,33 +266,49 @@ export function setupAuth(app: Express) {
         return res.status(403).json({ message: "Account has been disabled" });
       }
       
-      req.login(user, async (err: any) => {
-        if (err) return next(err);
+      // Regenerate session to prevent session fixation attacks
+      const oldSession = req.session;
+      req.session.regenerate((regenerateErr: any) => {
+        if (regenerateErr) {
+          console.error('Session regeneration failed:', regenerateErr);
+          // Continue with login even if regeneration fails
+        }
         
-        // Record successful login attempt
-        await recordLoginAttempt(username, ipAddress, userAgent, true);
+        // Copy old session data if needed (excluding sensitive data)
+        if (oldSession) {
+          Object.assign(req.session, {
+            cookie: oldSession.cookie
+          });
+        }
         
-        // Clear failed login attempts
-        await clearFailedAttempts(username);
-        
-        // Track active session
-        const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-        await trackSession(req.sessionID, user.id, user.username, req, sessionExpiry);
-        
-        // Log successful login
-        await AuditLogger.log({
-          userId: user.id,
-          username: user.username,
-          action: 'user.login',
-          details: { role: user.role },
-          ipAddress,
-          userAgent,
-          status: 'success',
+        req.login(user, async (err: any) => {
+          if (err) return next(err);
+          
+          // Record successful login attempt
+          await recordLoginAttempt(username, ipAddress, userAgent, true);
+          
+          // Clear failed login attempts
+          await clearFailedAttempts(username);
+          
+          // Track active session
+          const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+          await trackSession(req.sessionID, user.id, user.username, req, sessionExpiry);
+          
+          // Log successful login
+          await AuditLogger.log({
+            userId: user.id,
+            username: user.username,
+            action: 'user.login',
+            details: { role: user.role },
+            ipAddress,
+            userAgent,
+            status: 'success',
+          });
+          
+          // Return user without password
+          const { password, ...userWithoutPassword } = user;
+          res.status(200).json(userWithoutPassword);
         });
-        
-        // Return user without password
-        const { password, ...userWithoutPassword } = user;
-        res.status(200).json(userWithoutPassword);
       });
     })(req, res, next);
   });

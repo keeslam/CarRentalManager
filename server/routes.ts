@@ -42,6 +42,12 @@ import {
   VehicleAvailabilityStatus 
 } from "./vehicle-status-helper";
 import { calculateDutchHolidays, mergeHolidaysWithOverrides } from "../shared/holidays";
+import { 
+  createSecureMulterFilter, 
+  validateAfterUpload, 
+  isDangerousExtension,
+  sanitizeFilename 
+} from "./utils/security/fileUploadSecurity";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -106,38 +112,22 @@ export async function registerRoutes(app: Express): Promise<void> {
     throw new Error(`Upload directory setup failed. Please ensure the application has write permissions to: ${uploadsDir}`);
   }
 
-  // Configure multer for file uploads (PDFs for invoices/expenses)
+  // Configure multer for file uploads (PDFs for invoices/expenses) with enhanced security
   const upload = multer({
     dest: path.join(uploadsDir, 'temp'),
     limits: {
       fileSize: 25 * 1024 * 1024, // 25MB limit for invoices
     },
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype === 'application/pdf') {
-        cb(null, true);
-      } else {
-        cb(new Error('Only PDF files are allowed'));
-      }
-    },
+    fileFilter: createSecureMulterFilter('pdf'),
   });
 
-  // Configure multer for backup uploads (backup files)
+  // Configure multer for backup uploads (backup files) with enhanced security
   const backupUpload = multer({
     dest: path.join(uploadsDir, 'temp'),
     limits: {
       fileSize: 1000 * 1024 * 1024, // 1GB limit for backups
     },
-    fileFilter: (req, file, cb) => {
-      const filename = file.originalname.toLowerCase();
-      const allowedExtensions = ['.sql', '.sql.gz', '.tar.gz', '.tgz', '.gz'];
-      const isAllowed = allowedExtensions.some(ext => filename.endsWith(ext));
-      
-      if (isAllowed) {
-        cb(null, true);
-      } else {
-        cb(new Error('Only backup files (.sql, .sql.gz, .tar.gz, .tgz) are allowed'));
-      }
-    },
+    fileFilter: createSecureMulterFilter('backup'),
   });
   
   // Configure multer for diagram images - using disk storage like all other uploads
@@ -157,19 +147,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Configure multer for diagram images with enhanced security
   const diagramUpload = multer({
     storage: diagramStorage,
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit for images
     },
-    fileFilter: (req, file, cb) => {
-      const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-      if (allowedMimeTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Only PNG and JPEG images are allowed'));
-      }
-    },
+    fileFilter: createSecureMulterFilter('image'),
   });
 
   // Configure multer for fuel receipt uploads
@@ -237,31 +221,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Configure multer for fuel receipt uploads with enhanced security
   const fuelReceiptUpload = multer({
     storage: fuelReceiptStorage,
     limits: {
       fileSize: 25 * 1024 * 1024, // 25MB limit for PDFs and images
     },
-    fileFilter: (req, file, cb) => {
-      // Accept only specific file types
-      const fileTypes = /jpeg|jpg|png|pdf/;
-      const fileExt = path.extname(file.originalname).toLowerCase();
-      const extname = fileTypes.test(fileExt);
-      
-      const allowedMimeTypes = [
-        'image/jpeg', 'image/jpg', 'image/png',
-        'application/pdf', 'application/x-pdf', 'text/pdf'
-      ];
-      
-      const isPDF = file.mimetype.includes('pdf') || fileExt === '.pdf';
-      const isAllowedMimetype = allowedMimeTypes.includes(file.mimetype);
-      
-      if (extname && (isAllowedMimetype || isPDF)) {
-        return cb(null, true);
-      } else {
-        cb(new Error(`Only .jpg, .jpeg, .png, and .pdf files are allowed.`) as any, false);
-      }
-    },
+    fileFilter: createSecureMulterFilter('document'),
   });
   
   // Set up authentication routes and middleware
@@ -2167,23 +2133,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Configure multer for damage check uploads with enhanced security
   const damageCheckUpload = multer({
     storage: damageCheckStorage,
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit
     },
-    fileFilter: (req, file, cb) => {
-      // Accept only specific file types
-      const fileTypes = /jpeg|jpg|png|pdf/;
-      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = fileTypes.test(file.mimetype);
-      
-      if (extname && mimetype) {
-        return cb(null, true);
-      } else {
-        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
-      }
-    },
+    fileFilter: createSecureMulterFilter('document'),
   });
   
   // Create reservation with damage check upload
@@ -4098,50 +4054,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Configure multer for expense receipt uploads with enhanced security
   const expenseReceiptUpload = multer({
     storage: expenseReceiptStorage,
     limits: {
       fileSize: 25 * 1024 * 1024, // 25MB limit for PDFs and images
     },
-    fileFilter: (req, file, cb) => {
-      // Log file info for debugging
-      console.log("File upload attempt:", {
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size
-      });
-      
-      // Accept only specific file types
-      const fileTypes = /jpeg|jpg|png|pdf/;
-      // Extract the extension and convert to lowercase
-      const fileExt = path.extname(file.originalname).toLowerCase();
-      const extname = fileTypes.test(fileExt);
-      
-      // PDF files sometimes have different MIME types
-      const allowedMimeTypes = [
-        'image/jpeg', 'image/jpg', 'image/png',
-        'application/pdf', 'application/x-pdf', 'text/pdf'
-      ];
-      
-      // If the mimetype includes 'pdf' (anywhere in the string), consider it a PDF
-      const isPDF = file.mimetype.includes('pdf') || fileExt === '.pdf';
-      const isAllowedMimetype = allowedMimeTypes.includes(file.mimetype);
-      
-      console.log("File validation:", {
-        fileExt,
-        extname,
-        isPDF,
-        isAllowedMimetype
-      });
-      
-      if (extname && (isAllowedMimetype || isPDF)) {
-        console.log("File accepted");
-        return cb(null, true);
-      } else {
-        console.error(`File rejected: ${file.originalname}, mimetype: ${file.mimetype}, extension: ${fileExt}`);
-        cb(new Error(`Only .jpg, .jpeg, .png, and .pdf files are allowed. Received: ${fileExt} with mimetype: ${file.mimetype}`) as any, false);
-      }
-    },
+    fileFilter: createSecureMulterFilter('document'),
   });
 
   // Delete reservation (soft delete with user tracking)
@@ -4725,22 +4644,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Configure multer for document uploads with enhanced security
   const documentUpload = multer({
     storage: documentStorage,
     limits: {
       fileSize: 25 * 1024 * 1024, // 25MB limit for documents
     },
-    fileFilter: (req, file, cb) => {
-      // Accept common document types
-      const fileTypes = /jpeg|jpg|png|pdf|doc|docx|xls|xlsx|txt|csv/;
-      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-      
-      if (extname) {
-        return cb(null, true);
-      } else {
-        cb(new Error("Unsupported file type") as any, false);
-      }
-    },
+    fileFilter: createSecureMulterFilter('document'),
   });
 
   // Get all documents
@@ -6349,20 +6259,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Configure multer for template background uploads (memory storage for object storage)
+  // Configure multer for template background uploads (memory storage) with enhanced security
   const templateBackgroundUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit for backgrounds
     },
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Invalid file type. Only JPG, PNG, and PDF are allowed.'));
-      }
-    }
+    fileFilter: createSecureMulterFilter('document'),
   });
 
   // Upload template background
@@ -8113,22 +8016,13 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  // Configure multer for driver license uploads with enhanced security
   const driverLicenseUpload = multer({
     storage: driverLicenseStorage,
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB limit
     },
-    fileFilter: (req, file, cb) => {
-      const fileTypes = /jpeg|jpg|png|pdf/;
-      const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = fileTypes.test(file.mimetype);
-      
-      if (extname && mimetype) {
-        return cb(null, true);
-      } else {
-        cb(new Error("Only .jpg, .jpeg, .png, and .pdf files are allowed") as any, false);
-      }
-    },
+    fileFilter: createSecureMulterFilter('document'),
   });
   
   // Get all drivers for a specific customer
