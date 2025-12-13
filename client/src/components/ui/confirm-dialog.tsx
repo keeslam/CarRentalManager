@@ -41,11 +41,6 @@ export function ConfirmDialog({
     onOpenChange(false);
   };
 
-  const handleCancel = () => {
-    onCancel?.();
-    onOpenChange(false);
-  };
-
   const getIcon = () => {
     switch (variant) {
       case "danger":
@@ -72,8 +67,15 @@ export function ConfirmDialog({
     }
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      onCancel?.();
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent data-testid="confirm-dialog">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
@@ -86,7 +88,6 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel 
-            onClick={handleCancel} 
             disabled={isLoading}
             data-testid="confirm-dialog-cancel"
           >
@@ -143,11 +144,7 @@ export function useConfirmDialog(options: UseConfirmDialogOptions): UseConfirmDi
   const ConfirmDialogComponent = useCallback(() => (
     <ConfirmDialog
       open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          handleCancel();
-        }
-      }}
+      onOpenChange={setOpen}
       title={options.title}
       description={options.description}
       confirmLabel={options.confirmLabel}
