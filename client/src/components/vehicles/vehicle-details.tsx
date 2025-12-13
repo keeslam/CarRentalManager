@@ -14,7 +14,8 @@ import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
-import { Vehicle, Expense, Document, Reservation } from "@shared/schema";
+import { Vehicle, Expense, Document, Reservation, UserRole } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
 import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
@@ -111,6 +112,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   const [expenseCategoryPages, setExpenseCategoryPages] = useState<Record<string, number>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
   
   // Expense pagination helpers
   const EXPENSE_ITEMS_PER_PAGE = 5;
@@ -1020,6 +1023,22 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 ? `${Number(vehicle.currentMileage).toLocaleString()} km` 
                 : "N/A"}
             </p>
+            {isAdmin && vehicle.mileageDecreasedBy && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+                <div className="flex items-center gap-1 text-amber-700 font-medium">
+                  <AlertTriangle className="h-3 w-3" />
+                  Mileage Decreased
+                </div>
+                <p className="text-amber-600 mt-1">
+                  From {vehicle.previousMileage?.toLocaleString()} km by {vehicle.mileageDecreasedBy}
+                </p>
+                {vehicle.mileageDecreasedAt && (
+                  <p className="text-amber-500">
+                    {formatDate(new Date(vehicle.mileageDecreasedAt).toISOString().split('T')[0])}
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
         
