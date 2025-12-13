@@ -104,7 +104,7 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false, // Don't auto-refresh on a timer
       refetchOnWindowFocus: true, // Refetch when window gets focus
-      staleTime: 0, // Always refetch to ensure fresh data in multi-user environment
+      staleTime: 30000, // Cache data for 30 seconds to reduce refetches while maintaining freshness
       gcTime: 300000, // Keep unused data for 5 minutes
       retry: false,
     },

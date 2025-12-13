@@ -40,11 +40,6 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
     if (options.templateId) {
       emailParams.setTemplateId(options.templateId);
-      if (options.variables) {
-        // Note: Template variables are handled differently in MailerSend
-        // This would need to be set up in the MailerSend dashboard first
-        console.log('Template variables:', options.variables);
-      }
     }
 
     const response = await mailerSend.email.send(emailParams);

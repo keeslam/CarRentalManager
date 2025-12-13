@@ -1,29 +1,44 @@
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UserRole } from "@shared/schema";
+import { UserRole, UserPermission } from "@shared/schema";
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  permissions?: string[];
+};
 
 export function SidebarNav() {
   const [location] = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.role === UserRole.ADMIN;
 
-  // Define navigation items
-  const navItems = [
+  const navItems: NavItem[] = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
-    { href: "/vehicles", label: "Vehicles", icon: "directions_car" },
-    { href: "/customers", label: "Customers", icon: "people" },
-    { href: "/reservations", label: "Reservations", icon: "event" },
-    { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
-    { href: "/expenses", label: "Expenses", icon: "euro" },
-    { href: "/documents", label: "Documents", icon: "description" },
-    { href: "/communications", label: "Communications", icon: "email" },
-    { href: "/reports", label: "Reports", icon: "assessment" }
+    { href: "/vehicles", label: "Vehicles", icon: "directions_car", permissions: [UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES] },
+    { href: "/customers", label: "Customers", icon: "people", permissions: [UserPermission.VIEW_CUSTOMERS, UserPermission.MANAGE_CUSTOMERS] },
+    { href: "/reservations", label: "Reservations", icon: "event", permissions: [UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS] },
+    { href: "/maintenance", label: "Maintenance", icon: "maintenance", permissions: [UserPermission.MANAGE_MAINTENANCE] },
+    { href: "/expenses", label: "Expenses", icon: "euro", permissions: [UserPermission.MANAGE_EXPENSES] },
+    { href: "/documents", label: "Documents", icon: "description", permissions: [UserPermission.MANAGE_DOCUMENTS] },
+    { href: "/communications", label: "Communications", icon: "email", permissions: [UserPermission.MANAGE_EMAIL_TEMPLATES, UserPermission.MANAGE_NOTIFICATIONS] },
+    { href: "/reports", label: "Reports", icon: "assessment", permissions: [UserPermission.VIEW_REPORTS, UserPermission.MANAGE_REPORTS] }
   ];
+
+  const hasPermission = (item: NavItem): boolean => {
+    if (!item.permissions || item.permissions.length === 0) return true;
+    if (isAdmin) return true;
+    const userPermissions = (user?.permissions as string[]) || [];
+    return item.permissions.some(perm => userPermissions.includes(perm));
+  };
+
+  const filteredNavItems = navItems.filter(hasPermission);
 
   return (
     <nav className="mt-4 px-2">
       <div className="space-y-1">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive = item.href === "/" 
             ? location === item.href 
             : location.startsWith(item.href);

@@ -19,8 +19,7 @@ import { isTrueValue } from "@/lib/utils";
 import { addDays, format, subMonths, subDays, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, parseISO } from "date-fns";
 import { 
   Calendar, Download, FileText, TrendingUp, Car, Settings, User, 
-  DollarSign, BarChart, PieChart, Activity, AlertTriangle, Wrench,
-  Printer, RefreshCw, Search, XCircle, ExternalLink, Database, LineChart, X
+  DollarSign, AlertTriangle, Printer, Search, ExternalLink, Database, LineChart, X
 } from "lucide-react";
 import { Link } from "wouter";
 import { DateRange } from "react-day-picker";
@@ -1121,58 +1120,6 @@ export default function ReportsPage() {
           
         default:
           content = '<h1>Report content not available</h1>';
-      }
-      
-      // Generate APK table helper function
-      function generateAPKTable(vehicles: (Vehicle & { apkStatus: string, daysUntilExpiry: number | null })[]) {
-        return `
-          <table>
-            <thead>
-              <tr>
-                <th>Vehicle</th>
-                <th>License Plate</th>
-                <th>APK Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${vehicles.length > 0 
-                ? vehicles.map(v => {
-                    let statusClass = '';
-                    let statusText = '';
-                    
-                    switch(v.apkStatus) {
-                      case 'expired':
-                        statusClass = 'status-expired';
-                        statusText = `Expired (${Math.abs(v.daysUntilExpiry || 0)} days ago)`;
-                        break;
-                      case 'expiring_soon':
-                        statusClass = 'status-expiring';
-                        statusText = `Expiring soon (${v.daysUntilExpiry} days)`;
-                        break;
-                      case 'valid':
-                        statusClass = 'status-valid';
-                        statusText = `Valid (${v.daysUntilExpiry} days)`;
-                        break;
-                      default:
-                        statusClass = 'status-unknown';
-                        statusText = 'No APK date set';
-                    }
-                    
-                    return `
-                      <tr>
-                        <td>${v.brand} ${v.model}</td>
-                        <td>${formatLicensePlate(v.licensePlate)}</td>
-                        <td>${v.apkDate ? format(new Date(v.apkDate), 'dd/MM/yyyy') : 'Not set'}</td>
-                        <td class="${statusClass}">${statusText}</td>
-                      </tr>
-                    `;
-                  }).join('')
-                : '<tr><td colspan="4" class="text-center">No vehicles found</td></tr>'
-              }
-            </tbody>
-          </table>
-        `;
       }
       
       // Add content to document body
