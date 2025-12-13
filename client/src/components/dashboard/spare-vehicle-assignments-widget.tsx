@@ -110,6 +110,16 @@ export function SpareVehicleAssignmentsWidget() {
     })
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
+  // Filter for active spare vehicles (currently picked up / in use)
+  const activeSpares = [...(allReservations ?? [])]
+    .filter(spare => {
+      if (spare.type !== 'replacement') return false;
+      if (!spare.vehicleId) return false;
+      if (spare.status === 'cancelled') return false;
+      return spare.spareVehicleStatus === 'picked_up';
+    })
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
   // Update spare vehicle status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ reservationId, status }: { reservationId: number; status: string }) => {
@@ -199,20 +209,28 @@ export function SpareVehicleAssignmentsWidget() {
         </CardHeader>
         <CardContent className="p-0">
           <Tabs defaultValue="pending" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pending" className="relative">
-                TBD Assignments
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="pending" className="relative text-xs px-2">
+                TBD
                 {sortedPending.length > 0 && (
-                  <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">
+                  <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
                     {sortedPending.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="assigned" className="relative">
-                Upcoming Pickups
+              <TabsTrigger value="assigned" className="relative text-xs px-2">
+                Upcoming
                 {upcomingAssigned.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 px-1 py-0 text-xs">
+                  <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs">
                     {upcomingAssigned.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="active" className="relative text-xs px-2">
+                Active
+                {activeSpares.length > 0 && (
+                  <Badge variant="default" className="ml-1 px-1 py-0 text-xs bg-blue-500">
+                    {activeSpares.length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -350,6 +368,71 @@ export function SpareVehicleAssignmentsWidget() {
                           )}
                         </div>
                       )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="active" className="p-4 space-y-3">
+              <div className="text-sm text-gray-600 mb-3">
+                Spare vehicles currently in use by customers
+              </div>
+              
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {isLoadingAssigned ? (
+                  <div className="flex justify-center p-4">
+                    <svg className="animate-spin h-5 w-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                  </div>
+                ) : activeSpares.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-md">
+                    <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                    No active spare vehicles
+                  </div>
+                ) : (
+                  activeSpares.map(spare => (
+                    <div key={spare.id} className="p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-md">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <Truck className="w-4 h-4 text-blue-500" />
+                          <div>
+                            <div className="font-medium text-sm">
+                              {spare.vehicleId && vehicleMap[spare.vehicleId] 
+                                ? `${vehicleMap[spare.vehicleId].brand} ${vehicleMap[spare.vehicleId].model}`
+                                : `Spare Vehicle (ID: ${spare.vehicleId})`
+                              }
+                              {spare.vehicleId && vehicleMap[spare.vehicleId]?.licensePlate && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {formatLicensePlate(vehicleMap[spare.vehicleId].licensePlate)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              In use since: {formatDate(spare.startDate)}
+                              {spare.endDate && ` • Expected return: ${formatDate(spare.endDate)}`}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                          In Use
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusChange(spare.id, 'returned')}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-xs"
+                          data-testid="button-mark-returned-spare"
+                        >
+                          Mark Returned
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
