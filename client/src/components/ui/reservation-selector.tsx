@@ -80,15 +80,15 @@ export function ReservationSelector({
     const statusLower = status?.toLowerCase() || '';
     switch (statusLower) {
       case 'booked':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-[10px]">Booked</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">Booked</Badge>;
       case 'picked_up':
-        return <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[10px]">Picked Up</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-xs">Picked Up</Badge>;
       case 'returned':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-[10px]">Returned</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">Returned</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px]">Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Completed</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
   };
 
@@ -112,7 +112,7 @@ export function ReservationSelector({
       <div
         key={reservation.id}
         className={cn(
-          "flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors",
+          "flex items-center gap-3 p-3 rounded-md cursor-pointer hover:bg-gray-100 transition-colors",
           value === reservation.id && "bg-blue-50"
         )}
         onClick={() => {
@@ -123,23 +123,23 @@ export function ReservationSelector({
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm">#{reservation.id}</span>
+            <span className="font-semibold text-base">#{reservation.id}</span>
             {getStatusBadge(reservation.status)}
             {licensePlate && (
-              <Badge variant="outline" className="text-[10px] font-mono">
+              <Badge variant="outline" className="text-xs font-mono">
                 {formatLicensePlate(licensePlate)}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-600">
-            <User className="h-3 w-3" />
-            <span className="truncate">{customerName}</span>
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <User className="h-4 w-4" />
+            <span className="truncate font-medium">{customerName}</span>
             <span className="text-gray-400">•</span>
             <span className="truncate">{vehicleInfo}</span>
           </div>
           {reservation.startDate && (
-            <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
-              <Calendar className="h-3 w-3" />
+            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+              <Calendar className="h-3.5 w-3.5" />
               <span>{formatDate(reservation.startDate)}</span>
               {reservation.endDate && (
                 <>
@@ -151,7 +151,7 @@ export function ReservationSelector({
           )}
         </div>
         {value === reservation.id && (
-          <Check className="h-4 w-4 text-blue-600 shrink-0" />
+          <Check className="h-5 w-5 text-blue-600 shrink-0" />
         )}
       </div>
     );
@@ -241,7 +241,7 @@ export function ReservationSelector({
               {allowNone && (
                 <div
                   className={cn(
-                    "flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors mb-2 border-b pb-3",
+                    "flex items-center gap-3 p-3 rounded-md cursor-pointer hover:bg-gray-100 transition-colors mb-2 border-b pb-3",
                     value === null && "bg-blue-50"
                   )}
                   onClick={() => {
@@ -250,9 +250,9 @@ export function ReservationSelector({
                   }}
                   data-testid="reservation-option-none"
                 >
-                  <span className="text-sm text-gray-600">No Reservation</span>
+                  <span className="text-base text-gray-600">No Reservation</span>
                   {value === null && (
-                    <Check className="h-4 w-4 text-blue-600 shrink-0 ml-auto" />
+                    <Check className="h-5 w-5 text-blue-600 shrink-0 ml-auto" />
                   )}
                 </div>
               )}
