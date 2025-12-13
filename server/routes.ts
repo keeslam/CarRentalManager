@@ -41,6 +41,7 @@ import {
   validateManualStatusChange, 
   VehicleAvailabilityStatus 
 } from "./vehicle-status-helper";
+import { calculateDutchHolidays, mergeHolidaysWithOverrides } from "../shared/holidays";
 
 // Helper function to get uploads directory - works in any environment
 function getUploadsDir(): string {
@@ -8401,10 +8402,47 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Get app setting by key (returns single setting or null)
+  // For calendar_settings, auto-calculates Dutch holidays and merges with overrides
   app.get("/api/app-settings/key/:key", requireAuth, async (req: Request, res: Response) => {
     try {
       const { key } = req.params;
       const setting = await storage.getAppSettingByKey(key);
+      
+      // Special handling for calendar_settings: auto-calculate Dutch holidays
+      if (key === 'calendar_settings' && setting?.value) {
+        const currentYear = new Date().getFullYear();
+        const storedDutchHolidays = setting.value.dutchHolidays || {};
+        
+        // Convert stored format to override format and merge with calculated dates
+        const overrides: Record<string, { enabled: boolean; overrideDate?: string }> = {};
+        for (const [holidayKey, value] of Object.entries(storedDutchHolidays)) {
+          if (typeof value === 'object' && value !== null && 'enabled' in value) {
+            const holidayValue = value as { enabled: boolean; date?: string; overrideDate?: string };
+            overrides[holidayKey] = {
+              enabled: holidayValue.enabled,
+              overrideDate: holidayValue.overrideDate
+            };
+          } else if (typeof value === 'boolean') {
+            // Legacy format: just boolean
+            overrides[holidayKey] = { enabled: value };
+          }
+        }
+        
+        // Merge calculated holidays with overrides
+        const mergedHolidays = mergeHolidaysWithOverrides(currentYear, overrides);
+        
+        // Return enhanced setting with auto-calculated dates
+        res.json({
+          ...setting,
+          value: {
+            ...setting.value,
+            dutchHolidays: mergedHolidays,
+            calculatedYear: currentYear
+          }
+        });
+        return;
+      }
+      
       res.json(setting);
     } catch (error) {
       console.error("Error fetching app setting by key:", error);

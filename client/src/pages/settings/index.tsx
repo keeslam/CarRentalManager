@@ -35,6 +35,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { calculateDutchHolidays } from "@shared/holidays";
 
 interface EmailSetting {
   id: number;
@@ -124,21 +125,26 @@ export default function Settings() {
   
   const [newHolidayName, setNewHolidayName] = useState("");
   
-  // Dutch holidays with toggles AND dates (dates are editable since movable holidays change yearly)
+  // Dutch holidays with auto-calculation support
+  // New format: { enabled, date (current), isOverridden, calculatedDate }
   const currentYear = new Date().getFullYear();
-  const [dutchHolidays, setDutchHolidays] = useState<Record<string, { enabled: boolean; date: string }>>({
-    nieuwjaarsdag: { enabled: true, date: `${currentYear}-01-01` },
-    goede_vrijdag: { enabled: true, date: `${currentYear}-04-18` },
-    eerste_paasdag: { enabled: true, date: `${currentYear}-04-20` },
-    tweede_paasdag: { enabled: true, date: `${currentYear}-04-21` },
-    koningsdag: { enabled: true, date: `${currentYear}-04-26` },
-    bevrijdingsdag: { enabled: true, date: `${currentYear}-05-05` },
-    hemelvaartsdag: { enabled: true, date: `${currentYear}-05-29` },
-    eerste_pinksterdag: { enabled: true, date: `${currentYear}-06-08` },
-    tweede_pinksterdag: { enabled: true, date: `${currentYear}-06-09` },
-    eerste_kerstdag: { enabled: true, date: `${currentYear}-12-25` },
-    tweede_kerstdag: { enabled: true, date: `${currentYear}-12-26` },
-  });
+  
+  // Initialize with calculated defaults so UI is never empty
+  const getInitialDutchHolidays = () => {
+    const calculated = calculateDutchHolidays(currentYear);
+    const result: Record<string, { enabled: boolean; date: string; isOverridden: boolean; calculatedDate: string }> = {};
+    for (const [key, date] of Object.entries(calculated)) {
+      result[key] = { enabled: true, date, isOverridden: false, calculatedDate: date };
+    }
+    return result;
+  };
+  
+  const [dutchHolidays, setDutchHolidays] = useState<Record<string, { 
+    enabled: boolean; 
+    date: string; 
+    isOverridden?: boolean; 
+    calculatedDate?: string 
+  }>>(getInitialDutchHolidays);
   
   const DUTCH_HOLIDAY_NAMES: Record<string, string> = {
     nieuwjaarsdag: "Nieuwjaarsdag",
@@ -247,36 +253,9 @@ export default function Settings() {
       setDefaultMaintenanceDuration(calSettings.value.defaultMaintenanceDuration || "1");
       setReservationReminderHours(calSettings.value.reservationReminderHours || "24");
       if (calSettings.value.dutchHolidays) {
-        // Handle backward compatibility: convert old format (boolean) to new format (object with enabled+date)
-        const savedHolidays = calSettings.value.dutchHolidays;
-        const convertedHolidays: Record<string, { enabled: boolean; date: string }> = {};
-        
-        // Default dates for 2025 (used when migrating from old format)
-        const defaultDates: Record<string, string> = {
-          nieuwjaarsdag: `${currentYear}-01-01`,
-          goede_vrijdag: `${currentYear}-04-18`,
-          eerste_paasdag: `${currentYear}-04-20`,
-          tweede_paasdag: `${currentYear}-04-21`,
-          koningsdag: `${currentYear}-04-26`,
-          bevrijdingsdag: `${currentYear}-05-05`,
-          hemelvaartsdag: `${currentYear}-05-29`,
-          eerste_pinksterdag: `${currentYear}-06-08`,
-          tweede_pinksterdag: `${currentYear}-06-09`,
-          eerste_kerstdag: `${currentYear}-12-25`,
-          tweede_kerstdag: `${currentYear}-12-26`,
-        };
-        
-        for (const [key, value] of Object.entries(savedHolidays)) {
-          if (typeof value === 'boolean') {
-            // Old format: just a boolean - convert to new format with default date
-            convertedHolidays[key] = { enabled: value, date: defaultDates[key] || `${currentYear}-01-01` };
-          } else if (typeof value === 'object' && value !== null && 'enabled' in value) {
-            // New format: object with enabled and date
-            convertedHolidays[key] = value as { enabled: boolean; date: string };
-          }
-        }
-        
-        setDutchHolidays(convertedHolidays);
+        // API now returns auto-calculated holidays with format:
+        // { enabled, date, isOverridden, calculatedDate }
+        setDutchHolidays(calSettings.value.dutchHolidays);
       }
     }
     
@@ -368,13 +347,24 @@ export default function Settings() {
 
   const saveCalendarSettings = useMutation({
     mutationFn: async () => {
+      // Only store overrides, not calculated dates
+      // Format: { [key]: { enabled, overrideDate? } }
+      const dutchHolidaysToSave: Record<string, { enabled: boolean; overrideDate?: string }> = {};
+      for (const [key, value] of Object.entries(dutchHolidays)) {
+        dutchHolidaysToSave[key] = {
+          enabled: value.enabled,
+          // Only save overrideDate if user has manually changed the date
+          overrideDate: value.isOverridden ? value.date : undefined
+        };
+      }
+      
       const data = {
         key: 'calendar_settings',
         category: 'calendar',
         value: {
           holidays,
           blockedDates,
-          dutchHolidays,
+          dutchHolidays: dutchHolidaysToSave,
           defaultMaintenanceDuration,
           reservationReminderHours,
         }
@@ -1254,34 +1244,71 @@ export default function Settings() {
               {/* Dutch National Holidays */}
               <div>
                 <h4 className="font-medium text-sm mb-3">Dutch National Holidays</h4>
-                <p className="text-xs text-gray-500 mb-4">Toggle which Dutch holidays to recognize and set their dates (some holidays change each year)</p>
+                <p className="text-xs text-gray-500 mb-4">
+                  Dates are automatically calculated for {currentYear}. You can override any date manually.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {Object.entries(DUTCH_HOLIDAY_NAMES).map(([key, name]) => (
-                    <div key={key} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 gap-3">
-                      <Label htmlFor={`holiday-${key}`} className="font-medium cursor-pointer flex-shrink-0 min-w-[140px]">
-                        {name}
-                      </Label>
-                      <Input
-                        type="date"
-                        value={dutchHolidays[key]?.date || ''}
-                        onChange={(e) => setDutchHolidays(prev => ({
-                          ...prev,
-                          [key]: { ...prev[key], date: e.target.value }
-                        }))}
-                        className="w-[150px] flex-shrink-0"
-                        data-testid={`input-holiday-date-${key}`}
-                      />
-                      <Switch
-                        id={`holiday-${key}`}
-                        checked={dutchHolidays[key]?.enabled ?? true}
-                        onCheckedChange={(checked) => setDutchHolidays(prev => ({
-                          ...prev,
-                          [key]: { ...prev[key], enabled: checked }
-                        }))}
-                        data-testid={`switch-holiday-${key}`}
-                      />
-                    </div>
-                  ))}
+                  {Object.entries(DUTCH_HOLIDAY_NAMES).map(([key, name]) => {
+                    const holiday = dutchHolidays[key];
+                    const isOverridden = holiday?.isOverridden === true;
+                    
+                    return (
+                      <div key={key} className={`flex items-center justify-between p-3 border rounded-lg gap-2 ${isOverridden ? 'bg-blue-50 border-blue-200' : 'bg-orange-50'}`}>
+                        <div className="flex-shrink-0 min-w-[130px]">
+                          <Label htmlFor={`holiday-${key}`} className="font-medium cursor-pointer text-sm">
+                            {name}
+                          </Label>
+                          {isOverridden && (
+                            <span className="block text-xs text-blue-600">Manual override</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={holiday?.date || ''}
+                            onChange={(e) => setDutchHolidays(prev => ({
+                              ...prev,
+                              [key]: { 
+                                ...prev[key], 
+                                date: e.target.value,
+                                isOverridden: true
+                              }
+                            }))}
+                            className="w-[140px] flex-shrink-0"
+                            data-testid={`input-holiday-date-${key}`}
+                          />
+                          {isOverridden && holiday?.calculatedDate && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2 text-xs text-blue-600 hover:text-blue-800"
+                              onClick={() => setDutchHolidays(prev => ({
+                                ...prev,
+                                [key]: { 
+                                  ...prev[key], 
+                                  date: prev[key]?.calculatedDate || '',
+                                  isOverridden: false
+                                }
+                              }))}
+                              title={`Reset to calculated date: ${holiday.calculatedDate}`}
+                              data-testid={`button-reset-holiday-${key}`}
+                            >
+                              Reset
+                            </Button>
+                          )}
+                          <Switch
+                            id={`holiday-${key}`}
+                            checked={holiday?.enabled ?? true}
+                            onCheckedChange={(checked) => setDutchHolidays(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key], enabled: checked }
+                            }))}
+                            data-testid={`switch-holiday-${key}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
