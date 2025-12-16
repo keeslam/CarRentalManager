@@ -1131,8 +1131,15 @@ export async function registerRoutes(app: Express): Promise<void> {
           if (vehicleInput.vehicleType) vehicleData.vehicleType = vehicleInput.vehicleType;
           if (vehicleInput.fuel) vehicleData.fuel = vehicleInput.fuel;
           if (vehicleInput.chassisNumber) vehicleData.chassisNumber = vehicleInput.chassisNumber;
-          if (vehicleInput.remarks) vehicleData.remarks = vehicleInput.remarks;
           if (vehicleInput.tireSize) vehicleData.tireSize = vehicleInput.tireSize;
+          if (vehicleInput.euroZone) vehicleData.euroZone = vehicleInput.euroZone;
+          if (vehicleInput.internalAppointments) vehicleData.internalAppointments = vehicleInput.internalAppointments;
+          
+          // Combine remarks and generalInfo into remarks field
+          const remarksArr: string[] = [];
+          if (vehicleInput.remarks) remarksArr.push(vehicleInput.remarks);
+          if (vehicleInput.generalInfo) remarksArr.push(vehicleInput.generalInfo);
+          if (remarksArr.length > 0) vehicleData.remarks = remarksArr.join('\n');
           
           // Handle company field - convert to "true"/"false" string
           if (vehicleInput.company) {
@@ -1156,6 +1163,11 @@ export async function registerRoutes(app: Express): Promise<void> {
           // Handle APK date
           if (vehicleInput.apkDate) {
             vehicleData.apkDate = vehicleInput.apkDate;
+          }
+          
+          // Handle registration date
+          if (vehicleInput.registrationDate) {
+            vehicleData.registrationDate = vehicleInput.registrationDate;
           }
           
           // Handle boolean fields

@@ -128,6 +128,30 @@ const HEADER_MAPPING: Record<string, string> = {
   'winter tires': 'winterTires',
   'winterbanden aanwezig': 'winterTires',
   
+  // Tire size
+  'bandenmaat': 'tireSize',
+  'tire size': 'tireSize',
+  'tiresize': 'tireSize',
+  'banden maat': 'tireSize',
+  
+  // EuroZone
+  'eurozone': 'euroZone',
+  'euro zone': 'euroZone',
+  'euro': 'euroZone',
+  
+  // Internal appointments/notes
+  'afspraken intern.': 'internalAppointments',
+  'afspraken intern': 'internalAppointments',
+  'interne afspraken': 'internalAppointments',
+  'internal appointments': 'internalAppointments',
+  
+  // BV/Opnaam date
+  'bv /opnaam datum': 'registrationDate',
+  'bv/opnaam datum': 'registrationDate',
+  'bv / opnaam datum': 'registrationDate',
+  'registratie datum': 'registrationDate',
+  'registration date': 'registrationDate',
+  
   // Production date variations
   'productie datum': 'productionDate',
   'productiedatum': 'productionDate',
@@ -145,7 +169,7 @@ const HEADER_MAPPING: Record<string, string> = {
   'opmerkingen': 'remarks',
   'remarks': 'remarks',
   'notities': 'remarks',
-  'algemene info per auto': 'remarks',
+  'algemene info per auto': 'generalInfo',
 };
 
 // Display names for preview table
@@ -158,15 +182,19 @@ const DISPLAY_NAMES: Record<string, string> = {
   'fuel': 'Fuel',
   'company': 'Company',
   'registeredTo': 'BV/Opnaam',
+  'registrationDate': 'Registration Date',
   'chassisNumber': 'Chassis Number',
   'apkDate': 'APK Date',
   'gps': 'GPS',
+  'euroZone': 'EuroZone',
   'roadsideAssistance': 'Roadside Assistance',
   'spareKey': 'Spare Key',
   'winterTires': 'Winter Tires',
   'tireSize': 'Tire Size',
   'productionDate': 'Production Date',
+  'internalAppointments': 'Internal Notes',
   'remarks': 'Remarks',
+  'generalInfo': 'General Info',
 };
 
 // Form schema for license plate input
@@ -271,14 +299,17 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
         }
       }
       
-      // Extract tire size from remarks field (patterns like 165/65/R14, 205/55R16, etc.)
-      if (row.remarks && !row.tireSize) {
-        const remarksText = String(row.remarks);
-        // Match tire size patterns: 165/65/R14, 205/55R16, 185/60 R15, etc.
-        const tireSizePattern = /\b(\d{3}\/\d{2,3}\s*\/?R?\s*\d{2})\b/i;
-        const match = remarksText.match(tireSizePattern);
-        if (match) {
-          row.tireSize = match[1].replace(/\s+/g, '').toUpperCase();
+      // Extract tire size from remarks or generalInfo field (patterns like 165/65/R14, 205/55R16, etc.)
+      if (!row.tireSize) {
+        const textToSearch = [row.remarks, row.generalInfo, row.internalAppointments].filter(Boolean).join(' ');
+        if (textToSearch) {
+          // Match tire size patterns: 165/65/R14, 205/55R16, 185/60 R15, 165/65R14, etc.
+          const tireSizePattern = /\b(\d{3}\/\d{2,3}\s*\/?R?\s*\d{2})\b/i;
+          const match = textToSearch.match(tireSizePattern);
+          if (match) {
+            row.tireSize = match[1].replace(/\s+/g, '').toUpperCase();
+            console.log(`Extracted tire size "${row.tireSize}" from text`);
+          }
         }
       }
       
