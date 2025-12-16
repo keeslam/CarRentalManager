@@ -85,6 +85,8 @@ export interface IStorage {
   markVehicleForService(vehicleId: number, maintenanceStatus: string, maintenanceNote?: string): Promise<Vehicle | undefined>;
   createMaintenanceBlock(vehicleId: number, startDate: string, endDate?: string): Promise<Reservation>;
   closeMaintenanceBlock(blockReservationId: number, endDate: string): Promise<Reservation | undefined>;
+  getSpareVehicleForVehicle(vehicleId: number): Promise<{ spareVehicle: Vehicle; replacementReservation: Reservation; customer: Customer | null; originalReservation: Reservation } | null>;
+  getActingAsSpareInfo(vehicleId: number): Promise<{ originalVehicle: Vehicle; originalReservation: Reservation; replacementReservation: Reservation; customer: Customer | null } | null>;
   
   // Placeholder spare vehicle methods
   getPlaceholderReservations(startDate?: string, endDate?: string): Promise<Reservation[]>;
@@ -1803,6 +1805,89 @@ export class MemStorage implements IStorage {
 
     this.reservations.set(blockReservationId, updatedBlock);
     return updatedBlock;
+  }
+
+  async getSpareVehicleForVehicle(vehicleId: number): Promise<{ spareVehicle: Vehicle; replacementReservation: Reservation; customer: Customer | null; originalReservation: Reservation } | null> {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Find active reservations for this vehicle (all active statuses)
+    const activeStatuses = ['picked_up', 'booked', 'rented', 'confirmed', 'pending'];
+    const activeReservations = Array.from(this.reservations.values()).filter(r => 
+      r.vehicleId === vehicleId && 
+      r.type === 'standard' &&
+      activeStatuses.includes(r.status) &&
+      !r.deletedAt
+    );
+    
+    for (const originalRes of activeReservations) {
+      // Find replacement reservation for this original reservation
+      const replacement = Array.from(this.reservations.values()).find(r =>
+        r.type === 'replacement' &&
+        r.replacementForReservationId === originalRes.id &&
+        r.status !== 'cancelled' &&
+        r.status !== 'completed' &&
+        !r.deletedAt &&
+        r.startDate <= todayStr &&
+        (!r.endDate || r.endDate >= todayStr)
+      );
+      
+      if (replacement && replacement.vehicleId) {
+        const spareVehicle = this.vehicles.get(replacement.vehicleId);
+        const customer = originalRes.customerId ? this.customers.get(originalRes.customerId) : null;
+        
+        if (spareVehicle) {
+          return {
+            spareVehicle,
+            replacementReservation: replacement,
+            customer: customer || null,
+            originalReservation: originalRes
+          };
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  async getActingAsSpareInfo(vehicleId: number): Promise<{ originalVehicle: Vehicle; originalReservation: Reservation; replacementReservation: Reservation; customer: Customer | null } | null> {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Find active replacement reservation where this vehicle is the spare
+    const replacement = Array.from(this.reservations.values()).find(r =>
+      r.vehicleId === vehicleId &&
+      r.type === 'replacement' &&
+      r.status !== 'cancelled' &&
+      r.status !== 'completed' &&
+      !r.deletedAt &&
+      r.startDate <= todayStr &&
+      (!r.endDate || r.endDate >= todayStr)
+    );
+    
+    if (!replacement || !replacement.replacementForReservationId) {
+      return null;
+    }
+    
+    // Get the original reservation
+    const originalRes = this.reservations.get(replacement.replacementForReservationId);
+    if (!originalRes || !originalRes.vehicleId) {
+      return null;
+    }
+    
+    const originalVehicle = this.vehicles.get(originalRes.vehicleId);
+    const customer = originalRes.customerId ? this.customers.get(originalRes.customerId) : null;
+    
+    if (!originalVehicle) {
+      return null;
+    }
+    
+    return {
+      originalVehicle,
+      originalReservation: originalRes,
+      replacementReservation: replacement,
+      customer: customer || null
+    };
   }
 
   // Placeholder spare vehicle methods

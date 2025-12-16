@@ -630,6 +630,40 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
   } = useQuery<Reservation[]>({
     queryKey: vehicleReservationsQueryKey,
   });
+
+  // Fetch spare vehicle assignment info (when this vehicle has a spare assigned)
+  const { data: spareAssignment } = useQuery<{
+    spareVehicle: Vehicle;
+    replacementReservation: Reservation;
+    customer: Customer | null;
+    originalReservation: Reservation;
+  }>({
+    queryKey: ['/api/vehicles', vehicleId, 'spare-assignment'],
+    queryFn: async () => {
+      const response = await fetch(`/api/vehicles/${vehicleId}/spare-assignment`);
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error('Failed to fetch spare assignment');
+      return response.json();
+    },
+    retry: false,
+  });
+
+  // Fetch acting as spare info (when this vehicle is acting as a spare for another)
+  const { data: actingAsSpareInfo } = useQuery<{
+    originalVehicle: Vehicle;
+    originalReservation: Reservation;
+    replacementReservation: Reservation;
+    customer: Customer | null;
+  }>({
+    queryKey: ['/api/vehicles', vehicleId, 'acting-as-spare'],
+    queryFn: async () => {
+      const response = await fetch(`/api/vehicles/${vehicleId}/acting-as-spare`);
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error('Failed to fetch acting as spare info');
+      return response.json();
+    },
+    retry: false,
+  });
   
   // Delete reservation mutation
   const deleteReservationMutation = useMutation({
@@ -1112,6 +1146,72 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 <p className="text-xs mt-0.5">
                   {formatDate(activeReservation.startDate)} - {activeReservation.endDate ? formatDate(activeReservation.endDate) : "TBD"}
                 </p>
+              </div>
+              {spareAssignment && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Car className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700">Spare Vehicle Assigned</span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/vehicles/${spareAssignment.spareVehicle.id}`)}
+                    className="text-sm text-orange-800 hover:text-orange-600 font-medium cursor-pointer transition-colors"
+                    data-testid="link-spare-vehicle"
+                  >
+                    {spareAssignment.spareVehicle.brand} {spareAssignment.spareVehicle.model} ({formatLicensePlate(spareAssignment.spareVehicle.licensePlate)})
+                  </button>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Since {formatDate(spareAssignment.replacementReservation.startDate)}
+                    {spareAssignment.replacementReservation.endDate && ` - ${formatDate(spareAssignment.replacementReservation.endDate)}`}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {actingAsSpareInfo && (
+          <Card className="bg-orange-50 border-orange-200 md:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-orange-700 flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                Acting as Spare Vehicle
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-orange-600 font-medium">Replacement for:</p>
+                  <button
+                    onClick={() => navigate(`/vehicles/${actingAsSpareInfo.originalVehicle.id}`)}
+                    className="text-lg font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors"
+                    data-testid="link-original-vehicle"
+                  >
+                    {actingAsSpareInfo.originalVehicle.brand} {actingAsSpareInfo.originalVehicle.model} ({formatLicensePlate(actingAsSpareInfo.originalVehicle.licensePlate)})
+                  </button>
+                </div>
+                {actingAsSpareInfo.customer && (
+                  <div className="pt-2 border-t border-orange-200">
+                    <p className="text-xs text-orange-600 font-medium">Customer using this spare:</p>
+                    <CustomerViewDialog customerId={actingAsSpareInfo.customer.id}>
+                      <p className="text-lg font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors">
+                        {actingAsSpareInfo.customer.name}
+                      </p>
+                    </CustomerViewDialog>
+                    {actingAsSpareInfo.customer.phone && (
+                      <p className="text-sm text-orange-700">
+                        <span className="font-medium">Phone:</span> {actingAsSpareInfo.customer.phone}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="text-sm text-orange-700 pt-2 border-t border-orange-200">
+                  <p className="font-medium">Spare Period:</p>
+                  <p className="text-xs mt-0.5">
+                    {formatDate(actingAsSpareInfo.replacementReservation.startDate)}
+                    {actingAsSpareInfo.replacementReservation.endDate ? ` - ${formatDate(actingAsSpareInfo.replacementReservation.endDate)}` : ' - TBD'}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

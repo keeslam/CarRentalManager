@@ -2318,6 +2318,139 @@ export class DatabaseStorage implements IStorage {
     return updatedBlock || undefined;
   }
 
+  async getSpareVehicleForVehicle(vehicleId: number): Promise<{ spareVehicle: Vehicle; replacementReservation: Reservation; customer: Customer | null; originalReservation: Reservation } | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Find active reservations for this vehicle that might have spare vehicles assigned (all active statuses)
+    const activeReservations = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.vehicleId, vehicleId),
+          eq(reservations.type, 'standard'),
+          or(
+            eq(reservations.status, 'picked_up'),
+            eq(reservations.status, 'booked'),
+            eq(reservations.status, 'rented'),
+            eq(reservations.status, 'confirmed'),
+            eq(reservations.status, 'pending')
+          ),
+          isNull(reservations.deletedAt)
+        )
+      );
+    
+    for (const originalRes of activeReservations) {
+      // Find active replacement reservation for this original reservation
+      const [replacement] = await db
+        .select()
+        .from(reservations)
+        .where(
+          and(
+            eq(reservations.type, 'replacement'),
+            eq(reservations.replacementForReservationId, originalRes.id),
+            not(eq(reservations.status, 'cancelled')),
+            not(eq(reservations.status, 'completed')),
+            isNull(reservations.deletedAt),
+            lte(reservations.startDate, today),
+            or(
+              isNull(reservations.endDate),
+              gte(reservations.endDate, today)
+            )
+          )
+        );
+      
+      if (replacement && replacement.vehicleId) {
+        const [spareVehicle] = await db
+          .select()
+          .from(vehicles)
+          .where(eq(vehicles.id, replacement.vehicleId));
+        
+        let customer = null;
+        if (originalRes.customerId) {
+          const [cust] = await db
+            .select()
+            .from(customers)
+            .where(eq(customers.id, originalRes.customerId));
+          customer = cust || null;
+        }
+        
+        if (spareVehicle) {
+          return {
+            spareVehicle,
+            replacementReservation: replacement,
+            customer,
+            originalReservation: originalRes
+          };
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  async getActingAsSpareInfo(vehicleId: number): Promise<{ originalVehicle: Vehicle; originalReservation: Reservation; replacementReservation: Reservation; customer: Customer | null } | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Find active replacement reservation where this vehicle is the spare
+    const [replacement] = await db
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.vehicleId, vehicleId),
+          eq(reservations.type, 'replacement'),
+          not(eq(reservations.status, 'cancelled')),
+          not(eq(reservations.status, 'completed')),
+          isNull(reservations.deletedAt),
+          lte(reservations.startDate, today),
+          or(
+            isNull(reservations.endDate),
+            gte(reservations.endDate, today)
+          )
+        )
+      );
+    
+    if (!replacement || !replacement.replacementForReservationId) {
+      return null;
+    }
+    
+    // Get the original reservation
+    const [originalRes] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.id, replacement.replacementForReservationId));
+    
+    if (!originalRes || !originalRes.vehicleId) {
+      return null;
+    }
+    
+    const [originalVehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, originalRes.vehicleId));
+    
+    if (!originalVehicle) {
+      return null;
+    }
+    
+    let customer = null;
+    if (originalRes.customerId) {
+      const [cust] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, originalRes.customerId));
+      customer = cust || null;
+    }
+    
+    return {
+      originalVehicle,
+      originalReservation: originalRes,
+      replacementReservation: replacement,
+      customer
+    };
+  }
+
   // App Settings methods
   async getAllAppSettings(): Promise<AppSettings[]> {
     return await db.select().from(appSettings).orderBy(appSettings.category, appSettings.key);

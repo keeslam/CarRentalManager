@@ -3401,6 +3401,50 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Get spare vehicle info for a vehicle (when it has a spare assigned to its customer)
+  app.get("/api/vehicles/:id/spare-assignment", hasPermission(UserPermission.VIEW_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.id);
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+      
+      const spareInfo = await storage.getSpareVehicleForVehicle(vehicleId);
+      
+      if (!spareInfo) {
+        return res.status(404).json({ message: "No spare vehicle assigned" });
+      }
+      
+      res.json(spareInfo);
+      
+    } catch (error) {
+      console.error("Error getting spare vehicle info:", error);
+      res.status(500).json({ message: "Error getting spare vehicle info" });
+    }
+  });
+
+  // Get info when a vehicle is acting as a spare for another vehicle
+  app.get("/api/vehicles/:id/acting-as-spare", hasPermission(UserPermission.VIEW_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.id);
+      if (isNaN(vehicleId)) {
+        return res.status(400).json({ message: "Invalid vehicle ID" });
+      }
+      
+      const actingAsSpareInfo = await storage.getActingAsSpareInfo(vehicleId);
+      
+      if (!actingAsSpareInfo) {
+        return res.status(404).json({ message: "Vehicle is not acting as a spare" });
+      }
+      
+      res.json(actingAsSpareInfo);
+      
+    } catch (error) {
+      console.error("Error getting acting as spare info:", error);
+      res.status(500).json({ message: "Error getting acting as spare info" });
+    }
+  });
+
   // Get active replacement by original reservation
   app.get("/api/reservations/:id/active-replacement", hasPermission(UserPermission.VIEW_RESERVATIONS, UserPermission.MANAGE_RESERVATIONS), async (req: Request, res: Response) => {
     try {
