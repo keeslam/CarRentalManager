@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import * as XLSX from "xlsx";
 
 // Dutch to English header mapping
 const HEADER_MAPPING: Record<string, string> = {
@@ -126,35 +127,25 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     }
   };
 
-  // Parse CSV content
-  const parseCSV = (content: string): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
-    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
-    if (lines.length < 2) {
-      return { headers: [], data: [], invalidCount: 0 };
-    }
-
-    // Parse header row - handle both comma and semicolon delimiters
-    const delimiter = lines[0].includes(';') ? ';' : ',';
-    const rawHeaders = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    
+  // Validate and process rows from either CSV or XLSX
+  const processRows = (rawHeaders: string[], rows: any[][]): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
     // Map Dutch headers to English field names
     const mappedHeaders = rawHeaders.map(header => {
-      const normalized = header.toLowerCase().trim();
+      const normalized = String(header || '').toLowerCase().trim();
       return HEADER_MAPPING[normalized] || normalized;
     });
 
-    // Parse data rows
     const data: ParsedVehicle[] = [];
     let invalidCount = 0;
     
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
-      if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+    for (const values of rows) {
+      if (values.length === 0 || (values.length === 1 && !values[0])) continue;
       
       const row: ParsedVehicle = {};
       mappedHeaders.forEach((header, index) => {
-        if (values[index]) {
-          row[header] = values[index];
+        const value = values[index];
+        if (value !== undefined && value !== null && value !== '') {
+          row[header] = String(value).trim();
         }
       });
       
@@ -184,18 +175,74 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     };
   };
 
+  // Parse CSV content
+  const parseCSV = (content: string): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
+    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      return { headers: [], data: [], invalidCount: 0 };
+    }
+
+    // Parse header row - handle both comma and semicolon delimiters
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const rawHeaders = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
+    
+    // Parse data rows
+    const rows: string[][] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
+      rows.push(values);
+    }
+
+    return processRows(rawHeaders, rows);
+  };
+
+  // Parse XLSX content
+  const parseXLSX = (arrayBuffer: ArrayBuffer): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
+    try {
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Convert to array of arrays
+      const sheetData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      if (sheetData.length < 2) {
+        return { headers: [], data: [], invalidCount: 0 };
+      }
+      
+      const rawHeaders = sheetData[0].map(h => String(h || '').trim());
+      const rows = sheetData.slice(1);
+      
+      return processRows(rawHeaders, rows);
+    } catch (error) {
+      console.error("Error parsing XLSX:", error);
+      return { headers: [], data: [], invalidCount: 0 };
+    }
+  };
+
   // Handle file selection
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      const { headers, data, invalidCount } = parseCSV(content);
+      let result: { headers: string[], data: ParsedVehicle[], invalidCount: number };
+      
+      if (isExcel) {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        result = parseXLSX(arrayBuffer);
+      } else {
+        const content = e.target?.result as string;
+        result = parseCSV(content);
+      }
+      
+      const { headers, data, invalidCount } = result;
       
       if (data.length === 0) {
         toast({
-          title: "Invalid CSV",
-          description: "No valid vehicle data found in the CSV file. Make sure the first row contains headers and subsequent rows contain data.",
+          title: "Invalid File",
+          description: "No valid vehicle data found. Make sure the first row contains headers and subsequent rows contain data.",
           variant: "destructive",
         });
         return;
@@ -207,18 +254,23 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       const validCount = data.length - invalidCount;
       if (invalidCount > 0) {
         toast({
-          title: "CSV Loaded with Warnings",
+          title: "File Loaded with Warnings",
           description: `Found ${validCount} valid vehicles and ${invalidCount} rows with errors.`,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "CSV Loaded",
+          title: "File Loaded",
           description: `Found ${data.length} vehicles ready for import.`,
         });
       }
     };
-    reader.readAsText(file);
+    
+    if (isExcel) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   // Handle license plate bulk import
@@ -424,9 +476,9 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
               {!csvPreviewData ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Upload CSV File</CardTitle>
+                    <CardTitle>Upload File</CardTitle>
                     <CardDescription>
-                      Upload a CSV file with vehicle data. The first row should contain headers (e.g., Kenteken, Merk, Model, etc.)
+                      Upload a CSV or Excel file with vehicle data. The first row should contain headers (e.g., Kenteken, Merk, Model, etc.)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -441,19 +493,19 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
                         e.preventDefault();
                         e.stopPropagation();
                         const file = e.dataTransfer.files?.[0];
-                        if (file && file.name.endsWith('.csv')) {
+                        if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
                           handleFileSelect(file);
                         }
                       }}
                     >
                       <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-semibold">Drag and drop your CSV file here</h3>
-                      <p className="text-xs text-gray-500 mt-1">Or click to browse</p>
+                      <h3 className="mt-2 text-sm font-semibold">Drag and drop your file here</h3>
+                      <p className="text-xs text-gray-500 mt-1">Supports CSV and Excel (.xlsx, .xls) files</p>
                       <input
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
-                        accept=".csv"
+                        accept=".csv,.xlsx,.xls"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
