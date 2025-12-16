@@ -1132,6 +1132,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           if (vehicleInput.fuel) vehicleData.fuel = vehicleInput.fuel;
           if (vehicleInput.chassisNumber) vehicleData.chassisNumber = vehicleInput.chassisNumber;
           if (vehicleInput.remarks) vehicleData.remarks = vehicleInput.remarks;
+          if (vehicleInput.tireSize) vehicleData.tireSize = vehicleInput.tireSize;
           
           // Handle company field - convert to "true"/"false" string
           if (vehicleInput.company) {

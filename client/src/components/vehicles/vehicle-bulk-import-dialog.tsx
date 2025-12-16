@@ -164,6 +164,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   'roadsideAssistance': 'Roadside Assistance',
   'spareKey': 'Spare Key',
   'winterTires': 'Winter Tires',
+  'tireSize': 'Tire Size',
   'productionDate': 'Production Date',
   'remarks': 'Remarks',
 };
@@ -267,6 +268,17 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
         } else {
           row.brand = combined;
           row.model = '';
+        }
+      }
+      
+      // Extract tire size from remarks field (patterns like 165/65/R14, 205/55R16, etc.)
+      if (row.remarks && !row.tireSize) {
+        const remarksText = String(row.remarks);
+        // Match tire size patterns: 165/65/R14, 205/55R16, 185/60 R15, etc.
+        const tireSizePattern = /\b(\d{3}\/\d{2,3}\s*\/?R?\s*\d{2})\b/i;
+        const match = remarksText.match(tireSizePattern);
+        if (match) {
+          row.tireSize = match[1].replace(/\s+/g, '').toUpperCase();
         }
       }
       
