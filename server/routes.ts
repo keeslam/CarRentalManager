@@ -1160,14 +1160,46 @@ export async function registerRoutes(app: Express): Promise<void> {
             }
           }
           
+          // Helper function to convert Excel serial date to ISO date string
+          const convertExcelDate = (value: string): string | null => {
+            if (!value) return null;
+            const trimmed = value.trim();
+            
+            // Check if it's an Excel serial date (a number)
+            if (/^\d+$/.test(trimmed)) {
+              const serial = parseInt(trimmed, 10);
+              // Excel dates start from January 1, 1900 (serial 1)
+              // But Excel incorrectly treats 1900 as a leap year, so subtract 1 for dates after Feb 28, 1900
+              const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+              const date = new Date(excelEpoch.getTime() + serial * 24 * 60 * 60 * 1000);
+              if (!isNaN(date.getTime())) {
+                return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
+              }
+            }
+            
+            // Try parsing as a regular date string
+            const parsed = new Date(trimmed);
+            if (!isNaN(parsed.getTime())) {
+              return parsed.toISOString().split('T')[0];
+            }
+            
+            return null;
+          };
+          
           // Handle APK date
           if (vehicleInput.apkDate) {
-            vehicleData.apkDate = vehicleInput.apkDate;
+            const convertedApkDate = convertExcelDate(vehicleInput.apkDate);
+            if (convertedApkDate) {
+              vehicleData.apkDate = convertedApkDate;
+            }
           }
           
           // Handle registration date
           if (vehicleInput.registrationDate) {
-            vehicleData.registrationDate = vehicleInput.registrationDate;
+            const convertedRegDate = convertExcelDate(vehicleInput.registrationDate);
+            if (convertedRegDate) {
+              vehicleData.registrationDate = convertedRegDate;
+            }
           }
           
           // Handle boolean fields
