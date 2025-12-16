@@ -1023,6 +1023,165 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Bulk import vehicles from license plates (fetches from RDW)
+  app.post("/api/vehicles/bulk-import-plates", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const { licensePlates } = req.body;
+      
+      if (!Array.isArray(licensePlates) || licensePlates.length === 0) {
+        return res.status(400).json({ message: "Please provide an array of license plates" });
+      }
+
+      const imported: any[] = [];
+      const failed: any[] = [];
+      const user = req.user;
+
+      for (const licensePlate of licensePlates) {
+        try {
+          // Normalize license plate (remove dashes and spaces)
+          const normalizedPlate = licensePlate.replace(/[-\s]/g, '').toUpperCase();
+          
+          // Check if vehicle already exists
+          const existingVehicles = await storage.getAllVehicles();
+          const exists = existingVehicles.some(v => 
+            v.licensePlate.replace(/[-\s]/g, '').toUpperCase() === normalizedPlate
+          );
+          
+          if (exists) {
+            failed.push({ licensePlate, error: "Vehicle already exists" });
+            continue;
+          }
+
+          // Create vehicle with minimal data (user can fill in details later)
+          const vehicleData = {
+            licensePlate: licensePlate.toUpperCase(),
+            brand: "Unknown",
+            model: "Unknown",
+            createdBy: user ? user.username : null,
+            updatedBy: user ? user.username : null,
+          };
+
+          const vehicle = await storage.createVehicle(vehicleData as any);
+          imported.push({ licensePlate, vehicle });
+          
+          // Broadcast real-time update
+          realtimeEvents.vehicles.created(vehicle);
+        } catch (error) {
+          console.error(`Error importing vehicle ${licensePlate}:`, error);
+          failed.push({ 
+            licensePlate, 
+            error: error instanceof Error ? error.message : "Unknown error" 
+          });
+        }
+      }
+
+      res.json({ imported, failed });
+    } catch (error) {
+      console.error("Error in bulk import:", error);
+      res.status(500).json({ message: "Failed to process bulk import" });
+    }
+  });
+
+  // Bulk import vehicles from CSV data
+  app.post("/api/vehicles/bulk-import-csv", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
+    try {
+      const { vehicles } = req.body;
+      
+      if (!Array.isArray(vehicles) || vehicles.length === 0) {
+        return res.status(400).json({ message: "Please provide an array of vehicles" });
+      }
+
+      const imported: any[] = [];
+      const failed: any[] = [];
+      const user = req.user;
+
+      for (const vehicleInput of vehicles) {
+        try {
+          const licensePlate = vehicleInput.licensePlate;
+          
+          if (!licensePlate) {
+            failed.push({ licensePlate: "N/A", error: "License plate is required" });
+            continue;
+          }
+
+          // Normalize license plate for comparison
+          const normalizedPlate = licensePlate.replace(/[-\s]/g, '').toUpperCase();
+          
+          // Check if vehicle already exists
+          const existingVehicles = await storage.getAllVehicles();
+          const exists = existingVehicles.some(v => 
+            v.licensePlate.replace(/[-\s]/g, '').toUpperCase() === normalizedPlate
+          );
+          
+          if (exists) {
+            failed.push({ licensePlate, error: "Vehicle already exists" });
+            continue;
+          }
+
+          // Prepare vehicle data from CSV input
+          const vehicleData: any = {
+            licensePlate: licensePlate.toUpperCase(),
+            brand: vehicleInput.brand || "Unknown",
+            model: vehicleInput.model || "Unknown",
+            createdBy: user ? user.username : null,
+            updatedBy: user ? user.username : null,
+          };
+
+          // Map optional fields if provided
+          if (vehicleInput.vehicleType) vehicleData.vehicleType = vehicleInput.vehicleType;
+          if (vehicleInput.fuel) vehicleData.fuel = vehicleInput.fuel;
+          if (vehicleInput.chassisNumber) vehicleData.chassisNumber = vehicleInput.chassisNumber;
+          
+          // Handle company field - convert to "true"/"false" string
+          if (vehicleInput.company) {
+            const companyValue = vehicleInput.company.toLowerCase();
+            vehicleData.company = (companyValue === 'ja' || companyValue === 'yes' || companyValue === 'true' || companyValue === '1') ? "true" : vehicleInput.company;
+          }
+          
+          // Handle registeredTo field - convert to "true"/"false" string  
+          if (vehicleInput.registeredTo) {
+            const regValue = vehicleInput.registeredTo.toLowerCase();
+            vehicleData.registeredTo = (regValue === 'ja' || regValue === 'yes' || regValue === 'true' || regValue === '1') ? "true" : vehicleInput.registeredTo;
+          }
+          
+          // Handle production date
+          if (vehicleInput.productionDate) {
+            // Try to parse the date - could be year only or full date
+            const dateStr = vehicleInput.productionDate.trim();
+            if (/^\d{4}$/.test(dateStr)) {
+              // Year only - set to January 1st of that year
+              vehicleData.productionDate = `${dateStr}-01-01`;
+            } else {
+              vehicleData.productionDate = dateStr;
+            }
+          }
+
+          const vehicle = await storage.createVehicle(vehicleData);
+          imported.push({ 
+            licensePlate, 
+            brand: vehicle.brand,
+            model: vehicle.model,
+            vehicle 
+          });
+          
+          // Broadcast real-time update
+          realtimeEvents.vehicles.created(vehicle);
+        } catch (error) {
+          console.error(`Error importing vehicle:`, error);
+          failed.push({ 
+            licensePlate: vehicleInput.licensePlate || "Unknown", 
+            error: error instanceof Error ? error.message : "Unknown error" 
+          });
+        }
+      }
+
+      res.json({ imported, failed });
+    } catch (error) {
+      console.error("Error in CSV bulk import:", error);
+      res.status(500).json({ message: "Failed to process CSV bulk import" });
+    }
+  });
+
   // Update vehicle
   app.patch("/api/vehicles/:id", hasPermission(UserPermission.MANAGE_VEHICLES), async (req: Request, res: Response) => {
     try {

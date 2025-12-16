@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,26 +13,74 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Check, X, AlertCircle, Upload, UploadCloud, Download } from "lucide-react";
+import { FileText, Check, X, AlertCircle, Upload, UploadCloud, Download, ArrowLeft } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+
+// Dutch to English header mapping
+const HEADER_MAPPING: Record<string, string> = {
+  'kenteken': 'licensePlate',
+  'merk': 'brand',
+  'model': 'model',
+  'voertuigsoort': 'vehicleType',
+  'brandstof': 'fuel',
+  'bedrijf': 'company',
+  'op naam': 'registeredTo',
+  'opnaam': 'registeredTo',
+  'chassisnummer': 'chassisNumber',
+  'productie datum': 'productionDate',
+  'productiedatum': 'productionDate',
+  'bouwjaar': 'productionDate',
+};
+
+// Display names for preview table
+const DISPLAY_NAMES: Record<string, string> = {
+  'licensePlate': 'License Plate',
+  'brand': 'Brand',
+  'model': 'Model',
+  'vehicleType': 'Vehicle Type',
+  'fuel': 'Fuel',
+  'company': 'Company',
+  'registeredTo': 'Registered To',
+  'chassisNumber': 'Chassis Number',
+  'productionDate': 'Production Date',
+};
 
 // Form schema for license plate input
 const licensePlateFormSchema = z.object({
   licensePlates: z.string().min(1, "Please enter at least one license plate"),
 });
 
-// Form schema for CSV upload
-const csvUploadFormSchema = z.object({
-  file: z.any().refine((file) => file?.size > 0, "Please select a file"),
-});
-
 type LicensePlateFormValues = z.infer<typeof licensePlateFormSchema>;
-type CsvUploadFormValues = z.infer<typeof csvUploadFormSchema>;
+
+interface ParsedVehicle {
+  licensePlate?: string;
+  brand?: string;
+  model?: string;
+  vehicleType?: string;
+  fuel?: string;
+  company?: string;
+  registeredTo?: string;
+  chassisNumber?: string;
+  productionDate?: string;
+  _isValid?: boolean;
+  _errors?: string[];
+  [key: string]: string | boolean | string[] | undefined;
+}
 
 interface VehicleBulkImportDialogProps {
   children?: React.ReactNode;
@@ -49,6 +97,12 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     imported: any[];
     failed: any[];
   } | null>(null);
+  
+  // CSV preview state
+  const [csvPreviewData, setCsvPreviewData] = useState<ParsedVehicle[] | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form for license plate input
   const licensePlateForm = useForm<LicensePlateFormValues>({
@@ -58,12 +112,6 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     },
   });
 
-  // Form for CSV upload
-  const csvUploadForm = useForm<CsvUploadFormValues>({
-    resolver: zodResolver(csvUploadFormSchema),
-    defaultValues: {},
-  });
-
   // Reset dialog state when closing
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -71,9 +119,106 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       setImportResults(null);
       setImportProgress(0);
       licensePlateForm.reset();
-      csvUploadForm.reset();
+      setCsvPreviewData(null);
+      setCsvHeaders([]);
+      setSelectedFile(null);
       setActiveTab("manual");
     }
+  };
+
+  // Parse CSV content
+  const parseCSV = (content: string): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
+    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      return { headers: [], data: [], invalidCount: 0 };
+    }
+
+    // Parse header row - handle both comma and semicolon delimiters
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const rawHeaders = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/"/g, ''));
+    
+    // Map Dutch headers to English field names
+    const mappedHeaders = rawHeaders.map(header => {
+      const normalized = header.toLowerCase().trim();
+      return HEADER_MAPPING[normalized] || normalized;
+    });
+
+    // Parse data rows
+    const data: ParsedVehicle[] = [];
+    let invalidCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
+      if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+      
+      const row: ParsedVehicle = {};
+      mappedHeaders.forEach((header, index) => {
+        if (values[index]) {
+          row[header] = values[index];
+        }
+      });
+      
+      // Validate row
+      const errors: string[] = [];
+      if (!row.licensePlate) {
+        errors.push("Missing license plate");
+      }
+      
+      row._isValid = errors.length === 0;
+      row._errors = errors;
+      
+      if (!row._isValid) {
+        invalidCount++;
+      }
+      
+      // Include all rows (even invalid ones) so user can see what's wrong
+      if (row.licensePlate || Object.keys(row).filter(k => !k.startsWith('_')).length > 0) {
+        data.push(row);
+      }
+    }
+
+    return { 
+      headers: mappedHeaders.filter(h => Object.keys(DISPLAY_NAMES).includes(h)), 
+      data,
+      invalidCount 
+    };
+  };
+
+  // Handle file selection
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const { headers, data, invalidCount } = parseCSV(content);
+      
+      if (data.length === 0) {
+        toast({
+          title: "Invalid CSV",
+          description: "No valid vehicle data found in the CSV file. Make sure the first row contains headers and subsequent rows contain data.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setCsvHeaders(headers);
+      setCsvPreviewData(data);
+      
+      const validCount = data.length - invalidCount;
+      if (invalidCount > 0) {
+        toast({
+          title: "CSV Loaded with Warnings",
+          description: `Found ${validCount} valid vehicles and ${invalidCount} rows with errors.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "CSV Loaded",
+          description: `Found ${data.length} vehicles ready for import.`,
+        });
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Handle license plate bulk import
@@ -99,6 +244,37 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       toast({
         title: "Import Failed",
         description: "An error occurred during the import process. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle CSV bulk import
+  const csvImportMutation = useMutation({
+    mutationFn: async (vehicles: ParsedVehicle[]) => {
+      const response = await apiRequest("POST", "/api/vehicles/bulk-import-csv", { vehicles });
+      return response.json();
+    },
+    onSuccess: (data: { imported: any[], failed: any[] }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      setImportResults(data);
+      setCsvPreviewData(null);
+      setCsvHeaders([]);
+      setSelectedFile(null);
+      toast({
+        title: "Import Complete",
+        description: `Successfully imported ${data.imported.length} vehicles. ${data.failed.length} failed.`,
+        variant: data.failed.length > 0 ? "destructive" : "default",
+      });
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: "An error occurred during the CSV import process. Please try again.",
         variant: "destructive",
       });
     },
@@ -130,12 +306,35 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     importMutation.mutate(licensePlates);
   };
 
-  // Handle CSV upload
-  const onSubmitCsvUpload = (values: CsvUploadFormValues) => {
-    toast({
-      title: "CSV Upload",
-      description: "CSV upload functionality is coming soon. Please use the manual entry tab for now.",
-    });
+  // Handle CSV import confirmation - only import valid rows
+  const handleConfirmCsvImport = () => {
+    if (!csvPreviewData || csvPreviewData.length === 0) return;
+    
+    // Filter to only valid rows and remove internal validation fields
+    const validVehicles = csvPreviewData
+      .filter(v => v._isValid !== false)
+      .map(({ _isValid, _errors, ...vehicle }) => vehicle);
+    
+    if (validVehicles.length === 0) {
+      toast({
+        title: "No Valid Vehicles",
+        description: "All rows have validation errors. Please fix them and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    csvImportMutation.mutate(validVehicles);
+  };
+  
+  // Count valid vehicles for button display
+  const validVehicleCount = csvPreviewData?.filter(v => v._isValid !== false).length || 0;
+
+  // Clear preview and go back to upload
+  const handleClearPreview = () => {
+    setCsvPreviewData(null);
+    setCsvHeaders([]);
+    setSelectedFile(null);
   };
 
   // Custom trigger or default bulk import button
@@ -151,7 +350,7 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bulk Import Vehicles</DialogTitle>
           <DialogDescription>
@@ -222,47 +421,163 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
             </TabsContent>
 
             <TabsContent value="csv">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upload CSV File</CardTitle>
-                  <CardDescription>
-                    Upload a CSV file with license plates in the first column.
-                    Headers will be ignored.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...csvUploadForm}>
-                    <form onSubmit={csvUploadForm.handleSubmit(onSubmitCsvUpload)} className="space-y-4">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-semibold">Drag and drop your CSV file here</h3>
-                        <p className="text-xs text-gray-500 mt-1">Or click to browse</p>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".csv"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              csvUploadForm.setValue("file", file);
-                            }
-                          }}
-                        />
-                        <Button type="button" variant="outline" className="mt-4">
-                          Browse Files
-                        </Button>
-                      </div>
-                      <Button type="submit" className="w-full">
-                        Upload and Import
+              {!csvPreviewData ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upload CSV File</CardTitle>
+                    <CardDescription>
+                      Upload a CSV file with vehicle data. The first row should contain headers (e.g., Kenteken, Merk, Model, etc.)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div 
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file && file.name.endsWith('.csv')) {
+                          handleFileSelect(file);
+                        }
+                      }}
+                    >
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-semibold">Drag and drop your CSV file here</h3>
+                      <p className="text-xs text-gray-500 mt-1">Or click to browse</p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept=".csv"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleFileSelect(file);
+                          }
+                        }}
+                        data-testid="input-csv-file"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        data-testid="button-browse-files"
+                      >
+                        Browse Files
                       </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
+                    </div>
+                    
+                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                      <h4 className="text-sm font-medium mb-2">Expected CSV Format:</h4>
+                      <p className="text-xs text-gray-600">
+                        First row: Headers (Kenteken, Merk, Model, Voertuigsoort, Brandstof, Bedrijf, Op naam, Chassisnummer, Productie datum)
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Following rows: Vehicle data
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          Preview Import Data
+                          <Badge variant="secondary">{csvPreviewData.length} vehicles</Badge>
+                        </CardTitle>
+                        <CardDescription>
+                          Review the data below before confirming the import
+                          {selectedFile && <span className="ml-2 text-xs">({selectedFile.name})</span>}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearPreview}
+                        data-testid="button-back-to-upload"
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px] rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            {csvHeaders.map((header) => (
+                              <TableHead key={header}>
+                                {DISPLAY_NAMES[header] || header}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {csvPreviewData.map((vehicle, index) => (
+                            <TableRow key={index} className={vehicle._isValid === false ? 'bg-red-50' : ''}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {index + 1}
+                                  {vehicle._isValid === false && (
+                                    <AlertCircle className="h-4 w-4 text-red-500" title={vehicle._errors?.join(', ')} />
+                                  )}
+                                </div>
+                              </TableCell>
+                              {csvHeaders.map((header) => (
+                                <TableCell key={header} className={header === 'licensePlate' && !vehicle[header] ? 'text-red-500' : ''}>
+                                  {String(vehicle[header] || '-')}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                    
+                    <div className="flex gap-4 mt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleClearPreview}
+                        disabled={csvImportMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={handleConfirmCsvImport}
+                        disabled={csvImportMutation.isPending || validVehicleCount === 0}
+                        data-testid="button-confirm-csv-import"
+                      >
+                        {csvImportMutation.isPending ? (
+                          <>Processing Import...</>
+                        ) : validVehicleCount === 0 ? (
+                          <>No Valid Vehicles to Import</>
+                        ) : (
+                          <>Confirm Import ({validVehicleCount} vehicles)</>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
 
-          {importMutation.isPending && (
+          {(importMutation.isPending || csvImportMutation.isPending) && (
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle>Import Progress</CardTitle>
@@ -296,7 +611,7 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
                         {importResults.imported.map((item, index) => (
                           <li key={`success-${index}`} className="text-sm flex items-center">
                             <Check className="h-4 w-4 mr-2 text-green-500" />
-                            {item.licensePlate} - {item.vehicle.brand} {item.vehicle.model}
+                            {item.licensePlate} - {item.vehicle?.brand || item.brand} {item.vehicle?.model || item.model}
                           </li>
                         ))}
                       </ul>
