@@ -14,7 +14,7 @@ import { ExpenseAddDialog } from "@/components/expenses/expense-add-dialog";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil, getUrgencyColorClass } from "@/lib/date-utils";
-import { Vehicle, Expense, Document, Reservation, UserRole } from "@shared/schema";
+import { Vehicle, Expense, Document, Reservation, UserRole, Customer } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
@@ -907,7 +907,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       return dateA.getTime() - dateB.getTime();
     })[0] : null;
   
-  const displayReservation = activeReservation || upcomingReservation;
+  const displayReservation = activeReservation || upcomingReservation || actingAsSpareInfo;
   
   if (isLoadingVehicle) {
     return (
