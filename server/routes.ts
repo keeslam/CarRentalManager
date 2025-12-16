@@ -1131,6 +1131,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           if (vehicleInput.vehicleType) vehicleData.vehicleType = vehicleInput.vehicleType;
           if (vehicleInput.fuel) vehicleData.fuel = vehicleInput.fuel;
           if (vehicleInput.chassisNumber) vehicleData.chassisNumber = vehicleInput.chassisNumber;
+          if (vehicleInput.remarks) vehicleData.remarks = vehicleInput.remarks;
           
           // Handle company field - convert to "true"/"false" string
           if (vehicleInput.company) {
@@ -1138,10 +1139,37 @@ export async function registerRoutes(app: Express): Promise<void> {
             vehicleData.company = (companyValue === 'ja' || companyValue === 'yes' || companyValue === 'true' || companyValue === '1') ? "true" : vehicleInput.company;
           }
           
-          // Handle registeredTo field - convert to "true"/"false" string  
+          // Handle registeredTo field - convert to "true"/"false" string or store the value
           if (vehicleInput.registeredTo) {
             const regValue = vehicleInput.registeredTo.toLowerCase();
-            vehicleData.registeredTo = (regValue === 'ja' || regValue === 'yes' || regValue === 'true' || regValue === '1') ? "true" : vehicleInput.registeredTo;
+            // Check if it's a BV/Opnaam indicator
+            if (regValue.includes('bv') || regValue === 'ja' || regValue === 'yes' || regValue === 'true' || regValue === '1') {
+              vehicleData.company = "true";
+            } else if (regValue.includes('opnaam') || regValue.includes('naam')) {
+              vehicleData.registeredTo = "true";
+            } else {
+              vehicleData.registeredTo = vehicleInput.registeredTo;
+            }
+          }
+          
+          // Handle APK date
+          if (vehicleInput.apkDate) {
+            vehicleData.apkDate = vehicleInput.apkDate;
+          }
+          
+          // Handle boolean fields
+          const booleanFieldMappings: { [key: string]: string } = {
+            gps: 'gps',
+            roadsideAssistance: 'roadsideAssistance',
+            spareKey: 'spareKey',
+            winterTires: 'winterTires',
+          };
+          
+          for (const [inputField, dbField] of Object.entries(booleanFieldMappings)) {
+            if (vehicleInput[inputField]) {
+              const value = vehicleInput[inputField].toLowerCase();
+              vehicleData[dbField] = (value === 'ja' || value === 'yes' || value === 'true' || value === '1' || value === 'x' || value === '✓');
+            }
           }
           
           // Handle production date

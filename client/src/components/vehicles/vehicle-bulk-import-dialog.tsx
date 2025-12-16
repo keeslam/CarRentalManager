@@ -36,12 +36,20 @@ import * as XLSX from "xlsx";
 const HEADER_MAPPING: Record<string, string> = {
   // License plate variations
   'kenteken': 'licensePlate',
+  'kent': 'licensePlate',
   'license plate': 'licensePlate',
   'licenseplate': 'licensePlate',
   'nummerplaat': 'licensePlate',
   'registratie': 'licensePlate',
   'reg': 'licensePlate',
   'plate': 'licensePlate',
+  
+  // Brand + Model combined (will be split later)
+  'merk & type': 'brandAndModel',
+  'merk en type': 'brandAndModel',
+  'merk/type': 'brandAndModel',
+  'merk en model': 'brandAndModel',
+  'merk & model': 'brandAndModel',
   
   // Brand variations
   'merk': 'brand',
@@ -66,13 +74,18 @@ const HEADER_MAPPING: Record<string, string> = {
   'brandstof': 'fuel',
   'fuel': 'fuel',
   'brandstofsoort': 'fuel',
+  'diesel/benzine': 'fuel',
+  'diesel / benzine': 'fuel',
   
-  // Company variations
+  // Company/BV variations
   'bedrijf': 'company',
   'company': 'company',
   'firma': 'company',
   'bv': 'company',
   'onderneming': 'company',
+  'bv / opnaam': 'registeredTo',
+  'bv/opnaam': 'registeredTo',
+  'bv /opnaam': 'registeredTo',
   
   // Registered to variations
   'op naam': 'registeredTo',
@@ -81,7 +94,6 @@ const HEADER_MAPPING: Record<string, string> = {
   'registered to': 'registeredTo',
   'registeredto': 'registeredTo',
   'tenaamstelling': 'registeredTo',
-  'naam': 'registeredTo',
   
   // Chassis number variations
   'chassisnummer': 'chassisNumber',
@@ -89,6 +101,32 @@ const HEADER_MAPPING: Record<string, string> = {
   'vin': 'chassisNumber',
   'chassis number': 'chassisNumber',
   'chassisnr': 'chassisNumber',
+  
+  // APK date variations
+  'apk tot': 'apkDate',
+  'apk': 'apkDate',
+  'apk datum': 'apkDate',
+  'apk date': 'apkDate',
+  'apk vervaldatum': 'apkDate',
+  
+  // GPS variations
+  'gps': 'gps',
+  
+  // Roadside assistance
+  'pechhulp': 'roadsideAssistance',
+  'roadside assistance': 'roadsideAssistance',
+  'wegenwacht': 'roadsideAssistance',
+  
+  // Spare key
+  'reservesleutel': 'spareKey',
+  'spare key': 'spareKey',
+  'extra sleutel': 'spareKey',
+  
+  // Winter tires
+  'winter b.': 'winterTires',
+  'winterbanden': 'winterTires',
+  'winter tires': 'winterTires',
+  'winterbanden aanwezig': 'winterTires',
   
   // Production date variations
   'productie datum': 'productionDate',
@@ -101,6 +139,13 @@ const HEADER_MAPPING: Record<string, string> = {
   'year': 'productionDate',
   'datum eerste toelating': 'productionDate',
   'eerste toelating': 'productionDate',
+  
+  // Notes/remarks
+  'notes': 'remarks',
+  'opmerkingen': 'remarks',
+  'remarks': 'remarks',
+  'notities': 'remarks',
+  'algemene info per auto': 'remarks',
 };
 
 // Display names for preview table
@@ -108,12 +153,19 @@ const DISPLAY_NAMES: Record<string, string> = {
   'licensePlate': 'License Plate',
   'brand': 'Brand',
   'model': 'Model',
+  'brandAndModel': 'Brand & Model',
   'vehicleType': 'Vehicle Type',
   'fuel': 'Fuel',
   'company': 'Company',
-  'registeredTo': 'Registered To',
+  'registeredTo': 'BV/Opnaam',
   'chassisNumber': 'Chassis Number',
+  'apkDate': 'APK Date',
+  'gps': 'GPS',
+  'roadsideAssistance': 'Roadside Assistance',
+  'spareKey': 'Spare Key',
+  'winterTires': 'Winter Tires',
   'productionDate': 'Production Date',
+  'remarks': 'Remarks',
 };
 
 // Form schema for license plate input
@@ -203,6 +255,20 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
           row[header] = String(value).trim();
         }
       });
+      
+      // Handle combined brand & model field - split into separate fields
+      if (row.brandAndModel && !row.brand) {
+        const combined = String(row.brandAndModel);
+        // Try to split on first space - brand is usually first word
+        const parts = combined.split(/\s+/);
+        if (parts.length >= 2) {
+          row.brand = parts[0];
+          row.model = parts.slice(1).join(' ');
+        } else {
+          row.brand = combined;
+          row.model = '';
+        }
+      }
       
       // Validate row
       const errors: string[] = [];
