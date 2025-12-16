@@ -32,20 +32,75 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
 
-// Dutch to English header mapping
+// Dutch to English header mapping - covers many variations
 const HEADER_MAPPING: Record<string, string> = {
+  // License plate variations
   'kenteken': 'licensePlate',
+  'license plate': 'licensePlate',
+  'licenseplate': 'licensePlate',
+  'nummerplaat': 'licensePlate',
+  'registratie': 'licensePlate',
+  'reg': 'licensePlate',
+  'plate': 'licensePlate',
+  
+  // Brand variations
   'merk': 'brand',
+  'brand': 'brand',
+  'fabrikant': 'brand',
+  'make': 'brand',
+  
+  // Model variations
   'model': 'model',
+  'type': 'model',
+  'uitvoering': 'model',
+  
+  // Vehicle type variations
   'voertuigsoort': 'vehicleType',
+  'vehicle type': 'vehicleType',
+  'vehicletype': 'vehicleType',
+  'soort': 'vehicleType',
+  'voertuig': 'vehicleType',
+  'categorie': 'vehicleType',
+  
+  // Fuel variations
   'brandstof': 'fuel',
+  'fuel': 'fuel',
+  'brandstofsoort': 'fuel',
+  
+  // Company variations
   'bedrijf': 'company',
+  'company': 'company',
+  'firma': 'company',
+  'bv': 'company',
+  'onderneming': 'company',
+  
+  // Registered to variations
   'op naam': 'registeredTo',
   'opnaam': 'registeredTo',
+  'op_naam': 'registeredTo',
+  'registered to': 'registeredTo',
+  'registeredto': 'registeredTo',
+  'tenaamstelling': 'registeredTo',
+  'naam': 'registeredTo',
+  
+  // Chassis number variations
   'chassisnummer': 'chassisNumber',
+  'chassis': 'chassisNumber',
+  'vin': 'chassisNumber',
+  'chassis number': 'chassisNumber',
+  'chassisnr': 'chassisNumber',
+  
+  // Production date variations
   'productie datum': 'productionDate',
   'productiedatum': 'productionDate',
+  'production date': 'productionDate',
+  'productiondate': 'productionDate',
   'bouwjaar': 'productionDate',
+  'bouw jaar': 'productionDate',
+  'jaar': 'productionDate',
+  'year': 'productionDate',
+  'datum eerste toelating': 'productionDate',
+  'eerste toelating': 'productionDate',
 };
 
 // Display names for preview table
@@ -203,14 +258,32 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
+      console.log("XLSX Sheet names:", workbook.SheetNames);
+      console.log("Using sheet:", firstSheetName);
+      
       // Convert to array of arrays
       const sheetData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      console.log("XLSX first row (headers):", sheetData[0]);
+      console.log("XLSX total rows:", sheetData.length);
+      if (sheetData[1]) {
+        console.log("XLSX sample data row:", sheetData[1]);
+      }
       
       if (sheetData.length < 2) {
         return { headers: [], data: [], invalidCount: 0 };
       }
       
       const rawHeaders = sheetData[0].map(h => String(h || '').trim());
+      console.log("Raw headers found:", rawHeaders);
+      
+      // Show which headers are mapped
+      rawHeaders.forEach(h => {
+        const normalized = h.toLowerCase().trim();
+        const mapped = HEADER_MAPPING[normalized];
+        console.log(`Header "${h}" -> normalized "${normalized}" -> mapped to "${mapped || 'NOT MAPPED'}"`);
+      });
+      
       const rows = sheetData.slice(1);
       
       return processRows(rawHeaders, rows);
