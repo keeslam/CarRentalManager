@@ -1172,42 +1172,40 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
 
         {actingAsSpareInfo && (
           <Card className="bg-orange-50 border-orange-200 md:col-span-2">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-1 pt-3">
               <CardTitle className="text-sm font-medium text-orange-700 flex items-center gap-2">
                 <Car className="h-4 w-4" />
                 Acting as Spare Vehicle
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
+            <CardContent className="pb-3">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[140px]">
                   <p className="text-xs text-orange-600 font-medium">Replacement for:</p>
                   <button
                     onClick={() => navigate(`/vehicles/${actingAsSpareInfo.originalVehicle.id}`)}
-                    className="text-lg font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors"
+                    className="text-sm font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors"
                     data-testid="link-original-vehicle"
                   >
                     {actingAsSpareInfo.originalVehicle.brand} {actingAsSpareInfo.originalVehicle.model} ({formatLicensePlate(actingAsSpareInfo.originalVehicle.licensePlate)})
                   </button>
                 </div>
                 {actingAsSpareInfo.customer && (
-                  <div className="pt-2 border-t border-orange-200">
-                    <p className="text-xs text-orange-600 font-medium">Customer using this spare:</p>
+                  <div className="flex-1 min-w-[140px]">
+                    <p className="text-xs text-orange-600 font-medium">Customer:</p>
                     <CustomerViewDialog customerId={actingAsSpareInfo.customer.id}>
-                      <p className="text-lg font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors">
+                      <p className="text-sm font-semibold text-orange-900 hover:text-orange-600 cursor-pointer transition-colors">
                         {actingAsSpareInfo.customer.name}
                       </p>
                     </CustomerViewDialog>
                     {actingAsSpareInfo.customer.phone && (
-                      <p className="text-sm text-orange-700">
-                        <span className="font-medium">Phone:</span> {actingAsSpareInfo.customer.phone}
-                      </p>
+                      <p className="text-xs text-orange-700">{actingAsSpareInfo.customer.phone}</p>
                     )}
                   </div>
                 )}
-                <div className="text-sm text-orange-700 pt-2 border-t border-orange-200">
-                  <p className="font-medium">Spare Period:</p>
-                  <p className="text-xs mt-0.5">
+                <div className="flex-1 min-w-[120px]">
+                  <p className="text-xs text-orange-600 font-medium">Period:</p>
+                  <p className="text-sm text-orange-800">
                     {formatDate(actingAsSpareInfo.replacementReservation.startDate)}
                     {actingAsSpareInfo.replacementReservation.endDate ? ` - ${formatDate(actingAsSpareInfo.replacementReservation.endDate)}` : ' - TBD'}
                   </p>
