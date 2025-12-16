@@ -344,8 +344,10 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       
       console.log("XLSX first row (headers):", sheetData[0]);
       console.log("XLSX total rows:", sheetData.length);
-      if (sheetData[1]) {
-        console.log("XLSX sample data row:", sheetData[1]);
+      
+      // Log first 5 data rows to debug
+      for (let i = 1; i <= Math.min(5, sheetData.length - 1); i++) {
+        console.log(`XLSX data row ${i}:`, sheetData[i]);
       }
       
       if (sheetData.length < 2) {
@@ -353,6 +355,18 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       }
       
       const rawHeaders = sheetData[0].map(h => String(h || '').trim());
+      
+      // Filter out completely empty rows
+      const dataRows = sheetData.slice(1).filter(row => {
+        if (!Array.isArray(row)) return false;
+        // Check if row has at least one non-empty cell
+        return row.some(cell => cell !== undefined && cell !== null && cell !== '');
+      });
+      
+      console.log(`XLSX filtered data rows (non-empty): ${dataRows.length}`);
+      if (dataRows[0]) {
+        console.log("First non-empty data row:", dataRows[0]);
+      }
       console.log("Raw headers found:", rawHeaders);
       
       // Show which headers are mapped
@@ -362,9 +376,7 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
         console.log(`Header "${h}" -> normalized "${normalized}" -> mapped to "${mapped || 'NOT MAPPED'}"`);
       });
       
-      const rows = sheetData.slice(1);
-      
-      return processRows(rawHeaders, rows);
+      return processRows(rawHeaders, dataRows);
     } catch (error) {
       console.error("Error parsing XLSX:", error);
       return { headers: [], data: [], invalidCount: 0 };
