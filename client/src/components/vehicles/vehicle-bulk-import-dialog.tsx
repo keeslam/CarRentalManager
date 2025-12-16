@@ -332,8 +332,23 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       }
     }
 
+    // Build headers list from mapped headers + any dynamically extracted fields
+    let headers = mappedHeaders.filter(h => Object.keys(DISPLAY_NAMES).includes(h));
+    
+    // Check if any rows have extracted tireSize and add to headers if so
+    const hasTireSize = data.some(row => row.tireSize);
+    if (hasTireSize && !headers.includes('tireSize')) {
+      // Insert tireSize after winterTires if present, otherwise at end
+      const winterTiresIndex = headers.indexOf('winterTires');
+      if (winterTiresIndex >= 0) {
+        headers.splice(winterTiresIndex + 1, 0, 'tireSize');
+      } else {
+        headers.push('tireSize');
+      }
+    }
+    
     return { 
-      headers: mappedHeaders.filter(h => Object.keys(DISPLAY_NAMES).includes(h)), 
+      headers, 
       data,
       invalidCount 
     };
