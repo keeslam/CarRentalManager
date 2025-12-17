@@ -626,6 +626,7 @@ export default function VehiclesIndex() {
         context="view"
         onAcknowledge={handleRemarksAcknowledged}
         onCancel={() => setPendingViewVehicle(null)}
+        onRemarksUpdated={(updatedVehicle) => setPendingViewVehicle(updatedVehicle)}
       />
     </div>
   );

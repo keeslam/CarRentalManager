@@ -24,6 +24,7 @@ interface VehicleRemarksWarningDialogProps {
   onAcknowledge: () => void;
   onCancel?: () => void;
   context?: "reservation" | "pickup" | "view";
+  onRemarksUpdated?: (updatedVehicle: Vehicle) => void;
 }
 
 export function VehicleRemarksWarningDialog({
@@ -33,6 +34,7 @@ export function VehicleRemarksWarningDialog({
   onAcknowledge,
   onCancel,
   context = "view",
+  onRemarksUpdated,
 }: VehicleRemarksWarningDialogProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -53,9 +55,10 @@ export function VehicleRemarksWarningDialog({
   const updateRemarksMutation = useMutation({
     mutationFn: async (remarks: string) => {
       if (!vehicle) throw new Error("No vehicle selected");
-      return apiRequest("PATCH", `/api/vehicles/${vehicle.id}`, { remarks });
+      const response = await apiRequest("PATCH", `/api/vehicles/${vehicle.id}`, { remarks });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedVehicle: Vehicle) => {
       toast({
         title: "Remarks Updated",
         description: "Vehicle remarks have been saved.",
@@ -63,6 +66,11 @@ export function VehicleRemarksWarningDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
       setIsEditing(false);
+      
+      // Notify parent component of the update
+      if (onRemarksUpdated && updatedVehicle) {
+        onRemarksUpdated(updatedVehicle);
+      }
     },
     onError: (error: Error) => {
       toast({
