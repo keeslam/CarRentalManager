@@ -1194,11 +1194,11 @@ export async function registerRoutes(app: Express): Promise<void> {
             }
           }
           
-          // Handle registration date
-          if (vehicleInput.registrationDate) {
-            const convertedRegDate = convertExcelDate(vehicleInput.registrationDate);
-            if (convertedRegDate) {
-              vehicleData.registrationDate = convertedRegDate;
+          // Handle company date (BV/Opnaam date)
+          if (vehicleInput.companyDate) {
+            const convertedCompanyDate = convertExcelDate(vehicleInput.companyDate);
+            if (convertedCompanyDate) {
+              vehicleData.companyDate = convertedCompanyDate;
             }
           }
           

@@ -146,11 +146,9 @@ const HEADER_MAPPING: Record<string, string> = {
   'internal appointments': 'internalAppointments',
   
   // BV/Opnaam date
-  'bv /opnaam datum': 'registrationDate',
-  'bv/opnaam datum': 'registrationDate',
-  'bv / opnaam datum': 'registrationDate',
-  'registratie datum': 'registrationDate',
-  'registration date': 'registrationDate',
+  'bv /opnaam datum': 'companyDate',
+  'bv/opnaam datum': 'companyDate',
+  'bv / opnaam datum': 'companyDate',
   
   // Production date variations
   'productie datum': 'productionDate',
@@ -182,7 +180,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   'fuel': 'Fuel',
   'company': 'Company',
   'registeredTo': 'BV/Opnaam',
-  'registrationDate': 'Registration Date',
+  'companyDate': 'BV/Opnaam Date',
   'chassisNumber': 'Chassis Number',
   'apkDate': 'APK Date',
   'gps': 'GPS',
@@ -263,6 +261,66 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
     }
   };
 
+  // Helper function to convert Excel serial date to ISO date string
+  const convertExcelDate = (value: any): string | null => {
+    if (value === null || value === undefined || value === '') return null;
+    
+    // If it's already a Date object (from XLSX with cellDates: true)
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      return value.toISOString().split('T')[0];
+    }
+    
+    // If it's a number (Excel serial date)
+    if (typeof value === 'number') {
+      // Excel dates start from January 1, 1900 (serial 1)
+      // Excel incorrectly treats 1900 as a leap year, so we use Dec 30, 1899 as epoch
+      const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+      const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+      if (!isNaN(date.getTime())) {
+        console.log(`Converted Excel serial number ${value} to date ${date.toISOString().split('T')[0]}`);
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // If it's a string that looks like an Excel serial number (5 digits)
+    const strValue = String(value).trim();
+    if (/^\d{5}$/.test(strValue)) {
+      const serial = parseInt(strValue, 10);
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch.getTime() + serial * 24 * 60 * 60 * 1000);
+      if (!isNaN(date.getTime())) {
+        console.log(`Converted Excel serial string ${strValue} to date ${date.toISOString().split('T')[0]}`);
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // Try parsing as a regular date string (handles dd/mm/yyyy, dd-mm-yyyy, etc.)
+    // First try Dutch format (dd/mm/yyyy or dd-mm-yyyy)
+    const dutchMatch = strValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (dutchMatch) {
+      const day = parseInt(dutchMatch[1], 10);
+      const month = parseInt(dutchMatch[2], 10) - 1; // JavaScript months are 0-indexed
+      let year = parseInt(dutchMatch[3], 10);
+      if (year < 100) year += 2000; // Convert 24 to 2024
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        console.log(`Converted Dutch date ${strValue} to ${date.toISOString().split('T')[0]}`);
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // Return original string if it already looks like a valid date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(strValue)) {
+      return strValue;
+    }
+    
+    // Return null if not a recognizable date format
+    return null;
+  };
+
+  // List of date fields that need conversion
+  const DATE_FIELDS = ['apkDate', 'companyDate', 'productionDate', 'registeredToDate'];
+
   // Validate and process rows from either CSV or XLSX
   const processRows = (rawHeaders: string[], rows: any[][]): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
     // Map Dutch headers to English field names
@@ -281,7 +339,20 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       mappedHeaders.forEach((header, index) => {
         const value = values[index];
         if (value !== undefined && value !== null && value !== '') {
-          row[header] = String(value).trim();
+          // Check if this is a date field that needs conversion
+          if (DATE_FIELDS.includes(header)) {
+            const convertedDate = convertExcelDate(value);
+            if (convertedDate) {
+              row[header] = convertedDate;
+              console.log(`Date field ${header}: raw value "${value}" -> converted "${convertedDate}"`);
+            } else {
+              // Store the original value if we couldn't convert it
+              row[header] = String(value).trim();
+              console.log(`Date field ${header}: could not convert "${value}", keeping as-is`);
+            }
+          } else {
+            row[header] = String(value).trim();
+          }
         }
       });
       
@@ -378,15 +449,15 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
   // Parse XLSX content
   const parseXLSX = (arrayBuffer: ArrayBuffer): { headers: string[], data: ParsedVehicle[], invalidCount: number } => {
     try {
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
       console.log("XLSX Sheet names:", workbook.SheetNames);
       console.log("Using sheet:", firstSheetName);
       
-      // Convert to array of arrays
-      const sheetData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      // Convert to array of arrays with raw values
+      const sheetData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
       
       console.log("XLSX first row (headers):", sheetData[0]);
       console.log("XLSX total rows:", sheetData.length);
