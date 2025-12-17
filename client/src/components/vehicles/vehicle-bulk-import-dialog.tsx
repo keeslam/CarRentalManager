@@ -380,6 +380,37 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
           if (match) {
             row.tireSize = match[1].replace(/\s+/g, '').toUpperCase();
             console.log(`Extracted tire size "${row.tireSize}" from text`);
+            
+            // Clean up the source fields by removing the tire size and related words
+            const cleanupField = (text: string | undefined): string => {
+              if (!text) return '';
+              let cleaned = text
+                // Remove the tire size pattern
+                .replace(tireSizePattern, '')
+                // Remove Dutch tire-related words (case insensitive)
+                .replace(/\bbandenm(aa)?t\.?\b/gi, '')
+                .replace(/\bbandenmaat\b/gi, '')
+                .replace(/\bbandenmt\b/gi, '')
+                .replace(/\bbanden\s*maat\b/gi, '')
+                .replace(/\btire\s*size\b/gi, '')
+                // Clean up extra whitespace and punctuation
+                .replace(/\s*[:\-,;]\s*$/g, '')
+                .replace(/^\s*[:\-,;]\s*/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              return cleaned;
+            };
+            
+            // Apply cleanup to the fields where we searched
+            if (row.remarks && typeof row.remarks === 'string') {
+              row.remarks = cleanupField(row.remarks);
+            }
+            if (row.generalInfo && typeof row.generalInfo === 'string') {
+              row.generalInfo = cleanupField(row.generalInfo);
+            }
+            if (row.internalAppointments && typeof row.internalAppointments === 'string') {
+              row.internalAppointments = cleanupField(row.internalAppointments);
+            }
           }
         }
       }
