@@ -407,6 +407,33 @@ export default function MaintenanceCalendar() {
     queryKey: ["/api/app-settings/key/calendar_settings"],
   });
 
+  // Fetch system settings for maintenance calendar display options
+  const { data: systemSettings } = useQuery<{
+    showApkReminders?: boolean;
+    showWarrantyReminders?: boolean;
+    showMaintenanceBlocks?: boolean;
+    maintenanceExcludedStatuses?: string[];
+  }>({
+    queryKey: ["/api/settings"],
+  });
+
+  // Apply show/hide settings - default to showing all if settings not loaded
+  const showApkReminders = systemSettings?.showApkReminders ?? true;
+  const showWarrantyReminders = systemSettings?.showWarrantyReminders ?? true;
+  const showMaintenanceBlocks = systemSettings?.showMaintenanceBlocks ?? true;
+  const maintenanceExcludedStatuses = systemSettings?.maintenanceExcludedStatuses || ["not_for_rental"];
+
+  // Filter APK and warranty vehicles based on settings
+  const filteredApkExpiringVehicles = showApkReminders ? apkExpiringVehicles : [];
+  const filteredWarrantyExpiringVehicles = showWarrantyReminders ? warrantyExpiringVehicles : [];
+  const filteredMaintenanceBlocks = showMaintenanceBlocks ? maintenanceBlocks : [];
+
+  // Filter vehicles based on excluded statuses for maintenance reminders
+  const vehiclesForMaintenance = useMemo(() => {
+    if (!vehicles) return [];
+    return vehicles.filter(v => !maintenanceExcludedStatuses.includes(v.availabilityStatus || 'available'));
+  }, [vehicles, maintenanceExcludedStatuses]);
+
   // Helper to check if a date is a holiday or blocked
   const getDateStatus = useMemo(() => {
     return (day: Date): { isHoliday: boolean; isBlocked: boolean; holidayName?: string; blockedReason?: string } => {
@@ -498,6 +525,8 @@ export default function MaintenanceCalendar() {
   };
 
   // Helper function to check if maintenance is already scheduled for a vehicle
+  // Note: We use the FULL maintenanceBlocks list (not filtered) to ensure reminder suppression
+  // works correctly even when maintenance block visibility is toggled off in settings
   const isMaintenanceScheduled = (vehicleId: number, maintenanceType: 'apk_inspection' | 'warranty_service'): boolean => {
     if (!maintenanceBlocks) {
       return false;
@@ -703,24 +732,24 @@ export default function MaintenanceCalendar() {
       });
     };
     
-    // Generate APK and warranty events with advance reminders for ALL vehicles
+    // Generate APK and warranty events with advance reminders for vehicles (excluding filtered statuses)
     // Check every vehicle for APK and warranty dates to create complete reminders
-    if (vehicles) {
-      vehicles.forEach(vehicle => {
-        // Create APK events if vehicle has APK date AND no APK maintenance is scheduled
-        if (vehicle.apkDate && !isMaintenanceScheduled(vehicle.id, 'apk_inspection')) {
+    if (vehiclesForMaintenance) {
+      vehiclesForMaintenance.forEach(vehicle => {
+        // Create APK events if vehicle has APK date AND no APK maintenance is scheduled AND APK reminders are enabled
+        if (showApkReminders && vehicle.apkDate && !isMaintenanceScheduled(vehicle.id, 'apk_inspection')) {
           addApkEvents(vehicle);
         }
         
-        // Create warranty events if vehicle has warranty end date AND no warranty service is scheduled
-        if (vehicle.warrantyEndDate && !isMaintenanceScheduled(vehicle.id, 'warranty_service')) {
+        // Create warranty events if vehicle has warranty end date AND no warranty service is scheduled AND warranty reminders are enabled
+        if (showWarrantyReminders && vehicle.warrantyEndDate && !isMaintenanceScheduled(vehicle.id, 'warranty_service')) {
           addWarrantyEvents(vehicle);
         }
       });
     }
     
     // Scheduled maintenance events (potentially multi-day)
-    maintenanceBlocks.forEach(reservation => {
+    filteredMaintenanceBlocks.forEach(reservation => {
       // Find vehicle from vehicles list instead of relying on embedded object
       const vehicle = vehicles?.find((v: Vehicle) => v.id === reservation.vehicleId);
       if (!vehicle) return; // Skip if vehicle not found
@@ -766,7 +795,7 @@ export default function MaintenanceCalendar() {
     });
     
     return events;
-  }, [apkExpiringVehicles, warrantyExpiringVehicles, maintenanceBlocks, reservations, vehicles]);
+  }, [filteredApkExpiringVehicles, filteredWarrantyExpiringVehicles, filteredMaintenanceBlocks, reservations, vehicles, vehiclesForMaintenance, showApkReminders, showWarrantyReminders]);
 
   // Helper function to get maintenance events that start, end, or occur on a specific day
   const getMaintenanceEventsForDate = (day: Date): MaintenanceEvent[] => {
