@@ -493,25 +493,36 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async getVehiclesWithApkExpiringSoon(): Promise<Vehicle[]> {
+  async getVehiclesWithApkExpiringSoon(options?: { 
+    daysAhead?: number; 
+    excludedStatuses?: string[] 
+  }): Promise<Vehicle[]> {
     const today = new Date();
+    const daysAhead = options?.daysAhead ?? 60; // Default 60 days (2 months)
     const twoMonthsAgo = addMonths(today, -2);
-    const twoMonthsFromNow = addMonths(today, 2);
+    const futureDate = addDays(today, daysAhead);
     const pastStr = twoMonthsAgo.toISOString().split('T')[0];
-    const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
+    const futureStr = futureDate.toISOString().split('T')[0];
+    
+    // Build conditions for the query
+    const conditions: any[] = [
+      sql`${vehicles.apkDate} IS NOT NULL`,
+      sql`${vehicles.apkDate} >= ${pastStr}`, // Not more than 2 months overdue
+      sql`${vehicles.apkDate} <= ${futureStr}` // Within specified days ahead
+    ];
+    
+    // Add exclusion for specified vehicle statuses
+    if (options?.excludedStatuses && options.excludedStatuses.length > 0) {
+      for (const status of options.excludedStatuses) {
+        conditions.push(sql`${vehicles.availabilityStatus} != ${status}`);
+      }
+    }
     
     // Get all vehicles with APK expiring soon (including overdue up to 2 months)
-    // Show APK dates within a 4-month window: 2 months overdue to 2 months in future
     const expiringVehicles = await db
       .select()
       .from(vehicles)
-      .where(
-        and(
-          sql`${vehicles.apkDate} IS NOT NULL`,
-          sql`${vehicles.apkDate} >= ${pastStr}`, // Not more than 2 months overdue
-          sql`${vehicles.apkDate} <= ${futureStr}` // Not more than 2 months in future
-        )
-      );
+      .where(and(...conditions));
     
     // Get all vehicles that already have a scheduled APK inspection (exclude soft-deleted)
     const scheduledApkInspections = await db
@@ -537,25 +548,36 @@ export class DatabaseStorage implements IStorage {
     return expiringVehicles.filter(vehicle => !vehiclesWithScheduledApk.has(vehicle.id));
   }
 
-  async getVehiclesWithWarrantyExpiringSoon(): Promise<Vehicle[]> {
+  async getVehiclesWithWarrantyExpiringSoon(options?: { 
+    daysAhead?: number; 
+    excludedStatuses?: string[] 
+  }): Promise<Vehicle[]> {
     const today = new Date();
+    const daysAhead = options?.daysAhead ?? 60; // Default 60 days (2 months)
     const twoMonthsAgo = addMonths(today, -2);
-    const twoMonthsFromNow = addMonths(today, 2);
+    const futureDate = addDays(today, daysAhead);
     const pastStr = twoMonthsAgo.toISOString().split('T')[0];
-    const futureStr = twoMonthsFromNow.toISOString().split('T')[0];
+    const futureStr = futureDate.toISOString().split('T')[0];
+    
+    // Build conditions for the query
+    const conditions: any[] = [
+      sql`${vehicles.warrantyEndDate} IS NOT NULL`,
+      sql`${vehicles.warrantyEndDate} >= ${pastStr}`, // Not more than 2 months overdue
+      sql`${vehicles.warrantyEndDate} <= ${futureStr}` // Within specified days ahead
+    ];
+    
+    // Add exclusion for specified vehicle statuses
+    if (options?.excludedStatuses && options.excludedStatuses.length > 0) {
+      for (const status of options.excludedStatuses) {
+        conditions.push(sql`${vehicles.availabilityStatus} != ${status}`);
+      }
+    }
     
     // Get all vehicles with warranty expiring soon (including overdue up to 2 months)
-    // Show warranty dates within a 4-month window: 2 months overdue to 2 months in future
     return await db
       .select()
       .from(vehicles)
-      .where(
-        and(
-          sql`${vehicles.warrantyEndDate} IS NOT NULL`,
-          sql`${vehicles.warrantyEndDate} >= ${pastStr}`, // Not more than 2 months overdue
-          sql`${vehicles.warrantyEndDate} <= ${futureStr}` // Not more than 2 months in future
-        )
-      );
+      .where(and(...conditions));
   }
 
   // Customer methods

@@ -686,14 +686,40 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Get vehicles with APK expiring soon
   app.get("/api/vehicles/apk-expiring", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
-    const vehicles = await storage.getVehiclesWithApkExpiringSoon();
-    res.json(vehicles);
+    try {
+      // Get maintenance calendar settings
+      const appSettings = await storage.getSettings();
+      const excludedStatuses = appSettings?.maintenanceExcludedStatuses || ["not_for_rental"];
+      const daysAhead = appSettings?.apkReminderDays || 30;
+      
+      const vehicles = await storage.getVehiclesWithApkExpiringSoon({
+        daysAhead,
+        excludedStatuses
+      });
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Error fetching APK expiring vehicles:", error);
+      res.status(500).json({ message: "Failed to fetch APK expiring vehicles" });
+    }
   });
 
   // Get vehicles with warranty expiring soon
   app.get("/api/vehicles/warranty-expiring", hasPermission(UserPermission.VIEW_VEHICLES, UserPermission.MANAGE_VEHICLES), async (req, res) => {
-    const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon();
-    res.json(vehicles);
+    try {
+      // Get maintenance calendar settings
+      const appSettings = await storage.getSettings();
+      const excludedStatuses = appSettings?.maintenanceExcludedStatuses || ["not_for_rental"];
+      const daysAhead = appSettings?.warrantyReminderDays || 30;
+      
+      const vehicles = await storage.getVehiclesWithWarrantyExpiringSoon({
+        daysAhead,
+        excludedStatuses
+      });
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Error fetching warranty expiring vehicles:", error);
+      res.status(500).json({ message: "Failed to fetch warranty expiring vehicles" });
+    }
   });
 
   // Get overlapping regular reservations for a vehicle during maintenance period
