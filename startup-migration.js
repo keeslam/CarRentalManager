@@ -137,20 +137,22 @@ async function runMigrations() {
       `INSERT INTO settings (contract_number_start) VALUES (1)`
     );
     
-    // Add contract number override column to settings table
+    // Add ALL settings table columns (complete list from schema)
+    // Contract number settings
     await addColumnIfNotExists('settings', 'contract_number_override', 'integer');
     
-    // Add updated_at and updated_by columns to settings table
-    await addColumnIfNotExists('settings', 'updated_at', 'timestamp DEFAULT NOW() NOT NULL');
-    await addColumnIfNotExists('settings', 'updated_by', 'text');
-    
-    // Add maintenance calendar settings columns to settings table
+    // Maintenance calendar display settings
     await addColumnIfNotExists('settings', 'maintenance_excluded_statuses', 'text[] DEFAULT \'{not_for_rental}\'');
     await addColumnIfNotExists('settings', 'show_apk_reminders', 'boolean DEFAULT true NOT NULL');
     await addColumnIfNotExists('settings', 'apk_reminder_days', 'integer DEFAULT 30 NOT NULL');
     await addColumnIfNotExists('settings', 'show_warranty_reminders', 'boolean DEFAULT true NOT NULL');
     await addColumnIfNotExists('settings', 'warranty_reminder_days', 'integer DEFAULT 30 NOT NULL');
     await addColumnIfNotExists('settings', 'show_maintenance_blocks', 'boolean DEFAULT true NOT NULL');
+    
+    // Audit columns for settings
+    await addColumnIfNotExists('settings', 'updated_at', 'timestamp DEFAULT NOW() NOT NULL');
+    await addColumnIfNotExists('settings', 'updated_by', 'text');
+    await addColumnIfNotExists('settings', 'updated_by_user_id', 'integer REFERENCES users(id)');
     
     // Add missing columns to vehicles table (only if vehicles table exists)
     await addColumnIfNotExists('vehicles', 'maintenance_status', 'text DEFAULT \'ok\' NOT NULL');
