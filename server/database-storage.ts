@@ -1862,6 +1862,30 @@ export class DatabaseStorage implements IStorage {
     
     return result.rowCount ? result.rowCount > 0 : false;
   }
+
+  async deleteNotificationsByTypeAndPattern(type: string, pattern: string): Promise<number> {
+    // Find and delete notifications matching the type and pattern
+    const matchingNotifications = await db
+      .select()
+      .from(customNotifications)
+      .where(
+        and(
+          eq(customNotifications.type, type),
+          sql`${customNotifications.description} LIKE ${'%' + pattern + '%'}`
+        )
+      );
+    
+    if (matchingNotifications.length === 0) {
+      return 0;
+    }
+
+    const idsToDelete = matchingNotifications.map(n => n.id);
+    const result = await db
+      .delete(customNotifications)
+      .where(sql`${customNotifications.id} IN (${sql.join(idsToDelete.map(id => sql`${id}`), sql`, `)})`);
+    
+    return result.rowCount || 0;
+  }
   
   // Backup Settings methods
   async getBackupSettings(): Promise<BackupSettings | undefined> {
@@ -1984,10 +2008,10 @@ export class DatabaseStorage implements IStorage {
       .values(placeholderData)
       .returning();
 
-    // Create notification for pending spare assignment
+    // Create notification for pending spare assignment with reservation ID reference
     await this.createCustomNotification({
       title: "Spare Vehicle Assignment Required",
-      description: `TBD spare vehicle needs assignment for ${startDate}${endDate ? ` - ${endDate}` : ''}`,
+      description: `TBD spare vehicle needs assignment for ${startDate}${endDate ? ` - ${endDate}` : ''} [placeholder:${placeholder.id}]`,
       date: startDate,
       type: "spare_assignment",
       isRead: false,
@@ -2062,17 +2086,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reservations.id, reservationId))
       .returning();
 
-    // Mark related notifications as read when assignment is complete
-    await db
-      .update(customNotifications)
-      .set({ isRead: true })
-      .where(
-        and(
-          eq(customNotifications.type, "spare_assignment"),
-          eq(customNotifications.date, reservation.startDate),
-          eq(customNotifications.isRead, false)
-        )
-      );
+    // Delete the spare assignment notification when vehicle is assigned
+    await this.deleteNotificationsByTypeAndPattern("spare_assignment", `[placeholder:${reservationId}]`);
 
     return updatedReservation || undefined;
   }
