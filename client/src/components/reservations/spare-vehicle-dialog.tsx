@@ -134,6 +134,11 @@ export function SpareVehicleDialog({
         invalidateRelatedQueries('vehicles', { id: originalReservation.vehicleId });
       }
       
+      // Also invalidate placeholder reservations and custom notifications
+      // so the notification center updates properly
+      queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      
       toast({
         title: "Spare vehicle assigned",
         description: "The spare vehicle has been assigned successfully.",
