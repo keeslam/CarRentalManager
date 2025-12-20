@@ -45,6 +45,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
+import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Bell,
@@ -60,6 +61,8 @@ import {
   X,
   Loader2,
   Info,
+  Settings,
+  ExternalLink,
 } from "lucide-react";
 
 interface NotificationCenterDialogProps {
@@ -489,6 +492,20 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                     ? "No new notifications"
                     : `${totalNotifications} notification${totalNotifications !== 1 ? "s" : ""} requiring attention`}
                 </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  onClick={() => onOpenChange(false)}
+                  data-testid="button-notification-settings"
+                >
+                  <Link href="/notifications">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Settings & Overview
+                  </Link>
+                </Button>
               </div>
             </div>
           </DialogHeader>
