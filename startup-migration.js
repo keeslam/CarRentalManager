@@ -137,6 +137,9 @@ async function runMigrations() {
       `INSERT INTO settings (contract_number_start) VALUES (1)`
     );
     
+    // Add contract number override column to settings table
+    await addColumnIfNotExists('settings', 'contract_number_override', 'integer');
+    
     // Add maintenance calendar settings columns to settings table
     await addColumnIfNotExists('settings', 'maintenance_excluded_statuses', 'text[] DEFAULT \'{not_for_rental}\'');
     await addColumnIfNotExists('settings', 'show_apk_reminders', 'boolean DEFAULT true NOT NULL');
