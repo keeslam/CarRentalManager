@@ -168,6 +168,14 @@ export default function Settings() {
   const [newBlockedReason, setNewBlockedReason] = useState("");
   const [defaultMaintenanceDuration, setDefaultMaintenanceDuration] = useState("1");
   const [reservationReminderHours, setReservationReminderHours] = useState("24");
+  
+  // Maintenance Calendar Settings state
+  const [maintenanceExcludedStatuses, setMaintenanceExcludedStatuses] = useState<string[]>(["not_for_rental"]);
+  const [showApkReminders, setShowApkReminders] = useState(true);
+  const [showWarrantyReminders, setShowWarrantyReminders] = useState(true);
+  const [showMaintenanceBlocks, setShowMaintenanceBlocks] = useState(true);
+  const [apkReminderThresholdDays, setApkReminderThresholdDays] = useState("30");
+  const [warrantyReminderThresholdDays, setWarrantyReminderThresholdDays] = useState("30");
 
   // Document Email Templates state
   const [docEmailTemplates, setDocEmailTemplates] = useState({
@@ -212,6 +220,41 @@ export default function Settings() {
   const { data: emailSettings, isLoading: loadingEmail } = useQuery<EmailSetting[]>({
     queryKey: ['/api/app-settings/email'],
   });
+  
+  // Fetch system settings (for maintenance calendar display settings)
+  const { data: systemSettings } = useQuery<{
+    maintenanceExcludedStatuses?: string[];
+    showApkReminders?: boolean;
+    showWarrantyReminders?: boolean;
+    showMaintenanceBlocks?: boolean;
+    apkReminderDays?: number;
+    warrantyReminderDays?: number;
+  }>({
+    queryKey: ['/api/settings'],
+  });
+  
+  // Load maintenance calendar settings when they arrive
+  useEffect(() => {
+    if (!systemSettings) return;
+    if (systemSettings.maintenanceExcludedStatuses) {
+      setMaintenanceExcludedStatuses(systemSettings.maintenanceExcludedStatuses);
+    }
+    if (typeof systemSettings.showApkReminders === 'boolean') {
+      setShowApkReminders(systemSettings.showApkReminders);
+    }
+    if (typeof systemSettings.showWarrantyReminders === 'boolean') {
+      setShowWarrantyReminders(systemSettings.showWarrantyReminders);
+    }
+    if (typeof systemSettings.showMaintenanceBlocks === 'boolean') {
+      setShowMaintenanceBlocks(systemSettings.showMaintenanceBlocks);
+    }
+    if (systemSettings.apkReminderDays) {
+      setApkReminderThresholdDays(String(systemSettings.apkReminderDays));
+    }
+    if (systemSettings.warrantyReminderDays) {
+      setWarrantyReminderThresholdDays(String(systemSettings.warrantyReminderDays));
+    }
+  }, [systemSettings]);
 
   // Load settings into state when data arrives
   useEffect(() => {
@@ -390,6 +433,28 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
       toast({ title: "Success", description: "Calendar settings saved successfully" });
+    },
+  });
+  
+  // Save Maintenance Calendar Display Settings (to /api/settings)
+  const saveMaintenanceCalendarSettings = useMutation({
+    mutationFn: async () => {
+      const data = {
+        maintenanceExcludedStatuses,
+        showApkReminders,
+        showWarrantyReminders,
+        showMaintenanceBlocks,
+        apkReminderDays: parseInt(apkReminderThresholdDays) || 30,
+        warrantyReminderDays: parseInt(warrantyReminderThresholdDays) || 30,
+      };
+      await apiRequest('PUT', '/api/settings', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
+      toast({ title: "Success", description: "Maintenance calendar settings saved successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save maintenance calendar settings", variant: "destructive" });
     },
   });
 
@@ -1479,6 +1544,143 @@ export default function Settings() {
                 data-testid="button-save-calendar-settings"
               >
                 {saveCalendarSettings.isPending ? "Saving..." : "Save Calendar Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Maintenance Calendar Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5" />
+                Maintenance Calendar Display
+              </CardTitle>
+              <CardDescription>
+                Control which vehicles and reminders appear in the maintenance calendar
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Vehicle Status Exclusions */}
+              <div>
+                <h4 className="font-medium text-sm mb-3">Exclude Vehicles by Status</h4>
+                <p className="text-xs text-gray-500 mb-4">
+                  Vehicles with these statuses will not show APK/warranty reminders
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="exclude-not-for-rental"
+                      checked={maintenanceExcludedStatuses.includes("not_for_rental")}
+                      onCheckedChange={(checked) => {
+                        setMaintenanceExcludedStatuses(prev => 
+                          checked 
+                            ? [...prev.filter(s => s !== "not_for_rental"), "not_for_rental"]
+                            : prev.filter(s => s !== "not_for_rental")
+                        );
+                      }}
+                      data-testid="switch-exclude-not-for-rental"
+                    />
+                    <Label htmlFor="exclude-not-for-rental">Not for Rental</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="exclude-needs-fixing"
+                      checked={maintenanceExcludedStatuses.includes("needs_fixing")}
+                      onCheckedChange={(checked) => {
+                        setMaintenanceExcludedStatuses(prev => 
+                          checked 
+                            ? [...prev.filter(s => s !== "needs_fixing"), "needs_fixing"]
+                            : prev.filter(s => s !== "needs_fixing")
+                        );
+                      }}
+                      data-testid="switch-exclude-needs-fixing"
+                    />
+                    <Label htmlFor="exclude-needs-fixing">Needs Fixing</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-medium text-sm mb-3">Reminder Visibility</h4>
+                <p className="text-xs text-gray-500 mb-4">
+                  Toggle which reminder types appear in the calendar and notification center
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>APK Reminders</Label>
+                      <p className="text-sm text-gray-500">Show APK expiration reminders</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={apkReminderThresholdDays}
+                          onChange={(e) => setApkReminderThresholdDays(e.target.value)}
+                          className="w-20"
+                          disabled={!showApkReminders}
+                          data-testid="input-apk-threshold-days"
+                        />
+                        <span className="text-sm text-gray-500">days</span>
+                      </div>
+                      <Switch
+                        checked={showApkReminders}
+                        onCheckedChange={setShowApkReminders}
+                        data-testid="switch-show-apk-reminders"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Warranty Reminders</Label>
+                      <p className="text-sm text-gray-500">Show warranty expiration reminders</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={warrantyReminderThresholdDays}
+                          onChange={(e) => setWarrantyReminderThresholdDays(e.target.value)}
+                          className="w-20"
+                          disabled={!showWarrantyReminders}
+                          data-testid="input-warranty-threshold-days"
+                        />
+                        <span className="text-sm text-gray-500">days</span>
+                      </div>
+                      <Switch
+                        checked={showWarrantyReminders}
+                        onCheckedChange={setShowWarrantyReminders}
+                        data-testid="switch-show-warranty-reminders"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Maintenance Blocks</Label>
+                      <p className="text-sm text-gray-500">Show scheduled maintenance blocks on calendar</p>
+                    </div>
+                    <Switch
+                      checked={showMaintenanceBlocks}
+                      onCheckedChange={setShowMaintenanceBlocks}
+                      data-testid="switch-show-maintenance-blocks"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => saveMaintenanceCalendarSettings.mutate()}
+                disabled={saveMaintenanceCalendarSettings.isPending}
+                className="w-full md:w-auto"
+                data-testid="button-save-maintenance-calendar-settings"
+              >
+                {saveMaintenanceCalendarSettings.isPending ? "Saving..." : "Save Maintenance Settings"}
               </Button>
             </CardContent>
           </Card>
