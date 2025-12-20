@@ -230,7 +230,7 @@ export default function Settings() {
     apkReminderDays?: number;
     warrantyReminderDays?: number;
   }>({
-    queryKey: ['/api/settings'],
+    queryKey: ['/api/system-settings'],
   });
   
   // Load maintenance calendar settings when they arrive
@@ -436,7 +436,7 @@ export default function Settings() {
     },
   });
   
-  // Save Maintenance Calendar Display Settings (to /api/settings)
+  // Save Maintenance Calendar Display Settings (to /api/system-settings)
   const saveMaintenanceCalendarSettings = useMutation({
     mutationFn: async () => {
       const data = {
@@ -447,10 +447,10 @@ export default function Settings() {
         apkReminderDays: parseInt(apkReminderThresholdDays) || 30,
         warrantyReminderDays: parseInt(warrantyReminderThresholdDays) || 30,
       };
-      await apiRequest('PUT', '/api/settings', data);
+      await apiRequest('PUT', '/api/system-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/system-settings'] });
       toast({ title: "Success", description: "Maintenance calendar settings saved successfully" });
     },
     onError: () => {
@@ -2091,9 +2091,9 @@ function ContractNumberSettings() {
 
   // Fetch settings
   const { data: settings, isLoading } = useQuery({
-    queryKey: ["/api/settings"],
+    queryKey: ["/api/system-settings"],
     queryFn: async () => {
-      const response = await fetch("/api/settings");
+      const response = await fetch("/api/system-settings");
       if (!response.ok) throw new Error("Failed to fetch settings");
       return response.json();
     },
@@ -2112,14 +2112,14 @@ function ContractNumberSettings() {
   // Update settings mutation
   const updateSettings = useMutation({
     mutationFn: async (data: { contractNumberStart: number }) => {
-      return apiRequest("PUT", "/api/settings", data);
+      return apiRequest("PUT", "/api/system-settings", data);
     },
     onSuccess: () => {
       toast({
         title: "Settings Updated",
         description: "Contract number start value has been updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
     },
     onError: (error) => {
@@ -2158,7 +2158,7 @@ function ContractNumberSettings() {
         title: "Override Set",
         description: data.message || `Next contract number is now ${data.nextContractNumber}`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
       setOverrideInput("");
       setConflictWarning(null);
@@ -2184,7 +2184,7 @@ function ContractNumberSettings() {
         title: "Override Cleared",
         description: data.message || "Now using automatic contract numbering",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
     },
     onError: (error) => {

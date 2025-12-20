@@ -414,7 +414,7 @@ export default function MaintenanceCalendar() {
     showMaintenanceBlocks?: boolean;
     maintenanceExcludedStatuses?: string[];
   }>({
-    queryKey: ["/api/settings"],
+    queryKey: ["/api/system-settings"],
   });
 
   // Apply show/hide settings - default to showing all if settings not loaded

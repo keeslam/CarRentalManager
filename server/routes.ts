@@ -8981,12 +8981,20 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ============================================
 
   // Get system settings
-  app.get("/api/settings", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/system-settings", requireAuth, async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSettings();
       if (!settings) {
         // Return default settings if none exist
-        return res.json({ contractNumberStart: 1 });
+        return res.json({ 
+          contractNumberStart: 1,
+          maintenanceExcludedStatuses: ["not_for_rental"],
+          showApkReminders: true,
+          showWarrantyReminders: true,
+          showMaintenanceBlocks: true,
+          apkReminderDays: 30,
+          warrantyReminderDays: 30
+        });
       }
       res.json(settings);
     } catch (error) {
@@ -8996,13 +9004,27 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update system settings
-  app.put("/api/settings", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/system-settings", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = req.user;
-      const { contractNumberStart } = req.body;
+      const { 
+        contractNumberStart,
+        maintenanceExcludedStatuses,
+        showApkReminders,
+        showWarrantyReminders,
+        showMaintenanceBlocks,
+        apkReminderDays,
+        warrantyReminderDays
+      } = req.body;
 
       const updated = await storage.updateSettings({
         contractNumberStart,
+        maintenanceExcludedStatuses,
+        showApkReminders,
+        showWarrantyReminders,
+        showMaintenanceBlocks,
+        apkReminderDays,
+        warrantyReminderDays,
         updatedBy: user ? user.username : null,
       });
 
