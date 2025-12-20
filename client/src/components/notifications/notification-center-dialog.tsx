@@ -79,7 +79,7 @@ type NotificationFormData = z.infer<typeof notificationSchema>;
 export function NotificationCenterDialog({ open, onOpenChange }: NotificationCenterDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { openReservationDialog, openVehicleDialog, openAPKDialog } = useGlobalDialog();
+  const { openReservationDialog, openVehicleDialog, openAPKDialog, openSpareAssignmentDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNotification, setEditingNotification] = useState<CustomNotification | null>(null);
@@ -574,7 +574,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             date={p.startDate}
                             onView={() => {
                               onOpenChange(false);
-                              openReservationDialog(p.id);
+                              openSpareAssignmentDialog(p.id);
                             }}
                           />
                         ))}
