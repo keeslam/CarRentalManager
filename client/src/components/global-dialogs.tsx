@@ -5,6 +5,7 @@ import { ReservationViewDialog } from '@/components/reservations/reservation-vie
 import { ReservationEditDialog } from '@/components/reservations/reservation-edit-dialog';
 import { SpareVehicleDialog } from '@/components/reservations/spare-vehicle-dialog';
 import { ApkInspectionDialog } from '@/components/vehicles/apk-inspection-dialog';
+import { VehicleViewDialog } from '@/components/vehicles/vehicle-view-dialog';
 import { Vehicle, Reservation } from '@shared/schema';
 
 export function GlobalDialogs() {
@@ -18,6 +19,7 @@ export function GlobalDialogs() {
     closeSpareAssignmentDialog,
     closeAPKDialog,
     closeMaintenanceDialog,
+    closeVehicleDialog,
   } = useGlobalDialog();
   
   const handleEditReservation = (reservationId: number) => {
@@ -107,6 +109,13 @@ export function GlobalDialogs() {
           }}
         />
       )}
+
+      {/* Vehicle Details Dialog */}
+      <VehicleViewDialog
+        open={dialogState.vehicle.open}
+        onOpenChange={closeVehicleDialog}
+        vehicleId={dialogState.vehicle.vehicleId}
+      />
     </>
   );
 }

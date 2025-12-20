@@ -5,6 +5,7 @@ interface DialogState {
   spareAssignment: { open: boolean; id: number | null };
   apk: { open: boolean; vehicleId: number | null };
   maintenance: { open: boolean; vehicleId: number | null };
+  vehicle: { open: boolean; vehicleId: number | null };
 }
 
 interface GlobalDialogContextType {
@@ -17,6 +18,8 @@ interface GlobalDialogContextType {
   closeAPKDialog: () => void;
   openMaintenanceDialog: (vehicleId: number) => void;
   closeMaintenanceDialog: () => void;
+  openVehicleDialog: (vehicleId: number) => void;
+  closeVehicleDialog: () => void;
 }
 
 const GlobalDialogContext = createContext<GlobalDialogContextType | undefined>(undefined);
@@ -27,6 +30,7 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
     spareAssignment: { open: false, id: null },
     apk: { open: false, vehicleId: null },
     maintenance: { open: false, vehicleId: null },
+    vehicle: { open: false, vehicleId: null },
   });
 
   const openReservationDialog = (id: number) => {
@@ -85,6 +89,20 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const openVehicleDialog = (vehicleId: number) => {
+    setDialogState(prev => ({
+      ...prev,
+      vehicle: { open: true, vehicleId }
+    }));
+  };
+
+  const closeVehicleDialog = () => {
+    setDialogState(prev => ({
+      ...prev,
+      vehicle: { open: false, vehicleId: null }
+    }));
+  };
+
   return (
     <GlobalDialogContext.Provider
       value={{
@@ -97,6 +115,8 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
         closeAPKDialog,
         openMaintenanceDialog,
         closeMaintenanceDialog,
+        openVehicleDialog,
+        closeVehicleDialog,
       }}
     >
       {children}
