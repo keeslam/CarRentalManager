@@ -316,7 +316,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
   );
 
   const CustomNotificationCard = ({ notification }: { notification: CustomNotification }) => (
-    <div className="flex items-start gap-3 p-3 border-b hover:bg-muted/50 transition-colors">
+    <div className="flex items-start gap-3 p-3 border-b hover:bg-muted/50 transition-colors group">
       <div className="mt-0.5">
         <Bell className={notification.isRead ? "h-5 w-5 text-muted-foreground" : "h-5 w-5 text-primary"} />
       </div>
@@ -330,47 +330,48 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
         </div>
         <p className="text-xs text-muted-foreground mt-1">{notification.description}</p>
         <p className="text-xs text-muted-foreground mt-1">{formatDate(notification.date)}</p>
-      </div>
-      <div className="flex gap-1">
-        {notification.isRead ? (
+        <div className="flex gap-2 mt-2">
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => markAsUnreadMutation.mutate(notification.id)}
-            title="Mark as unread"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => handleEditClick(notification)}
+            data-testid={`button-edit-notification-${notification.id}`}
           >
-            <X className="h-4 w-4" />
+            <Edit2 className="h-3 w-3 mr-1" />
+            Edit
           </Button>
-        ) : (
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => markAsReadMutation.mutate(notification.id)}
-            title="Mark as read"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+            onClick={() => setDeleteNotification(notification)}
+            data-testid={`button-delete-notification-${notification.id}`}
           >
-            <Check className="h-4 w-4" />
+            <Trash2 className="h-3 w-3 mr-1" />
+            Delete
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => handleEditClick(notification)}
-          title="Edit"
-        >
-          <Edit2 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive"
-          onClick={() => setDeleteNotification(notification)}
-          title="Delete"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+          {notification.isRead ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => markAsUnreadMutation.mutate(notification.id)}
+            >
+              Mark unread
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => markAsReadMutation.mutate(notification.id)}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Mark read
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -720,22 +721,28 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
               </TabsContent>
 
               <TabsContent value="custom" className="m-0">
-                {(showCreateForm || editingNotification) && <NotificationForm />}
-                
-                {!showCreateForm && !editingNotification && (
-                  <div className="p-3 border-b">
-                    <Button onClick={() => setShowCreateForm(true)} className="w-full" data-testid="button-add-notification">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Custom Notification
-                    </Button>
+                <div className="p-3 border-b bg-blue-50 dark:bg-blue-950/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-sm">Manage Custom Notifications</h3>
+                      <p className="text-xs text-muted-foreground">Create, edit, and delete your own reminders</p>
+                    </div>
+                    {!showCreateForm && !editingNotification && (
+                      <Button onClick={() => setShowCreateForm(true)} size="sm" data-testid="button-add-notification">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add New
+                      </Button>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {customNotifications.length === 0 ? (
+                {(showCreateForm || editingNotification) && <NotificationForm />}
+
+                {customNotifications.length === 0 && !showCreateForm ? (
                   <EmptyState
                     icon={<MessageSquare className="h-8 w-8" />}
-                    title="No custom notifications"
-                    description="Create reminders and notes for your team."
+                    title="No custom notifications yet"
+                    description="Click 'Add New' above to create reminders and notes for your team."
                   />
                 ) : (
                   <>
