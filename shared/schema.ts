@@ -1536,6 +1536,13 @@ export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   contractNumberStart: integer("contract_number_start").notNull().default(1),
   contractNumberOverride: integer("contract_number_override"), // Manual override for next contract number
+  // Maintenance Calendar Settings
+  maintenanceExcludedStatuses: text("maintenance_excluded_statuses").array().default(["not_for_rental"]),
+  showApkReminders: boolean("show_apk_reminders").notNull().default(true),
+  apkReminderDays: integer("apk_reminder_days").notNull().default(30),
+  showWarrantyReminders: boolean("show_warranty_reminders").notNull().default(true),
+  warrantyReminderDays: integer("warranty_reminder_days").notNull().default(30),
+  showMaintenanceBlocks: boolean("show_maintenance_blocks").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   updatedBy: text("updated_by"),
   updatedByUser: integer("updated_by_user_id").references(() => users.id),
@@ -1550,6 +1557,12 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 export const updateSettingsSchema = createInsertSchema(settings).pick({
   contractNumberStart: true,
   contractNumberOverride: true,
+  maintenanceExcludedStatuses: true,
+  showApkReminders: true,
+  apkReminderDays: true,
+  showWarrantyReminders: true,
+  warrantyReminderDays: true,
+  showMaintenanceBlocks: true,
   updatedBy: true,
 }).partial();
 
