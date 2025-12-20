@@ -140,6 +140,10 @@ async function runMigrations() {
     // Add contract number override column to settings table
     await addColumnIfNotExists('settings', 'contract_number_override', 'integer');
     
+    // Add updated_at and updated_by columns to settings table
+    await addColumnIfNotExists('settings', 'updated_at', 'timestamp DEFAULT NOW() NOT NULL');
+    await addColumnIfNotExists('settings', 'updated_by', 'text');
+    
     // Add maintenance calendar settings columns to settings table
     await addColumnIfNotExists('settings', 'maintenance_excluded_statuses', 'text[] DEFAULT \'{not_for_rental}\'');
     await addColumnIfNotExists('settings', 'show_apk_reminders', 'boolean DEFAULT true NOT NULL');
