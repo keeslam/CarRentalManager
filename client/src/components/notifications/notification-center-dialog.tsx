@@ -4,6 +4,7 @@ import { differenceInDays } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useGlobalDialog } from "@/contexts/GlobalDialogContext";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
-import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Bell,
@@ -79,6 +79,7 @@ type NotificationFormData = z.infer<typeof notificationSchema>;
 export function NotificationCenterDialog({ open, onOpenChange }: NotificationCenterDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { openReservationDialog, openVehicleDialog, openAPKDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNotification, setEditingNotification] = useState<CustomNotification | null>(null);
@@ -283,14 +284,14 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
     title,
     description,
     date,
-    link,
+    onView,
     onDismiss,
   }: {
     icon: ReactNode;
     title: string;
     description: string;
     date: string;
-    link?: string;
+    onView?: () => void;
     onDismiss?: () => void;
   }) => (
     <div className="flex items-start gap-3 p-3 border-b hover:bg-muted/50 transition-colors">
@@ -301,9 +302,9 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
         <p className="text-xs text-muted-foreground mt-1">{formatDate(date)}</p>
       </div>
       <div className="flex gap-1">
-        {link && (
-          <Button variant="ghost" size="sm" asChild onClick={() => onOpenChange(false)}>
-            <Link href={link}>View</Link>
+        {onView && (
+          <Button variant="ghost" size="sm" onClick={onView}>
+            View
           </Button>
         )}
         {onDismiss && (
@@ -531,7 +532,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                               title={`Reservation #${r.id} starting soon`}
                               description={`${vehicle?.brand} ${vehicle?.model} - ${formatLicensePlate(vehicle?.licensePlate || "")}`}
                               date={r.startDate}
-                              link={`/reservations?openReservation=${r.id}`}
+                              onView={() => {
+                                onOpenChange(false);
+                                openReservationDialog(r.id);
+                              }}
                             />
                           );
                         })}
@@ -549,7 +553,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                               title={`${m.maintenanceCategory || "Maintenance"} scheduled`}
                               description={`${vehicle?.brand} ${vehicle?.model} - ${formatLicensePlate(vehicle?.licensePlate || "")}`}
                               date={m.startDate}
-                              link={`/vehicles/${m.vehicleId}?tab=maintenance`}
+                              onView={() => {
+                                onOpenChange(false);
+                                if (m.vehicleId) openVehicleDialog(m.vehicleId);
+                              }}
                             />
                           );
                         })}
@@ -565,7 +572,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             title={`Spare needed for ${p.customer?.name || "Customer"}`}
                             description={`Reservation #${p.id} needs a spare vehicle`}
                             date={p.startDate}
-                            link={`/?openSpare=${p.id}`}
+                            onView={() => {
+                              onOpenChange(false);
+                              openReservationDialog(p.id);
+                            }}
                           />
                         ))}
                       </>
@@ -580,7 +590,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             title={`APK expiring - ${formatLicensePlate(v.licensePlate)}`}
                             description={`${v.brand} ${v.model}`}
                             date={v.apkDate || ""}
-                            link={`/vehicles/${v.id}?openApkDialog=true`}
+                            onView={() => {
+                              onOpenChange(false);
+                              openAPKDialog(v.id);
+                            }}
                             onDismiss={() => {
                               localStorage.setItem(`dismissed_apk_${v.id}`, Date.now().toString());
                               queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
@@ -599,7 +612,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             title={`Warranty expiring - ${formatLicensePlate(v.licensePlate)}`}
                             description={`${v.brand} ${v.model}`}
                             date={v.warrantyEndDate || ""}
-                            link={`/vehicles/${v.id}`}
+                            onView={() => {
+                              onOpenChange(false);
+                              openVehicleDialog(v.id);
+                            }}
                             onDismiss={() => {
                               localStorage.setItem(`dismissed_warranty_${v.id}`, Date.now().toString());
                               queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
@@ -639,7 +655,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                         title={`Reservation #${r.id} starting soon`}
                         description={`${vehicle?.brand} ${vehicle?.model} - ${formatLicensePlate(vehicle?.licensePlate || "")}`}
                         date={r.startDate}
-                        link={`/reservations?openReservation=${r.id}`}
+                        onView={() => {
+                          onOpenChange(false);
+                          openReservationDialog(r.id);
+                        }}
                       />
                     );
                   })
@@ -663,7 +682,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                         title={`${m.maintenanceCategory || "Maintenance"} scheduled`}
                         description={`${vehicle?.brand} ${vehicle?.model} - ${formatLicensePlate(vehicle?.licensePlate || "")}`}
                         date={m.startDate}
-                        link={`/vehicles/${m.vehicleId}?tab=maintenance`}
+                        onView={() => {
+                          onOpenChange(false);
+                          if (m.vehicleId) openVehicleDialog(m.vehicleId);
+                        }}
                       />
                     );
                   })
@@ -685,7 +707,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                       title={`APK expiring - ${formatLicensePlate(v.licensePlate)}`}
                       description={`${v.brand} ${v.model}`}
                       date={v.apkDate || ""}
-                      link={`/vehicles/${v.id}?openApkDialog=true`}
+                      onView={() => {
+                        onOpenChange(false);
+                        openAPKDialog(v.id);
+                      }}
                       onDismiss={() => {
                         localStorage.setItem(`dismissed_apk_${v.id}`, Date.now().toString());
                         queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
@@ -710,7 +735,10 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                       title={`Warranty expiring - ${formatLicensePlate(v.licensePlate)}`}
                       description={`${v.brand} ${v.model}`}
                       date={v.warrantyEndDate || ""}
-                      link={`/vehicles/${v.id}`}
+                      onView={() => {
+                        onOpenChange(false);
+                        openVehicleDialog(v.id);
+                      }}
                       onDismiss={() => {
                         localStorage.setItem(`dismissed_warranty_${v.id}`, Date.now().toString());
                         queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
