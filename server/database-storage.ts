@@ -1417,7 +1417,13 @@ export class DatabaseStorage implements IStorage {
 
   // Document methods
   async getAllDocuments(): Promise<Document[]> {
-    return await db.select().from(documents);
+    // Only return documents for vehicles that still exist
+    const result = await db
+      .select({ document: documents })
+      .from(documents)
+      .innerJoin(vehicles, eq(documents.vehicleId, vehicles.id));
+    
+    return result.map(row => row.document);
   }
 
   async getDocument(id: number): Promise<Document | undefined> {
