@@ -2,7 +2,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { io, Socket } from 'socket.io-client';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { invalidateVehicleData, invalidateReservationData } from '@/lib/cache-utils';
+import { 
+  invalidateVehicleData, 
+  invalidateReservationData,
+  invalidateCustomerData,
+  invalidateExpenseData,
+  invalidateDocumentData,
+  invalidateNotificationData
+} from '@/lib/cache-utils';
 
 interface SocketContextValue {
   socket: Socket | null;
@@ -84,83 +91,61 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   );
 };
 
-// Smart cache invalidation based on entity type and action
+/**
+ * Smart cache invalidation based on entity type and action.
+ * Uses soft invalidation (refetchType: 'none') to prevent dialogs from closing.
+ * Data will be refetched when components re-render or when they actively need it.
+ */
 function invalidateQueries(entityType: string, action: string, data?: any) {
-  console.log(`🔄 Invalidating cache for ${entityType} ${action}`, data);
+  console.log(`🔄 Soft-invalidating cache for ${entityType} ${action}`, data);
 
   switch (entityType) {
     case 'users':
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/users'],
+        refetchType: 'none'
+      });
       if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/users', data.id] });
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/users', data.id],
+          refetchType: 'none'
+        });
       }
       break;
 
     case 'vehicles':
-      // Use centralized invalidation helper for comprehensive cache refresh
       invalidateVehicleData(data?.id);
       break;
 
     case 'customers':
-      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/customers/with-reservations'] });
-      if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/customers', data.id] });
-      }
-      // Also invalidate reservation-related data
-      invalidateReservationData();
+      invalidateCustomerData(data?.id);
       break;
 
     case 'reservations':
-      // Use centralized invalidation helper for comprehensive cache refresh
       invalidateReservationData(data?.id, data?.vehicleId);
       break;
 
     case 'expenses':
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses/recent'] });
-      if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/expenses', data.id] });
-      }
-      // Also invalidate related vehicles data and vehicle-specific expenses
-      if (data?.vehicleId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.vehicleId] });
-        queryClient.invalidateQueries({ queryKey: ['/api/expenses/vehicle', data.vehicleId] });
-      }
+      invalidateExpenseData(data?.id, data?.vehicleId);
       break;
 
     case 'documents':
-      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/documents', data.id] });
-      }
-      // Also invalidate related vehicles data and vehicle-specific documents
-      if (data?.vehicleId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', data.vehicleId] });
-        queryClient.invalidateQueries({ queryKey: ['/api/documents/vehicle', data.vehicleId] });
-      }
+      invalidateDocumentData(data?.id, data?.vehicleId);
       break;
 
     case 'notifications':
-      // Invalidate all notification-related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/user'] });
-      if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/notifications', data.id] });
-        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications', data.id] });
-      }
-      // Invalidate type-specific notifications if type is available
-      if (data?.type) {
-        queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/type', data.type] });
-      }
+      invalidateNotificationData(data?.id);
       break;
 
     default:
-      // Fallback: invalidate all queries for unknown entity types
-      console.log('🔄 Invalidating all queries for unknown entity type:', entityType);
-      queryClient.invalidateQueries();
+      console.log('🔄 Unknown entity type, soft-invalidating related queries:', entityType);
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/');
+        },
+        refetchType: 'none'
+      });
       break;
   }
 }

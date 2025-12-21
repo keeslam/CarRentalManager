@@ -116,14 +116,15 @@ export const queryClient = new QueryClient({
 });
 
 /**
- * Automatic cache invalidation based on mutation patterns
- * This eliminates the need for manual cache invalidation in most cases
+ * Automatic cache invalidation based on mutation patterns.
+ * Uses soft invalidation to prevent dialogs from closing unexpectedly.
+ * Data is marked as stale but not force-refetched.
  */
 function autoInvalidateCache(mutationKey: string, data?: any) {
   // Extract the API path and method from mutation key
   const apiPath = mutationKey.toLowerCase();
   
-  // Smart invalidation based on API patterns
+  // Smart invalidation based on API patterns - uses soft invalidation
   if (apiPath.includes('users')) {
     invalidateByPrefix('/api/users');
   } else if (apiPath.includes('vehicles')) {
@@ -140,7 +141,7 @@ function autoInvalidateCache(mutationKey: string, data?: any) {
     invalidateRelatedQueries('notifications', data);
   }
   
-  // Always invalidate dashboard data for any changes
+  // Soft invalidate dashboard data - they will refetch when visible
   invalidateByPrefix('/api/reservations/upcoming');
   invalidateByPrefix('/api/expenses/recent');
   invalidateByPrefix('/api/vehicles/apk-expiring');
@@ -148,14 +149,17 @@ function autoInvalidateCache(mutationKey: string, data?: any) {
 }
 
 /**
- * Prefix-based invalidation utility to invalidate all queries with a matching prefix
+ * Prefix-based invalidation utility to invalidate all queries with a matching prefix.
+ * Uses soft invalidation (refetchType: 'none') to prevent dialogs from closing.
+ * Data is marked stale and will be refetched when components need it.
  */
 export function invalidateByPrefix(prefix: string) {
   return queryClient.invalidateQueries({
     predicate: (query) => {
       const queryKey = query.queryKey;
       return typeof queryKey?.[0] === 'string' && queryKey[0].startsWith(prefix);
-    }
+    },
+    refetchType: 'none' // Soft invalidation - prevents dialog closures
   });
 }
 
@@ -189,20 +193,21 @@ export const createMutationWithoutAutoCache = (options: any) => ({
 });
 
 /**
- * Comprehensive invalidation system for all entity types and their relationships
- * This ensures changes propagate across all related pages and components
+ * Comprehensive soft invalidation system for all entity types and their relationships.
+ * Uses refetchType: 'none' throughout to prevent dialogs from closing unexpectedly.
+ * Data is marked as stale and will be refetched when components actively need it.
+ * 
+ * This ensures real-time updates are reflected without disrupting user interactions.
  */
 export function invalidateRelatedQueries(entityType: string, entityData?: { id?: number; vehicleId?: number; customerId?: number }) {
   const id = entityData?.id;
   const vehicleId = entityData?.vehicleId;
   const customerId = entityData?.customerId;
   
-  // Core invalidation patterns based on entity type
+  // All invalidations use soft mode (refetchType: 'none') via invalidateByPrefix
   switch (entityType) {
     case 'vehicles':
-      // Invalidate all vehicle-related queries
       invalidateByPrefix('/api/vehicles');
-      // Also invalidate related entities that depend on vehicle data
       if (id) {
         invalidateByPrefix(`/api/reservations/vehicle/${id}`);
         invalidateByPrefix(`/api/expenses/vehicle/${id}`);
@@ -211,14 +216,11 @@ export function invalidateRelatedQueries(entityType: string, entityData?: { id?:
       break;
       
     case 'reservations':
-      // Invalidate all reservation-related queries
       invalidateByPrefix('/api/reservations');
-      // Also affect vehicle availability
       invalidateByPrefix('/api/vehicles/available');
-      // Invalidate related vehicle and customer data if available
+      invalidateByPrefix('/api/placeholder-reservations');
       if (vehicleId) {
         invalidateByPrefix(`/api/reservations/vehicle/${vehicleId}`);
-        invalidateByPrefix('/api/vehicles'); // Might affect availability
       }
       if (customerId) {
         invalidateByPrefix(`/api/reservations/customer/${customerId}`);
@@ -226,36 +228,29 @@ export function invalidateRelatedQueries(entityType: string, entityData?: { id?:
       break;
       
     case 'expenses':
-      // Invalidate all expense-related queries including recent expenses and parameterized queries
       invalidateByPrefix('/api/expenses');
-      // Invalidate related vehicle data if available
       if (vehicleId) {
         invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
       }
       break;
       
     case 'documents':
-      // Invalidate all document-related queries
       invalidateByPrefix('/api/documents');
-      // Invalidate related vehicle data if available
       if (vehicleId) {
         invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
       }
       break;
       
     case 'customers':
-      // Invalidate all customer-related queries
       invalidateByPrefix('/api/customers');
-      // Also invalidate reservations that might display customer data
-      invalidateByPrefix('/api/reservations');
       if (id) {
         invalidateByPrefix(`/api/reservations/customer/${id}`);
       }
       break;
       
     case 'notifications':
-      // Invalidate all notification-related queries
       invalidateByPrefix('/api/custom-notifications');
+      invalidateByPrefix('/api/notifications');
       break;
       
     default:
