@@ -220,6 +220,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Google Translate Widget */}
+            <div id="google_translate_element" className="hidden md:block"></div>
+            
             <div className="relative" ref={searchRef}>
               <form onSubmit={(e) => {
                 e.preventDefault();
