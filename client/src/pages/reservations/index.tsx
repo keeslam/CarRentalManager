@@ -52,9 +52,9 @@ export default function ReservationsIndex() {
   const { toast } = useToast();
   
   // Fetch overdue reservations
+  // Note: No refetchInterval - real-time updates come via WebSocket to prevent dialog closures
   const { data: overdueReservations = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations/overdue'],
-    refetchInterval: 60000,
   });
   
   // Get current date

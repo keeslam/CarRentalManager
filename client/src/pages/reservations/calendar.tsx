@@ -610,9 +610,9 @@ export default function ReservationCalendarPage() {
   });
 
   // Fetch overdue reservations (picked_up but past end date)
+  // Note: No refetchInterval - real-time updates come via WebSocket to prevent dialog closures
   const { data: overdueReservations = [] } = useQuery<Reservation[]>({
     queryKey: ['/api/reservations/overdue'],
-    refetchInterval: 60000,
   });
 
   // Fetch documents for selected reservation

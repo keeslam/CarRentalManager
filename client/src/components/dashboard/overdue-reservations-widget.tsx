@@ -25,9 +25,9 @@ function getUrgencyClass(days: number): string {
 export function OverdueReservationsWidget() {
   const [selectedReservationId, setSelectedReservationId] = useState<number | null>(null);
   
+  // Note: No refetchInterval - real-time updates come via WebSocket to prevent dialog closures
   const { data: overdueReservations = [], isLoading, error } = useQuery<OverdueReservation[]>({
     queryKey: ['/api/reservations/overdue'],
-    refetchInterval: 60000,
   });
 
   const today = new Date();
