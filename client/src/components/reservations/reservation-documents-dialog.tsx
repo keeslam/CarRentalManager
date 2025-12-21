@@ -33,8 +33,6 @@ export function ReservationDocumentsDialog({
     enabled: open && vehicleId !== null,
   });
 
-  if (!open || vehicleId === null) return null;
-
   // Filter documents for this specific reservation ONLY (not general vehicle docs)
   const reservationDocuments = documents?.filter(
     doc => doc.reservationId === reservationId
@@ -48,8 +46,9 @@ export function ReservationDocumentsDialog({
     return acc;
   }, {} as Record<string, Document[]>);
 
+  // Always render the Dialog to prevent unmounting issues
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && vehicleId !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

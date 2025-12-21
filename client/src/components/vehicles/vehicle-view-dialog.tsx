@@ -29,10 +29,10 @@ export function VehicleViewDialog({
     enabled: open && vehicleId !== null,
   });
 
-  if (!open || vehicleId === null) return null;
-
+  // Always render the Dialog component to prevent unmounting issues
+  // The open prop controls visibility
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && vehicleId !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

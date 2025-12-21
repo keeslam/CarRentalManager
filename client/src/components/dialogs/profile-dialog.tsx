@@ -201,18 +201,17 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     },
   });
 
-  if (!user) return null;
+  const createdAt = user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown";
 
-  const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown";
-
+  // Always render the Dialog to prevent unmounting issues
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !!user} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>My Profile</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {user && (<Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" data-testid="tab-profile">
               <UserIcon className="h-4 w-4 mr-1" />
@@ -521,7 +520,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
               </form>
             </Form>
           </TabsContent>
-        </Tabs>
+        </Tabs>)}
       </DialogContent>
     </Dialog>
   );

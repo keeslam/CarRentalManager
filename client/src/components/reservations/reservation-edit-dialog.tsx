@@ -43,10 +43,10 @@ export function ReservationEditDialog({
     onOpenChange(false);
   };
 
-  if (!reservationId) return null;
-
+  // Always render the Dialog component to prevent unmounting issues during data loading
+  // The open prop controls visibility
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !!reservationId} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-reservation-edit">
         <DialogHeader>
           <DialogTitle>Edit Reservation</DialogTitle>

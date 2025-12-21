@@ -9,9 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Driver, Reservation } from "@shared/schema";
-import { formatDate, formatPhoneNumber } from "@/lib/format-utils";
+import { formatDate, formatPhoneNumber, formatReservationStatus, formatLicensePlate } from "@/lib/format-utils";
 import { User, Mail, Phone, CreditCard, Calendar, Car, FileText, Globe } from "lucide-react";
-import { formatLicensePlate } from "@/lib/format-utils";
 
 interface DriverViewDialogProps {
   driver: Driver | null;
@@ -21,10 +20,10 @@ interface DriverViewDialogProps {
 }
 
 export function DriverViewDialog({ driver, activeReservation, open, onOpenChange }: DriverViewDialogProps) {
-  if (!driver) return null;
-
+  // Always render the Dialog to prevent unmounting issues
+  // Content is only shown when driver is available
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !!driver} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -32,11 +31,11 @@ export function DriverViewDialog({ driver, activeReservation, open, onOpenChange
             Driver Details
           </DialogTitle>
           <DialogDescription>
-            Complete information for {driver.displayName}
+            Complete information for {driver?.displayName || 'Driver'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        {driver && (<div className="space-y-4">
           {/* Basic Information */}
           <Card>
             <CardContent className="pt-6 space-y-3">
@@ -245,7 +244,7 @@ export function DriverViewDialog({ driver, activeReservation, open, onOpenChange
               </CardContent>
             </Card>
           )}
-        </div>
+        </div>)}
       </DialogContent>
     </Dialog>
   );

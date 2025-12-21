@@ -237,11 +237,11 @@ export function ReservationViewDialog({
     }
   };
 
-  if (!reservationId) return null;
-
+  // Always render the Dialog component to prevent unmounting issues during data loading
+  // The open prop controls visibility
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open && !!reservationId} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-reservation-view">
           <DialogHeader>
             <DialogTitle>Reservation Details</DialogTitle>
@@ -899,7 +899,7 @@ export function ReservationViewDialog({
               variant="outline"
               onClick={() => {
                 console.log('Edit button clicked', { reservationId, onEdit });
-                onEdit?.(reservationId);
+                if (reservationId) onEdit?.(reservationId);
               }}
               data-testid="button-edit-reservation"
             >
@@ -940,7 +940,7 @@ export function ReservationViewDialog({
       <ServiceVehicleDialog
         open={isServiceDialogOpen}
         onOpenChange={setIsServiceDialogOpen}
-        reservationId={reservationId}
+        reservationId={reservationId || 0}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation?.vehicleId}`] });
           queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}`] });
