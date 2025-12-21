@@ -5230,12 +5230,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "No file path found for this document" });
       }
 
-      // Convert relative path to absolute path
-      const absolutePath = path.join(process.cwd(), document.filePath);
+      // Convert relative path to absolute path (handles both with and without uploads/ prefix)
+      let absolutePath = path.join(process.cwd(), document.filePath);
       
-      // Check if file exists
+      // Check if file exists, try adding uploads/ prefix if not found
       if (!fs.existsSync(absolutePath)) {
-        return res.status(404).json({ message: "Document file not found on disk" });
+        const altPath = path.join(process.cwd(), 'uploads', document.filePath);
+        if (fs.existsSync(altPath)) {
+          absolutePath = altPath;
+        } else {
+          console.error(`Document file not found: ${absolutePath} or ${altPath}`);
+          return res.status(404).json({ message: "Document file not found on disk" });
+        }
       }
 
       // Set appropriate headers for inline viewing (not download)
@@ -5278,12 +5284,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "No file path found for this document" });
       }
 
-      // Convert relative path to absolute path
-      const absolutePath = path.join(process.cwd(), document.filePath);
+      // Convert relative path to absolute path (handles both with and without uploads/ prefix)
+      let absolutePath = path.join(process.cwd(), document.filePath);
       
-      // Check if file exists
+      // Check if file exists, try adding uploads/ prefix if not found
       if (!fs.existsSync(absolutePath)) {
-        return res.status(404).json({ message: "Document file not found on disk" });
+        const altPath = path.join(process.cwd(), 'uploads', document.filePath);
+        if (fs.existsSync(altPath)) {
+          absolutePath = altPath;
+        } else {
+          console.error(`Document file not found: ${absolutePath} or ${altPath}`);
+          return res.status(404).json({ message: "Document file not found on disk" });
+        }
       }
 
       // Set appropriate headers for download
