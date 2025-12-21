@@ -103,20 +103,14 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false, // Don't auto-refresh on a timer
-      refetchOnWindowFocus: true, // Refetch when window gets focus
+      refetchOnWindowFocus: false, // Disabled - prevents dialogs from closing when switching tabs. Real-time updates come via WebSocket instead.
+      refetchOnReconnect: false, // Disabled - prevents refetch on network reconnect which can close dialogs
       staleTime: 30000, // Cache data for 30 seconds to reduce refetches while maintaining freshness
       gcTime: 300000, // Keep unused data for 5 minutes
       retry: false,
     },
     mutations: {
       retry: false,
-      // Global mutation observer for automatic cache invalidation
-      onSuccess: (data, variables, context, mutation) => {
-        const mutationKey = mutation.options.mutationKey?.[0] as string;
-        if (mutationKey) {
-          autoInvalidateCache(mutationKey, data);
-        }
-      },
     },
   },
 });
