@@ -4448,10 +4448,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         console.log(`🚗 Found ${replacementsToDelete.length} spare vehicle reservations to delete`);
         
-        // Delete all related replacement reservations
+        // Delete all related replacement reservations and their notifications
         for (const replacement of replacementsToDelete) {
           await storage.updateReservation(replacement.id, softDeleteData);
           realtimeEvents.reservations.deleted({ id: replacement.id });
+          
+          // Delete associated spare assignment notification if this was a placeholder
+          if (replacement.placeholderSpare) {
+            await storage.deleteNotificationsByTypeAndPattern("spare_assignment", `[placeholder:${replacement.id}]`);
+            console.log(`🔔 Deleted spare assignment notification for placeholder ${replacement.id}`);
+          }
+          
           console.log(`✅ Deleted spare vehicle reservation ${replacement.id}`);
         }
       }
@@ -4459,6 +4466,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Delete the main reservation
       const updatedReservation = await storage.updateReservation(id, softDeleteData);
       if (updatedReservation) {
+        // If this was a placeholder spare reservation, delete its notification
+        if (reservation.placeholderSpare && reservation.type === 'replacement') {
+          await storage.deleteNotificationsByTypeAndPattern("spare_assignment", `[placeholder:${id}]`);
+          console.log(`🔔 Deleted spare assignment notification for placeholder ${id}`);
+        }
+        
         // Sync vehicle availability status after deleting reservation
         await storage.syncVehicleAvailabilityWithReservations();
         
