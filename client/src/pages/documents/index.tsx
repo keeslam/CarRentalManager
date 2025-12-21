@@ -197,19 +197,19 @@ export default function DocumentsIndex() {
     }
   };
   
-  // Handle view document
+  // Handle view document - uses API endpoint for proper file resolution
   const handleViewDocument = (document: Document) => {
     window.open(
-      `/${document.filePath}`,
+      `/api/documents/view/${document.id}`,
       'Document Preview',
       'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
     );
   };
 
-  // Handle print document
+  // Handle print document - uses API endpoint for proper file resolution
   const handlePrintDocument = (document: Document) => {
     const printWindow = window.open(
-      `/${document.filePath}`,
+      `/api/documents/view/${document.id}`,
       'Print Preview',
       'width=900,height=700,toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes'
     );
