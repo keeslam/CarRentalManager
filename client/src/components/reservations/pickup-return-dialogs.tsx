@@ -82,7 +82,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
   });
 
   // Fetch existing damage checks for this reservation
-  const { data: damageChecks } = useQuery<any[]>({
+  const { data: damageChecks, refetch: refetchDamageChecks } = useQuery<any[]>({
     queryKey: ['/api/interactive-damage-checks', 'reservation', reservation.id],
     queryFn: async () => {
       const response = await fetch(`/api/interactive-damage-checks/reservation/${reservation.id}`, {
@@ -1054,7 +1054,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             onClose={() => {
               setDamageCheckDialogOpen(false);
               setEditingDamageCheckId(null);
-              invalidateByPrefix('/api/interactive-damage-checks');
+              refetchDamageChecks();
             }}
             editingCheckId={editingDamageCheckId}
             initialVehicleId={isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId}
@@ -1093,7 +1093,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           if (pickupDamageCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/interactive-damage-checks/${pickupDamageCheckToDelete}`, {});
-              invalidateByPrefix('/api/interactive-damage-checks');
+              await refetchDamageChecks();
               toast({
                 title: "Deleted",
                 description: "Pickup damage check deleted successfully",
@@ -1188,7 +1188,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
   };
 
   // Fetch existing damage checks for this reservation
-  const { data: damageChecks } = useQuery<any[]>({
+  const { data: damageChecks, refetch: refetchDamageChecks } = useQuery<any[]>({
     queryKey: ['/api/interactive-damage-checks', 'reservation', reservation.id],
     queryFn: async () => {
       const response = await fetch(`/api/interactive-damage-checks/reservation/${reservation.id}`, {
@@ -1750,7 +1750,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             onClose={() => {
               setDamageCheckDialogOpen(false);
               setEditingDamageCheckId(null);
-              invalidateByPrefix('/api/interactive-damage-checks');
+              refetchDamageChecks();
             }}
             editingCheckId={editingDamageCheckId}
             initialVehicleId={reservation.vehicleId}
@@ -1776,7 +1776,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           if (returnDamageCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/interactive-damage-checks/${returnDamageCheckToDelete}`, {});
-              invalidateByPrefix('/api/interactive-damage-checks');
+              await refetchDamageChecks();
               toast({
                 title: "Deleted",
                 description: "Return damage check deleted successfully",
