@@ -1097,6 +1097,7 @@ export class DatabaseStorage implements IStorage {
       eq(reservations.vehicleId, vehicleId),
       sql`${reservations.status} != 'cancelled'`,
       sql`${reservations.status} != 'completed'`,
+      sql`${reservations.status} != 'returned'`,
       isNull(reservations.deletedAt),
       sql`(
         (${reservations.startDate} <= ${effectiveEndDate} AND ${reservations.endDate} >= ${startDate})
