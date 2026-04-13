@@ -526,14 +526,22 @@ export default function DamageCheckTemplateEditor() {
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Partial<PdfTemplate>) => {
       if (template.id) {
-        return await apiRequest('PUT', `/api/damage-check-pdf-templates/${template.id}`, template);
+        const res = await apiRequest('PUT', `/api/damage-check-pdf-templates/${template.id}`, template);
+        return await res.json();
       } else {
-        return await apiRequest('POST', '/api/damage-check-pdf-templates', template);
+        const res = await apiRequest('POST', '/api/damage-check-pdf-templates', template);
+        return await res.json();
       }
     },
-    onSuccess: () => {
-      invalidateByPrefix('/api/damage-check-pdf-templates');
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      if (data && data.id) {
+        setCurrentTemplate(data);
+      }
       toast({ title: "Success", description: "Template saved" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to save template", variant: "destructive" });
     },
   });
 
@@ -542,21 +550,31 @@ export default function DamageCheckTemplateEditor() {
       return await apiRequest('DELETE', `/api/damage-check-pdf-templates/${id}`);
     },
     onSuccess: () => {
-      invalidateByPrefix('/api/damage-check-pdf-templates');
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
       toast({ title: "Success", description: "Template deleted" });
       setCurrentTemplate(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete template", variant: "destructive" });
     },
   });
   
   const duplicateTemplateMutation = useMutation({
     mutationFn: async ({ id, name }: { id: number; name: string }) => {
-      return await apiRequest('POST', `/api/damage-check-pdf-templates/${id}/duplicate`, { name });
+      const res = await apiRequest('POST', `/api/damage-check-pdf-templates/${id}/duplicate`, { name });
+      return await res.json();
     },
-    onSuccess: (data) => {
-      invalidateByPrefix('/api/damage-check-pdf-templates');
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      if (data && data.id) {
+        setCurrentTemplate(data);
+      }
       toast({ title: "Success", description: "Template duplicated" });
       setIsDuplicateDialogOpen(false);
       setDuplicateName('');
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to duplicate template", variant: "destructive" });
     },
   });
   
@@ -1174,8 +1192,12 @@ export default function DamageCheckTemplateEditor() {
     try {
       const text = await file.text();
       const templateData = JSON.parse(text);
-      await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
-      invalidateByPrefix('/api/damage-check-pdf-templates');
+      const res = await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
+      const imported = await res.json();
+      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      if (imported && imported.id) {
+        setCurrentTemplate(imported);
+      }
       toast({ title: "Success", description: "PDF template layout imported successfully" });
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error: any) {
