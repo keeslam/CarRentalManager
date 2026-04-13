@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Check, ChevronsUpDown, Search, CarFront } from "lucide-react";
 import { cn, isTrueValue } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,10 @@ import { Input } from "@/components/ui/input";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { Vehicle } from "@shared/schema";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tabs,
   TabsContent,
@@ -45,8 +41,14 @@ export function VehicleSelector({
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Get all unique vehicle types
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [open]);
+
   const vehicleTypes = useMemo(() => {
     if (!vehicles) return [];
     const types = new Set<string>();
@@ -58,7 +60,6 @@ export function VehicleSelector({
     return Array.from(types);
   }, [vehicles]);
 
-  // Filter vehicles based on search query
   const filteredVehicles = useMemo(() => {
     if (!vehicles) return [];
     if (!searchQuery) return vehicles;
@@ -67,7 +68,6 @@ export function VehicleSelector({
     const queryWithoutDashes = query.replace(/-/g, '');
     
     return vehicles.filter((vehicle) => {
-      // For license plate, handle searching with or without dashes
       const licensePlate = vehicle.licensePlate?.toLowerCase() || '';
       const licensePlateWithoutDashes = licensePlate.replace(/-/g, '');
       
@@ -79,7 +79,6 @@ export function VehicleSelector({
     });
   }, [vehicles, searchQuery]);
 
-  // Filter vehicles based on active tab
   const displayedVehicles = useMemo(() => {
     if (activeTab === "all") return filteredVehicles;
     if (activeTab === "recent" && recentVehicleIds.length > 0) {
@@ -92,14 +91,14 @@ export function VehicleSelector({
     );
   }, [filteredVehicles, activeTab, recentVehicleIds]);
 
-  // Get the selected vehicle for display
   const selectedVehicle = vehicles?.find(v => v.id.toString() === value);
 
   return (
     <div className="relative w-full">
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <PopoverTrigger asChild>
           <Button
+            type="button"
             variant="outline"
             className={cn(
               "w-full justify-between",
@@ -123,22 +122,24 @@ export function VehicleSelector({
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          className="w-[320px] md:w-[750px] max-h-[265px] overflow-auto p-0"
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[320px] md:w-[750px] max-h-[300px] overflow-auto p-0"
           align="start"
           side="bottom"
           sideOffset={4}
           avoidCollisions={false}
-          sticky="always"
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="p-3">
             <div className="flex items-center px-1 mb-3">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <Input
+                ref={searchInputRef}
                 placeholder="Search by license plate, brand, or model..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="h-7"
               />
             </div>
@@ -169,8 +170,8 @@ export function VehicleSelector({
               ))}
             </Tabs>
           </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </PopoverContent>
+      </Popover>
     </div>
   );
   

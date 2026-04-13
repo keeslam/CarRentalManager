@@ -5,14 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type ComboboxOption = {
   value: string;
@@ -52,17 +48,22 @@ export function SearchableCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   
-  // Set up debounce for search query
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
-    }, 300); // 300ms delay
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Filter options based on search query
+  React.useEffect(() => {
+    if (open) {
+      setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [open]);
+
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options;
     
@@ -76,13 +77,11 @@ export function SearchableCombobox({
     );
   }, [options, searchQuery]);
 
-  // Group the options
   const groupedOptions = React.useMemo(() => {
     if (!groups) return { "All": filteredOptions };
     
     const grouped: Record<string, ComboboxOption[]> = {};
     
-    // Add recent options to the top
     if (recentValues && recentValues.length > 0) {
       const recentOptions = options.filter(option => 
         recentValues.includes(option.value)
@@ -92,7 +91,6 @@ export function SearchableCombobox({
       }
     }
     
-    // Add the rest of filtered options grouped by their group
     filteredOptions.forEach(option => {
       const group = option.group || "Other";
       if (!grouped[group]) {
@@ -104,14 +102,14 @@ export function SearchableCombobox({
     return grouped;
   }, [filteredOptions, groups, options, recentValues]);
 
-  // Selected option for display
   const selectedOption = options.find(option => option.value === value);
 
   return (
     <div className="relative w-full">
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <PopoverTrigger asChild>
           <Button
+            type="button"
             variant="outline"
             className={cn(
               "w-full justify-between",
@@ -136,26 +134,25 @@ export function SearchableCombobox({
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          className="w-[350px] md:w-[500px] lg:w-[600px] max-h-[300px] overflow-auto"
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[350px] md:w-[500px] lg:w-[600px] max-h-[300px] overflow-auto p-0"
           align="start"
           side="bottom"
           sideOffset={4}
-          avoidCollisions={true}
-          sticky="always"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          avoidCollisions={false}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="px-2 py-2">
             <div className="flex items-center px-1 mb-2">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <Input
+                ref={searchInputRef}
                 placeholder={searchPlaceholder}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.stopPropagation()}
                 className="h-8"
-                autoFocus
               />
             </div>
             
@@ -167,15 +164,15 @@ export function SearchableCombobox({
             
             {Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
               <div key={group}>
-                {groupIndex > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuGroup>
+                {groupIndex > 0 && <div className="my-1 border-t" />}
+                <div>
                   {group !== "All" && (
-                    <DropdownMenuLabel>{group}</DropdownMenuLabel>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group}</div>
                   )}
                   {groupOptions.map((option) => (
-                    <DropdownMenuItem
+                    <div
                       key={option.value}
-                      className="flex flex-col items-start py-1 px-2 cursor-pointer text-sm"
+                      className="flex flex-col items-start py-1.5 px-2 cursor-pointer text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                       onClick={() => {
                         onChange(option.value);
                         setOpen(false);
@@ -205,14 +202,14 @@ export function SearchableCombobox({
                           )}
                         </div>
                       </div>
-                    </DropdownMenuItem>
+                    </div>
                   ))}
-                </DropdownMenuGroup>
+                </div>
               </div>
             ))}
           </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
