@@ -61,7 +61,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InteractiveDamageCheckPage from "@/pages/interactive-damage-check";
 import { EmailDocumentDialog } from "@/components/documents/email-document-dialog";
@@ -256,6 +256,10 @@ export default function ReservationCalendarPage() {
     console.log('Edit dialog should be open now');
   };
   
+  const refetchCalendarData = () => {
+    queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
+  };
+
   const handleOpenDamageCheckDialog = (editCheckId: number | null = null, compareWithId: number | null = null) => {
     setEditingDamageCheckId(editCheckId);
     setCompareWithCheckId(compareWithId);
@@ -270,8 +274,8 @@ export default function ReservationCalendarPage() {
     refetchDamageChecks();
     refetchDocuments();
     
-    // Refetch calendar data to get updated mileage/fuel values
     invalidateRelatedQueries('reservations');
+    refetchCalendarData();
     
     // If view dialog is open, update the selected reservation with fresh data
     if (viewDialogOpen && selectedReservation) {
@@ -362,8 +366,8 @@ export default function ReservationCalendarPage() {
         throw new Error(errorData.message || 'Failed to move reservation');
       }
       
-      // Refetch calendar data to show updated reservation
       invalidateRelatedQueries('reservations');
+      refetchCalendarData();
       
       toast({
         title: "Success",
@@ -443,8 +447,8 @@ export default function ReservationCalendarPage() {
       });
     },
     onSuccess: async () => {
-      // Invalidate to refetch and ensure consistency
       await invalidateRelatedQueries('reservations');
+      refetchCalendarData();
       
       toast({
         title: "Reservation deleted",
@@ -985,6 +989,7 @@ export default function ReservationCalendarPage() {
                   setSelectedReservation(fullReservation);
                   setViewDialogOpen(true);
                   invalidateRelatedQueries('reservations');
+                  queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
                 }
               } catch (error) {
                 console.error('Error fetching new reservation:', error);
@@ -2471,6 +2476,7 @@ export default function ReservationCalendarPage() {
             onSuccess={() => {
               invalidateRelatedQueries('reservations');
               invalidateRelatedQueries('vehicles', { id: selectedReservation?.vehicleId });
+              refetchCalendarData();
               setIsServiceDialogOpen(false);
             }}
           />
@@ -2480,6 +2486,7 @@ export default function ReservationCalendarPage() {
             originalReservation={selectedReservation}
             onSuccess={() => {
               invalidateRelatedQueries('reservations');
+              refetchCalendarData();
               setIsSpareDialogOpen(false);
             }}
           />
@@ -2489,6 +2496,7 @@ export default function ReservationCalendarPage() {
             originalReservation={selectedReservation}
             onSuccess={() => {
               invalidateRelatedQueries('reservations');
+              refetchCalendarData();
               setIsReturnFromServiceDialogOpen(false);
             }}
           />
@@ -2542,10 +2550,9 @@ export default function ReservationCalendarPage() {
               editMode={true} 
               initialData={selectedReservation}
               onSuccess={async () => {
-                // Close the edit dialog
                 setEditDialogOpen(false);
-                // Refresh calendar data and overdue list
                 invalidateRelatedQueries('reservations');
+                queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
                 
                 // Fetch fresh reservation data and reopen view dialog
                 try {
@@ -2651,9 +2658,9 @@ export default function ReservationCalendarPage() {
                 console.warn('⚠️ No selectedReservation available');
               }
               
-              // Refetch the calendar data to update the list
               console.log('🔄 Refetching calendar data');
               invalidateRelatedQueries('reservations');
+              refetchCalendarData();
               console.log('✅ onStatusChanged callback completed');
             }}
           />
@@ -2814,9 +2821,8 @@ export default function ReservationCalendarPage() {
                 setSelectedDate(null);
               }}
               onSuccess={(reservation) => {
-                // Keep the dialog open after creating reservation
-                // Refresh calendar data and overdue list
                 invalidateRelatedQueries('reservations');
+                queryClient.refetchQueries({ queryKey: ["/api/reservations/range"] });
               }}
             />
           </div>
@@ -3080,6 +3086,7 @@ export default function ReservationCalendarPage() {
                                     fuelNotes: null
                                   });
                                   invalidateRelatedQueries('reservations');
+                                  refetchCalendarData();
                                   toast({
                                     title: "Rental Reverted",
                                     description: "Rental has been marked as picked up (return data cleared)"
@@ -3129,6 +3136,7 @@ export default function ReservationCalendarPage() {
                                       try {
                                         await apiRequest('DELETE', `/api/reservations/${rental.id}`);
                                         invalidateRelatedQueries('reservations');
+                                        refetchCalendarData();
                                         toast({
                                           title: "Rental Deleted",
                                           description: "The rental record has been permanently deleted"
@@ -3700,12 +3708,11 @@ export default function ReservationCalendarPage() {
                 console.error('Error fetching updated reservation:', error);
               }
               
-              // Refetch documents and damage checks to show newly generated contract
               await refetchDocuments();
               await refetchDamageChecks();
               
-              // Refetch calendar data
               invalidateRelatedQueries('reservations');
+              refetchCalendarData();
             }}
           />
           <ReturnDialog
@@ -3713,7 +3720,6 @@ export default function ReservationCalendarPage() {
             onOpenChange={setReturnDialogOpen}
             reservation={selectedReservation}
             onSuccess={async () => {
-              // Fetch updated reservation data and update the view dialog
               try {
                 const response = await fetch(`/api/reservations/${selectedReservation.id}`, {
                   credentials: 'include',
@@ -3727,12 +3733,11 @@ export default function ReservationCalendarPage() {
                 console.error('Error fetching updated reservation:', error);
               }
               
-              // Refetch documents and damage checks to show newly generated damage check
               await refetchDocuments();
               await refetchDamageChecks();
               
-              // Refetch calendar data
               invalidateRelatedQueries('reservations');
+              refetchCalendarData();
             }}
           />
         </>

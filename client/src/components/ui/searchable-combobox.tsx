@@ -142,8 +142,9 @@ export function SearchableCombobox({
           align="start"
           side="bottom"
           sideOffset={4}
-          avoidCollisions={false}
+          avoidCollisions={true}
           sticky="always"
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <div className="px-2 py-2">
             <div className="flex items-center px-1 mb-2">
