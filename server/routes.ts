@@ -10983,12 +10983,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "PDF template not found" });
       }
       
-      // Remove id and timestamps for export (will be regenerated on import)
       const exportData = {
         name: pdfTemplate.name,
         isDefault: pdfTemplate.isDefault,
         sections: pdfTemplate.sections,
         pageMargins: pdfTemplate.pageMargins,
+        pageOrientation: pdfTemplate.pageOrientation || 'portrait',
+        pageSize: pdfTemplate.pageSize || 'A4',
+        customPageWidth: pdfTemplate.customPageWidth || null,
+        customPageHeight: pdfTemplate.customPageHeight || null,
+        pageCount: pdfTemplate.pageCount || 1,
+        tags: pdfTemplate.tags || [],
+        category: pdfTemplate.category || null,
+        backgroundImage: pdfTemplate.backgroundImage || null,
       };
       
       // Set response headers for JSON download

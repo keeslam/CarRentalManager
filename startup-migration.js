@@ -388,6 +388,77 @@ async function runMigrations() {
       console.log('✅ Unique index already exists on vehicle_customer_blacklist');
     }
     
+    // Ensure damage_check_pdf_templates base table exists before adding columns/dependents
+    await createTableIfNotExists(
+      'damage_check_pdf_templates',
+      `CREATE TABLE damage_check_pdf_templates (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        is_default BOOLEAN NOT NULL DEFAULT false,
+        sections JSONB NOT NULL DEFAULT '[]',
+        page_margins INTEGER NOT NULL DEFAULT 15,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`
+    );
+    
+    // Add missing columns to damage_check_pdf_templates table
+    await addColumnIfNotExists('damage_check_pdf_templates', 'page_orientation', "text DEFAULT 'portrait'");
+    await addColumnIfNotExists('damage_check_pdf_templates', 'page_size', "text DEFAULT 'A4'");
+    await addColumnIfNotExists('damage_check_pdf_templates', 'custom_page_width', 'integer');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'custom_page_height', 'integer');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'page_count', 'integer DEFAULT 1');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'tags', 'text[]');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'category', 'text');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'theme_id', 'integer');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'background_image', 'text');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'usage_count', 'integer DEFAULT 0');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'last_used_at', 'timestamp');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'created_by', 'text');
+    await addColumnIfNotExists('damage_check_pdf_templates', 'updated_by', 'text');
+    
+    // Create damage_check_pdf_template_versions table
+    await createTableIfNotExists(
+      'damage_check_pdf_template_versions',
+      `CREATE TABLE damage_check_pdf_template_versions (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL REFERENCES damage_check_pdf_templates(id) ON DELETE CASCADE,
+        version INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sections JSONB NOT NULL,
+        settings JSONB,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_by TEXT
+      )`
+    );
+    
+    // Create damage_check_pdf_template_themes table
+    await createTableIfNotExists(
+      'damage_check_pdf_template_themes',
+      `CREATE TABLE damage_check_pdf_template_themes (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        palette JSONB NOT NULL,
+        is_default BOOLEAN DEFAULT false,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`
+    );
+    
+    // Create damage_check_pdf_section_presets table
+    await createTableIfNotExists(
+      'damage_check_pdf_section_presets',
+      `CREATE TABLE damage_check_pdf_section_presets (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT NOT NULL,
+        config JSONB NOT NULL,
+        category TEXT,
+        is_built_in BOOLEAN DEFAULT false,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`
+    );
+    
     // Add spare key tracking columns to vehicles table
     await addColumnIfNotExists('vehicles', 'spare_key_with_customer', 'boolean');
     await addColumnIfNotExists('vehicles', 'spare_key_customer_name', 'text');
