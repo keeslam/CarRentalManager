@@ -1047,7 +1047,13 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
       />
 
       {/* Damage Check Dialog */}
-      <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
+      <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
+        setDamageCheckDialogOpen(open);
+        if (!open) {
+          setEditingDamageCheckId(null);
+          refetchDamageChecks();
+        }
+      }}>
         <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Pickup</DialogTitle>
           <InteractiveDamageCheck
@@ -1059,6 +1065,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             editingCheckId={editingDamageCheckId}
             initialVehicleId={isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId}
             initialReservationId={reservation.id}
+            initialCheckType="pickup"
             initialMileage={pickupMileage}
             initialFuelLevel={fuelLevelPickup}
             initialDate={pickupDate}
@@ -1743,7 +1750,13 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
       </DialogContent>
 
       {/* Damage Check Dialog */}
-      <Dialog open={damageCheckDialogOpen} onOpenChange={setDamageCheckDialogOpen}>
+      <Dialog open={damageCheckDialogOpen} onOpenChange={(open) => {
+        setDamageCheckDialogOpen(open);
+        if (!open) {
+          setEditingDamageCheckId(null);
+          refetchDamageChecks();
+        }
+      }}>
         <DialogContent className="max-w-[95vw] h-[95vh] overflow-y-auto p-0">
           <DialogTitle className="sr-only">Interactive Damage Check - Return</DialogTitle>
           <InteractiveDamageCheck

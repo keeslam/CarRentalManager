@@ -1028,11 +1028,35 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           description: "Damage check updated successfully",
         });
       } else {
-        await apiRequest('POST', '/api/interactive-damage-checks', checkData);
-        toast({
-          title: "Success",
-          description: "Damage check saved successfully",
-        });
+        try {
+          await apiRequest('POST', '/api/interactive-damage-checks', checkData);
+          toast({
+            title: "Success",
+            description: "Damage check saved successfully",
+          });
+        } catch (postError: any) {
+          if (postError.message?.includes('already exists') || postError.message?.startsWith('409')) {
+            const existingChecksRes = await fetch(`/api/interactive-damage-checks/reservation/${selectedReservationId}`, { credentials: 'include' });
+            if (existingChecksRes.ok) {
+              const checks = await existingChecksRes.json();
+              const existing = checks.find((c: any) => c.checkType === checkType);
+              if (existing) {
+                setEditingCheckId(existing.id);
+                await apiRequest('PUT', `/api/interactive-damage-checks/${existing.id}`, checkData);
+                toast({
+                  title: "Success",
+                  description: "Existing damage check updated with your changes",
+                });
+              } else {
+                throw postError;
+              }
+            } else {
+              throw postError;
+            }
+          } else {
+            throw postError;
+          }
+        }
       }
 
       invalidateRelatedQueries('reservations');

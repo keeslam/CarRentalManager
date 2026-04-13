@@ -10397,7 +10397,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           const updateData: any = {};
           
           // Sync fuel level
-          if (created.fuelLevel) {
+          if (created.fuelLevel != null) {
             if (created.checkType === 'pickup') {
               updateData.fuelLevelPickup = created.fuelLevel;
             } else if (created.checkType === 'return') {
@@ -10405,8 +10405,8 @@ export async function registerRoutes(app: Express): Promise<void> {
             }
           }
           
-          // Sync mileage
-          if (created.mileage) {
+          // Sync mileage (use != null to allow mileage of 0)
+          if (created.mileage != null) {
             if (created.checkType === 'pickup') {
               updateData.pickupMileage = created.mileage;
             } else if (created.checkType === 'return') {
@@ -10420,19 +10420,26 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      // Sync mileage to vehicle (vehicle is source of truth for mileage)
-      if (created.mileage && created.vehicleId) {
-        const vehicleUpdateData: any = {
-          currentMileage: created.mileage,
-        };
+      // Sync mileage and fuel to vehicle
+      if (created.vehicleId) {
+        const vehicleUpdateData: any = {};
         
-        if (created.checkType === 'pickup') {
-          vehicleUpdateData.departureMileage = created.mileage;
-        } else if (created.checkType === 'return') {
-          vehicleUpdateData.returnMileage = created.mileage;
+        if (created.mileage != null) {
+          vehicleUpdateData.currentMileage = created.mileage;
+          if (created.checkType === 'pickup') {
+            vehicleUpdateData.departureMileage = created.mileage;
+          } else if (created.checkType === 'return') {
+            vehicleUpdateData.returnMileage = created.mileage;
+          }
         }
         
-        await storage.updateVehicle(created.vehicleId, vehicleUpdateData);
+        if (created.fuelLevel != null) {
+          vehicleUpdateData.currentFuelLevel = created.fuelLevel;
+        }
+        
+        if (Object.keys(vehicleUpdateData).length > 0) {
+          await storage.updateVehicle(created.vehicleId, vehicleUpdateData);
+        }
       }
       
       // Generate and save PDF as a document
@@ -10540,7 +10547,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           const updateData: any = {};
           
           // Sync fuel level
-          if (updated.fuelLevel) {
+          if (updated.fuelLevel != null) {
             if (updated.checkType === 'pickup') {
               updateData.fuelLevelPickup = updated.fuelLevel;
             } else if (updated.checkType === 'return') {
@@ -10548,8 +10555,8 @@ export async function registerRoutes(app: Express): Promise<void> {
             }
           }
           
-          // Sync mileage
-          if (updated.mileage) {
+          // Sync mileage (use != null to allow mileage of 0)
+          if (updated.mileage != null) {
             if (updated.checkType === 'pickup') {
               updateData.pickupMileage = updated.mileage;
             } else if (updated.checkType === 'return') {
@@ -10563,19 +10570,26 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      // Sync mileage to vehicle (vehicle is source of truth for mileage)
-      if (updated.mileage && updated.vehicleId) {
-        const vehicleUpdateData: any = {
-          currentMileage: updated.mileage,
-        };
+      // Sync mileage and fuel to vehicle
+      if (updated.vehicleId) {
+        const vehicleUpdateData: any = {};
         
-        if (updated.checkType === 'pickup') {
-          vehicleUpdateData.departureMileage = updated.mileage;
-        } else if (updated.checkType === 'return') {
-          vehicleUpdateData.returnMileage = updated.mileage;
+        if (updated.mileage != null) {
+          vehicleUpdateData.currentMileage = updated.mileage;
+          if (updated.checkType === 'pickup') {
+            vehicleUpdateData.departureMileage = updated.mileage;
+          } else if (updated.checkType === 'return') {
+            vehicleUpdateData.returnMileage = updated.mileage;
+          }
         }
         
-        await storage.updateVehicle(updated.vehicleId, vehicleUpdateData);
+        if (updated.fuelLevel != null) {
+          vehicleUpdateData.currentFuelLevel = updated.fuelLevel;
+        }
+        
+        if (Object.keys(vehicleUpdateData).length > 0) {
+          await storage.updateVehicle(updated.vehicleId, vehicleUpdateData);
+        }
       }
       
       // Regenerate PDF and mark old one as outdated
