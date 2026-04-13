@@ -401,6 +401,19 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
     enabled: !!selectedReservationId,
   });
 
+  useEffect(() => {
+    if (checkType === 'return' && selectedReservationId && !editingCheckId && !compareWithCheckId && existingChecks.length > 0) {
+      const pickupCheck = existingChecks.find((c: any) => c.checkType === 'pickup');
+      if (pickupCheck && (!pickupCheckData || pickupCheckData.id !== pickupCheck.id)) {
+        setPickupCheckData(pickupCheck);
+        setShowComparison(true);
+      }
+    } else if (checkType === 'pickup' && !compareWithCheckId) {
+      setPickupCheckData(null);
+      setShowComparison(false);
+    }
+  }, [checkType, selectedReservationId, existingChecks, editingCheckId, compareWithCheckId]);
+
   // Fetch matching diagram when vehicle is selected
   useEffect(() => {
     const fetchDiagram = async () => {
