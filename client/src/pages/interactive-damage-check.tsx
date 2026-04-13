@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle, type Reservation } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { ReservationSelector } from "@/components/ui/reservation-selector";
@@ -1035,14 +1035,9 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         });
       }
 
-      // Invalidate all relevant caches to ensure fresh data everywhere
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/reservations/range'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/vehicles', selectedVehicleId, 'latest-data'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] }),
-      ]);
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles');
+      invalidateByPrefix('/api/interactive-damage-checks');
 
       if (onClose) {
         onClose();

@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
@@ -16,8 +17,8 @@ export function UploadContractButton({ vehicleId, reservationId, onSuccess }: Up
 
   const handleSuccess = () => {
     // Invalidate relevant queries
-    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-    queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}`] });
+    invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
+    invalidateByPrefix(`/api/reservations/${reservationId}`);
     
     // Trigger additional callback if provided
     if (onSuccess) {

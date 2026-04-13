@@ -46,7 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Link, useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import {
   Bell,
   Calendar,
@@ -138,8 +138,8 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications/unread"] });
+      invalidateByPrefix("/api/custom-notifications");
+      invalidateByPrefix("/api/custom-notifications/unread");
       toast({ title: "Created", description: "Notification created successfully" });
       setShowCreateForm(false);
       form.reset();
@@ -155,8 +155,8 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications/unread"] });
+      invalidateByPrefix("/api/custom-notifications");
+      invalidateByPrefix("/api/custom-notifications/unread");
       toast({ title: "Updated", description: "Notification updated successfully" });
       setEditingNotification(null);
       form.reset();
@@ -171,8 +171,8 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
       await apiRequest("DELETE", `/api/custom-notifications/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications/unread"] });
+      invalidateByPrefix("/api/custom-notifications");
+      invalidateByPrefix("/api/custom-notifications/unread");
       toast({ title: "Deleted", description: "Notification deleted successfully" });
       setDeleteNotification(null);
     },
@@ -186,8 +186,8 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
       return await apiRequest("POST", `/api/custom-notifications/${id}/read`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications/unread"] });
+      invalidateByPrefix("/api/custom-notifications");
+      invalidateByPrefix("/api/custom-notifications/unread");
     },
   });
 
@@ -196,8 +196,8 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
       return await apiRequest("POST", `/api/custom-notifications/${id}/unread`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications/unread"] });
+      invalidateByPrefix("/api/custom-notifications");
+      invalidateByPrefix("/api/custom-notifications/unread");
     },
   });
 
@@ -613,7 +613,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             }}
                             onDismiss={() => {
                               localStorage.setItem(`dismissed_apk_${v.id}`, Date.now().toString());
-                              queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+                              invalidateByPrefix("/api/vehicles/apk-expiring");
                             }}
                           />
                         ))}
@@ -635,7 +635,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                             }}
                             onDismiss={() => {
                               localStorage.setItem(`dismissed_warranty_${v.id}`, Date.now().toString());
-                              queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
+                              invalidateByPrefix("/api/vehicles/warranty-expiring");
                             }}
                           />
                         ))}
@@ -730,7 +730,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                       }}
                       onDismiss={() => {
                         localStorage.setItem(`dismissed_apk_${v.id}`, Date.now().toString());
-                        queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
+                        invalidateByPrefix("/api/vehicles/apk-expiring");
                       }}
                     />
                   ))
@@ -758,7 +758,7 @@ export function NotificationCenterDialog({ open, onOpenChange }: NotificationCen
                       }}
                       onDismiss={() => {
                         localStorage.setItem(`dismissed_warranty_${v.id}`, Date.now().toString());
-                        queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
+                        invalidateByPrefix("/api/vehicles/warranty-expiring");
                       }}
                     />
                   ))

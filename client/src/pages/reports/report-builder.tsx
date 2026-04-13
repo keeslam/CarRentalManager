@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Play, Save, Trash2, X, Filter as FilterIcon, Download, Settings, BarChart3 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateByPrefix } from "@/lib/queryClient";
 import { 
   DATA_SOURCES, 
   type ReportConfiguration, 
@@ -97,7 +97,7 @@ export default function ReportBuilder() {
       return await apiRequest('/api/reports/saved', 'POST', config);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/reports/saved'] });
+      invalidateByPrefix('/api/reports/saved');
       setShowSaveDialog(false);
       setReportName('');
       setReportDescription('');
@@ -120,7 +120,7 @@ export default function ReportBuilder() {
       await apiRequest(`/api/reports/saved/${id}`, 'DELETE');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/reports/saved'] });
+      invalidateByPrefix('/api/reports/saved');
       toast({
         title: "Report deleted",
         description: "Report has been removed",

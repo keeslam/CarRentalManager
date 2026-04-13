@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries , invalidateByPrefix } from "@/lib/queryClient";
 import { Reservation, Vehicle } from "@shared/schema";
 import { formatLicensePlate, formatCurrency } from "@/lib/format-utils";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -557,7 +557,7 @@ export function ReservationListDialog({ open, onOpenChange, onViewReservation, o
           fuelNotes: selectedReservation.fuelNotes,
         } : undefined}
         onStatusChanged={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          invalidateByPrefix('/api/reservations');
         }}
       />
 

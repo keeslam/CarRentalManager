@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Document, Vehicle, insertDamageCheckPdfTemplateSchema } from "@shared/schema";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
 import DamageCheckTemplateEditor from "./damage-check-template-editor";
 import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit } from "lucide-react";
@@ -82,7 +82,7 @@ export default function DocumentsIndex() {
         title: "Document deleted",
         description: "The document has been successfully deleted.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      invalidateByPrefix("/api/documents");
       setDeleteDialogOpen(false);
       setDocumentToDelete(null);
     },
@@ -132,7 +132,7 @@ export default function DocumentsIndex() {
         title: "Template deleted",
         description: "The PDF template has been successfully deleted.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/pdf-templates"] });
+      invalidateByPrefix("/api/pdf-templates");
       setTemplateDeleteDialogOpen(false);
       setTemplateToDelete(null);
     },
@@ -1194,8 +1194,8 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/documents/damage-checks'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      invalidateByPrefix('/api/documents/damage-checks');
+      invalidateByPrefix('/api/documents');
       toast({
         title: "Success",
         description: "Damage check uploaded successfully",
@@ -1461,7 +1461,7 @@ function DiagramTemplateManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      invalidateByPrefix('/api/vehicle-diagram-templates');
       toast({
         title: "Success",
         description: "Vehicle diagram template uploaded successfully",
@@ -1494,7 +1494,7 @@ function DiagramTemplateManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      invalidateByPrefix('/api/vehicle-diagram-templates');
       toast({
         title: "Success",
         description: "Vehicle diagram template updated successfully",
@@ -1519,7 +1519,7 @@ function DiagramTemplateManager() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicle-diagram-templates'] });
+      invalidateByPrefix('/api/vehicle-diagram-templates');
       toast({
         title: "Success",
         description: "Diagram template deleted successfully",
@@ -2276,7 +2276,7 @@ function DamageCheckPdfTemplateManager() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({
         title: "Success",
         description: editingTemplate ? "PDF template updated" : "PDF template created",
@@ -2299,7 +2299,7 @@ function DamageCheckPdfTemplateManager() {
       return await apiRequest('DELETE', `/api/damage-check-pdf-templates/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({
         title: "Success",
         description: "PDF template deleted",

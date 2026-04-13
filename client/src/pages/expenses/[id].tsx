@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useLocation, Link, useNavigate } from "wouter";
 import { 
   ArrowLeft, 
@@ -24,7 +24,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { 
   Card, 
   CardContent, 

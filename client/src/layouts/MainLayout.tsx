@@ -8,6 +8,7 @@ import { NotificationCenter } from "@/components/ui/notification-center";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Car, User, Calendar, X, ClipboardCheck } from "lucide-react";
 import { formatLicensePlate } from "@/lib/format-utils";
+import { invalidateRelatedQueries } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -601,7 +602,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         reservationId={editReservationId}
         onSuccess={() => {
           setEditReservationDialogOpen(false);
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          invalidateRelatedQueries('reservations');
         }}
       />
     </div>

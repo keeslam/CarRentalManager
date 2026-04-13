@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle, Reservation } from "@shared/schema";
 import { formatLicensePlate } from "@/lib/format-utils";
@@ -190,11 +190,11 @@ export function ApkInspectionDialog({ open, onOpenChange, vehicle, onSuccess }: 
       // This ensures if the user deletes the maintenance, the notification will reappear
       localStorage.removeItem(`dismissed_apk_${vehicle.id}`);
       
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle.id}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/placeholder-reservations/needing-assignment'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/custom-notifications/unread'] });
+      invalidateByPrefix('/api/reservations');
+      invalidateByPrefix(`/api/vehicles/${vehicle.id}`);
+      invalidateByPrefix('/api/vehicles/apk-expiring');
+      invalidateByPrefix('/api/placeholder-reservations/needing-assignment');
+      invalidateByPrefix('/api/custom-notifications/unread');
       form.reset();
       setSelectedDate(null);
       onOpenChange(false);

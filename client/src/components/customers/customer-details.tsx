@@ -17,7 +17,7 @@ import { DriverViewDialog } from "./driver-view-dialog";
 import { formatDate, formatCurrency, formatPhoneNumber, formatReservationStatus, formatLicensePlate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { Customer, Reservation, Driver } from "@shared/schema";
-import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { Calendar, Car, Check, FileWarning } from "lucide-react";
 import {
   AlertDialog,
@@ -536,7 +536,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
             customerId={customerId}
             onSuccess={() => {
               // Refresh customer data after successful edit
-              queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+              invalidateByPrefix(`/api/customers/${customerId}`);
             }}
           />
           <ReservationAddDialog initialCustomerId={customerId.toString()}>
@@ -1431,7 +1431,7 @@ export function CustomerDetails({ customerId, inDialog = false, onClose }: Custo
         reservationId={editReservationId}
         onSuccess={() => {
           setIsEditDialogOpen(false);
-          queryClient.invalidateQueries({ queryKey: customerReservationsQueryKey });
+          invalidateByPrefix('/api/reservations');
         }}
       />
       

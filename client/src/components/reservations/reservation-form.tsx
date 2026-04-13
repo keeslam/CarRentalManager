@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertReservationSchemaBase } from "@shared/schema";
@@ -760,9 +760,7 @@ export function ReservationForm({
   const handleCustomerCreated = async (data: Customer) => {
     console.log("Customer created in reservation form:", data);
     
-    // Refresh customers list first to ensure the new customer is available
-    await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+    invalidateRelatedQueries('customers');
     
     // Update form with a slight delay to ensure the revalidation has completed
     setTimeout(() => {
@@ -857,7 +855,7 @@ export function ReservationForm({
               });
               
               // Refresh vehicle data
-              await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+              invalidateRelatedQueries('vehicles');
             }
           } catch (error) {
             console.error('Failed to convert vehicle from BV to Opnaam:', error);
@@ -958,14 +956,7 @@ export function ReservationForm({
       await invalidateByPrefix('/api/reservations');
       await invalidateByPrefix('/api/vehicles');
       
-      // Force immediate refetch of critical calendar queries
-      await queryClient.refetchQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.includes('/api/reservations/range') || 
-                 key?.includes('/api/vehicles/available');
-        }
-      });
+      
       
       // Check if we need to trigger pickup/return dialog (using ref for immediate access)
       const pendingStatusChange = pendingStatusChangeRef.current;
@@ -1038,8 +1029,7 @@ export function ReservationForm({
         description: `Reservation for ${selectedVehicle?.brand} ${selectedVehicle?.model} has been ${editMode ? "updated" : "created"}.`
       });
       
-      // Force refetch if needed
-      queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
+      invalidateRelatedQueries('reservations');
       
       // If onSuccess callback is provided, use it instead of navigating
       if (onSuccess) {
@@ -1089,8 +1079,7 @@ export function ReservationForm({
       return await apiRequest("PATCH", `/api/vehicles/${vehicleData.id}`, updateData);
     },
     onSuccess: () => {
-      // Invalidate vehicle queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateRelatedQueries('vehicles');
     },
     onError: (error) => {
       toast({
@@ -1544,8 +1533,7 @@ export function ReservationForm({
                                     redirectToList={false}
                                     onSuccess={async (updatedCustomer) => {
                                       // Refresh customers list to show updated data
-                                      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-                                      await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+                                      invalidateRelatedQueries('customers');
                                       
                                       // The customer selector will automatically show updated data after cache refresh
                                       
@@ -1727,9 +1715,7 @@ export function ReservationForm({
                                 customerId={Number(customerIdWatch)}
                                 driver={selectedDriver}
                                 onSuccess={async () => {
-                                  await queryClient.invalidateQueries({ 
-                                    queryKey: [`/api/customers/${customerIdWatch}/drivers`] 
-                                  });
+                                  invalidateByPrefix(`/api/customers/${customerIdWatch}/drivers`);
                                 }}
                               >
                                 <Button type="button" variant="ghost" size="sm" className="h-6 px-2">
@@ -2230,7 +2216,7 @@ export function ReservationForm({
                                 throw new Error('Upload failed');
                               }
                               
-                              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+                              invalidateByPrefix(`/api/documents/reservation/${reservationId}`);
                               toast({
                                 title: "Success",
                                 description: `${type} uploaded successfully`,
@@ -2655,7 +2641,7 @@ export function ReservationForm({
                             }
                           }
                           
-                          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+                          invalidateRelatedQueries('reservations');
                         } catch (error) {
                           toast({
                             title: "Error",
@@ -2696,7 +2682,7 @@ export function ReservationForm({
                             }
                           }
                           
-                          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+                          invalidateRelatedQueries('reservations');
                         } catch (error) {
                           toast({
                             title: "Error",
@@ -2896,7 +2882,7 @@ export function ReservationForm({
             throw new Error('Delete failed');
           }
           
-          queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${createdReservationId}`] });
+          invalidateByPrefix(`/api/documents/reservation/${createdReservationId}`);
           toast({
             title: "Success",
             description: "Document deleted successfully",

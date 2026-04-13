@@ -22,7 +22,7 @@ import { UserRole } from "@shared/schema";
 import { Redirect } from "wouter";
 import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle, Upload, RotateCcw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 
 interface BackupSettings {
   id: number;
@@ -109,7 +109,7 @@ export default function BackupPage() {
       return await response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/backup-settings'] });
+      invalidateByPrefix('/api/backup-settings');
       toast({
         title: data.enableAutoBackup ? 'Auto Backup Enabled' : 'Auto Backup Disabled',
         description: data.enableAutoBackup 

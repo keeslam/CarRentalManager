@@ -2180,9 +2180,12 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(reservations.replacementForReservationId, originalReservationId),
           eq(reservations.type, 'replacement'),
-          not(eq(reservations.status, 'cancelled'))
+          not(eq(reservations.status, 'cancelled')),
+          not(eq(reservations.status, 'completed')),
+          isNull(reservations.deletedAt)
         )
-      );
+      )
+      .orderBy(desc(reservations.id));
     
     return replacement || undefined;
   }

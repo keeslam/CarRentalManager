@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -95,7 +95,7 @@ export default function DamageCheckTemplates() {
       return await apiRequest('DELETE', `/api/damage-check-templates/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      invalidateByPrefix('/api/damage-check-templates');
       toast({
         title: "Success",
         description: "Template deleted successfully",
@@ -165,7 +165,7 @@ export default function DamageCheckTemplates() {
 
       await apiRequest('POST', '/api/damage-check-templates/import', templateData);
 
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      invalidateByPrefix('/api/damage-check-templates');
       
       toast({
         title: "Success",
@@ -457,7 +457,7 @@ function TemplateEditor({
       return await apiRequest(method, url, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      invalidateByPrefix('/api/damage-check-templates');
       toast({
         title: "Success",
         description: template ? "Template updated successfully" : "Template created successfully",

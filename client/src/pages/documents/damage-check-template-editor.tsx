@@ -25,7 +25,7 @@ import {
   Magnet, Ruler, LayoutGrid, Table2, Image, QrCode, Barcode, Tag, History, Palette, LayoutTemplate,
   GripVertical, RotateCcw, FileText, BookOpen, Layers, ChevronRight, Car, RefreshCw
 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient , invalidateByPrefix } from "@/lib/queryClient";
 import { DamageCheckTemplate, TemplateSection, TemplateSectionStyle } from "@shared/schema";
 import {
   Dialog,
@@ -537,7 +537,7 @@ export default function DamageCheckTemplateEditor() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "Template saved" });
     },
   });
@@ -547,7 +547,7 @@ export default function DamageCheckTemplateEditor() {
       return await apiRequest('DELETE', `/api/damage-check-pdf-templates/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "Template deleted" });
       setCurrentTemplate(null);
     },
@@ -558,7 +558,7 @@ export default function DamageCheckTemplateEditor() {
       return await apiRequest('POST', `/api/damage-check-pdf-templates/${id}/duplicate`, { name });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "Template duplicated" });
       setIsDuplicateDialogOpen(false);
       setDuplicateName('');
@@ -570,7 +570,7 @@ export default function DamageCheckTemplateEditor() {
       return await apiRequest('POST', `/api/damage-check-pdf-templates/${templateId}/versions`, { name, sections, settings });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates', currentTemplate?.id, 'versions'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "Version saved" });
     },
   });
@@ -580,7 +580,7 @@ export default function DamageCheckTemplateEditor() {
       return await apiRequest('POST', `/api/damage-check-pdf-templates/${templateId}/restore/${versionId}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "Template restored from version" });
       setIsVersionDialogOpen(false);
     },
@@ -595,7 +595,7 @@ export default function DamageCheckTemplateEditor() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-templates'] });
+      invalidateByPrefix('/api/damage-check-templates');
       toast({ title: "Success", description: "Checklist template saved" });
     },
   });
@@ -1180,7 +1180,7 @@ export default function DamageCheckTemplateEditor() {
       const text = await file.text();
       const templateData = JSON.parse(text);
       await apiRequest('POST', '/api/damage-check-pdf-templates/import', templateData);
-      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+      invalidateByPrefix('/api/damage-check-pdf-templates');
       toast({ title: "Success", description: "PDF template layout imported successfully" });
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error: any) {
@@ -1625,7 +1625,7 @@ export default function DamageCheckTemplateEditor() {
                       if (!currentTemplate.id || currentTemplate.isDefault) return;
                       const updatedTemplate = { ...currentTemplate, isDefault: true };
                       await apiRequest('PATCH', `/api/damage-check-pdf-templates/${currentTemplate.id}`, updatedTemplate);
-                      queryClient.invalidateQueries({ queryKey: ['/api/damage-check-pdf-templates'] });
+                      invalidateByPrefix('/api/damage-check-pdf-templates');
                       toast({ title: "Success", description: "Template set as default" });
                     }} disabled={!currentTemplate.id || currentTemplate.isDefault}>
                       <Check className="w-4 h-4 mr-2" />

@@ -47,7 +47,7 @@ import { Calendar, Car, AlertTriangle, Bell, Check, X, Info, ClipboardCheck, Mes
 import { Vehicle, Reservation, CustomNotification } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { Link } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -92,7 +92,7 @@ export default function NotificationsPage() {
       return await apiRequest("POST", `/api/custom-notifications/${notificationId}/read`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({
         title: "Notification marked as read",
         description: "The notification has been marked as read.",
@@ -106,7 +106,7 @@ export default function NotificationsPage() {
       return await apiRequest("POST", `/api/custom-notifications/${notificationId}/unread`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({
         title: "Notification marked as unread",
         description: "The notification has been marked as unread.",

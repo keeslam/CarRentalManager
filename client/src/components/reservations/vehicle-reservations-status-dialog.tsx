@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { Vehicle, Reservation } from "@shared/schema";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
@@ -90,9 +91,7 @@ export function VehicleReservationsStatusDialog({
   // Handle reservation status change success
   const handleReservationStatusChanged = () => {
     // Invalidate all relevant queries
-    queryClient.invalidateQueries({
-      queryKey: [`/api/reservations/vehicle/${selectedVehicleId}`],
-    });
+    invalidateByPrefix(`/api/reservations/vehicle/${selectedVehicleId}`);
     
     // Set selected reservation ID to null
     setSelectedReservationId(null);

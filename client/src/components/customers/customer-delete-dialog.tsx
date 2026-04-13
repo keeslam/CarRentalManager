@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 
 interface CustomerDeleteDialogProps {
   customerId: number;
@@ -53,7 +53,7 @@ export function CustomerDeleteDialog({
     },
     onSuccess: () => {
       // Refresh the customers list
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      invalidateByPrefix("/api/customers");
       
       toast({
         title: "Customer deleted",

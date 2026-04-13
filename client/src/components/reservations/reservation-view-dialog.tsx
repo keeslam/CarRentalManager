@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UploadContractButton } from "@/components/documents/contract-upload-button";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
@@ -523,8 +523,8 @@ export function ReservationViewDialog({
                         <ExpenseAddDialog 
                           vehicleId={reservation.vehicleId}
                           onSuccess={() => {
-                            queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-                            queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation.vehicleId}`] });
+                            invalidateByPrefix('/api/expenses');
+                            invalidateByPrefix(`/api/vehicles/${reservation.vehicleId}`);
                           }}
                         >
                           <Button variant="outline" size="sm">
@@ -650,7 +650,7 @@ export function ReservationViewDialog({
                                     throw new Error('Upload failed');
                                   }
                                   
-                                  queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+                                  invalidateByPrefix(`/api/documents/reservation/${reservation.id}`);
                                   toast({
                                     title: "Success",
                                     description: `${type} uploaded successfully`,
@@ -942,8 +942,8 @@ export function ReservationViewDialog({
         onOpenChange={setIsServiceDialogOpen}
         reservationId={reservationId || 0}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation?.vehicleId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}`] });
+          invalidateByPrefix(`/api/vehicles/${reservation?.vehicleId}`);
+          invalidateByPrefix(`/api/reservations/${reservationId}`);
         }}
       />
 
@@ -952,8 +952,8 @@ export function ReservationViewDialog({
         onOpenChange={setIsSpareDialogOpen}
         originalReservation={reservation}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}/active-replacement`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations`] });
+          invalidateByPrefix(`/api/reservations/${reservationId}/active-replacement`);
+          invalidateByPrefix(`/api/reservations`);
         }}
       />
 
@@ -963,9 +963,9 @@ export function ReservationViewDialog({
         originalReservation={reservation}
         replacementReservation={activeReplacement}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${reservation?.vehicleId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${reservationId}/active-replacement`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations`] });
+          invalidateByPrefix(`/api/vehicles/${reservation?.vehicleId}`);
+          invalidateByPrefix(`/api/reservations/${reservationId}/active-replacement`);
+          invalidateByPrefix(`/api/reservations`);
         }}
       />
 
@@ -1063,7 +1063,7 @@ export function ReservationViewDialog({
               throw new Error('Delete failed');
             }
             
-            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+            invalidateByPrefix(`/api/documents/reservation/${reservationId}`);
             toast({
               title: "Success",
               description: "Document deleted successfully",

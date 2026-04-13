@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -152,7 +152,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Business rules saved" });
     },
     onError: () => toast({ title: "Error", description: "Failed to save", variant: "destructive" }),
@@ -170,7 +170,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Notification preferences saved" });
     },
     onError: () => toast({ title: "Error", description: "Failed to save", variant: "destructive" }),
@@ -185,7 +185,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Document settings saved" });
     },
     onError: () => toast({ title: "Error", description: "Failed to save", variant: "destructive" }),
@@ -200,7 +200,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Calendar settings saved" });
     },
     onError: () => toast({ title: "Error", description: "Failed to save", variant: "destructive" }),
@@ -224,9 +224,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+      invalidateByPrefix('/api/settings');
+      invalidateByPrefix('/api/vehicles/apk-expiring');
+      invalidateByPrefix('/api/vehicles/warranty-expiring');
       toast({ title: "Success", description: "Maintenance calendar settings saved" });
     },
     onError: () => toast({ title: "Error", description: "Failed to save maintenance settings", variant: "destructive" }),

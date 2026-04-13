@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { formatLicensePlate } from "@/lib/format-utils";
 
 interface VehicleDeleteDialogProps {
@@ -58,7 +58,7 @@ export function VehicleDeleteDialog({
     },
     onSuccess: () => {
       // Refresh the vehicles list
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/vehicles");
       
       toast({
         title: "Vehicle deleted",

@@ -2913,6 +2913,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         };
         maintenanceReservation = await storage.createReservation(maintenanceWithTracking);
         
+        // Clean up existing placeholder reservations for the same original reservations
+        if (spareVehicleAssignments.length > 0) {
+          const conflictingReservationIds = spareVehicleAssignments.map((a: any) => a.reservationId);
+          const allReservations = await storage.getAllReservations();
+          const oldPlaceholders = allReservations.filter((r: any) => 
+            r.type === 'replacement' && 
+            r.replacementForReservationId && 
+            conflictingReservationIds.includes(r.replacementForReservationId)
+          );
+          
+          for (const oldPlaceholder of oldPlaceholders) {
+            await storage.deleteReservation(oldPlaceholder.id);
+          }
+        }
+        
         // Create replacement reservations using pre-validated data
         const updatePromises = validatedAssignments.map(async (validated) => {
           const { originalReservation, overlapStart, overlapEnd, spareVehicleId, isOpenEnded } = validated;
@@ -2950,6 +2965,16 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
         
         updatedReservations = await Promise.all(updatePromises);
+      }
+      
+      // Broadcast real-time updates for all created reservations
+      if (maintenanceReservation) {
+        realtimeEvents.reservations.created(maintenanceReservation);
+      }
+      if (updatedReservations) {
+        for (const replacement of updatedReservations) {
+          realtimeEvents.reservations.created(replacement);
+        }
       }
       
       res.status(201).json({

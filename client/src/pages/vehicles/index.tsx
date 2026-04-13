@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
@@ -96,7 +97,7 @@ export default function VehiclesIndex() {
   // Handle successful operations from dialogs
   const handleDialogSuccess = () => {
     // Refresh the vehicles list after any dialog operation
-    queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+    invalidateByPrefix("/api/vehicles");
   };
   
   // Custom filtering logic that works regardless of length
@@ -599,8 +600,8 @@ export default function VehiclesIndex() {
             setPickupDialogOpen(false);
             
             // Refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+            invalidateByPrefix("/api/vehicles");
+            invalidateByPrefix("/api/reservations");
             
             toast({
               title: "Pickup Complete",

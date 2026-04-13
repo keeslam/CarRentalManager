@@ -25,7 +25,7 @@ import { Eye, Trash2, Wrench, CircleDot, AlertTriangle, Hammer, Fuel, Shield, Fi
 import { formatDate, formatCurrency } from "@/lib/format-utils";
 import { Expense, Vehicle } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { ExpenseAddDialog } from "./expense-add-dialog";
 
 // Function to get expense icon based on category
@@ -109,8 +109,8 @@ export function ExpenseViewDialog({ vehicleId, children, onSuccess }: ExpenseVie
       });
       
       // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
+      invalidateByPrefix("/api/expenses");
+      invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
       
       if (onSuccess) {
         onSuccess();

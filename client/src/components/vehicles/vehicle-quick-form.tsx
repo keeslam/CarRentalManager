@@ -2,9 +2,8 @@ import { useState } from "react";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { Vehicle } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
-import { queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import z from "zod";
 import { formSchema } from "./vehicle-form"; // Reuse the form schema from the main form
 

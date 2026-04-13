@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 import { 
   Loader2, Plus, Edit, Trash2, Check, X, CalendarDays, ClipboardCheck, 
   Bell, AlertCircle, Info, ArrowLeft, Search, Filter, CheckCheck, 
@@ -142,7 +142,7 @@ const CustomNotificationsPage = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({ title: "Success", description: "Notification created successfully" });
       setIsCreateDialogOpen(false);
       createForm.reset();
@@ -158,7 +158,7 @@ const CustomNotificationsPage = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({ title: "Success", description: "Notification updated successfully" });
       setIsEditDialogOpen(false);
     },
@@ -172,7 +172,7 @@ const CustomNotificationsPage = () => {
       await apiRequest("DELETE", `/api/custom-notifications/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({ title: "Success", description: "Notification deleted successfully" });
       setIsDeleteDialogOpen(false);
       setSelectedIds(new Set());
@@ -188,7 +188,7 @@ const CustomNotificationsPage = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
     },
   });
 
@@ -198,7 +198,7 @@ const CustomNotificationsPage = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
     },
   });
 
@@ -208,7 +208,7 @@ const CustomNotificationsPage = () => {
       return ids.length;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({ title: "Success", description: `Marked ${count} notification${count !== 1 ? "s" : ""} as read` });
       setSelectedIds(new Set());
     },
@@ -220,7 +220,7 @@ const CustomNotificationsPage = () => {
       return ids.length;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/custom-notifications");
       toast({ title: "Success", description: `Deleted ${count} notification${count !== 1 ? "s" : ""}` });
       setSelectedIds(new Set());
     },

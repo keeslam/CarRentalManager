@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateByPrefix } from "@/lib/queryClient";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
@@ -355,7 +355,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Business rules saved successfully" });
     },
   });
@@ -379,7 +379,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Notification preferences saved successfully" });
     },
   });
@@ -399,7 +399,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Document settings saved successfully" });
     },
   });
@@ -431,7 +431,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Calendar settings saved successfully" });
     },
   });
@@ -450,7 +450,7 @@ export default function Settings() {
       await apiRequest('PUT', '/api/system-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/system-settings'] });
+      invalidateByPrefix('/api/system-settings');
       toast({ title: "Success", description: "Maintenance calendar settings saved successfully" });
     },
     onError: () => {
@@ -469,7 +469,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "Document email templates saved successfully" });
     },
   });
@@ -485,7 +485,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "GPS recipient email saved successfully" });
     },
   });
@@ -505,7 +505,7 @@ export default function Settings() {
       await apiRequest('POST', '/api/app-settings', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings'] });
+      invalidateByPrefix('/api/app-settings');
       toast({ title: "Success", description: "GPS email templates saved successfully" });
     },
   });
@@ -520,7 +520,7 @@ export default function Settings() {
       await apiRequest(method, url, emailData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings/email'] });
+      invalidateByPrefix('/api/app-settings/email');
       toast({
         title: "Success",
         description: editingEmail ? "Email configuration updated successfully" : "Email configuration saved successfully",
@@ -594,7 +594,7 @@ export default function Settings() {
     
     try {
       await apiRequest('DELETE', `/api/app-settings/${emailConfigToDelete}`);
-      queryClient.invalidateQueries({ queryKey: ['/api/app-settings/email'] });
+      invalidateByPrefix('/api/app-settings/email');
       toast({ 
         title: "Success", 
         description: "Email configuration deleted successfully" 
@@ -2119,8 +2119,8 @@ function ContractNumberSettings() {
         title: "Settings Updated",
         description: "Contract number start value has been updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+      invalidateByPrefix("/api/system-settings");
+      invalidateByPrefix("/api/settings/next-contract-number");
     },
     onError: (error) => {
       toast({
@@ -2158,8 +2158,8 @@ function ContractNumberSettings() {
         title: "Override Set",
         description: data.message || `Next contract number is now ${data.nextContractNumber}`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+      invalidateByPrefix("/api/system-settings");
+      invalidateByPrefix("/api/settings/next-contract-number");
       setOverrideInput("");
       setConflictWarning(null);
       setShowConfirmDialog(false);
@@ -2184,8 +2184,8 @@ function ContractNumberSettings() {
         title: "Override Cleared",
         description: data.message || "Now using automatic contract numbering",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/system-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/next-contract-number"] });
+      invalidateByPrefix("/api/system-settings");
+      invalidateByPrefix("/api/settings/next-contract-number");
     },
     onError: (error) => {
       toast({

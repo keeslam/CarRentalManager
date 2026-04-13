@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import type { Reservation, Vehicle } from "@shared/schema";
 import { Car, Fuel, Calendar, FileText, ClipboardCheck, ExternalLink, CheckCircle2, Edit, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { MileageOverridePasswordDialog } from "@/components/mileage-override-password-dialog";
@@ -245,9 +245,9 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         title: "Pickup Completed",
         description: "Vehicle picked up successfully. Contract has been generated.",
       });
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+      await invalidateByPrefix("/api/reservations");
+      await invalidateByPrefix("/api/reservations");
+      await invalidateByPrefix(`/api/documents/reservation/${reservation.id}`);
       setOverridePassword("");
       setPendingMileage(null);
       setUploadedPaperCheckIds([]); // Clear tracked IDs - documents are now permanent
@@ -371,8 +371,8 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
         }
         
         // Invalidate queries to refresh data
-        await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-        await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
+        await invalidateByPrefix("/api/reservations");
+        await invalidateByPrefix("/api/reservations");
       } catch (error) {
         toast({
           variant: "destructive",
@@ -1054,7 +1054,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
             onClose={() => {
               setDamageCheckDialogOpen(false);
               setEditingDamageCheckId(null);
-              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              invalidateByPrefix('/api/interactive-damage-checks');
             }}
             editingCheckId={editingDamageCheckId}
             initialVehicleId={isTBDSpare && selectedVehicleId ? selectedVehicleId : reservation.vehicleId}
@@ -1093,7 +1093,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           if (pickupDamageCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/interactive-damage-checks/${pickupDamageCheckToDelete}`, {});
-              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              invalidateByPrefix('/api/interactive-damage-checks');
               toast({
                 title: "Deleted",
                 description: "Pickup damage check deleted successfully",
@@ -1123,7 +1123,7 @@ export function PickupDialog({ open, onOpenChange, reservation, onSuccess }: Pic
           if (pickupPaperCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/documents/${pickupPaperCheckToDelete}`, {});
-              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+              invalidateByPrefix(`/api/documents/reservation/${reservation.id}`);
               toast({
                 title: "Deleted",
                 description: "Paper damage check deleted successfully",
@@ -1241,9 +1241,9 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
         title: "Return Completed",
         description: "Vehicle returned successfully. Damage check has been generated.",
       });
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations", reservation.id] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+      await invalidateByPrefix("/api/reservations");
+      await invalidateByPrefix("/api/reservations");
+      await invalidateByPrefix(`/api/documents/reservation/${reservation.id}`);
       setUploadedPaperCheckIds([]); // Clear tracked IDs - documents are now permanent
       
       // Call the success callback first (to reopen view dialog)
@@ -1750,7 +1750,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
             onClose={() => {
               setDamageCheckDialogOpen(false);
               setEditingDamageCheckId(null);
-              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              invalidateByPrefix('/api/interactive-damage-checks');
             }}
             editingCheckId={editingDamageCheckId}
             initialVehicleId={reservation.vehicleId}
@@ -1776,7 +1776,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           if (returnDamageCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/interactive-damage-checks/${returnDamageCheckToDelete}`, {});
-              queryClient.invalidateQueries({ queryKey: ['/api/interactive-damage-checks'] });
+              invalidateByPrefix('/api/interactive-damage-checks');
               toast({
                 title: "Deleted",
                 description: "Return damage check deleted successfully",
@@ -1806,7 +1806,7 @@ export function ReturnDialog({ open, onOpenChange, reservation, onSuccess }: Ret
           if (returnPaperCheckToDelete) {
             try {
               await apiRequest('DELETE', `/api/documents/${returnPaperCheckToDelete}`, {});
-              queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation.id}`] });
+              invalidateByPrefix(`/api/documents/reservation/${reservation.id}`);
               toast({
                 title: "Deleted",
                 description: "Paper damage check deleted successfully",

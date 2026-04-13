@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest, queryClient, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UploadContractButton } from "@/components/documents/contract-upload-button";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
@@ -555,7 +555,7 @@ export default function ReservationDetails() {
                       vehicleId={reservation.vehicleId} 
                       reservationId={reservation.id}
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
+                        invalidateByPrefix(`/api/reservations/${id}`);
                       }}
                     />
                   </div>
@@ -734,8 +734,8 @@ export default function ReservationDetails() {
         reservationId={parseInt(id as string)}
         vehicle={vehicle}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
+          invalidateRelatedQueries('reservations');
+          invalidateRelatedQueries('vehicles');
         }}
       />
 
@@ -744,8 +744,7 @@ export default function ReservationDetails() {
         onOpenChange={setIsSpareDialogOpen}
         originalReservation={reservation}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}/active-replacement`] });
+          invalidateByPrefix(`/api/reservations/${id}`);
         }}
       />
 
@@ -755,9 +754,8 @@ export default function ReservationDetails() {
         replacementReservation={activeReplacement}
         originalReservation={reservation}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reservations/${id}/active-replacement`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
+          invalidateByPrefix(`/api/reservations/${id}`);
+          invalidateRelatedQueries('vehicles');
         }}
       />
 

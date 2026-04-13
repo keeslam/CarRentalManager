@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertReservationSchema } from "@shared/schema";
 import { 
@@ -318,12 +318,12 @@ export function MaintenanceEditDialog({
       });
       
       // Invalidate all reservation-related queries
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+      invalidateByPrefix("/api/reservations");
+      invalidateByPrefix("/api/reservations/range");
+      invalidateByPrefix("/api/reservations/upcoming");
       
       // Invalidate vehicle availability cache
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/available"] });
+      invalidateByPrefix("/api/vehicles/available");
       
       // Invalidate overlaps for both original and current form values
       const originalVehicleId = reservation?.vehicleId;
@@ -332,23 +332,12 @@ export function MaintenanceEditDialog({
       
       // Invalidate original overlaps
       if (originalVehicleId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/vehicles", originalVehicleId, "overlaps", originalStartDate, originalEndDate] });
-        queryClient.invalidateQueries({ 
-          predicate: (query) => {
-            const key = query.queryKey;
-            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === originalVehicleId && key[2] === "overlaps";
-          }
-        });
+        invalidateByPrefix("/api/vehicles");
       }
       
       // Invalidate current form values overlaps (if different)
       if (currentVehicleId && currentVehicleId !== originalVehicleId) {
-        queryClient.invalidateQueries({ 
-          predicate: (query) => {
-            const key = query.queryKey;
-            return Array.isArray(key) && key[0] === "/api/vehicles" && key[1] === currentVehicleId && key[2] === "overlaps";
-          }
-        });
+        invalidateByPrefix("/api/vehicles");
       }
       
       onOpenChange(false);

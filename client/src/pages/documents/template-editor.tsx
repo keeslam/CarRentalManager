@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
+import { getQueryFn, apiRequest, queryClient, invalidateByPrefix } from '@/lib/queryClient';
 import { 
   Loader2, Plus, Save, Trash2, FileText, ZoomIn, ZoomOut, Grid, 
   AlignCenter, AlignLeft, AlignRight, ArrowLeft, Copy, Lock, Unlock,
@@ -157,7 +157,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      invalidateByPrefix('/api/pdf-templates');
       toast({
         title: "Success",
         description: "Template saved successfully",
@@ -178,7 +178,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+      invalidateByPrefix('/api/pdf-templates');
       toast({
         title: "Success",
         description: "Template deleted successfully",
@@ -219,7 +219,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
     },
     onSuccess: async (updatedTemplate) => {
       // Force refetch to ensure we get fresh data (no 304 cache)
-      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      await invalidateByPrefix('/api/pdf-templates');
       
       // Update current template to show the new background immediately
       if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
@@ -247,7 +247,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
     },
     onSuccess: async (updatedTemplate) => {
       // Force refetch to ensure we get fresh data (no 304 cache)
-      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      await invalidateByPrefix('/api/pdf-templates');
       
       // Update current template to remove the background immediately
       if (currentTemplate && updatedTemplate.id === currentTemplate.id) {
@@ -347,7 +347,7 @@ const PDFTemplateEditor = ({ onClose }: PDFTemplateEditorProps = {}) => {
       setTemplates(updatedTemplates);
       
       // Then refetch to ensure everything is in sync
-      await queryClient.refetchQueries({ queryKey: ['/api/pdf-templates'], type: 'active' });
+      await invalidateByPrefix('/api/pdf-templates');
       toast({
         title: "Success",
         description: "Background selected",

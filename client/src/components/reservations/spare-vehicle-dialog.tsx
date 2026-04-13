@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Reservation, Vehicle } from "@shared/schema";
 import { formatLicensePlate } from "@/lib/format-utils";
@@ -136,8 +136,8 @@ export function SpareVehicleDialog({
       
       // Also invalidate placeholder reservations and custom notifications
       // so the notification center updates properly
-      queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-notifications"] });
+      invalidateByPrefix("/api/placeholder-reservations/needing-assignment");
+      invalidateByPrefix("/api/custom-notifications");
       
       toast({
         title: "Spare vehicle assigned",

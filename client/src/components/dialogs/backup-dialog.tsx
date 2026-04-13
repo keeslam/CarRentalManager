@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Database, Code, Download, CheckCircle2, Clock, Calendar, AlertCircle, Upload, RotateCcw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
@@ -120,7 +120,7 @@ export function BackupDialog({ open, onOpenChange }: BackupDialogProps) {
       return await response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/backup-settings'] });
+      invalidateByPrefix('/api/backup-settings');
       toast({
         title: data.enableAutoBackup ? 'Auto Backup Enabled' : 'Auto Backup Disabled',
         description: data.enableAutoBackup 

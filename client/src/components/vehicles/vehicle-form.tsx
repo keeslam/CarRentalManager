@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertVehicleSchema } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -371,11 +371,11 @@ export function VehicleForm({
       }
       
       // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      await invalidateByPrefix("/api/vehicles");
       
       // Also invalidate the specific vehicle query if we're in edit mode
       if (editMode && initialData?.id) {
-        await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
+        await invalidateByPrefix(`/api/vehicles/${initialData.id}`);
       }
       
       // Show success message
@@ -777,17 +777,14 @@ export function VehicleForm({
       // Force more aggressive cache invalidation
       
       // First invalidate all vehicle-related queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      await invalidateByPrefix("/api/vehicles");
       
       // Invalidate dashboard queries that might show vehicle data
-      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      await invalidateByPrefix("/api/dashboard");
       
       // Also invalidate the specific vehicle query if we're in edit mode with a refetchType of "all"
       if (editMode && initialData?.id) {
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/vehicles/${initialData.id}`],
-          refetchType: "all" 
-        });
+        await invalidateByPrefix(`/api/vehicles/${initialData.id}`);
       }
       
       toast({
@@ -1213,8 +1210,8 @@ export function VehicleForm({
                                             }
                                             
                                             // Invalidate queries to refresh data
-                                            await queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${initialData.id}`] });
-                                            await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+                                            await invalidateByPrefix(`/api/vehicles/${initialData.id}`);
+                                            await invalidateByPrefix("/api/vehicles");
                                             
                                             toast({
                                               title: "GPS Settings Saved",

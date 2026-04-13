@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateByPrefix } from "@/lib/queryClient";
 import { MessageSquare, Plus, Edit, Trash2, Copy } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -88,7 +88,7 @@ export default function WhatsAppTemplatesPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/templates"] });
+      invalidateByPrefix("/api/whatsapp/templates");
       toast({
         title: "Success",
         description: "Template saved successfully",
@@ -114,7 +114,7 @@ export default function WhatsAppTemplatesPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/templates"] });
+      invalidateByPrefix("/api/whatsapp/templates");
       toast({
         title: "Success",
         description: "Template deleted successfully",

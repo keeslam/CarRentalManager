@@ -20,7 +20,7 @@ import { InlineDocumentUpload } from "@/components/documents/inline-document-upl
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
 import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -545,9 +545,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
       });
       
       // Refresh related data
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${vehicleId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/reservations");
+      invalidateByPrefix(`/api/reservations/vehicle/${vehicleId}`);
+      invalidateByPrefix("/api/vehicles");
       
       // Close dialog and reset form
       setIsNewReservationOpen(false);
@@ -971,8 +971,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 redirectToList={false}
                 onSuccess={() => {
                   setIsEditVehicleDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                  queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                  invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                  invalidateByPrefix('/api/vehicles');
                 }}
                 customCancelButton={
                   <Button 
@@ -991,8 +991,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
             vehicleId={vehicleId}
             currentFuelLevel={vehicle.currentFuelLevel || undefined}
             onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-              queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+              invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+              invalidateByPrefix('/api/vehicles');
             }}
           />
 
@@ -1422,8 +1422,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       <AvailabilityToggleDialog 
                         vehicle={vehicle}
                         onSuccess={() => {
-                          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
+                          invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                          invalidateByPrefix('/api/vehicles');
                         }}
                       />
                     </div>
@@ -1578,15 +1578,15 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   <ExpenseViewDialog 
                     vehicleId={vehicleId}
                     onSuccess={() => {
-                      queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
-                      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                      invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
+                      invalidateByPrefix(`/api/vehicles/${vehicleId}`);
                     }}
                   />
                   <ExpenseAddDialog 
                     vehicleId={vehicleId}
                     onSuccess={() => {
-                      queryClient.invalidateQueries({ queryKey: [`/api/expenses/vehicle/${vehicleId}`] });
-                      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                      invalidateByPrefix(`/api/expenses/vehicle/${vehicleId}`);
+                      invalidateByPrefix(`/api/vehicles/${vehicleId}`);
                     }}
                   />
                 </div>
@@ -1746,8 +1746,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                   vehicleId={vehicleId} 
                   onSuccess={() => {
                     // Refresh the documents list after upload
-                    queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                    invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                    invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                   }}
                 />
               </div>
@@ -1880,8 +1880,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       vehicleId={vehicleId} 
                       preselectedType="APK Inspection"
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                       }}
                     >
                       <div className="text-center">
@@ -1901,8 +1901,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       vehicleId={vehicleId}
                       preselectedType="Contract"
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                       }}
                     >
                       <div className="text-center">
@@ -1924,8 +1924,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       vehicleId={vehicleId}
                       preselectedType="Damage Report"
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                       }}
                     >
                       <div className="text-center">
@@ -1943,8 +1943,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       vehicleId={vehicleId}
                       preselectedType="Vehicle Photos"
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                       }}
                     >
                       <div className="text-center">
@@ -1963,8 +1963,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       vehicleId={vehicleId}
                       preselectedType="Maintenance Record"
                       onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                        invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+                        invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                       }}
                     >
                       <div className="text-center">
@@ -3263,9 +3263,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
             description: "The reservation has been successfully updated."
           });
           // Refresh vehicle data and related queries
-          queryClient.invalidateQueries({ queryKey: vehicleQueryKey });
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-          queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}/reservations`] });
+          invalidateRelatedQueries('vehicles');
+          invalidateByPrefix('/api/reservations');
+          invalidateByPrefix(`/api/vehicles/${vehicleId}/reservations`);
           setEditReservationDialogOpen(false);
           setEditReservationId(null);
         }}
@@ -3278,9 +3278,9 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
           onOpenChange={setIsApkInspectionOpen}
           vehicle={vehicle}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: vehicleQueryKey });
-            queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+            invalidateRelatedQueries('vehicles');
+            invalidateByPrefix('/api/reservations');
+            invalidateByPrefix('/api/vehicles/apk-expiring');
           }}
         />
       )}
@@ -3294,7 +3294,7 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               onClose={() => {
                 setInteractiveDamageCheckDialogOpen(false);
                 // Refresh damage checks when dialog closes
-                queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
+                invalidateByPrefix(`/api/interactive-damage-checks/vehicle/${vehicleId}`);
               }} 
               editingCheckId={editingCheckId}
               initialVehicleId={vehicleId}
@@ -3323,8 +3323,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                 throw new Error('Failed to delete damage check');
               }
               
-              queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`] });
-              queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+              invalidateByPrefix(`/api/interactive-damage-checks/vehicle/${vehicleId}`);
+              invalidateByPrefix(`/api/vehicles/${vehicleId}`);
               
               toast({ 
                 title: "Damage Check Deleted", 
@@ -3360,8 +3360,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               });
               
               if (response.ok) {
-                queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
-                queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicleId}`] });
+                invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
+                invalidateByPrefix(`/api/vehicles/${vehicleId}`);
                 toast({
                   title: "Document deleted",
                   description: "The document has been deleted successfully.",

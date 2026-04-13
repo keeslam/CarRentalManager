@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertDocumentSchema } from "@shared/schema";
@@ -180,7 +180,7 @@ export function DocumentUpload() {
     },
     onSuccess: async () => {
       // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      await invalidateByPrefix("/api/documents");
       
       // Show success message
       toast({

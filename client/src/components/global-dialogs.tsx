@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGlobalDialog } from '@/contexts/GlobalDialogContext';
@@ -70,7 +71,7 @@ export function GlobalDialogs() {
         reservationId={editReservationId}
         onSuccess={() => {
           setEditDialogOpen(false);
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          invalidateByPrefix('/api/reservations');
         }}
       />
 

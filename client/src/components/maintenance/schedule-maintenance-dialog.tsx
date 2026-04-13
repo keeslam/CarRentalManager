@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle } from "@shared/schema";
 import { formatLicensePlate } from "@/lib/format-utils";
@@ -374,21 +374,9 @@ export function ScheduleMaintenanceDialog({
         localStorage.removeItem(`dismissed_warranty_${variables.vehicleId}`);
       }
       
-      // Use aggressive cache invalidation that catches all query variations
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith('/api/vehicles') || 
-                 key?.startsWith('/api/reservations') || 
-                 key?.startsWith('/api/placeholder-reservations');
-        }
-      });
-      
-      // Force immediate refetch of critical data
-      queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-      queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-      queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
-      queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles');
+      invalidateByPrefix('/api/placeholder-reservations');
       
       toast({
         title: editingReservation ? "Maintenance updated" : "Maintenance scheduled",
@@ -622,27 +610,9 @@ export function ScheduleMaintenanceDialog({
         console.warn('Error resetting form:', error);
       }
       
-      // Handle cache invalidation asynchronously (don't block dialog closing)
-      setTimeout(() => {
-        try {
-          queryClient.invalidateQueries({ 
-            predicate: (query) => {
-              const key = query.queryKey[0] as string;
-              return key?.startsWith('/api/vehicles') || 
-                     key?.startsWith('/api/reservations') || 
-                     key?.startsWith('/api/placeholder-reservations');
-            }
-          });
-          
-          queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-          queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-          queryClient.refetchQueries({ queryKey: ['/api/reservations'] });
-          queryClient.refetchQueries({ queryKey: ['/api/reservations/range'] });
-          queryClient.refetchQueries({ queryKey: ['/api/placeholder-reservations'] });
-        } catch (error) {
-          console.warn('Error invalidating cache:', error);
-        }
-      }, 100);
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles');
+      invalidateByPrefix('/api/placeholder-reservations');
     },
     onError: (error: Error) => {
       toast({

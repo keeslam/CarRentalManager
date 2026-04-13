@@ -13,7 +13,7 @@ import { Loader2, FileText, Download, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDate } from "@/lib/format-utils";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient , invalidateByPrefix } from "@/lib/queryClient";
 
 interface ReservationDocumentsDialogProps {
   open: boolean;
@@ -82,7 +82,7 @@ export function ReservationDocumentsDialog({
                 <InlineDocumentUpload 
                   vehicleId={vehicleId}
                   onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                    invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                   }}
                 >
                   <Button variant="outline">Upload Document</Button>
@@ -103,7 +103,7 @@ export function ReservationDocumentsDialog({
                       <InlineDocumentUpload 
                         vehicleId={vehicleId}
                         onSuccess={() => {
-                          queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${vehicleId}`] });
+                          invalidateByPrefix(`/api/documents/vehicle/${vehicleId}`);
                         }}
                       >
                         <Button variant="outline" className="bg-white">Upload Document</Button>

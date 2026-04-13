@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../../lib/queryClient";
@@ -59,7 +60,7 @@ export default function BulkImportVehicles() {
       return response.json();
     },
     onSuccess: (data: { imported: any[], failed: any[] }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/vehicles");
       setImportResults(data);
       toast({
         title: "Import Complete",

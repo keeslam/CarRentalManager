@@ -51,9 +51,8 @@ import { MaintenanceEditDialog } from "@/components/maintenance/maintenance-edit
 import { ScheduleMaintenanceDialog } from "@/components/maintenance/schedule-maintenance-dialog";
 import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { SpareVehicleDialog } from "@/components/reservations/spare-vehicle-dialog";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 
 interface MaintenanceListDialogProps {
   open: boolean;
@@ -161,14 +160,9 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
     try {
       await apiRequest("DELETE", `/api/reservations/${reservation.id}`);
 
-      // Comprehensive cache invalidation to refresh all parts of the app
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/range"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/placeholder-reservations/needing-assignment"] });
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles');
+      invalidateByPrefix('/api/placeholder-reservations');
 
       toast({
         title: "Maintenance Deleted",
@@ -806,26 +800,9 @@ export function MaintenanceListDialog({ open, onOpenChange }: MaintenanceListDia
         initialVehicleId={selectedVehicleIdForSchedule || undefined}
         initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
         onSuccess={() => {
-          // Use more aggressive cache invalidation that catches all query variations
-          queryClient.invalidateQueries({ 
-            predicate: (query) => {
-              const key = query.queryKey[0] as string;
-              return key?.startsWith('/api/vehicles') || 
-                     key?.startsWith('/api/reservations') || 
-                     key?.startsWith('/api/placeholder-reservations');
-            }
-          });
-          
-          // Also do specific invalidation as backup
-          queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-          
-          // Force immediate refetch of the data this component depends on
-          queryClient.refetchQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
-          queryClient.refetchQueries({ queryKey: ["/api/vehicles/warranty-expiring"] });
-          queryClient.refetchQueries({ queryKey: ["/api/reservations"] });
+          invalidateRelatedQueries('reservations');
+          invalidateRelatedQueries('vehicles');
+          invalidateByPrefix('/api/placeholder-reservations');
           
           // Show success message
           toast({

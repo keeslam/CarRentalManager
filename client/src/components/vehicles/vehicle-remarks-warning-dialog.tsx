@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { AlertTriangle, Edit2, Save, X } from "lucide-react";
 import type { Vehicle } from "@shared/schema";
 
@@ -63,8 +63,8 @@ export function VehicleRemarksWarningDialog({
         title: "Remarks Updated",
         description: "Vehicle remarks have been saved.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${vehicle?.id}`] });
+      invalidateByPrefix("/api/vehicles");
+      invalidateByPrefix(`/api/vehicles/${vehicle?.id}`);
       setIsEditing(false);
       
       // Notify parent component of the update

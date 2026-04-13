@@ -81,8 +81,8 @@ export function ApkExpirationWidget() {
   };
   
   const handleScheduleSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/vehicles/apk-expiring"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+    invalidateByPrefix("/api/vehicles/apk-expiring");
+    invalidateByPrefix("/api/reservations");
   };
   
   const handleDialogClose = (isOpen: boolean) => {

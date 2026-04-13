@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -167,9 +167,7 @@ export function SpareVehicleAssignmentDialog({
       await invalidateRelatedQueries('vehicles');
       
       // Also invalidate specific calendar query keys
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/reservations/range']
-      });
+      invalidateByPrefix('/api/reservations/range');
 
       // Close dialog
       onOpenChange(false);

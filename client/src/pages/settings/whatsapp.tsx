@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient , invalidateByPrefix } from "@/lib/queryClient";
 import { MessageSquare, Phone, CheckCircle, XCircle, Save } from "lucide-react";
 
 interface WhatsAppSettings {
@@ -70,7 +70,7 @@ export default function WhatsAppSettingsPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/whatsapp"] });
+      invalidateByPrefix("/api/settings/whatsapp");
       toast({
         title: "Success",
         description: "WhatsApp settings saved successfully",

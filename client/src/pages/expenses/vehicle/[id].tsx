@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import {
@@ -129,16 +129,7 @@ export default function VehicleExpensesPage() {
         description: "The expense has been successfully deleted."
       });
       
-      // Invalidate all relevant queries
-      await queryClient.invalidateQueries({ queryKey: expenseListQueryKey });
-      await queryClient.invalidateQueries({ queryKey: vehicleExpensesQueryKey });
-      
-      // Force a refetch of both expense lists to ensure UI updates properly
-      await queryClient.refetchQueries({ queryKey: expenseListQueryKey });
-      await queryClient.refetchQueries({ queryKey: vehicleExpensesQueryKey });
-      
-      // Additional explicit refetch of this specific vehicle's expenses 
-      await refetchExpenses();
+      invalidateRelatedQueries('expenses');
     },
     onError: (error: Error) => {
       toast({

@@ -76,7 +76,7 @@ export function UsersDialog({ open, onOpenChange }: UsersDialogProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      invalidateByPrefix('/api/users');
       toast({ title: "Success", description: "User deleted successfully" });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
@@ -122,7 +122,7 @@ export function UsersDialog({ open, onOpenChange }: UsersDialogProps) {
   };
 
   const handleFormSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    invalidateByPrefix('/api/users');
     setViewMode("list");
     setSelectedUserId(null);
   };
@@ -461,7 +461,7 @@ export function UsersDialog({ open, onOpenChange }: UsersDialogProps) {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import {
   Form,
   FormControl,
@@ -526,7 +526,7 @@ function UserFormInDialog({ user, isEdit = false, onSuccess }: UserFormInDialogP
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateByPrefix("/api/users");
       onSuccess();
     },
     onError: (error: Error) => {
@@ -545,7 +545,7 @@ function UserFormInDialog({ user, isEdit = false, onSuccess }: UserFormInDialogP
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateByPrefix("/api/users");
       onSuccess();
     },
     onError: (error: Error) => {

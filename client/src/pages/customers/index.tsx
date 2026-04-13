@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -51,7 +52,7 @@ export default function CustomersIndex() {
 
   const handleCustomerAdded = () => {
     // Refresh the customers list when a new customer is added
-    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    invalidateByPrefix("/api/customers");
   };
 
   // Create enriched customer data with computed fields

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { formatReservationStatus } from "@/lib/format-utils";
@@ -441,7 +441,7 @@ export function StatusChangeDialog({
             });
           } else {
             // Invalidate documents query
-            queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+            invalidateByPrefix(`/api/documents/reservation/${reservationId}`);
           }
         } catch (error) {
           console.error('Error uploading fuel receipt:', error);
@@ -521,10 +521,10 @@ export function StatusChangeDialog({
     },
     onSuccess: async () => {
       // Invalidate documents query to show the new contract
-      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      await invalidateByPrefix(`/api/documents/reservation/${reservationId}`);
       
       // Also invalidate the specific reservation to refresh all data
-      await queryClient.invalidateQueries({ queryKey: [`/api/reservations`, reservationId] });
+      await invalidateByPrefix(`/api/reservations`);
       
       toast({
         title: "Contract Generated",
@@ -557,10 +557,10 @@ export function StatusChangeDialog({
     },
     onSuccess: async () => {
       // Invalidate documents query to show the new damage check
-      await queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservationId}`] });
+      await invalidateByPrefix(`/api/documents/reservation/${reservationId}`);
       
       // Also invalidate the specific reservation to refresh all data
-      await queryClient.invalidateQueries({ queryKey: [`/api/reservations`, reservationId] });
+      await invalidateByPrefix(`/api/reservations`);
       
       toast({
         title: "Damage Check Generated",

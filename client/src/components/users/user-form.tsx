@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserRole, UserPermission } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
 // Components
@@ -84,7 +84,7 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
         title: "Success",
         description: "User has been created successfully!",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      invalidateByPrefix("/api/users");
       navigate("/users");
     },
     onError: (error: Error) => {
@@ -114,16 +114,7 @@ export function UserForm({ user, isEdit = false }: UserFormProps) {
         description: "User has been updated successfully!",
       });
       // More aggressive cache invalidation
-      await queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/users"] });
-      
-      // Also invalidate any individual user queries
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith('/api/users');
-        }
-      });
+      await invalidateByPrefix("/api/users");
       
       navigate("/users");
     },

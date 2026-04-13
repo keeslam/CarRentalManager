@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, User, Phone, Mail, Check, CheckCheck, Clock } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateByPrefix } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 interface Customer {
@@ -75,8 +75,8 @@ export default function WhatsAppMessaging() {
       return await apiRequest('/api/whatsapp/send', 'POST', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/whatsapp/messages', selectedCustomerId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/whatsapp/conversations'] });
+      invalidateByPrefix('/api/whatsapp/messages');
+      invalidateByPrefix('/api/whatsapp/conversations');
       setMessageText('');
       toast({
         title: "Message sent",

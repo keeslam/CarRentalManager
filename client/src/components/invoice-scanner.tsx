@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog,
@@ -292,8 +292,8 @@ export function InvoiceScanner({ selectedVehicleId, onExpensesCreated }: Invoice
       });
       
       // Invalidate queries to refresh expense lists
-      await queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/expenses/recent"] });
+      await invalidateByPrefix('/api/expenses');
+      await invalidateByPrefix("/api/expenses/recent");
       
       // Call callback if provided
       if (onExpensesCreated) {

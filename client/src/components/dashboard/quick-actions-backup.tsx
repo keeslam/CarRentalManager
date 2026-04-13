@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -536,8 +537,8 @@ export function QuickActions() {
             console.error("Failed to update vehicle damage check status:", response.status);
           } else {
             // Invalidate cache for this vehicle and for the documents
-            queryClient.invalidateQueries({ queryKey: ["/api/vehicles", selectedDamageVehicle.id] });
-            queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedDamageVehicle.id] });
+            invalidateByPrefix("/api/vehicles");
+            invalidateByPrefix("/api/documents/vehicle");
           }
         } catch (error) {
           console.error("Error updating vehicle damage check status:", error);
@@ -557,8 +558,8 @@ export function QuickActions() {
       
       // Invalidate queries to refresh UI
       if (uploadCount > 0) {
-        queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedDamageVehicle.id] });
+        invalidateByPrefix("/api/vehicles");
+        invalidateByPrefix("/api/documents/vehicle");
       }
       
       // Show success message
@@ -595,7 +596,7 @@ export function QuickActions() {
   // Handler for when a reservation status has been updated
   const handleReservationStatusUpdated = () => {
     // Refetch upcoming reservations to update the list
-    queryClient.invalidateQueries({ queryKey: ["/api/reservations/upcoming"] });
+    invalidateByPrefix("/api/reservations/upcoming");
     // Show a success toast
     toast({
       title: "Success",
@@ -649,9 +650,9 @@ export function QuickActions() {
       const document = await response.json();
       
       // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents/vehicle", selectedUploadVehicle.id] });
+      invalidateByPrefix("/api/vehicles");
+      invalidateByPrefix("/api/documents");
+      invalidateByPrefix("/api/documents/vehicle");
       
       // Show success message
       toast({

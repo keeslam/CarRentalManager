@@ -48,7 +48,7 @@ import { VehicleViewDialog } from "@/components/vehicles/vehicle-view-dialog";
 import { MaintenanceViewDialog } from "@/components/maintenance/maintenance-view-dialog";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateRelatedQueries } from "@/lib/queryClient";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { getCustomMaintenanceStyle, getCustomMaintenanceStyleObject } from "@/lib/calendar-styling";
@@ -258,22 +258,8 @@ export default function MaintenanceCalendar() {
         description: `Maintenance for ${vehicleInfo} has been deleted successfully.`,
       });
 
-      // Invalidate all relevant queries to refresh the calendar
-      queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/reservations/range', {
-          startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
-          endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
-        }]
-      });
-      
-      // Force refetch after a short delay to ensure database transaction is committed
-      // This prevents race conditions where the query runs before deletion is fully committed
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-        queryClient.refetchQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-      }, 100);
+      invalidateRelatedQueries('reservations');
+      invalidateRelatedQueries('vehicles');
 
       // Close dialogs if open
       setDeleteDialogOpen(false);
@@ -1627,25 +1613,8 @@ export default function MaintenanceCalendar() {
         initialVehicleId={selectedVehicleIdForSchedule || undefined}
         initialMaintenanceType={selectedMaintenanceTypeForSchedule || undefined}
         onSuccess={() => {
-          // Comprehensive cache invalidation to ensure immediate UI updates
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-          queryClient.invalidateQueries({ 
-            queryKey: ['/api/reservations/range', {
-              startDate: format(dateRanges.start, "yyyy-MM-dd"),
-              endDate: format(dateRanges.end, "yyyy-MM-dd")
-            }]
-          });
-          
-          // Also invalidate the current range for immediate update
-          queryClient.invalidateQueries({ 
-            queryKey: ['/api/reservations/range', {
-              startDate: format(dateRanges.days[0], "yyyy-MM-dd"),
-              endDate: format(dateRanges.days[dateRanges.days.length - 1], "yyyy-MM-dd")
-            }]
-          });
+          invalidateRelatedQueries('reservations');
+          invalidateRelatedQueries('vehicles');
           
           // Close the day dialog to immediately reflect changes
           closeDayDialog();
@@ -1669,17 +1638,8 @@ export default function MaintenanceCalendar() {
           setEditDialogOpen(open);
           if (!open) {
             setSelectedReservation(null);
-            // Invalidate all relevant queries to refresh the calendar
-            queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-            queryClient.invalidateQueries({ 
-              queryKey: ['/api/reservations/range', {
-                startDate: format(dateRanges.start, "yyyy-MM-dd"),
-                endDate: format(dateRanges.end, "yyyy-MM-dd")
-              }]
-            });
+            invalidateRelatedQueries('reservations');
+            invalidateRelatedQueries('vehicles');
           }
         }}
         reservation={selectedReservation}
@@ -2017,12 +1977,8 @@ export default function MaintenanceCalendar() {
                       notes: updatedNotes
                     });
 
-                    // Refresh calendar and maintenance history
-                    queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-                    queryClient.invalidateQueries({ queryKey: [`/api/reservations/vehicle/${completingReservation.vehicleId}`] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
+                    invalidateRelatedQueries('reservations', { vehicleId: completingReservation.vehicleId });
+                    invalidateRelatedQueries('vehicles');
 
                     setWarrantyDateDialogOpen(false);
                     setCompletingReservation(null);
@@ -2109,7 +2065,7 @@ export default function MaintenanceCalendar() {
                                   await apiRequest('PATCH', `/api/reservations/${maintenance.id}`, {
                                     maintenanceStatus: 'in'
                                   });
-                                  queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+                                  invalidateRelatedQueries('reservations');
                                   toast({
                                     title: "Maintenance Reverted",
                                     description: "Maintenance has been marked as active again"
@@ -2158,9 +2114,8 @@ export default function MaintenanceCalendar() {
                                     onClick={async () => {
                                       try {
                                         await apiRequest('DELETE', `/api/reservations/${maintenance.id}`);
-                                        queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/apk-expiring'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/vehicles/warranty-expiring'] });
+                                        invalidateRelatedQueries('reservations');
+                                        invalidateRelatedQueries('vehicles');
                                         toast({
                                           title: "Maintenance Deleted",
                                           description: "The maintenance record has been permanently deleted"

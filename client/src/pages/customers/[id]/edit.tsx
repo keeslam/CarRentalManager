@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CustomerForm } from "@/components/customers/customer-form";
@@ -54,7 +55,7 @@ export default function CustomerEdit() {
         initialData={customer} 
         onSuccess={(data) => {
           // Force a refresh of all customer data before navigation
-          queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+          invalidateByPrefix(`/api/customers/${customerId}`);
           queryClient.removeQueries({ queryKey: [`/api/customers/${customerId}`] });
           
           // Then navigate back to the customer details page

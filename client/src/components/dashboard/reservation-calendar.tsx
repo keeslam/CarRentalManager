@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -648,9 +649,7 @@ export function ReservationCalendar() {
                                         className="h-8 text-xs"
                                         onStatusChanged={() => {
                                           // Force refresh of reservations data
-                                          queryClient.invalidateQueries({ 
-                                            queryKey: ["/api/reservations/range", startDate, endDate]
-                                          });
+                                          invalidateByPrefix("/api/reservations/range");
                                         }}
                                       />
                                     )}
@@ -832,7 +831,7 @@ export function ReservationCalendar() {
                 setEditDialogOpen(false);
                 setSelectedReservation(null);
                 // Refresh calendar data
-                queryClient.invalidateQueries({ queryKey: ["/api/reservations/range", startDate, endDate] });
+                invalidateByPrefix("/api/reservations/range");
               }}
               onCancel={() => {
                 setEditDialogOpen(false);

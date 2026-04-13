@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix, invalidateRelatedQueries } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertExpenseSchema } from "@shared/schema";
@@ -336,7 +336,7 @@ export function ExpenseForm({
             <InvoiceScanner
               onExpensesCreated={(expenses) => {
                 // When expenses are created via scanner, refresh and close dialog
-                queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+                invalidateByPrefix("/api/expenses");
                 if (onSuccess) {
                   onSuccess();
                 }

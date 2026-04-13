@@ -54,7 +54,7 @@ import {
   X,
   FileText
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { EmailTemplate } from "@shared/schema";
 
 type TemplateCategory = 'apk' | 'maintenance' | 'custom';
@@ -100,7 +100,7 @@ export default function TemplateBuilderPage() {
       return await apiRequest("POST", "/api/email-templates", template);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      invalidateByPrefix("/api/email-templates");
       toast({
         title: "Template Created",
         description: "Your template has been created successfully.",
@@ -123,7 +123,7 @@ export default function TemplateBuilderPage() {
       return await apiRequest("PUT", `/api/email-templates/${template.id}`, template);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      invalidateByPrefix("/api/email-templates");
       toast({
         title: "Template Updated",
         description: "Your template has been updated successfully.",
@@ -146,7 +146,7 @@ export default function TemplateBuilderPage() {
       return await apiRequest("DELETE", `/api/email-templates/${templateId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      invalidateByPrefix("/api/email-templates");
       toast({
         title: "Template Deleted",
         description: "The template has been deleted successfully.",

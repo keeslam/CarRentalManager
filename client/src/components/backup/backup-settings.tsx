@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, HardDrive, Cloud, Clock, Database } from "lucide-react";
 import { BackupSettings } from "@shared/schema";
@@ -87,7 +87,7 @@ export function BackupSettingsPanel({ onSettingsChange }: BackupSettingsProps) {
         title: 'Settings Saved',
         description: 'Backup settings have been updated successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/backup-settings'] });
+      invalidateByPrefix('/api/backup-settings');
       onSettingsChange?.();
     },
     onError: (error: Error) => {

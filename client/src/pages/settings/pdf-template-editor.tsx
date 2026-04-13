@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
+import { getQueryFn, apiRequest, queryClient , invalidateByPrefix } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Plus, Save, Trash2, FileText, MoveHorizontal } from "lucide-react";
 import { useNavigate } from 'wouter';
@@ -78,7 +78,7 @@ const PDFTemplateEditor = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      invalidateByPrefix('/api/templates');
       toast({
         title: "Success",
         description: "Template saved successfully",
@@ -99,7 +99,7 @@ const PDFTemplateEditor = () => {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      invalidateByPrefix('/api/templates');
       toast({
         title: "Success",
         description: "Template deleted successfully",

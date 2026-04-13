@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { insertReservationSchemaBase } from "@shared/schema";
@@ -299,7 +299,7 @@ export function ReservationForm({
     });
     
     // Refresh customers list
-    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    invalidateByPrefix("/api/customers");
   };
   
   // Create vehicle mutation
@@ -321,7 +321,7 @@ export function ReservationForm({
       });
       
       // Invalidate vehicles query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/vehicles");
     },
     onError: (error) => {
       toast({
@@ -417,8 +417,8 @@ export function ReservationForm({
       }
       
       // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      await invalidateByPrefix("/api/reservations");
+      await invalidateByPrefix("/api/vehicles");
       
       // Show success message
       toast({

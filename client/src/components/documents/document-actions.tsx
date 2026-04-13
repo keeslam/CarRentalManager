@@ -1,3 +1,4 @@
+import { invalidateByPrefix } from "@/lib/queryClient";
 import { useState } from "react";
 import { Document } from "@shared/schema";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,8 +40,8 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
       
       if (response.ok) {
         // Refresh document list after successful deletion
-        queryClient.invalidateQueries({ queryKey: [`/api/documents/vehicle/${document.vehicleId}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/vehicles/${document.vehicleId}`] });
+        invalidateByPrefix(`/api/documents/vehicle/${document.vehicleId}`);
+        invalidateByPrefix(`/api/vehicles/${document.vehicleId}`);
         
         toast({
           title: "Document deleted",

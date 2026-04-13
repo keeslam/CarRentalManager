@@ -18,7 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -591,7 +591,7 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       return response.json();
     },
     onSuccess: (data: { imported: any[], failed: any[] }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/vehicles");
       setImportResults(data);
       toast({
         title: "Import Complete",
@@ -619,7 +619,7 @@ export function VehicleBulkImportDialog({ children, onSuccess }: VehicleBulkImpo
       return response.json();
     },
     onSuccess: (data: { imported: any[], failed: any[] }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      invalidateByPrefix("/api/vehicles");
       setImportResults(data);
       setCsvPreviewData(null);
       setCsvHeaders([]);

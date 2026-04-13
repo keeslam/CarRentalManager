@@ -36,7 +36,7 @@ import { displayLicensePlate } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";
 import { InvoiceScanner } from "@/components/invoice-scanner";
@@ -233,7 +233,7 @@ export function MaintenanceViewDialog({
         title: "Success",
         description: "Spare vehicle assignment updated",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+      invalidateByPrefix('/api/reservations');
       setEditingSpare(null);
     },
     onError: (error: any) => {
@@ -666,8 +666,8 @@ export function MaintenanceViewDialog({
                   selectedVehicleId={vehicle?.id}
                   onExpensesCreated={(expenses) => {
                     console.log('Expenses created from invoice:', expenses);
-                    queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                    invalidateByPrefix('/api/expenses');
+                    invalidateByPrefix(`/api/documents/reservation/${reservation?.id}`);
                     toast({
                       title: "Expenses created",
                       description: `Created ${expenses.length} expense record(s) from invoice`,
@@ -680,7 +680,7 @@ export function MaintenanceViewDialog({
                   reservationId={reservation?.id}
                   preselectedType="Vehicle Photos"
                   onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                    invalidateByPrefix(`/api/documents/reservation/${reservation?.id}`);
                   }}
                 >
                   <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-photos">
@@ -693,7 +693,7 @@ export function MaintenanceViewDialog({
                   reservationId={reservation?.id}
                   preselectedType="Maintenance Record"
                   onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                    invalidateByPrefix(`/api/documents/reservation/${reservation?.id}`);
                   }}
                 >
                   <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-maintenance-pdf">
@@ -706,7 +706,7 @@ export function MaintenanceViewDialog({
                   reservationId={reservation?.id}
                   preselectedType="Other"
                   onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: [`/api/documents/reservation/${reservation?.id}`] });
+                    invalidateByPrefix(`/api/documents/reservation/${reservation?.id}`);
                   }}
                 >
                   <Button variant="outline" size="sm" className="w-full" data-testid="button-upload-other">

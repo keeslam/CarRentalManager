@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { BackupSettingsPanel } from "./backup-settings";
@@ -97,8 +97,8 @@ export function BackupManagement() {
         title: 'Backup Started',
         description: 'The backup process has been initiated.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
+      invalidateByPrefix('/api/backups');
+      invalidateByPrefix('/api/backups/status');
     },
     onError: (error: Error) => {
       toast({
@@ -124,7 +124,7 @@ export function BackupManagement() {
         title: 'Cleanup Complete',
         description: 'Old backups have been removed successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+      invalidateByPrefix('/api/backups');
     },
     onError: (error: Error) => {
       toast({
@@ -212,8 +212,8 @@ export function BackupManagement() {
         variant: data.warning ? "default" : "default",
       });
       // Refresh all backup data after complete restore
-      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
+      invalidateByPrefix('/api/backups');
+      invalidateByPrefix('/api/backups/status');
     },
     onError: (error: Error) => {
       toast({
@@ -246,7 +246,7 @@ export function BackupManagement() {
         title: 'Upload Successful',
         description: `Backup file uploaded successfully.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+      invalidateByPrefix('/api/backups');
       setUploadDialogOpen(false);
       setSelectedFile(null);
     },
@@ -274,7 +274,7 @@ export function BackupManagement() {
         title: 'Backup Deleted',
         description: 'Backup file has been deleted successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
+      invalidateByPrefix('/api/backups');
     },
     onError: (error: Error) => {
       toast({
@@ -348,8 +348,8 @@ export function BackupManagement() {
 
       {/* Settings Section */}
       <BackupSettingsPanel onSettingsChange={() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/backups'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/backups/status'] });
+        invalidateByPrefix('/api/backups');
+        invalidateByPrefix('/api/backups/status');
       }} />
 
       {/* Status Overview */}

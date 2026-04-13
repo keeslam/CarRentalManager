@@ -138,9 +138,7 @@ export default function ExpensesIndex() {
   useEffect(() => {
     if (!hasMounted) {
       console.log("Forcing a refresh of the expenses list on initial mount");
-      // Force a refetch of expenses when component first mounts
-      queryClient.invalidateQueries({ queryKey: expensesQueryKey });
-      queryClient.refetchQueries({ queryKey: expensesQueryKey });
+      invalidateRelatedQueries('expenses');
       setHasMounted(true);
     }
   }, [hasMounted, queryClient, expensesQueryKey]);
@@ -297,7 +295,7 @@ export default function ExpensesIndex() {
             onExpensesCreated={(expenses) => {
               console.log('Expenses created from invoice:', expenses);
               // Refresh the expenses list
-              queryClient.invalidateQueries({ queryKey: expensesQueryKey });
+              invalidateRelatedQueries('expenses');
             }}
           />
           <Link href="/expenses/add">
@@ -709,7 +707,7 @@ export default function ExpensesIndex() {
               onSuccess={() => {
                 setEditDialogOpen(false);
                 setSelectedExpense(null);
-                queryClient.invalidateQueries({ queryKey: expensesQueryKey });
+                invalidateRelatedQueries('expenses');
               }}
             />
           )}
