@@ -37,12 +37,36 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const headers: Record<string, string> = {};
-  
+  let bodyPayload: unknown = data;
+
+  // Backwards-compat: some callers pass { body: JSON.stringify(payload), headers: {...} }
+  // (a fetch-init-style wrapper) instead of the raw payload. Detect and unwrap so the
+  // server receives the actual payload and not a doubly-wrapped object.
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    typeof (data as any).body === 'string' &&
+    (Object.keys(data as any).length === 1 ||
+      (Object.keys(data as any).length === 2 && 'headers' in (data as any)))
+  ) {
+    try {
+      bodyPayload = JSON.parse((data as any).body);
+      const wrappedHeaders = (data as any).headers;
+      if (wrappedHeaders && typeof wrappedHeaders === 'object') {
+        Object.assign(headers, wrappedHeaders);
+      }
+    } catch {
+      // If body isn't valid JSON, fall through and send original data as-is
+      bodyPayload = data;
+    }
+  }
+
   // Add Content-Type for requests with data
-  if (data) {
+  if (bodyPayload !== undefined && bodyPayload !== null) {
     headers["Content-Type"] = "application/json";
   }
-  
+
   // Add CSRF token for state-changing requests
   if (['POST', 'PATCH', 'DELETE', 'PUT'].includes(method.toUpperCase())) {
     const csrfToken = getCsrfToken();
@@ -50,11 +74,11 @@ export async function apiRequest(
       headers["X-CSRF-Token"] = csrfToken;
     }
   }
-  
+
   const res = await fetch(url, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body: bodyPayload !== undefined && bodyPayload !== null ? JSON.stringify(bodyPayload) : undefined,
     credentials: "include",
   });
 
