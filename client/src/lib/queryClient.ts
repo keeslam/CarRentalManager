@@ -249,6 +249,25 @@ export function invalidateRelatedQueries(entityType: string, entityData?: { id?:
       if (customerId) {
         invalidateByPrefix(`/api/reservations/customer/${customerId}`);
       }
+      // Active refetch of list/calendar views so they update immediately after
+      // a reservation/maintenance is created, edited, or deleted. These query
+      // keys belong to non-dialog views, so refetching is safe and won't close
+      // any open dialogs.
+      queryClient.refetchQueries({
+        predicate: (query) => {
+          const key = query.queryKey?.[0];
+          if (typeof key !== 'string') return false;
+          return (
+            key.startsWith('/api/reservations/range') ||
+            key === '/api/reservations' ||
+            key.startsWith('/api/reservations/upcoming') ||
+            key.startsWith('/api/reservations/upcoming-maintenance') ||
+            key.startsWith('/api/reservations/overdue') ||
+            key.startsWith('/api/placeholder-reservations')
+          );
+        },
+        type: 'active',
+      });
       break;
       
     case 'expenses':
