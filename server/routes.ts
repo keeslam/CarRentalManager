@@ -2503,11 +2503,59 @@ export async function registerRoutes(app: Express): Promise<void> {
           reservationData.endDate,
           reservation.id // Exclude the just-created maintenance reservation from conflicts
         );
-        
-        // Filter to only include customer reservations (not other maintenance blocks)
-        const customerConflicts = customerReservations.filter(r => r.type !== 'maintenance_block');
-        
+
+        console.log(
+          `🔧 [Maintenance #${reservation.id}] Conflict check for vehicle ${reservationData.vehicleId} ` +
+          `period ${reservationData.startDate} → ${reservationData.endDate ?? 'open'}: ` +
+          `found ${customerReservations.length} reservation(s) by date overlap (excluding maintenance ${reservation.id}).`
+        );
+
+        // ALSO query the broader picture (any non-deleted reservation on this vehicle that overlaps,
+        // regardless of status) so we can tell the user when a rental was missed because of its status.
+        const allReservations = await storage.getAllReservations();
+        const maintStart = new Date(reservationData.startDate);
+        const maintEnd = reservationData.endDate ? new Date(reservationData.endDate) : new Date('9999-12-31');
+        const broadOverlapping = allReservations.filter(r =>
+          r.id !== reservation.id &&
+          !r.deletedAt &&
+          r.vehicleId === reservationData.vehicleId &&
+          r.type === 'standard' &&
+          r.customerId !== null
+        ).filter(r => {
+          const rs = new Date(r.startDate);
+          const re = r.endDate ? new Date(r.endDate) : new Date('9999-12-31');
+          return rs <= maintEnd && re >= maintStart;
+        });
+
+        console.log(
+          `🔧 [Maintenance #${reservation.id}] Broad overlap (any status) found ${broadOverlapping.length} standard rental(s) ` +
+          `on vehicle ${reservationData.vehicleId}: ` +
+          JSON.stringify(broadOverlapping.map(r => ({ id: r.id, status: r.status, startDate: r.startDate, endDate: r.endDate, customerId: r.customerId })))
+        );
+
+        // Filter to only include customer reservations (not other maintenance blocks or replacements)
+        const customerConflicts = customerReservations.filter(
+          r => r.type !== 'maintenance_block' && r.type !== 'replacement' && r.customerId !== null
+        );
+
+        // Fallback: if the strict status-based check missed an overlapping rental that the broad
+        // check found (e.g. rental still has the vehicle but status was changed to 'returned'),
+        // include those so the user gets the spare prompt instead of silently succeeding.
+        const conflictIds = new Set(customerConflicts.map(r => r.id));
+        for (const r of broadOverlapping) {
+          if (!conflictIds.has(r.id)) {
+            console.log(
+              `🔧 [Maintenance #${reservation.id}] Including rental ${r.id} (status=${r.status}) via broad overlap fallback.`
+            );
+            customerConflicts.push(r as any);
+            conflictIds.add(r.id);
+          }
+        }
+
         if (customerConflicts.length > 0) {
+          console.log(
+            `🔧 [Maintenance #${reservation.id}] Returning needsSpareVehicle=true with ${customerConflicts.length} conflict(s).`
+          );
           return res.status(200).json({ 
             message: "Customer reservations found during maintenance period",
             needsSpareVehicle: true,
@@ -2517,6 +2565,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           });
         }
         
+        console.log(`🔧 [Maintenance #${reservation.id}] No customer conflicts — returning 201.`);
         // No conflicts, return the created maintenance reservation
         return res.status(201).json(reservation);
       } else {
