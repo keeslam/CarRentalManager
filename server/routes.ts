@@ -3032,6 +3032,38 @@ export async function registerRoutes(app: Express): Promise<void> {
         id
       );
       
+      // Special handling for maintenance_block edits: customer rentals during the
+      // maintenance period should NOT block the update — they should trigger the
+      // spare vehicle assignment flow (same as POST /api/reservations).
+      if (reservationData.type === 'maintenance_block') {
+        const customerConflicts = conflicts.filter(r => r.type !== 'maintenance_block');
+
+        // Apply the maintenance update first so the dates are persisted
+        const userForMaint = req.user;
+        const maintDataWithTracking = {
+          ...reservationData,
+          updatedBy: userForMaint ? userForMaint.username : null,
+        };
+        const updatedMaintenance = await storage.updateReservation(id, maintDataWithTracking);
+        if (!updatedMaintenance) {
+          return res.status(404).json({ message: "Reservation not found" });
+        }
+
+        if (customerConflicts.length > 0) {
+          return res.status(200).json({
+            message: "Customer reservations found during maintenance period",
+            needsSpareVehicle: true,
+            conflictingReservations: customerConflicts,
+            maintenanceData: reservationData,
+            maintenanceReservationId: id,
+          });
+        }
+
+        await storage.syncVehicleAvailabilityWithReservations();
+        realtimeEvents.reservations.updated(updatedMaintenance);
+        return res.json(updatedMaintenance);
+      }
+
       if (conflicts.length > 0) {
         return res.status(409).json({ 
           message: "Reservation conflicts with existing bookings",
