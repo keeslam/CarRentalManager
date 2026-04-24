@@ -154,6 +154,15 @@ export function ReservationAddDialog({
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
             console.log('🛑 Blocking pointer down outside - pickup dialog is open');
             e.preventDefault();
+            return;
+          }
+          // Prevent closing when the click target is inside another open dialog/popover
+          // (e.g. the Quick Add Driver dialog, customer search, etc.) — those are portaled
+          // outside this dialog so Radix considers them "outside" clicks.
+          const target = e.target as HTMLElement | null;
+          if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
+            console.log('🛑 Blocking pointer down outside - target is inside another dialog/popover');
+            e.preventDefault();
           }
         }}
         onInteractOutside={(e) => {
@@ -161,12 +170,26 @@ export function ReservationAddDialog({
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
             console.log('🛑 Blocking interact outside - pickup dialog is open');
             e.preventDefault();
+            return;
+          }
+          // Same as above: ignore interactions that happen inside another open dialog/popover.
+          const target = e.target as HTMLElement | null;
+          if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
+            console.log('🛑 Blocking interact outside - target is inside another dialog/popover');
+            e.preventDefault();
           }
         }}
         onEscapeKeyDown={(e) => {
           // Prevent escape closing parent when pickup dialog is open
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
             console.log('🛑 Blocking escape key - pickup dialog is open');
+            e.preventDefault();
+            return;
+          }
+          // Prevent escape closing parent when any nested dialog is open
+          const openDialogs = document.querySelectorAll('[role="dialog"][data-state="open"]');
+          if (openDialogs.length > 1) {
+            console.log('🛑 Blocking escape key - another dialog is open');
             e.preventDefault();
           }
         }}

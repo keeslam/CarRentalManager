@@ -47,7 +47,31 @@ export function ReservationEditDialog({
   // The open prop controls visibility
   return (
     <Dialog open={open && !!reservationId} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-reservation-edit">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        data-testid="dialog-reservation-edit"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when the click target is inside another open dialog/popover
+          // (e.g. Quick Add Driver, customer search). Those are portaled outside this
+          // dialog so Radix would otherwise treat them as outside clicks.
+          const target = e.target as HTMLElement | null;
+          if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          const openDialogs = document.querySelectorAll('[role="dialog"][data-state="open"]');
+          if (openDialogs.length > 1) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Edit Reservation</DialogTitle>
           <DialogDescription>
