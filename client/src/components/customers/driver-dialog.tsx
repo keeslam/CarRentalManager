@@ -63,18 +63,6 @@ export function DriverDialog({ customerId, driver, children, onSuccess }: Driver
   const [scrollPosition, setScrollPosition] = useState(0);
   const { toast } = useToast();
   const isEdit = !!driver;
-  
-  // Diagnostic: track this dialog instance
-  const dlgIdRef = useMemo(() => `DRV-${Math.random().toString(36).slice(2, 8)}`, []);
-  useEffect(() => {
-    console.log(`🟢 DriverDialog MOUNTED [${dlgIdRef}] customer=${customerId} edit=${isEdit}`);
-    return () => {
-      console.log(`🔴 DriverDialog UNMOUNTED [${dlgIdRef}] customer=${customerId} edit=${isEdit}`);
-    };
-  }, [dlgIdRef, customerId, isEdit]);
-  useEffect(() => {
-    console.log(`📊 DriverDialog [${dlgIdRef}] open=${open}`);
-  }, [open, dlgIdRef]);
 
   // Fetch country usage statistics
   const { data: countryStats = [] } = useQuery<{ country: string; count: number }[]>({

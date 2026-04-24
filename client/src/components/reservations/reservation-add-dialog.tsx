@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,47 +40,32 @@ export function ReservationAddDialog({
   // Use ref for synchronous access in event handlers (React state updates are async)
   const isPickupReturnDialogOpenRef = useRef(false);
   const { toast } = useToast();
-  
-  // Diagnostic: track this dialog instance and log mount/unmount + open transitions
-  const instanceIdRef = useRef(`RAD-${Math.random().toString(36).slice(2, 8)}`);
-  useEffect(() => {
-    console.log(`🟢 ReservationAddDialog MOUNTED [${instanceIdRef.current}] vehicle=${initialVehicleId}`);
-    return () => {
-      console.log(`🔴 ReservationAddDialog UNMOUNTED [${instanceIdRef.current}] vehicle=${initialVehicleId}`);
-    };
-  }, []);
-  useEffect(() => {
-    console.log(`📊 ReservationAddDialog [${instanceIdRef.current}] open=${open}`);
-  }, [open]);
-  
+
   // Lift pickup/return dialog state up to this level to render outside parent Dialog
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [pendingDialogReservation, setPendingDialogReservation] = useState<Reservation | null>(null);
-  
+
   // Use refs to persist values across potential re-renders
   const pendingDialogReservationRef = useRef<Reservation | null>(null);
   const pickupDialogOpenRef = useRef(false);
 
   const handleOpenChange = (newOpen: boolean) => {
-    console.log(`📦 ReservationAddDialog [${instanceIdRef.current}] handleOpenChange called: ${newOpen} isPickupReturnDialogOpen=${isPickupReturnDialogOpen} ref=${isPickupReturnDialogOpenRef.current}`);
+    // Defense-in-depth: block any close requested while a nested dialog is open
+    // (e.g. Quick Add Driver, Add Customer). This prevents an outside-click or stray
+    // close event from a child portal from collapsing the parent reservation dialog.
     if (!newOpen) {
-      // Stack trace so we can see exactly what's calling close
-      console.trace(`🔍 ReservationAddDialog close requested [${instanceIdRef.current}]`);
-      // Block if any other dialog is currently open (nested driver dialog, etc.)
       const openDialogs = document.querySelectorAll('[role="dialog"][data-state="open"]');
       if (openDialogs.length > 1) {
-        console.log(`🛑 Blocking close - ${openDialogs.length} dialogs currently open`);
         return;
       }
     }
-    
+
     // Don't close if pickup/return dialog is open (check both state and ref for sync issues)
     if (!newOpen && (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current)) {
-      console.log('🛑 Blocking close - pickup/return dialog is open');
       return;
     }
-    
+
     if (!newOpen && isInPreviewMode) {
       toast({
         title: "Preview in Progress",
@@ -89,10 +74,9 @@ export function ReservationAddDialog({
       });
       return;
     }
-    
-    console.log('✅ Allowing dialog state change to:', newOpen);
+
     setOpen(newOpen);
-    
+
     if (!newOpen) {
       setIsInPreviewMode(false);
     }
@@ -100,51 +84,39 @@ export function ReservationAddDialog({
   
   // Handler for pickup/return dialog changes - updates both state and ref
   const handlePickupReturnDialogChange = (isOpen: boolean) => {
-    console.log('📦 ReservationAddDialog pickup/return dialog change:', isOpen);
     isPickupReturnDialogOpenRef.current = isOpen;
     setIsPickupReturnDialogOpen(isOpen);
   };
-  
+
   // Handler to trigger pickup dialog from ReservationForm - this receives the reservation data
   // Strategy: If parent provides onStartPickupFlow callback, delegate to it (page-level dialog)
   // Otherwise, try to render pickup dialog locally (works when dialog is stable)
   const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
-    console.log('📦 ReservationAddDialog triggering pickup dialog for reservation:', reservation.id);
-    
     // If parent provides a page-level pickup flow handler, use it instead
     // This is more reliable when the component might unmount due to data refetch
     if (onStartPickupFlow) {
-      console.log('📦 Delegating pickup to page-level handler');
-      // Close this dialog first
       setOpen(false);
-      // Then trigger page-level pickup dialog
       onStartPickupFlow(reservation);
       return;
     }
-    
-    console.log('📦 Setting pendingDialogReservation and pickupDialogOpen to true');
+
     // Set up ref FIRST for synchronous blocking
     isPickupReturnDialogOpenRef.current = true;
     setIsPickupReturnDialogOpen(true);
-    
+
     // Store in both state and ref for persistence
     pendingDialogReservationRef.current = reservation;
     pickupDialogOpenRef.current = true;
     setPendingDialogReservation(reservation);
-    
+
     // Use setTimeout to ensure state is set before opening dialog
     setTimeout(() => {
-      console.log('📦 Opening pickup dialog after state set, ref values:', {
-        reservation: pendingDialogReservationRef.current?.id,
-        pickupOpen: pickupDialogOpenRef.current
-      });
       setPickupDialogOpen(true);
     }, 50);
   }, [onStartPickupFlow]);
-  
+
   // Handler to trigger return dialog from ReservationForm
   const handleTriggerReturnDialog = useCallback((reservation: Reservation) => {
-    console.log('📦 ReservationAddDialog triggering return dialog for reservation:', reservation.id);
     isPickupReturnDialogOpenRef.current = true;
     setIsPickupReturnDialogOpen(true);
     setPendingDialogReservation(reservation);
@@ -174,7 +146,6 @@ export function ReservationAddDialog({
         onPointerDownOutside={(e) => {
           // Prevent closing when clicking on nested dialog overlays (use ref for sync access)
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
-            console.log('🛑 Blocking pointer down outside - pickup dialog is open');
             e.preventDefault();
             return;
           }
@@ -183,35 +154,26 @@ export function ReservationAddDialog({
           // outside this dialog so Radix considers them "outside" clicks.
           const target = e.target as HTMLElement | null;
           if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
-            console.log('🛑 Blocking pointer down outside - target is inside another dialog/popover');
             e.preventDefault();
           }
         }}
         onInteractOutside={(e) => {
-          // Prevent any interaction outside when pickup dialog is open (use ref for sync access)
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
-            console.log('🛑 Blocking interact outside - pickup dialog is open');
             e.preventDefault();
             return;
           }
-          // Same as above: ignore interactions that happen inside another open dialog/popover.
           const target = e.target as HTMLElement | null;
           if (target && target.closest('[role="dialog"], [data-radix-popper-content-wrapper]')) {
-            console.log('🛑 Blocking interact outside - target is inside another dialog/popover');
             e.preventDefault();
           }
         }}
         onEscapeKeyDown={(e) => {
-          // Prevent escape closing parent when pickup dialog is open
           if (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current) {
-            console.log('🛑 Blocking escape key - pickup dialog is open');
             e.preventDefault();
             return;
           }
-          // Prevent escape closing parent when any nested dialog is open
           const openDialogs = document.querySelectorAll('[role="dialog"][data-state="open"]');
           if (openDialogs.length > 1) {
-            console.log('🛑 Blocking escape key - another dialog is open');
             e.preventDefault();
           }
         }}
@@ -232,7 +194,6 @@ export function ReservationAddDialog({
             onTriggerPickupDialog={handleTriggerPickupDialog}
             onTriggerReturnDialog={handleTriggerReturnDialog}
             onSuccess={(reservation) => {
-              console.log('📦 ReservationAddDialog onSuccess callback called');
               setIsInPreviewMode(false);
               isPickupReturnDialogOpenRef.current = false;
               setIsPickupReturnDialogOpen(false);
@@ -242,7 +203,6 @@ export function ReservationAddDialog({
               }
             }}
             onCancel={() => {
-              console.log('📦 ReservationAddDialog onCancel callback called');
               setIsInPreviewMode(false);
               isPickupReturnDialogOpenRef.current = false;
               setIsPickupReturnDialogOpen(false);
@@ -255,7 +215,6 @@ export function ReservationAddDialog({
     
     {/* Render pickup/return dialogs OUTSIDE the parent Dialog to avoid focus/portal conflicts */}
     {/* Use ref fallback if state was reset due to component re-render */}
-    {(pendingDialogReservation || pendingDialogReservationRef.current) && (pickupDialogOpen || pickupDialogOpenRef.current) && console.log('📦 Rendering PickupDialog with open=', pickupDialogOpen, pickupDialogOpenRef.current, 'reservation=', pendingDialogReservation?.id, pendingDialogReservationRef.current?.id)}
     {(pendingDialogReservation || pendingDialogReservationRef.current) && (
       <PickupDialog
         open={pickupDialogOpen || pickupDialogOpenRef.current}
@@ -272,7 +231,6 @@ export function ReservationAddDialog({
         }}
         reservation={(pendingDialogReservation || pendingDialogReservationRef.current)!}
         onSuccess={async () => {
-          console.log('📦 ReservationAddDialog pickup success');
           setPickupDialogOpen(false);
           pickupDialogOpenRef.current = false;
           isPickupReturnDialogOpenRef.current = false;
@@ -316,7 +274,6 @@ export function ReservationAddDialog({
         }}
         reservation={(pendingDialogReservation || pendingDialogReservationRef.current)!}
         onSuccess={async () => {
-          console.log('📦 ReservationAddDialog return success');
           setReturnDialogOpen(false);
           isPickupReturnDialogOpenRef.current = false;
           setIsPickupReturnDialogOpen(false);

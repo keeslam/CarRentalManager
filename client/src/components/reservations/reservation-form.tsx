@@ -1213,7 +1213,21 @@ export function ReservationForm({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              // Guard against submit events bubbling up from nested portaled forms
+              // (e.g. the Quick Add Driver dialog or Customer dialog forms). Their
+              // submit events propagate through React's synthetic event tree to this
+              // form even though they're rendered in DOM portals — without this guard,
+              // saving a driver would inadvertently submit the reservation form and
+              // close the entire dialog.
+              if (e.target !== e.currentTarget) {
+                return;
+              }
+              form.handleSubmit(onSubmit)(e);
+            }}
+            className="space-y-6"
+          >
             {/* Date Selection Section - Now First */}
             <div className="space-y-6">
               <div className="text-lg font-medium">1. Select Rental Dates</div>
