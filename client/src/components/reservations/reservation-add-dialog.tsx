@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +41,18 @@ export function ReservationAddDialog({
   const isPickupReturnDialogOpenRef = useRef(false);
   const { toast } = useToast();
   
+  // Diagnostic: track this dialog instance and log mount/unmount + open transitions
+  const instanceIdRef = useRef(`RAD-${Math.random().toString(36).slice(2, 8)}`);
+  useEffect(() => {
+    console.log(`🟢 ReservationAddDialog MOUNTED [${instanceIdRef.current}] vehicle=${initialVehicleId}`);
+    return () => {
+      console.log(`🔴 ReservationAddDialog UNMOUNTED [${instanceIdRef.current}] vehicle=${initialVehicleId}`);
+    };
+  }, []);
+  useEffect(() => {
+    console.log(`📊 ReservationAddDialog [${instanceIdRef.current}] open=${open}`);
+  }, [open]);
+  
   // Lift pickup/return dialog state up to this level to render outside parent Dialog
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -51,7 +63,17 @@ export function ReservationAddDialog({
   const pickupDialogOpenRef = useRef(false);
 
   const handleOpenChange = (newOpen: boolean) => {
-    console.log('📦 ReservationAddDialog handleOpenChange called:', newOpen, 'isPickupReturnDialogOpen:', isPickupReturnDialogOpen, 'ref:', isPickupReturnDialogOpenRef.current);
+    console.log(`📦 ReservationAddDialog [${instanceIdRef.current}] handleOpenChange called: ${newOpen} isPickupReturnDialogOpen=${isPickupReturnDialogOpen} ref=${isPickupReturnDialogOpenRef.current}`);
+    if (!newOpen) {
+      // Stack trace so we can see exactly what's calling close
+      console.trace(`🔍 ReservationAddDialog close requested [${instanceIdRef.current}]`);
+      // Block if any other dialog is currently open (nested driver dialog, etc.)
+      const openDialogs = document.querySelectorAll('[role="dialog"][data-state="open"]');
+      if (openDialogs.length > 1) {
+        console.log(`🛑 Blocking close - ${openDialogs.length} dialogs currently open`);
+        return;
+      }
+    }
     
     // Don't close if pickup/return dialog is open (check both state and ref for sync issues)
     if (!newOpen && (isPickupReturnDialogOpen || isPickupReturnDialogOpenRef.current)) {
