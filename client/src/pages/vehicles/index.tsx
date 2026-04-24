@@ -39,6 +39,11 @@ export default function VehiclesIndex() {
   // Page-level pickup dialog state - survives table re-renders after reservation creation
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [pendingPickupReservation, setPendingPickupReservation] = useState<Reservation | null>(null);
+
+  // Page-level reservation dialog state — kept here (not in the table cell) so it
+  // survives table refetches that would otherwise unmount the dialog and lose the
+  // user's form data (e.g. when adding a quick driver triggers a vehicles refetch).
+  const [reserveDialogVehicleId, setReserveDialogVehicleId] = useState<string | null>(null);
   
   // Vehicle remarks warning dialog state
   const [remarksWarningOpen, setRemarksWarningOpen] = useState(false);
@@ -269,31 +274,17 @@ export default function VehiclesIndex() {
                 );
               }
               
-              // For available vehicles, show Reserve button
+              // For available vehicles, show Reserve button. The actual dialog lives at
+              // the page level (see below) so it isn't unmounted when the table refetches.
               return (
-                <ReservationAddDialog 
-                  initialVehicleId={vehicle.id.toString()}
-                  onStartPickupFlow={handleStartPickupFlow}
-                  onSuccess={(reservation) => {
-                    handleDialogSuccess();
-                    if (reservation.status !== 'picked_up') {
-                      toast({
-                        title: "Reservation created",
-                        description: "Opening reservation details...",
-                      });
-                      setSelectedReservationId(reservation.id);
-                      setReservationViewDialogOpen(true);
-                    }
-                  }}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid={`button-reserve-vehicle-${vehicle.id}`}
+                  onClick={() => setReserveDialogVehicleId(vehicle.id.toString())}
                 >
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    data-testid={`button-reserve-vehicle-${vehicle.id}`}
-                  >
-                    Reserve
-                  </Button>
-                </ReservationAddDialog>
+                  Reserve
+                </Button>
               );
             })()}
           </div>
@@ -507,6 +498,33 @@ export default function VehiclesIndex() {
         onOpenChange={setReservationViewDialogOpen}
         reservationId={selectedReservationId}
       />
+
+      {/* Page-level Reservation Add Dialog. Lives here (not inside the table cell)
+          so it survives table refetches that would otherwise unmount the dialog
+          mid-flow — e.g. after creating a quick driver. */}
+      {reserveDialogVehicleId !== null && (
+        <ReservationAddDialog
+          key={reserveDialogVehicleId}
+          initialVehicleId={reserveDialogVehicleId}
+          open={true}
+          onOpenChange={(next) => {
+            if (!next) setReserveDialogVehicleId(null);
+          }}
+          onStartPickupFlow={handleStartPickupFlow}
+          onSuccess={(reservation) => {
+            handleDialogSuccess();
+            setReserveDialogVehicleId(null);
+            if (reservation.status !== 'picked_up') {
+              toast({
+                title: "Reservation created",
+                description: "Opening reservation details...",
+              });
+              setSelectedReservationId(reservation.id);
+              setReservationViewDialogOpen(true);
+            }
+          }}
+        />
+      )}
       
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Vehicle Management</h1>

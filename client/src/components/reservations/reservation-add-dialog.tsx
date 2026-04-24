@@ -24,6 +24,11 @@ interface ReservationAddDialogProps {
   // This is needed when this dialog is rendered in a context where it gets unmounted
   // on data refetch (e.g., inside a table row that re-renders after reservation creation)
   onStartPickupFlow?: (reservation: Reservation) => void;
+  // Optional controlled-mode props. When provided, the dialog open state is owned by
+  // the parent (recommended when this component would otherwise unmount during a
+  // refetch — e.g. when rendered inside a TanStack Table cell).
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ReservationAddDialog({ 
@@ -32,9 +37,20 @@ export function ReservationAddDialog({
   initialStartDate,
   children,
   onSuccess,
-  onStartPickupFlow
+  onStartPickupFlow,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: ReservationAddDialogProps) {
-  const [open, setOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = useCallback((next: boolean) => {
+    if (isControlled) {
+      controlledOnOpenChange?.(next);
+    } else {
+      setUncontrolledOpen(next);
+    }
+  }, [isControlled, controlledOnOpenChange]);
   const [isInPreviewMode, setIsInPreviewMode] = useState(false);
   const [isPickupReturnDialogOpen, setIsPickupReturnDialogOpen] = useState(false);
   // Use ref for synchronous access in event handlers (React state updates are async)
@@ -138,9 +154,11 @@ export function ReservationAddDialog({
       onOpenChange={handleOpenChange}
       modal={!pickupDialogOpen && !returnDialogOpen}
     >
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent 
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
         onPointerDownOutside={(e) => {
