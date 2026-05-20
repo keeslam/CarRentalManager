@@ -45,6 +45,9 @@ import { ReservationForm } from "@/components/reservations/reservation-form";
 import { ReservationListDialog } from "@/components/reservations/reservation-list-dialog";
 import { ReservationAddDialog } from "@/components/reservations/reservation-add-dialog";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
+import { EditContractNumberDialog } from "@/components/reservations/edit-contract-number-dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { UserPermission, UserRole } from "@shared/schema";
 import { PickupDialog, ReturnDialog } from "@/components/reservations/pickup-return-dialogs";
 import { ColorCodingDialog } from "@/components/calendar/color-coding-dialog";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
@@ -178,6 +181,11 @@ export default function ReservationCalendarPage() {
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [editContractNumberOpen, setEditContractNumberOpen] = useState(false);
+  const { user: currentUser } = useAuth();
+  const canManageReservations =
+    currentUser?.role === UserRole.ADMIN ||
+    !!currentUser?.permissions?.includes(UserPermission.MANAGE_RESERVATIONS);
   
   // Day reservations dialog
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
@@ -1714,6 +1722,18 @@ export default function ReservationCalendarPage() {
                     <span className="text-sm font-semibold text-indigo-900" data-testid="text-contract-number">
                       {selectedReservation.contractNumber}
                     </span>
+                    {canManageReservations && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100 ml-auto"
+                        onClick={() => setEditContractNumberOpen(true)}
+                        title="Edit contract number"
+                        data-testid="button-edit-contract-number"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -2667,6 +2687,20 @@ export default function ReservationCalendarPage() {
           />
         );
       })()}
+
+      {/* Edit Contract Number Dialog */}
+      {selectedReservation && canManageReservations && (
+        <EditContractNumberDialog
+          open={editContractNumberOpen}
+          onOpenChange={setEditContractNumberOpen}
+          reservationId={selectedReservation.id}
+          currentContractNumber={selectedReservation.contractNumber}
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          }}
+        />
+      )}
+
       {/* Day Reservations Dialog */}
       <Dialog open={dayDialogOpen} onOpenChange={(open) => {
           console.log('Day dialog open change:', open);

@@ -3520,6 +3520,32 @@ export async function registerRoutes(app: Express): Promise<void> {
         req.body.fuelNotes = null;
       }
       
+      // Normalize contractNumber: trim or null
+      if (req.body.contractNumber === "null" || req.body.contractNumber === "" || req.body.contractNumber === null) {
+        req.body.contractNumber = null;
+      } else if (typeof req.body.contractNumber === "string") {
+        req.body.contractNumber = req.body.contractNumber.trim();
+      }
+
+      // If contractNumber is being set, verify it's not in use by another reservation
+      if (req.body.contractNumber) {
+        const existing = await storage.getReservation(id);
+        // Only validate when the value actually changes
+        if (existing && existing.contractNumber !== req.body.contractNumber) {
+          const all = await storage.getAllReservations();
+          const duplicate = all.find(
+            (r) => r.id !== id && r.contractNumber === req.body.contractNumber,
+          );
+          if (duplicate) {
+            return res.status(409).json({
+              message: `Contract number "${req.body.contractNumber}" is already used by reservation #${duplicate.id}.`,
+              code: "DUPLICATE_CONTRACT_NUMBER",
+              conflictingReservationId: duplicate.id,
+            });
+          }
+        }
+      }
+
       // For updates, bypass full schema validation and just use the raw data
       // This allows partial updates without requiring all fields
       const reservationData = req.body;

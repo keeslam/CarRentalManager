@@ -1130,8 +1130,17 @@ export function ReservationForm({
         status: statusForSave,
       };
       delete submissionData.isOpenEnded;
-      // Contract number is assigned during pickup in status-change-dialog, not here
-      delete submissionData.contractNumber;
+      // Contract number is normally assigned during pickup; it's only editable
+      // in this form when editing an already picked-up/completed reservation.
+      const allowContractEdit =
+        editMode &&
+        (currentReservationStatus === "picked_up" ||
+          currentReservationStatus === "completed");
+      if (!allowContractEdit) {
+        delete submissionData.contractNumber;
+      } else if (typeof submissionData.contractNumber === "string") {
+        submissionData.contractNumber = submissionData.contractNumber.trim() || null;
+      }
       
       createReservationMutation.mutate(submissionData);
     } catch (error) {
@@ -1927,6 +1936,33 @@ export function ReservationForm({
                   )}
                 />
                 
+                {/* Contract Number - editable when reservation has been picked up */}
+                {editMode && (currentStatus === "picked_up" || currentStatus === "completed") && (
+                  <FormField
+                    control={form.control}
+                    name="contractNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-medium">Contract Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Enter contract number"
+                            {...field}
+                            value={field.value ?? ""}
+                            className="h-12 text-base"
+                            data-testid="input-edit-form-contract-number"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Edit the contract number assigned at pickup. Must be unique.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 {/* Mileage When Returned - only when status is completed */}
                 {currentStatus === "completed" && (
                   <div className="col-span-1">
