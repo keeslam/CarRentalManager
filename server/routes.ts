@@ -63,6 +63,220 @@ function getRelativePath(absolutePath: string): string {
   return path.relative(process.cwd(), absolutePath);
 }
 
+// Fields on a reservation that, when changed, invalidate any previously
+// generated "Contract (Unsigned)" PDFs (because they appear on the contract).
+const CONTRACT_RELEVANT_FIELDS = [
+  "contractNumber",
+  "vehicleId",
+  "customerId",
+  "driverId",
+  "startDate",
+  "endDate",
+  "totalPrice",
+  "pickupMileage",
+  "returnMileage",
+  "fuelLevelPickup",
+  "fuelLevelReturn",
+  "fuelCardNumber",
+  "actualPickupDate",
+  "actualReturnDate",
+  "deliveryRequired",
+  "deliveryAddress",
+  "deliveryCity",
+  "deliveryPostalCode",
+  "pickupLocation",
+  "returnLocation",
+  "notes",
+] as const;
+
+/**
+ * Resolves a document.filePath (which may be stored as absolute, cwd-relative,
+ * or uploads-dir-relative depending on which code path created it) to an
+ * absolute path that exists on disk. Returns null if no resolution exists.
+ * Refuses to resolve any path that escapes the uploads directory.
+ */
+function resolveDocumentFilePath(filePath: string | null | undefined): string | null {
+  if (!filePath) return null;
+  const uploadsDir = getUploadsDir();
+  const candidates: string[] = [];
+  if (path.isAbsolute(filePath)) {
+    candidates.push(filePath);
+  } else {
+    candidates.push(path.join(process.cwd(), filePath));
+    candidates.push(path.join(uploadsDir, filePath));
+    // Some paths are stored with a leading "uploads/" — try stripping it too.
+    if (filePath.startsWith("uploads/") || filePath.startsWith("uploads\\")) {
+      candidates.push(path.join(uploadsDir, filePath.slice("uploads/".length)));
+    }
+  }
+  const uploadsResolved = path.resolve(uploadsDir);
+  for (const c of candidates) {
+    try {
+      const resolved = path.resolve(c);
+      // Stay within uploads dir to avoid any traversal mishaps.
+      if (!resolved.startsWith(uploadsResolved + path.sep) && resolved !== uploadsResolved) {
+        continue;
+      }
+      if (fs.existsSync(resolved)) return resolved;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+// Single-flight queue: ensures regeneration for a given reservation runs
+// sequentially even when multiple edits arrive concurrently. Each new request
+// chains onto the previous promise so we never have two regen jobs racing on
+// the same reservation's documents.
+const regenQueues = new Map<number, Promise<void>>();
+
+function scheduleContractRegeneration(
+  reservationId: number,
+  username: string | null,
+): void {
+  const previous = regenQueues.get(reservationId) || Promise.resolve();
+  const next = previous
+    .catch(() => undefined) // don't let a failed prior job poison the chain
+    .then(() => regenerateUnsignedContractsForReservation(reservationId, username));
+  regenQueues.set(reservationId, next);
+  // Clean up the map once this job (and any later chained ones) settle.
+  next.finally(() => {
+    if (regenQueues.get(reservationId) === next) {
+      regenQueues.delete(reservationId);
+    }
+  });
+}
+
+/**
+ * Regenerates the "Contract (Unsigned)" PDF documents for a reservation by
+ * deleting the existing unsigned contract(s) (file + DB row) and creating one
+ * new PDF using the default template. Signed contracts and other document
+ * types are NEVER touched.
+ *
+ * Only runs if at least one unsigned contract already exists — we never
+ * auto-create a contract that wasn't there before.
+ *
+ * Must be invoked through `scheduleContractRegeneration` to ensure per-
+ * reservation serialization. Errors are logged and swallowed.
+ */
+async function regenerateUnsignedContractsForReservation(
+  reservationId: number,
+  username: string | null,
+): Promise<void> {
+  try {
+    const reservation = await storage.getReservation(reservationId);
+    if (!reservation || !reservation.vehicle) {
+      return;
+    }
+
+    const allDocs = await storage.getDocumentsByReservation(reservationId);
+    const unsignedContracts = allDocs.filter((d) =>
+      (d.documentType || "").startsWith("Contract (Unsigned)"),
+    );
+
+    if (unsignedContracts.length === 0) {
+      // Nothing to regenerate — don't auto-create a contract that never existed.
+      return;
+    }
+
+    // Pick the template: default if available, else any.
+    const allTemplates = await storage.getAllPdfTemplates();
+    const template =
+      allTemplates.find((t) => t.isDefault) || allTemplates[0];
+    if (!template) {
+      console.warn(
+        `[contract-regen] No PDF template available for reservation #${reservationId}; skipping.`,
+      );
+      return;
+    }
+
+    // Generate the new PDF FIRST so we don't delete the old one if generation fails.
+    const { generateRentalContractFromTemplate } = await import(
+      "./utils/pdf-generator"
+    );
+    const newPdf = await generateRentalContractFromTemplate(
+      reservation,
+      template,
+    );
+
+    // Write the new file to disk.
+    const sanitizedPlate = reservation.vehicle.licensePlate.replace(
+      /[^a-zA-Z0-9]/g,
+      "",
+    );
+    const uploadsDir = getUploadsDir();
+    const contractsDir = path.join(
+      uploadsDir,
+      "contracts",
+      sanitizedPlate,
+    );
+    if (!fs.existsSync(contractsDir)) {
+      fs.mkdirSync(contractsDir, { recursive: true });
+    }
+    const today = new Date();
+    const dateString =
+      today.getFullYear().toString() +
+      (today.getMonth() + 1).toString().padStart(2, "0") +
+      today.getDate().toString().padStart(2, "0");
+    const fileName = `${sanitizedPlate}_contract_regen_${dateString}_${Date.now()}.pdf`;
+    const absolutePath = path.join(contractsDir, fileName);
+    fs.writeFileSync(absolutePath, newPdf);
+    const relativePath = getRelativePath(absolutePath);
+
+    // Re-read the unsigned contracts list right before deletion in case any
+    // were added/removed while the PDF was being generated. This narrows the
+    // window for losing newly created (e.g. signed) docs.
+    const docsToReplace = (await storage.getDocumentsByReservation(reservationId))
+      .filter((d) => (d.documentType || "").startsWith("Contract (Unsigned)"));
+
+    // Delete the old unsigned contracts (file + DB row).
+    for (const doc of docsToReplace) {
+      try {
+        const resolved = resolveDocumentFilePath(doc.filePath);
+        if (resolved) {
+          fs.unlinkSync(resolved);
+        }
+      } catch (fileErr) {
+        console.warn(
+          `[contract-regen] Could not delete file for doc ${doc.id}:`,
+          fileErr,
+        );
+      }
+      try {
+        await storage.deleteDocument(doc.id);
+      } catch (dbErr) {
+        console.warn(
+          `[contract-regen] Could not delete document row ${doc.id}:`,
+          dbErr,
+        );
+      }
+    }
+
+    // Register the new unsigned contract document.
+    await storage.createDocument({
+      vehicleId: reservation.vehicleId,
+      reservationId: reservation.id,
+      documentType: "Contract (Unsigned)",
+      fileName,
+      filePath: relativePath,
+      fileSize: newPdf.length,
+      contentType: "application/pdf",
+      createdBy: username || "System",
+      notes: `Auto-regenerated after reservation data changed (replaced ${docsToReplace.length} older version${docsToReplace.length === 1 ? "" : "s"}).`,
+    } as any);
+
+    console.log(
+      `[contract-regen] Regenerated unsigned contract for reservation #${reservationId} (replaced ${docsToReplace.length}).`,
+    );
+  } catch (err) {
+    console.error(
+      `[contract-regen] Failed to regenerate unsigned contracts for reservation #${reservationId}:`,
+      err,
+    );
+  }
+}
+
 // Helper function to format dates consistently
 function formatDate(dateString: string): string {
   if (!dateString) return '';
@@ -3549,14 +3763,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       // For updates, bypass full schema validation and just use the raw data
       // This allows partial updates without requiring all fields
       const reservationData = req.body;
-      
+
+      // Load the existing reservation once so we can diff contract-relevant
+      // fields after the update and trigger contract PDF regeneration.
+      const existingReservationForDiff = await storage.getReservation(id);
+      if (!existingReservationForDiff) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
       // Check for conflicts only if vehicle, startDate or endDate are being updated
       if (reservationData.vehicleId && reservationData.startDate) {
-        // Get the existing reservation to check its type
-        const existingReservation = await storage.getReservation(id);
-        if (!existingReservation) {
-          return res.status(404).json({ message: "Reservation not found" });
-        }
+        // Reuse the loaded reservation for the conflict check
+        const existingReservation = existingReservationForDiff;
         
         // Determine if this is a maintenance block - check both the update data and existing reservation
         const isMaintenanceBlock = (reservationData.type === 'maintenance_block') || 
@@ -3589,6 +3807,30 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       if (!reservation) {
         return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Detect contract-relevant changes and regenerate unsigned contract PDFs
+      // in the background (fire-and-forget so we don't slow the response).
+      try {
+        const changedFields = CONTRACT_RELEVANT_FIELDS.filter((field) => {
+          if (!(field in reservationData)) return false;
+          const before = (existingReservationForDiff as any)[field];
+          const after = (reservation as any)[field];
+          const norm = (v: any) =>
+            v === undefined || v === "" ? null : v instanceof Date ? v.toISOString() : v;
+          return norm(before) !== norm(after);
+        });
+        if (changedFields.length > 0) {
+          console.log(
+            `[contract-regen] Reservation #${id} contract-relevant fields changed: ${changedFields.join(", ")} — scheduling PDF regeneration.`,
+          );
+          scheduleContractRegeneration(id, user ? user.username : null);
+        }
+      } catch (regenErr) {
+        console.error(
+          "[contract-regen] Error scheduling regeneration:",
+          regenErr,
+        );
       }
       
       // If there's a file, create a document record linked to the vehicle
