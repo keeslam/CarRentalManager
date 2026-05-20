@@ -108,10 +108,9 @@ export function ReservationAddDialog({
   // Strategy: If parent provides onStartPickupFlow callback, delegate to it (page-level dialog)
   // Otherwise, try to render pickup dialog locally (works when dialog is stable)
   const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
-    console.log('🚪 ReservationAddDialog.handleTriggerPickupDialog called, reservation id:', reservation?.id);
     // If parent provides a page-level pickup flow handler, use it instead
+    // (e.g. when this dialog might be unmounted by a refetch).
     if (onStartPickupFlow) {
-      console.log('🚪 → delegating up via onStartPickupFlow');
       onStartPickupFlow(reservation);
       setOpen(false);
       return;
@@ -125,7 +124,6 @@ export function ReservationAddDialog({
     pickupDialogOpenRef.current = true;
     setPendingDialogReservation(reservation);
     setPickupDialogOpen(true);
-    console.log('🚪 → inline pickup state set: pendingDialogReservation + pickupDialogOpen=true');
   }, [onStartPickupFlow, setOpen]);
 
   // Handler to trigger return dialog from ReservationForm
