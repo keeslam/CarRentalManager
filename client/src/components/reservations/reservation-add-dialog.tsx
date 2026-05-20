@@ -108,33 +108,25 @@ export function ReservationAddDialog({
   // Strategy: If parent provides onStartPickupFlow callback, delegate to it (page-level dialog)
   // Otherwise, try to render pickup dialog locally (works when dialog is stable)
   const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
+    console.log('🚪 ReservationAddDialog.handleTriggerPickupDialog called, reservation id:', reservation?.id);
     // If parent provides a page-level pickup flow handler, use it instead
-    // This is more reliable when the component might unmount due to data refetch.
-    // IMPORTANT: open the page-level pickup BEFORE closing this dialog so the page
-    // state is committed first. If we closed first, this component would unmount
-    // and any in-flight state work could be lost, leaving the user with only the
-    // (empty) underlying page (and the new-reservation dialog could appear to
-    // briefly re-open from re-renders).
     if (onStartPickupFlow) {
+      console.log('🚪 → delegating up via onStartPickupFlow');
       onStartPickupFlow(reservation);
       setOpen(false);
       return;
     }
 
-    // Set up ref FIRST for synchronous blocking
+    // Inline path: render PickupDialog as a sibling of the parent Dialog so it
+    // stacks on top while the New Reservation dialog stays visible underneath.
     isPickupReturnDialogOpenRef.current = true;
     setIsPickupReturnDialogOpen(true);
-
-    // Store in both state and ref for persistence
     pendingDialogReservationRef.current = reservation;
     pickupDialogOpenRef.current = true;
     setPendingDialogReservation(reservation);
-
-    // Use setTimeout to ensure state is set before opening dialog
-    setTimeout(() => {
-      setPickupDialogOpen(true);
-    }, 50);
-  }, [onStartPickupFlow]);
+    setPickupDialogOpen(true);
+    console.log('🚪 → inline pickup state set: pendingDialogReservation + pickupDialogOpen=true');
+  }, [onStartPickupFlow, setOpen]);
 
   // Handler to trigger return dialog from ReservationForm
   const handleTriggerReturnDialog = useCallback((reservation: Reservation) => {
