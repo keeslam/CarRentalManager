@@ -21,7 +21,7 @@ interface EditContractNumberDialogProps {
   onOpenChange: (open: boolean) => void;
   reservationId: number;
   currentContractNumber?: string | null;
-  onSaved?: () => void | Promise<void>;
+  onSaved?: (newContractNumber: string) => void | Promise<void>;
 }
 
 type DuplicateInfo = {
@@ -91,19 +91,31 @@ export function EditContractNumberDialog({
       });
       return res.json();
     },
-    onSuccess: async () => {
+    onSuccess: (_data, newValue) => {
       toast({
         title: "Contract number updated",
-        description: "The contract number has been saved.",
+        description: `Contract number is now "${newValue}".`,
       });
-      await invalidateByPrefix("/api/reservations");
-      if (onSaved) await onSaved();
+      // Close immediately for snappy UX; fire-and-forget the cache refresh.
       onOpenChange(false);
+      invalidateByPrefix("/api/reservations");
+      if (onSaved) {
+        Promise.resolve(onSaved(newValue)).catch(() => {});
+      }
     },
     onError: (error: any) => {
+      const msg = String(error?.message || "");
+      // apiRequest throws "<status>: <body>"; try to extract a friendly message.
+      let friendly = "Please try again.";
+      if (msg.includes("DUPLICATE_CONTRACT_NUMBER") || msg.startsWith("409")) {
+        friendly = "That contract number is already used by another reservation.";
+        setDuplicate({ reservationId: 0 });
+      } else if (msg) {
+        friendly = msg.replace(/^\d+:\s*/, "");
+      }
       toast({
         title: "Could not update contract number",
-        description: error?.message || "Please try again.",
+        description: friendly,
         variant: "destructive",
       });
     },

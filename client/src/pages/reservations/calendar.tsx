@@ -2695,8 +2695,13 @@ export default function ReservationCalendarPage() {
           onOpenChange={setEditContractNumberOpen}
           reservationId={selectedReservation.id}
           currentContractNumber={selectedReservation.contractNumber}
-          onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
+          onSaved={(newContractNumber) => {
+            // Update locally so the view dialog reflects the change immediately,
+            // without waiting for the (slow) /api/reservations refetch.
+            setSelectedReservation((prev) =>
+              prev ? { ...prev, contractNumber: newContractNumber } : prev,
+            );
+            queryClient.invalidateQueries({ queryKey: ['/api/reservations'] });
           }}
         />
       )}
