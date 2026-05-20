@@ -11223,16 +11223,43 @@ export async function registerRoutes(app: Express): Promise<void> {
         if (vehicle && updated.reservationId) {
           // Find existing PDF documents for this damage check
           const allDocs = await storage.getDocumentsByReservation(updated.reservationId);
-          const existingPDFs = allDocs.filter(doc => 
+          const existingPDFs = allDocs.filter(doc =>
             doc.documentType?.startsWith(`Damage Check (${updated.checkType === 'pickup' ? 'Pickup' : 'Return'})`) &&
+            !doc.documentType?.includes('Edited') &&
+            !doc.documentType?.includes('Previous') &&
             !doc.documentType?.includes('Old') &&
             doc.fileName.includes(`_v${updated.id}.pdf`)
           );
-          
-          // Mark old PDFs as outdated
+
+          // Mark old PDFs as "edited / previous version" — update both the
+          // label AND the filename on disk so it's obvious in document lists
+          // and in downloaded files which version was replaced by an edit.
+          const editStamp = format(new Date(), 'yyyy-MM-dd_HHmmss');
           for (const oldDoc of existingPDFs) {
+            const newLabel = `${oldDoc.documentType} - Edited (Previous Version ${editStamp})`;
+            let newFileName = oldDoc.fileName;
+            let newFilePath = oldDoc.filePath;
+            try {
+              const resolvedOld = resolveDocumentFilePath(oldDoc.filePath);
+              if (resolvedOld && fs.existsSync(resolvedOld)) {
+                const dir = path.dirname(resolvedOld);
+                const ext = path.extname(oldDoc.fileName) || '.pdf';
+                const base = oldDoc.fileName.replace(/\.[^.]+$/, '');
+                newFileName = `${base}_edited_previous_${editStamp}${ext}`;
+                const newAbsPath = path.join(dir, newFileName);
+                fs.renameSync(resolvedOld, newAbsPath);
+                newFilePath = getRelativePath(newAbsPath);
+              }
+            } catch (renameErr) {
+              console.warn(
+                `[damage-check-edit] Could not rename old PDF file for doc ${oldDoc.id}:`,
+                renameErr,
+              );
+            }
             await storage.updateDocument(oldDoc.id, {
-              documentType: `${oldDoc.documentType} - Old`
+              documentType: newLabel,
+              fileName: newFileName,
+              filePath: newFilePath,
             });
           }
           
@@ -11268,9 +11295,9 @@ export async function registerRoutes(app: Express): Promise<void> {
                 brand: vehicle.brand,
                 model: vehicle.model,
                 licensePlate: vehicle.licensePlate,
-                buildYear: vehicle.productionDate,
+                buildYear: vehicle.productionDate || undefined,
                 fuel: updated.fuelLevel || vehicle.fuel || undefined,
-                mileage: updated.mileage || vehicle.mileage || undefined,
+                mileage: updated.mileage || (vehicle as any).currentMileage || undefined,
               },
               damageTemplate,
               reservationData,
