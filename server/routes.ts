@@ -302,6 +302,68 @@ async function regenerateUnsignedContractsForReservation(
 }
 
 /**
+ * Deletes any "superseded" pickup/return damage check PDFs (rows whose
+ * documentType has been marked with " - Edited", " - Previous", or " - Old")
+ * for a given reservation + checkType. Removes both the DB row and the file
+ * on disk. The current active document (without those markers) is preserved.
+ *
+ * Called whenever a brand-new pickup or return damage check PDF is generated
+ * so accumulated "previous version" entries don't pile up on the server.
+ */
+async function cleanupSupersededDamageCheckVersions(
+  reservationId: number,
+  checkType: "pickup" | "return",
+): Promise<number> {
+  let removed = 0;
+  try {
+    const prefix = `Damage Check (${checkType === "pickup" ? "Pickup" : "Return"})`;
+    const docs = await storage.getDocumentsByReservation(reservationId);
+    const superseded = docs.filter((d) => {
+      const t = d.documentType || "";
+      if (!t.startsWith(prefix)) return false;
+      return (
+        t.includes("Edited") ||
+        t.includes("Previous") ||
+        t.includes("Old")
+      );
+    });
+    for (const doc of superseded) {
+      try {
+        const resolved = resolveDocumentFilePath(doc.filePath);
+        if (resolved && fs.existsSync(resolved)) {
+          fs.unlinkSync(resolved);
+        }
+      } catch (fileErr) {
+        console.warn(
+          `[damage-check-cleanup] Could not delete file for doc ${doc.id}:`,
+          fileErr,
+        );
+      }
+      try {
+        await storage.deleteDocument(doc.id);
+        removed++;
+      } catch (dbErr) {
+        console.warn(
+          `[damage-check-cleanup] Could not delete document row ${doc.id}:`,
+          dbErr,
+        );
+      }
+    }
+    if (removed > 0) {
+      console.log(
+        `[damage-check-cleanup] Removed ${removed} superseded ${checkType} damage check version(s) for reservation #${reservationId}.`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[damage-check-cleanup] Error cleaning up superseded ${checkType} damage checks for reservation #${reservationId}:`,
+      err,
+    );
+  }
+  return removed;
+}
+
+/**
  * Regenerates the "Damage Check (Unsigned)" PDF documents for a reservation by
  * deleting existing unsigned damage check(s) (file + DB row) and creating one
  * new PDF using the matching damage check template. Signed/Pickup/Return
@@ -11131,13 +11193,22 @@ export async function registerRoutes(app: Express): Promise<void> {
               fileSize: pdfBuffer.length,
               uploadedBy: user ? user.username : null,
             });
+
+            // A brand-new active PDF was just created — purge any superseded
+            // "Edited (Previous Version)" entries so old files don't pile up.
+            if (created.checkType === 'pickup' || created.checkType === 'return') {
+              await cleanupSupersededDamageCheckVersions(
+                created.reservationId,
+                created.checkType,
+              );
+            }
           }
         }
       } catch (pdfError) {
         console.error("Error generating damage check PDF document:", pdfError);
         // Don't fail the whole request if PDF generation fails
       }
-      
+
       res.status(201).json(created);
     } catch (error) {
       console.error("Error creating interactive damage check:", error);
@@ -11324,6 +11395,19 @@ export async function registerRoutes(app: Express): Promise<void> {
               fileSize: pdfBuffer.length,
               uploadedBy: user ? user.username : null,
             });
+
+            // A fresh active PDF was just created — purge prior superseded
+            // "Edited (Previous Version)" entries for this reservation+type
+            // so old files don't accumulate on disk or in the documents list.
+            if (
+              updated.reservationId &&
+              (updated.checkType === 'pickup' || updated.checkType === 'return')
+            ) {
+              await cleanupSupersededDamageCheckVersions(
+                updated.reservationId,
+                updated.checkType,
+              );
+            }
           }
         }
       } catch (pdfError) {
