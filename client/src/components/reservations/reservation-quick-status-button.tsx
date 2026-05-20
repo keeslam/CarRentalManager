@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { Reservation } from "@shared/schema";
-import { ClipboardEdit } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 interface ReservationQuickStatusButtonProps {
   reservation: Reservation;
@@ -22,10 +22,16 @@ export function ReservationQuickStatusButton({
   onStatusChanged,
 }: ReservationQuickStatusButtonProps) {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  
+
   // Extract the necessary information
   const { id, status, vehicle, customer } = reservation;
-  
+
+  // This dialog is only used to revert a picked-up reservation back to booked.
+  // Hide the button for any other status.
+  if (status !== "picked_up") {
+    return null;
+  }
+
   return (
     <>
       <Button
@@ -33,9 +39,10 @@ export function ReservationQuickStatusButton({
         size={size}
         onClick={() => setStatusDialogOpen(true)}
         className={`text-primary-600 hover:text-primary-800 ${className}`}
+        title="Revert to Booked"
       >
-        <ClipboardEdit className="h-4 w-4" />
-        {withText && <span className="ml-2">Change Status</span>}
+        <RotateCcw className="h-4 w-4" />
+        {withText && <span className="ml-2">Revert to Booked</span>}
       </Button>
       
       <StatusChangeDialog

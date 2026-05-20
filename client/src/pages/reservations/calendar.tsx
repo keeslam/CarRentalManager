@@ -51,7 +51,7 @@ import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { formatReservationStatus } from "@/lib/format-utils";
 import { formatCurrency } from "@/lib/utils";
 import { getCustomReservationStyle, getCustomReservationStyleObject, getCustomIndicatorStyle, getCustomTBDStyle } from "@/lib/calendar-styling";
-import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search, FileText, Building, MapPin, Clock, History, AlertTriangle, Phone } from "lucide-react";
+import { Calendar, User, Car, CreditCard, Edit, Eye, ClipboardEdit, Palette, Trash2, Wrench, ClipboardCheck, Mail, Search, FileText, Building, MapPin, Clock, History, AlertTriangle, Phone, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -333,17 +333,13 @@ export default function ReservationCalendarPage() {
   };
   
   const handleStatusChange = (reservation: Reservation) => {
-    console.log('handleStatusChange called with reservation:', reservation);
-    console.log('🔍 Fuel data in reservation:', {
-      fuelLevelPickup: reservation.fuelLevelPickup,
-      fuelLevelReturn: reservation.fuelLevelReturn,
-      fuelCost: reservation.fuelCost,
-      fuelCardNumber: reservation.fuelCardNumber,
-      fuelNotes: reservation.fuelNotes,
-    });
+    // The status dialog now only reverts a picked_up reservation back to booked.
+    // For any other status, this trigger is a no-op.
+    if (reservation.status !== "picked_up") {
+      return;
+    }
     setSelectedReservation(reservation);
     setStatusDialogOpen(true);
-    console.log('Status dialog should be open now');
   };
   
   const handleCloseDialogs = () => {
@@ -1562,20 +1558,22 @@ export default function ReservationCalendarPage() {
                                         <Eye className="mr-1 h-3 w-3" />
                                         View
                                       </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        className="h-8 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          console.log('Status change clicked for reservation:', res.id);
-                                          handleStatusChange(res);
-                                        }}
-                                      >
-                                        <ClipboardEdit className="mr-1 h-3 w-3" />
-                                        Status
-                                      </Button>
+                                      {res.status === 'picked_up' && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleStatusChange(res);
+                                          }}
+                                          title="Revert to Booked"
+                                        >
+                                          <RotateCcw className="mr-1 h-3 w-3" />
+                                          Revert
+                                        </Button>
+                                      )}
                                       <Button 
                                         size="sm" 
                                         variant="outline"
@@ -2408,16 +2406,19 @@ export default function ReservationCalendarPage() {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    handleStatusChange(selectedReservation);
-                  }}
-                  data-testid="button-change-status-dialog"
-                >
-                  <ClipboardEdit className="mr-2 h-4 w-4" />
-                  Status
-                </Button>
+                {selectedReservation.status === 'picked_up' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleStatusChange(selectedReservation);
+                    }}
+                    data-testid="button-change-status-dialog"
+                    title="Revert to Booked"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Revert
+                  </Button>
+                )}
                 {selectedReservation.status === 'picked_up' && (
                   <Button 
                     variant="outline"

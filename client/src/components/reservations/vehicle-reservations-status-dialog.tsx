@@ -286,15 +286,19 @@ export function VehicleReservationsStatusDialog({
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedReservationId(reservation.id)}
-                                    className="bg-primary-50 hover:bg-primary-100 text-primary-600"
-                                  >
-                                    <CalendarClock className="mr-1 h-3 w-3" />
-                                    Change Status
-                                  </Button>
+                                  {reservation.status === 'picked_up' ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setSelectedReservationId(reservation.id)}
+                                      className="bg-primary-50 hover:bg-primary-100 text-primary-600"
+                                    >
+                                      <CalendarClock className="mr-1 h-3 w-3" />
+                                      Revert to Booked
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
                                 </td>
                               </tr>
                             );

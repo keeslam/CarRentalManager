@@ -3282,6 +3282,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         dataWithTracking.actualPickupDate = null;
         dataWithTracking.pickupMileage = null;
         dataWithTracking.fuelLevelPickup = null;
+        dataWithTracking.contractNumber = null;
       }
       
       // When reverting from "returned" to "picked_up", clear return data

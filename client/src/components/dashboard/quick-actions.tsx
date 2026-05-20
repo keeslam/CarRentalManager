@@ -33,7 +33,6 @@ import { isTrueValue } from "@/lib/utils";
 import { formatLicensePlate } from "@/lib/format-utils";
 import { formatDate } from "@/lib/format-utils";
 import { SearchableCombobox, type ComboboxOption } from "@/components/ui/searchable-combobox";
-import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { VehicleReservationsStatusDialog } from "@/components/reservations/vehicle-reservations-status-dialog";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { InlineDocumentUpload } from "@/components/documents/inline-document-upload";

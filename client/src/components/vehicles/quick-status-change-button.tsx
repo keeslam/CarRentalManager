@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { StatusChangeDialog } from "@/components/reservations/status-change-dialog";
 import { Reservation } from "@shared/schema";
-import { CalendarClock } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 interface QuickStatusChangeButtonProps {
   vehicleId: number;
@@ -20,9 +20,10 @@ export function QuickStatusChangeButton({ vehicleId }: QuickStatusChangeButtonPr
     queryKey: vehicleReservationsQueryKey,
   });
   
-  // Find active reservations (those with booked or picked_up status)
+  // The status dialog now only reverts picked_up reservations back to booked,
+  // so we only surface picked_up reservations here.
   const activeReservations = reservations?.filter(
-    (res) => res.status === "booked" || res.status === "picked_up"
+    (res) => res.status === "picked_up"
   );
   
   // Sort by nearest start date
@@ -52,13 +53,13 @@ export function QuickStatusChangeButton({ vehicleId }: QuickStatusChangeButtonPr
   
   return (
     <>
-      <Button 
+      <Button
         variant="outline"
         onClick={handleStatusChange}
         className="flex items-center"
       >
-        <CalendarClock className="h-4 w-4 mr-2" />
-        Change Reservation Status
+        <RotateCcw className="h-4 w-4 mr-2" />
+        Revert Pickup to Booked
       </Button>
       
       {selectedReservation && (
