@@ -131,14 +131,33 @@ function resolveDocumentFilePath(filePath: string | null | undefined): string | 
 // the same reservation's documents.
 const regenQueues = new Map<number, Promise<void>>();
 
-function scheduleContractRegeneration(
+export type ReservationPdfKinds = {
+  contract?: boolean;
+  damageCheck?: boolean;
+};
+
+/**
+ * Schedule regeneration of unsigned PDFs (contract and/or pickup damage check)
+ * for a reservation. Runs sequentially per reservation via single-flight queue.
+ * Each kind is independent and silently no-ops if no existing unsigned doc of
+ * that kind exists.
+ */
+function scheduleReservationPdfRegeneration(
   reservationId: number,
   username: string | null,
+  kinds: ReservationPdfKinds = { contract: true, damageCheck: true },
 ): void {
   const previous = regenQueues.get(reservationId) || Promise.resolve();
   const next = previous
     .catch(() => undefined) // don't let a failed prior job poison the chain
-    .then(() => regenerateUnsignedContractsForReservation(reservationId, username));
+    .then(async () => {
+      if (kinds.contract) {
+        await regenerateUnsignedContractsForReservation(reservationId, username);
+      }
+      if (kinds.damageCheck) {
+        await regenerateUnsignedDamageChecksForReservation(reservationId, username);
+      }
+    });
   regenQueues.set(reservationId, next);
   // Clean up the map once this job (and any later chained ones) settle.
   next.finally(() => {
@@ -146,6 +165,11 @@ function scheduleContractRegeneration(
       regenQueues.delete(reservationId);
     }
   });
+}
+
+// Backwards-compatible alias used in existing code paths.
+function scheduleContractRegeneration(reservationId: number, username: string | null): void {
+  scheduleReservationPdfRegeneration(reservationId, username, { contract: true, damageCheck: true });
 }
 
 /**
@@ -275,6 +299,218 @@ async function regenerateUnsignedContractsForReservation(
       err,
     );
   }
+}
+
+/**
+ * Regenerates the "Damage Check (Unsigned)" PDF documents for a reservation by
+ * deleting existing unsigned damage check(s) (file + DB row) and creating one
+ * new PDF using the matching damage check template. Signed/Pickup/Return
+ * damage checks and all other document types are NEVER touched.
+ *
+ * Only runs if at least one unsigned damage check already exists — we never
+ * auto-create one that wasn't there before.
+ *
+ * Must be invoked through `scheduleReservationPdfRegeneration` to ensure
+ * per-reservation serialization. Errors are logged and swallowed.
+ */
+async function regenerateUnsignedDamageChecksForReservation(
+  reservationId: number,
+  username: string | null,
+): Promise<void> {
+  try {
+    const reservation = await storage.getReservation(reservationId);
+    if (!reservation || !reservation.vehicle) {
+      return;
+    }
+
+    const allDocs = await storage.getDocumentsByReservation(reservationId);
+    const unsignedDamageChecks = allDocs.filter((d) =>
+      (d.documentType || "").startsWith("Damage Check (Unsigned)"),
+    );
+
+    if (unsignedDamageChecks.length === 0) {
+      return; // Don't auto-create one that didn't exist.
+    }
+
+    // Find matching damage check template (by vehicle), fallback to default.
+    const vehicle = reservation.vehicle;
+    const matchingTemplates = await storage.getDamageCheckTemplatesByVehicle(
+      vehicle.brand,
+      vehicle.model,
+      vehicle.vehicleType || undefined,
+    );
+    const damageTemplate =
+      (matchingTemplates && matchingTemplates.length > 0)
+        ? matchingTemplates[0]
+        : await storage.getDefaultDamageCheckTemplate();
+
+    if (!damageTemplate) {
+      console.warn(
+        `[damage-check-regen] No damage check template available for reservation #${reservationId}; skipping.`,
+      );
+      return;
+    }
+
+    // Prepare data exactly like the standalone generation endpoint.
+    const vehicleData = {
+      brand: vehicle.brand,
+      model: vehicle.model,
+      licensePlate: vehicle.licensePlate,
+      buildYear: vehicle.productionDate || undefined,
+      fuel: (reservation as any).fuelLevelPickup || vehicle.fuel || undefined,
+      mileage:
+        (reservation as any).pickupMileage ??
+        (vehicle as any).currentMileage ??
+        undefined,
+    };
+
+    let reservationData: any = undefined;
+    if (reservation.customer) {
+      const startDate = new Date(reservation.startDate);
+      const endDate = reservation.endDate
+        ? new Date(reservation.endDate)
+        : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const rentalDays = Math.max(
+        1,
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)),
+      );
+      reservationData = {
+        contractNumber:
+          (reservation as any).contractNumber ||
+          `C-${reservationId}-${format(new Date(), "yyyyMMdd")}`,
+        customerName:
+          `${(reservation.customer as any).firstName || ""} ${(reservation.customer as any).lastName || ""}`.trim() ||
+          (reservation.customer as any).name ||
+          "",
+        startDate: format(startDate, "dd-MM-yyyy"),
+        endDate: format(endDate, "dd-MM-yyyy"),
+        rentalDays,
+      };
+    }
+
+    // Generate the new PDF FIRST so failures don't lose the old one.
+    const { generateDamageCheckPDFWithTemplate } = await import(
+      "./pdf-damage-check-generator"
+    );
+    const pdfBuffer = await generateDamageCheckPDFWithTemplate(
+      vehicleData,
+      damageTemplate as any,
+      reservationData,
+    );
+
+    // Write the new file to disk in the same convention as the existing endpoint.
+    const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, "");
+    const uploadsDir = getUploadsDir();
+    const vehicleDir = path.join(uploadsDir, sanitizedPlate, "damage-checks");
+    if (!fs.existsSync(vehicleDir)) {
+      fs.mkdirSync(vehicleDir, { recursive: true });
+    }
+    const timestamp = Date.now();
+    const dateString = format(new Date(), "yyyy-MM-dd");
+    const fileName = `${sanitizedPlate}_DamageCheck_Unsigned_${dateString}_regen_${timestamp}.pdf`;
+    const absolutePath = path.join(vehicleDir, fileName);
+    fs.writeFileSync(absolutePath, pdfBuffer);
+    const relativePath = `uploads/${sanitizedPlate}/damage-checks/${fileName}`;
+
+    // Re-read to narrow the deletion window.
+    const docsToReplace = (await storage.getDocumentsByReservation(reservationId))
+      .filter((d) => (d.documentType || "").startsWith("Damage Check (Unsigned)"));
+
+    for (const doc of docsToReplace) {
+      try {
+        const resolved = resolveDocumentFilePath(doc.filePath);
+        if (resolved) {
+          fs.unlinkSync(resolved);
+        }
+      } catch (fileErr) {
+        console.warn(
+          `[damage-check-regen] Could not delete file for doc ${doc.id}:`,
+          fileErr,
+        );
+      }
+      try {
+        await storage.deleteDocument(doc.id);
+      } catch (dbErr) {
+        console.warn(
+          `[damage-check-regen] Could not delete document row ${doc.id}:`,
+          dbErr,
+        );
+      }
+    }
+
+    const savedDoc = await storage.createDocument({
+      vehicleId: reservation.vehicleId,
+      reservationId: reservation.id,
+      documentType: "Damage Check (Unsigned)",
+      fileName,
+      filePath: relativePath,
+      fileSize: pdfBuffer.length,
+      contentType: "application/pdf",
+      createdBy: username || "System",
+      notes: `Auto-regenerated after reservation data changed (replaced ${docsToReplace.length} older version${docsToReplace.length === 1 ? "" : "s"}).`,
+    } as any);
+
+    try {
+      realtimeEvents.documents.created(savedDoc);
+    } catch {
+      // realtime broadcast is best-effort
+    }
+
+    console.log(
+      `[damage-check-regen] Regenerated unsigned damage check for reservation #${reservationId} (replaced ${docsToReplace.length}).`,
+    );
+  } catch (err) {
+    console.error(
+      `[damage-check-regen] Failed to regenerate unsigned damage checks for reservation #${reservationId}:`,
+      err,
+    );
+  }
+}
+
+// ============================================================================
+// Old-rental admin password override
+// ============================================================================
+// After 3 weeks past the actual pickup date, non-admin users editing a
+// reservation must enter an admin password to confirm the change (and trigger
+// PDF regeneration). Admins bypass this check entirely.
+const OLD_RENTAL_LOCK_DAYS = 21;
+
+function reservationIsOld(reservation: any | null | undefined): boolean {
+  if (!reservation) return false;
+  const pickup = reservation.actualPickupDate;
+  if (!pickup) return false;
+  const pickupTime = new Date(pickup).getTime();
+  if (Number.isNaN(pickupTime)) return false;
+  const ageMs = Date.now() - pickupTime;
+  return ageMs > OLD_RENTAL_LOCK_DAYS * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Verifies the supplied password matches any active admin user's password.
+ * Returns true on match, false otherwise. Safe to fail silently.
+ */
+async function verifyAdminPassword(password: string): Promise<boolean> {
+  if (!password || typeof password !== "string") return false;
+  try {
+    const allUsers = await storage.getAllUsers();
+    const admins = allUsers.filter(
+      (u) => u.role === UserRole.ADMIN && (u as any).active !== false,
+    );
+    if (admins.length === 0) return false;
+    const { comparePasswords } = await import("./auth");
+    for (const admin of admins) {
+      try {
+        if (await comparePasswords(password, admin.password)) {
+          return true;
+        }
+      } catch {
+        // skip
+      }
+    }
+  } catch (err) {
+    console.error("[admin-override] Error verifying admin password:", err);
+  }
+  return false;
 }
 
 // Helper function to format dates consistently
@@ -3771,6 +4007,39 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ message: "Reservation not found" });
       }
 
+      // Old-rental admin password override: if the reservation was picked up
+      // more than 3 weeks ago and the editor is not an admin, require an
+      // admin password to be supplied with the request body.
+      if (
+        req.user?.role !== UserRole.ADMIN &&
+        reservationIsOld(existingReservationForDiff)
+      ) {
+        const adminPasswordOverride =
+          (req.body && (req.body as any).adminPasswordOverride) ||
+          (req.body && (req.body as any).adminOverridePassword) ||
+          undefined;
+        if (!adminPasswordOverride) {
+          return res.status(403).json({
+            code: "ADMIN_PASSWORD_REQUIRED",
+            message:
+              "This rental was picked up more than 3 weeks ago. Admin password required to save changes.",
+          });
+        }
+        const ok = await verifyAdminPassword(String(adminPasswordOverride));
+        if (!ok) {
+          return res.status(403).json({
+            code: "INVALID_ADMIN_PASSWORD",
+            message: "The admin password you entered is incorrect.",
+          });
+        }
+        // Strip the override fields so they don't leak into the persisted data.
+        delete (req.body as any).adminPasswordOverride;
+        delete (req.body as any).adminOverridePassword;
+        console.log(
+          `[admin-override] Old-rental edit on reservation #${id} approved with admin password (user: ${req.user?.username}).`,
+        );
+      }
+
       // Check for conflicts only if vehicle, startDate or endDate are being updated
       if (reservationData.vehicleId && reservationData.startDate) {
         // Reuse the loaded reservation for the conflict check
@@ -3824,7 +4093,11 @@ export async function registerRoutes(app: Express): Promise<void> {
           console.log(
             `[contract-regen] Reservation #${id} contract-relevant fields changed: ${changedFields.join(", ")} — scheduling PDF regeneration.`,
           );
-          scheduleContractRegeneration(id, user ? user.username : null);
+          scheduleReservationPdfRegeneration(
+            id,
+            user ? user.username : null,
+            { contract: true, damageCheck: true },
+          );
         }
       } catch (regenErr) {
         console.error(
@@ -11030,7 +11303,24 @@ export async function registerRoutes(app: Express): Promise<void> {
         console.error("Error regenerating damage check PDF document:", pdfError);
         // Don't fail the whole request if PDF regeneration fails
       }
-      
+
+      // Also refresh any "Damage Check (Unsigned)" PDFs and unsigned contract
+      // PDFs for the linked reservation so they reflect the new inspection data.
+      if (updated.reservationId) {
+        try {
+          scheduleReservationPdfRegeneration(
+            updated.reservationId,
+            user ? user.username : null,
+            { contract: true, damageCheck: true },
+          );
+        } catch (regenErr) {
+          console.error(
+            "[damage-check-regen] Error scheduling regen from interactive damage check update:",
+            regenErr,
+          );
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating interactive damage check:", error);

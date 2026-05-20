@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { invokeSessionExpired } from "./session-expiry";
+import { promptForAdminPassword } from "./admin-password-prompt";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -35,6 +36,7 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { _adminRetryCount?: number },
 ): Promise<Response> {
   const headers: Record<string, string> = {};
   let bodyPayload: unknown = data;
@@ -81,6 +83,46 @@ export async function apiRequest(
     body: bodyPayload !== undefined && bodyPayload !== null ? JSON.stringify(bodyPayload) : undefined,
     credentials: "include",
   });
+
+  // Handle "old rental" admin-password override: when the backend rejects with
+  // 403 + code ADMIN_PASSWORD_REQUIRED (or INVALID_ADMIN_PASSWORD), prompt the
+  // user for an admin password and retry transparently with the password
+  // merged into the request body. Caps at 3 retries to avoid infinite loops.
+  if (res.status === 403) {
+    const retryCount = options?._adminRetryCount ?? 0;
+    if (retryCount < 3) {
+      let parsedBody: any = null;
+      try {
+        parsedBody = await res.clone().json();
+      } catch {
+        parsedBody = null;
+      }
+      const code = parsedBody?.code;
+      if (code === "ADMIN_PASSWORD_REQUIRED" || code === "INVALID_ADMIN_PASSWORD") {
+        const password = await promptForAdminPassword({
+          reason:
+            code === "ADMIN_PASSWORD_REQUIRED"
+              ? parsedBody?.message ||
+                "This rental was picked up more than 3 weeks ago. Admin password required to save changes."
+              : undefined,
+          errorMessage:
+            code === "INVALID_ADMIN_PASSWORD"
+              ? parsedBody?.message || "The admin password you entered is incorrect."
+              : undefined,
+        });
+        if (password) {
+          const mergedBody =
+            bodyPayload && typeof bodyPayload === "object" && !Array.isArray(bodyPayload)
+              ? { ...(bodyPayload as Record<string, unknown>), adminPasswordOverride: password }
+              : { adminPasswordOverride: password };
+          return apiRequest(method, url, mergedBody, {
+            _adminRetryCount: retryCount + 1,
+          });
+        }
+        // User cancelled — fall through to throw
+      }
+    }
+  }
 
   await throwIfResNotOk(res);
   return res;

@@ -888,15 +888,66 @@ export function ReservationForm({
         formData.append("damageCheckFile", data.damageCheckFile);
       }
       
-      // Use FormData for the request
-      const response = await fetch(
-        editMode ? `/api/reservations/${initialData?.id}` : "/api/reservations", 
-        {
-          method: editMode ? "PATCH" : "POST",
-          body: formData,
+      // Use FormData for the request. We handle the admin-password override
+      // protocol manually here because this path uses raw fetch (not apiRequest)
+      // to support multipart file upload.
+      const sendRequest = async (overridePassword?: string) => {
+        if (overridePassword) {
+          formData.set("adminPasswordOverride", overridePassword);
+        } else {
+          formData.delete("adminPasswordOverride");
         }
-      );
-      
+        return fetch(
+          editMode ? `/api/reservations/${initialData?.id}` : "/api/reservations",
+          {
+            method: editMode ? "PATCH" : "POST",
+            body: formData,
+          },
+        );
+      };
+
+      let response = await sendRequest();
+
+      // Handle admin-password override challenge (old rentals, non-admin user).
+      if (response.status === 403) {
+        try {
+          const cloned = response.clone();
+          const errJson = await cloned.json();
+          const code = errJson?.code;
+          if (code === "ADMIN_PASSWORD_REQUIRED" || code === "INVALID_ADMIN_PASSWORD") {
+            const { promptForAdminPassword } = await import("@/lib/admin-password-prompt");
+            let attempts = 0;
+            let errorMessage =
+              code === "INVALID_ADMIN_PASSWORD"
+                ? "Incorrect admin password. Please try again."
+                : undefined;
+            while (attempts < 3) {
+              attempts++;
+              const pwd = await promptForAdminPassword({ errorMessage });
+              if (!pwd) {
+                throw new Error("Admin password required to edit old reservation");
+              }
+              response = await sendRequest(pwd);
+              if (response.status !== 403) break;
+              try {
+                const c2 = response.clone();
+                const e2 = await c2.json();
+                if (e2?.code !== "INVALID_ADMIN_PASSWORD") break;
+                errorMessage = "Incorrect admin password. Please try again.";
+              } catch {
+                break;
+              }
+            }
+          }
+        } catch (overrideErr) {
+          // If we threw above (user cancelled), re-throw to abort save.
+          if (overrideErr instanceof Error && overrideErr.message.includes("Admin password required")) {
+            throw overrideErr;
+          }
+          // Otherwise fall through to normal error handling below.
+        }
+      }
+
       if (!response.ok) {
         // Try to get the error message from the response
         let errorMessage = "Failed to save reservation";
