@@ -1910,9 +1910,13 @@ export function ReservationForm({
                         <SelectContent>
                           <SelectItem value="booked">Booked</SelectItem>
                           <SelectItem value="picked_up">Picked Up</SelectItem>
-                          <SelectItem value="returned">Returned</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          {editMode && (
+                            <>
+                              <SelectItem value="returned">Returned</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormDescription>

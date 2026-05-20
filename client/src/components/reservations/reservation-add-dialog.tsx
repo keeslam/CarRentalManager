@@ -109,10 +109,15 @@ export function ReservationAddDialog({
   // Otherwise, try to render pickup dialog locally (works when dialog is stable)
   const handleTriggerPickupDialog = useCallback((reservation: Reservation) => {
     // If parent provides a page-level pickup flow handler, use it instead
-    // This is more reliable when the component might unmount due to data refetch
+    // This is more reliable when the component might unmount due to data refetch.
+    // IMPORTANT: open the page-level pickup BEFORE closing this dialog so the page
+    // state is committed first. If we closed first, this component would unmount
+    // and any in-flight state work could be lost, leaving the user with only the
+    // (empty) underlying page (and the new-reservation dialog could appear to
+    // briefly re-open from re-renders).
     if (onStartPickupFlow) {
-      setOpen(false);
       onStartPickupFlow(reservation);
+      setOpen(false);
       return;
     }
 
