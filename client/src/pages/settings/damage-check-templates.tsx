@@ -25,6 +25,9 @@ import {
   X,
   GripVertical,
   MapPin,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   DndContext,
@@ -322,7 +325,8 @@ function DiagramPlacementPanel({
                   e.stopPropagation();
                   onSetPosition(p.id, undefined);
                 }}
-                className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] leading-none hidden group-hover:flex items-center justify-center shadow"
+                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] leading-none flex items-center justify-center shadow opacity-70 hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-300"
                 aria-label={`Remove ${p.name} from diagram`}
                 data-testid={`diagram-marker-remove-${p.id}`}
               >
@@ -900,6 +904,118 @@ function TemplateEditor({
   const [sideViewFile, setSideViewFile] = useState<File | null>(null);
   const [uploadingDiagrams, setUploadingDiagrams] = useState(false);
 
+  // Stable object URL for the freshly-selected top-view file. Created once
+  // per file selection and explicitly revoked on change/unmount so we don't
+  // leak blob URLs across long editing sessions.
+  const [topViewPreviewUrl, setTopViewPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!topViewFile) {
+      setTopViewPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(topViewFile);
+    setTopViewPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [topViewFile]);
+
+  // Phase 3 — live PDF preview. Debounced POST of the current draft to a
+  // dedicated preview endpoint that renders the PDF in memory and streams
+  // the bytes back. The blob URL is revoked when superseded or on unmount.
+  const [showPreview, setShowPreview] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  // Monotonically-increasing request id so only the latest preview fetch is
+  // allowed to mutate loading/error/url state. Older requests that resolve
+  // after a newer one was scheduled simply no-op.
+  const previewReqIdRef = useRef(0);
+
+  // Phase 3 — once a user picks a new diagram file in the editor, upload it
+  // immediately so the live preview can render the in-flight selection. The
+  // resulting server-relative path is stored in `pendingDiagramPaths` and is
+  // used both by the preview pane and the final save flow.
+  const [pendingDiagramPaths, setPendingDiagramPaths] = useState<{
+    diagramTopView?: string | null;
+    diagramFrontView?: string | null;
+    diagramRearView?: string | null;
+    diagramSideView?: string | null;
+  }>({});
+
+  // Revoke the previous preview blob URL whenever it changes or unmounts so
+  // long editing sessions don't accumulate blobs in memory.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  // Auto-upload each newly-selected diagram file to the existing upload
+  // endpoint so the live preview can render the in-flight selection. One
+  // effect per slot keeps uploads independent. AbortController guards
+  // against rapid file changes superseding an in-flight upload.
+  const uploadDiagramForPreview = (
+    file: File,
+    fieldName: "topView" | "frontView" | "rearView" | "sideView",
+    pathKey: "diagramTopView" | "diagramFrontView" | "diagramRearView" | "diagramSideView",
+    signal: AbortSignal,
+  ) => {
+    const fd = new FormData();
+    fd.append(fieldName, file);
+    fetch("/api/damage-check-templates/upload-diagrams", {
+      method: "POST",
+      body: fd,
+      credentials: "include",
+      signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("upload failed");
+        return res.json();
+      })
+      .then((paths) => {
+        if (paths?.[pathKey]) {
+          setPendingDiagramPaths((prev) => ({ ...prev, [pathKey]: paths[pathKey] }));
+        }
+      })
+      .catch((err) => {
+        if (err?.name !== "AbortError") {
+          console.warn(`Diagram preview upload failed for ${fieldName}:`, err);
+        }
+      });
+  };
+  useEffect(() => {
+    if (!topViewFile) return;
+    const c = new AbortController();
+    uploadDiagramForPreview(topViewFile, "topView", "diagramTopView", c.signal);
+    return () => c.abort();
+  }, [topViewFile]);
+  useEffect(() => {
+    if (!frontViewFile) return;
+    const c = new AbortController();
+    uploadDiagramForPreview(frontViewFile, "frontView", "diagramFrontView", c.signal);
+    return () => c.abort();
+  }, [frontViewFile]);
+  useEffect(() => {
+    if (!rearViewFile) return;
+    const c = new AbortController();
+    uploadDiagramForPreview(rearViewFile, "rearView", "diagramRearView", c.signal);
+    return () => c.abort();
+  }, [rearViewFile]);
+  useEffect(() => {
+    if (!sideViewFile) return;
+    const c = new AbortController();
+    uploadDiagramForPreview(sideViewFile, "sideView", "diagramSideView", c.signal);
+    return () => c.abort();
+  }, [sideViewFile]);
+
+  // Effective diagram paths for preview + save: pending uploads win over the
+  // persisted template paths.
+  const effectiveDiagrams = {
+    diagramTopView: pendingDiagramPaths.diagramTopView ?? template?.diagramTopView ?? null,
+    diagramFrontView: pendingDiagramPaths.diagramFrontView ?? template?.diagramFrontView ?? null,
+    diagramRearView: pendingDiagramPaths.diagramRearView ?? template?.diagramRearView ?? null,
+    diagramSideView: pendingDiagramPaths.diagramSideView ?? template?.diagramSideView ?? null,
+  };
+
   useEffect(() => {
     if (template) {
       setName(template.name);
@@ -938,6 +1054,17 @@ function TemplateEditor({
     setFrontViewFile(null);
     setRearViewFile(null);
     setSideViewFile(null);
+    // Reset Phase 3 live-preview transient state so values from a previous
+    // edit session can't leak into a different template's preview/save.
+    setPendingDiagramPaths({});
+    setPreviewError(null);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    // Bump the request id so any in-flight preview fetch from the previous
+    // template is ignored when it resolves.
+    previewReqIdRef.current++;
   }, [template]);
 
   const saveMutation = useMutation({
@@ -995,21 +1122,26 @@ function TemplateEditor({
       return;
     }
 
-    let diagramPaths = {
-      diagramTopView: template?.diagramTopView || null,
-      diagramFrontView: template?.diagramFrontView || null,
-      diagramRearView: template?.diagramRearView || null,
-      diagramSideView: template?.diagramSideView || null,
-    };
+    // Start from current effective paths (pending live-preview uploads have
+    // priority over persisted template paths). Only re-upload diagram files
+    // that haven't already been uploaded by the live-preview auto-upload.
+    let diagramPaths = { ...effectiveDiagrams };
 
-    try {
-      if (topViewFile || frontViewFile || rearViewFile || sideViewFile) {
+    const filesNeedingUpload: { field: string; file: File }[] = [];
+    if (topViewFile && !pendingDiagramPaths.diagramTopView)
+      filesNeedingUpload.push({ field: "topView", file: topViewFile });
+    if (frontViewFile && !pendingDiagramPaths.diagramFrontView)
+      filesNeedingUpload.push({ field: "frontView", file: frontViewFile });
+    if (rearViewFile && !pendingDiagramPaths.diagramRearView)
+      filesNeedingUpload.push({ field: "rearView", file: rearViewFile });
+    if (sideViewFile && !pendingDiagramPaths.diagramSideView)
+      filesNeedingUpload.push({ field: "sideView", file: sideViewFile });
+
+    if (filesNeedingUpload.length > 0) {
+      try {
         setUploadingDiagrams(true);
         const formData = new FormData();
-        if (topViewFile) formData.append("topView", topViewFile);
-        if (frontViewFile) formData.append("frontView", frontViewFile);
-        if (rearViewFile) formData.append("rearView", rearViewFile);
-        if (sideViewFile) formData.append("sideView", sideViewFile);
+        filesNeedingUpload.forEach(({ field, file }) => formData.append(field, file));
         const response = await fetch("/api/damage-check-templates/upload-diagrams", {
           method: "POST",
           body: formData,
@@ -1017,17 +1149,17 @@ function TemplateEditor({
         if (!response.ok) throw new Error("Failed to upload diagrams");
         const uploadedPaths = await response.json();
         diagramPaths = { ...diagramPaths, ...uploadedPaths };
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload diagram images",
+          variant: "destructive",
+        });
+        setUploadingDiagrams(false);
+        return;
+      } finally {
+        setUploadingDiagrams(false);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload diagram images",
-        variant: "destructive",
-      });
-      setUploadingDiagrams(false);
-      return;
-    } finally {
-      setUploadingDiagrams(false);
     }
 
     // Normalise per-category order so the backend gets a stable ordering hint.
@@ -1294,18 +1426,118 @@ function TemplateEditor({
     return map;
   }, [inspectionPoints, categories]);
 
+  // Phase 3 — debounced live preview fetch. Whenever any field that affects
+  // the rendered PDF changes, schedule a single POST 600ms later so rapid
+  // typing doesn't spam the server. An AbortController guards against races
+  // where a newer change finishes before an in-flight older request.
+  useEffect(() => {
+    if (!open || !showPreview) return;
+    const controller = new AbortController();
+    const reqId = ++previewReqIdRef.current;
+    const timer = setTimeout(async () => {
+      // Only the latest request may mutate UI state.
+      if (reqId !== previewReqIdRef.current) return;
+      setPreviewLoading(true);
+      setPreviewError(null);
+      try {
+        const draft = {
+          name,
+          description,
+          vehicleMake,
+          vehicleModel,
+          vehicleType,
+          buildYearFrom,
+          buildYearTo,
+          headerText,
+          footerText,
+          categories,
+          inspectionPoints,
+          handoverChecklist,
+          ...effectiveDiagrams,
+        };
+        const res = await fetch("/api/damage-check-templates/preview-pdf", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(draft),
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Preview failed (${res.status})`);
+        const blob = await res.blob();
+        if (reqId !== previewReqIdRef.current) return;
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        if (reqId !== previewReqIdRef.current) return;
+        setPreviewError(err?.message || "Failed to generate preview");
+      } finally {
+        if (reqId === previewReqIdRef.current) setPreviewLoading(false);
+      }
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    open,
+    showPreview,
+    name,
+    description,
+    vehicleMake,
+    vehicleModel,
+    vehicleType,
+    buildYearFrom,
+    buildYearTo,
+    headerText,
+    footerText,
+    categories,
+    inspectionPoints,
+    handoverChecklist,
+    effectiveDiagrams.diagramTopView,
+    effectiveDiagrams.diagramFrontView,
+    effectiveDiagrams.diagramRearView,
+    effectiveDiagrams.diagramSideView,
+  ]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{template ? "Edit Template" : "Create New Template"}</DialogTitle>
-          <DialogDescription>
-            {template
-              ? "Update template details and inspection points"
-              : "Create a custom damage check template for vehicle inspections"}
-          </DialogDescription>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 flex flex-col gap-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle>{template ? "Edit Template" : "Create New Template"}</DialogTitle>
+              <DialogDescription>
+                {template
+                  ? "Update template details and inspection points"
+                  : "Create a custom damage check template for vehicle inspections"}
+              </DialogDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPreview((v) => !v)}
+              data-testid="button-toggle-preview"
+            >
+              {showPreview ? (
+                <>
+                  <EyeOff className="h-4 w-4 mr-2" /> Hide Preview
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" /> Show Preview
+                </>
+              )}
+            </Button>
+          </div>
         </DialogHeader>
 
+        <div className="flex-1 min-h-0 flex gap-0 overflow-hidden">
+          <div className={`${showPreview ? "flex-1 min-w-0" : "w-full"} overflow-y-auto px-6 pb-2`}>
         <div className="space-y-6 py-4">
           {/* Basic Info */}
           <section className="space-y-4">
@@ -1706,11 +1938,7 @@ function TemplateEditor({
               </p>
             </div>
             <DiagramPlacementPanel
-              topViewPath={
-                topViewFile
-                  ? URL.createObjectURL(topViewFile)
-                  : template?.diagramTopView ?? null
-              }
+              topViewPath={topViewPreviewUrl ?? template?.diagramTopView ?? null}
               points={inspectionPoints}
               onSetPosition={setPointPosition}
             />
@@ -1961,8 +2189,43 @@ function TemplateEditor({
             )}
           </section>
         </div>
+          </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+          {showPreview && (
+            <div className="w-[45%] min-w-[380px] border-l bg-gray-50 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-white flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Live Preview</h3>
+                  {previewLoading && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                  )}
+                </div>
+                <span className="text-xs text-gray-500">Sample data</span>
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden p-2">
+                {previewError ? (
+                  <div className="h-full flex items-center justify-center text-sm text-red-600 p-4 text-center">
+                    {previewError}
+                  </div>
+                ) : previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    title="Template PDF preview"
+                    className="w-full h-full border rounded bg-white"
+                    data-testid="iframe-template-preview"
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Generating preview…
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 px-6 py-3 border-t flex-shrink-0 bg-white">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

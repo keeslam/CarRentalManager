@@ -10394,6 +10394,103 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Live preview: render a draft template to PDF without persisting it. Used
+  // by the template editor's live-preview pane so editors can see exactly how
+  // their inspection points / categories / diagrams will render. Accepts the
+  // full draft template in the request body.
+  app.post(
+    "/api/damage-check-templates/preview-pdf",
+    hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS),
+    async (req: Request, res: Response) => {
+      try {
+        const draft = req.body ?? {};
+
+        // Diagram path safety: only allow relative paths inside the uploads
+        // directory and reject any traversal attempt. Anything that fails the
+        // check is silently dropped so the preview still renders without it.
+        const isSafeDiagramPath = (p: unknown): p is string => {
+          if (typeof p !== "string" || p.length === 0) return false;
+          if (p.includes("..") || p.includes("\0")) return false;
+          if (path.isAbsolute(p)) return false;
+          const normalized = path.posix.normalize(p.replace(/\\/g, "/"));
+          if (normalized.startsWith("../") || normalized === "..") return false;
+          return normalized.startsWith("uploads/");
+        };
+        const safeDiagram = (p: unknown) => (isSafeDiagramPath(p) ? p : null);
+
+        // Build a synthetic template so the generator has all fields it
+        // expects. Missing fields default to sensible values so an empty
+        // editor still produces a viewable preview.
+        const templateForRender: any = {
+          id: 0,
+          name: draft.name || "Preview",
+          description: draft.description ?? null,
+          vehicleMake: draft.vehicleMake ?? null,
+          vehicleModel: draft.vehicleModel ?? null,
+          vehicleType: draft.vehicleType ?? null,
+          buildYearFrom: draft.buildYearFrom ?? null,
+          buildYearTo: draft.buildYearTo ?? null,
+          isDefault: false,
+          language: draft.language ?? "nl",
+          inspectionPoints: Array.isArray(draft.inspectionPoints)
+            ? draft.inspectionPoints
+            : [],
+          categories: Array.isArray(draft.categories) ? draft.categories : [],
+          handoverChecklist: Array.isArray(draft.handoverChecklist)
+            ? draft.handoverChecklist
+            : [],
+          headerText: draft.headerText ?? null,
+          footerText: draft.footerText ?? null,
+          diagramTopView: safeDiagram(draft.diagramTopView),
+          diagramFrontView: safeDiagram(draft.diagramFrontView),
+          diagramRearView: safeDiagram(draft.diagramRearView),
+          diagramSideView: safeDiagram(draft.diagramSideView),
+        };
+
+        // Sample vehicle + reservation data for the preview. Editors can
+        // see how dynamic fields render without needing a real reservation.
+        const sampleVehicle = {
+          brand: draft.vehicleMake || "Sample Brand",
+          model: draft.vehicleModel || "Sample Model",
+          licensePlate: "XX-000-X",
+          buildYear: "2024",
+          fuel: "Diesel",
+          mileage: 12345,
+        };
+        const sampleReservation = {
+          contractNumber: "PREVIEW-0001",
+          customerName: "Sample Customer",
+          startDate: format(new Date(), "dd-MM-yyyy"),
+          endDate: format(
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            "dd-MM-yyyy",
+          ),
+          rentalDays: 7,
+        };
+
+        const { generateDamageCheckPDFWithTemplate } = await import(
+          "./pdf-damage-check-generator"
+        );
+        const pdfBuffer = await generateDamageCheckPDFWithTemplate(
+          sampleVehicle,
+          templateForRender,
+          sampleReservation,
+        );
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader(
+          "Content-Disposition",
+          'inline; filename="template-preview.pdf"',
+        );
+        res.send(pdfBuffer);
+      } catch (error) {
+        console.error("Error generating template preview PDF:", error);
+        res.status(500).json({ message: "Error generating preview" });
+      }
+    },
+  );
+
   // Upload diagrams for damage check templates
   app.post("/api/damage-check-templates/upload-diagrams", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), diagramUpload.fields([
     { name: 'topView', maxCount: 1 },
