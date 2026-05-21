@@ -68,6 +68,9 @@ interface TemplateCategory {
   id: string;
   label: string;
   order?: number;
+  // Phase 2 layout controls (per category):
+  columns?: 1 | 2 | 3 | 4;
+  alignment?: "left" | "center" | "right";
 }
 
 interface HandoverChecklistItem {
@@ -343,10 +346,16 @@ export async function generateDamageCheckPDF(
   for (const category of categories) {
     const points = template.inspectionPoints.filter(p => p.category === category);
     if (points.length === 0) continue;
-    
+
+    // Per-category layout overrides (Phase 2). Defaults preserve the prior
+    // single-column / left-aligned rendering when not configured.
+    const categoryConfig = template.categories?.find(c => c.id === category);
+    const categoryAlignment = categoryConfig?.alignment ?? 'left';
+    const categoryColumns = Math.max(1, Math.min(4, categoryConfig?.columns ?? 1));
+
     // Ensure space for category header
     page = ensureSpace(100);
-    
+
     // Category header
     page.drawRectangle({
       x: margin,
@@ -355,16 +364,98 @@ export async function generateDamageCheckPDF(
       height: 18,
       color: rgb(0.2, 0.4, 0.7),
     });
-    
-    page.drawText(categoryLabels[category as keyof typeof categoryLabels] || category, {
-      x: margin + 5,
+
+    const headerLabel = categoryLabels[category as keyof typeof categoryLabels] || category;
+    const headerWidth = boldFont.widthOfTextAtSize(headerLabel, 10);
+    let headerX = margin + 5;
+    if (categoryAlignment === 'center') {
+      headerX = margin + (width - margin * 2 - headerWidth) / 2;
+    } else if (categoryAlignment === 'right') {
+      headerX = width - margin - 5 - headerWidth;
+    }
+    page.drawText(headerLabel, {
+      x: headerX,
       y: yPosition - 13,
       size: 10,
       font: boldFont,
       color: rgb(1, 1, 1),
     });
-    
+
     yPosition -= 20;
+
+    // Multi-column rendering path — only used when columns > 1 AND none of
+    // the category's points need the full-width damage-type checkbox grid.
+    // Mixing the two would cause overlap, so we keep checkbox-grid points on
+    // the single-column path.
+    const hasCheckboxGrid = points.some(p => !p.inputType || p.inputType === 'checkbox');
+    if (categoryColumns > 1 && !hasCheckboxGrid) {
+      const colGap = 8;
+      const colWidth = (width - margin * 2 - colGap * (categoryColumns - 1)) / categoryColumns;
+      const rowsNeeded = Math.ceil(points.length / categoryColumns);
+      const rowHeight = 16;
+
+      for (let r = 0; r < rowsNeeded; r++) {
+        page = ensureSpace(rowHeight + 10);
+        for (let c = 0; c < categoryColumns; c++) {
+          const idx = r * categoryColumns + c;
+          const point = points[idx];
+          if (!point) continue;
+          const colX = margin + c * (colWidth + colGap);
+
+          // Align the point name within its column based on category alignment.
+          const nameSize = 8;
+          const nameWidth = font.widthOfTextAtSize(point.name, nameSize);
+          let nameX = colX;
+          if (categoryAlignment === 'center') {
+            nameX = colX + (colWidth - nameWidth) / 2;
+          } else if (categoryAlignment === 'right') {
+            nameX = colX + colWidth - nameWidth;
+          }
+          page.drawText(point.name, { x: nameX, y: yPosition, size: nameSize, font });
+
+          if (point.inputType === 'text') {
+            // Underline under the name as a write-in field.
+            page.drawLine({
+              start: { x: colX, y: yPosition - 3 },
+              end: { x: colX + colWidth, y: yPosition - 3 },
+              thickness: 0.5,
+              color: rgb(0, 0, 0),
+            });
+          } else if (point.inputType === 'dropdown') {
+            // Render checkable options below the name, wrapped within col width.
+            const opts = (point.dropdownOptions ?? []).slice(0, 4);
+            const checkboxSize = 7;
+            let optX = colX;
+            const optY = yPosition - 11;
+            for (const opt of opts) {
+              const label = opt.substring(0, 10);
+              const labelWidth = font.widthOfTextAtSize(label, 6);
+              const slot = checkboxSize + 2 + labelWidth + 4;
+              if (optX + slot > colX + colWidth) break;
+              page.drawRectangle({
+                x: optX,
+                y: optY,
+                width: checkboxSize,
+                height: checkboxSize,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 0.5,
+              });
+              page.drawText(label, {
+                x: optX + checkboxSize + 2,
+                y: optY + 1,
+                size: 6,
+                font,
+              });
+              optX += slot;
+            }
+          }
+        }
+        yPosition -= rowHeight + (points.some(p => p.inputType === 'dropdown') ? 6 : 0);
+      }
+
+      yPosition -= 10;
+      continue;
+    }
     
     // Damage type column headers
     let xPos = margin + nameColumnWidth + 10;

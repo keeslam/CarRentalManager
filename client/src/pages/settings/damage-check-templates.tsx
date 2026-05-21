@@ -23,7 +23,30 @@ import {
   Copy,
   ClipboardList,
   X,
+  GripVertical,
+  MapPin,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +72,9 @@ interface TemplateCategory {
   id: string;
   label: string;
   order: number;
+  // Phase 2 layout controls
+  columns?: 1 | 2 | 3 | 4;
+  alignment?: "left" | "center" | "right";
 }
 
 interface HandoverChecklistItem {
@@ -136,6 +162,226 @@ const DAMAGE_TYPES = [
   { value: "vuil", label: "Vuil" },
   { value: "ontbreekt", label: "Ontbreekt" },
 ];
+
+// ---------------------------------------------------------------------------
+// Sortable helpers (Phase 2 — drag & drop)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generic sortable row wrapper. Wraps children in a div that registers
+ * itself with the surrounding `<SortableContext>` and exposes a `handle`
+ * render prop the caller can mount on its drag affordance.
+ */
+function SortableRow({
+  id,
+  data,
+  children,
+  className,
+}: {
+  id: string;
+  data?: Record<string, any>;
+  children: (args: {
+    handleProps: any;
+    isDragging: boolean;
+  }) => React.ReactNode;
+  className?: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, data });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={className}>
+      {children({
+        handleProps: { ...attributes, ...listeners },
+        isDragging,
+      })}
+    </div>
+  );
+}
+
+/**
+ * Diagram placement panel — shows the template's top-view diagram and lets
+ * the user click anywhere to drop a marker for an inspection point, drag
+ * existing markers to reposition, and remove markers via a hover button.
+ * Stored coordinates are 0..1 fractions of the image so they scale with the
+ * rendered diagram on screen and in the PDF.
+ */
+function DiagramPlacementPanel({
+  topViewPath,
+  points,
+  onSetPosition,
+}: {
+  topViewPath?: string | null;
+  points: InspectionPoint[];
+  onSetPosition: (id: string, position: { x: number; y: number } | undefined) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingPos, setPendingPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  // Drag-to-reposition: window-level listeners while a marker is being dragged.
+  useEffect(() => {
+    if (!dragId) return;
+    const clamp = (n: number) => Math.max(0, Math.min(1, n));
+    const onMove = (e: MouseEvent) => {
+      const rect = imgRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      onSetPosition(dragId, {
+        x: clamp((e.clientX - rect.left) / rect.width),
+        y: clamp((e.clientY - rect.top) / rect.height),
+      });
+    };
+    const onUp = () => setDragId(null);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragId, onSetPosition]);
+
+  if (!topViewPath) {
+    return (
+      <div className="border-2 border-dashed rounded-lg p-6 text-center text-gray-500 text-xs">
+        Upload a Top View diagram above to start placing inspection points on it.
+      </div>
+    );
+  }
+
+  const placedPoints = points.filter((p) => p.position);
+  const unplacedPoints = points.filter((p) => !p.position);
+  const imgSrc = topViewPath.startsWith("/") || topViewPath.startsWith("http")
+    ? topViewPath
+    : `/${topViewPath}`;
+
+  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragId) return;
+    if ((e.target as HTMLElement).closest("[data-marker]")) return;
+    const rect = imgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    setPendingPos({
+      x: Math.max(0, Math.min(1, x)),
+      y: Math.max(0, Math.min(1, y)),
+    });
+    setPickerOpen(true);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        ref={imgRef}
+        onClick={handleImageClick}
+        className="relative border rounded-lg overflow-hidden bg-gray-50 cursor-crosshair"
+        style={{ maxWidth: 800 }}
+        data-testid="diagram-placement-canvas"
+      >
+        <img
+          src={imgSrc}
+          alt="Vehicle top view"
+          className="block w-full select-none pointer-events-none"
+          draggable={false}
+        />
+        {placedPoints.map((p, idx) => (
+          <div
+            key={p.id}
+            data-marker
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setDragId(p.id);
+            }}
+            className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-move"
+            style={{
+              left: `${p.position!.x * 100}%`,
+              top: `${p.position!.y * 100}%`,
+            }}
+            title={p.name}
+            data-testid={`diagram-marker-${p.id}`}
+          >
+            <div className="relative">
+              <div className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow border-2 border-white">
+                {idx + 1}
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetPosition(p.id, undefined);
+                }}
+                className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] leading-none hidden group-hover:flex items-center justify-center shadow"
+                aria-label={`Remove ${p.name} from diagram`}
+                data-testid={`diagram-marker-remove-${p.id}`}
+              >
+                ×
+              </button>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none">
+                {p.name}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-600">
+        {placedPoints.length} of {points.length} point
+        {points.length === 1 ? "" : "s"} placed. Click the diagram to add,
+        drag markers to move, hover to remove.
+      </p>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Place inspection point</DialogTitle>
+            <DialogDescription>
+              Choose which point should be marked at this location.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto space-y-1">
+            {points.length === 0 && (
+              <p className="text-sm text-gray-500">
+                No inspection points exist yet — add some first.
+              </p>
+            )}
+            {unplacedPoints.length === 0 && points.length > 0 && (
+              <p className="text-xs text-gray-500 mb-2">
+                All points already placed. Selecting one moves it here.
+              </p>
+            )}
+            {(unplacedPoints.length > 0 ? unplacedPoints : points).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  if (pendingPos) onSetPosition(p.id, pendingPos);
+                  setPickerOpen(false);
+                  setPendingPos(null);
+                }}
+                className="w-full text-left p-2 hover:bg-gray-100 rounded text-sm flex items-center gap-2"
+                data-testid={`button-place-point-${p.id}`}
+              >
+                <Circle className="h-3 w-3 text-gray-400" />
+                <span>{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Templates list page
@@ -884,6 +1130,138 @@ function TemplateEditor({
     setHandoverChecklist((items) => items.filter((it) => it.id !== id));
   };
 
+  // Phase 2 — column / alignment per category ------------------------------
+  const updateCategoryColumns = (id: string, columns: 1 | 2 | 3 | 4) => {
+    setCategories((cs) => cs.map((c) => (c.id === id ? { ...c, columns } : c)));
+  };
+  const updateCategoryAlignment = (
+    id: string,
+    alignment: "left" | "center" | "right",
+  ) => {
+    setCategories((cs) => cs.map((c) => (c.id === id ? { ...c, alignment } : c)));
+  };
+
+  // Phase 2 — drag & drop ---------------------------------------------------
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const [activePointId, setActivePointId] = useState<string | null>(null);
+
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = categories.findIndex((c) => c.id === active.id);
+    const newIndex = categories.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setCategories((cs) =>
+      arrayMove(cs, oldIndex, newIndex).map((c, idx) => ({ ...c, order: idx })),
+    );
+  };
+
+  /**
+   * Multi-container point DnD. Each category is a droppable container; each
+   * point is a sortable item identified by `point::<id>`. Source/destination
+   * containers are resolved from the dnd-kit drag payload (`active.data` /
+   * `over.data`) rather than from outer-state lookups so we are not vulnerable
+   * to stale-closure issues during fast drag sequences where state mutations
+   * race with handlers.
+   */
+  const resolveContainerFromNode = (
+    node: { id: string | number; data?: { current?: any } } | null | undefined,
+  ): string | null => {
+    if (!node) return null;
+    const fromData = node.data?.current?.category as string | undefined;
+    if (fromData) return fromData;
+    const sId = String(node.id);
+    if (sId.startsWith("container::")) return sId.slice("container::".length);
+    return null;
+  };
+
+  const handlePointDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeContainer = resolveContainerFromNode(active);
+    const overContainer = resolveContainerFromNode(over);
+    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      return;
+    }
+    // Move the active point into the over container immediately so the
+    // drop indicator follows the cursor between lists. Mutate the data
+    // payload on the active node so subsequent handlers see the new container
+    // without relying on outer-state reads.
+    const activePid = String(active.id).slice("point::".length);
+    if (active.data?.current) {
+      (active.data.current as any).category = overContainer;
+    }
+    setInspectionPoints((pts) =>
+      pts.map((p) =>
+        p.id === activePid ? { ...p, category: overContainer } : p,
+      ),
+    );
+  };
+
+  const handlePointDragEnd = (event: DragEndEvent) => {
+    setActivePointId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const activePid = String(active.id).slice("point::".length);
+    // Prefer the destination container from the over node's payload, fall
+    // back to the active node (it may already have been moved in dragOver).
+    const destContainer =
+      resolveContainerFromNode(over) ?? resolveContainerFromNode(active);
+    if (!destContainer) return;
+
+    setInspectionPoints((pts) => {
+      // Snapshot grouped points so we can compute the new ordering for the
+      // destination container.
+      const grouped = new Map<string, InspectionPoint[]>();
+      pts.forEach((p) => {
+        if (!grouped.has(p.category)) grouped.set(p.category, []);
+        grouped.get(p.category)!.push(p);
+      });
+      grouped.forEach((arr) =>
+        arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      );
+
+      const destList = grouped.get(destContainer) ?? [];
+      const activeIdx = destList.findIndex((p) => p.id === activePid);
+      let newIdx: number;
+      const overIdStr = String(over.id);
+      if (overIdStr.startsWith("container::")) {
+        // Dropped on empty space at end of the container.
+        newIdx = destList.length - 1;
+      } else {
+        const overPid = overIdStr.slice("point::".length);
+        newIdx = destList.findIndex((p) => p.id === overPid);
+        if (newIdx < 0) newIdx = destList.length - 1;
+      }
+      if (activeIdx < 0 || activeIdx === newIdx) return pts;
+
+      const reordered = arrayMove(destList, activeIdx, newIdx).map((p, idx) => ({
+        ...p,
+        order: idx,
+      }));
+      grouped.set(destContainer, reordered);
+
+      // Flatten back into a single list — preserve other categories' order.
+      const out: InspectionPoint[] = [];
+      grouped.forEach((arr) => arr.forEach((p) => out.push(p)));
+      return out;
+    });
+  };
+
+  // Phase 2 — diagram placement --------------------------------------------
+  const setPointPosition = (
+    id: string,
+    position: { x: number; y: number } | undefined,
+  ) => {
+    setInspectionPoints((pts) =>
+      pts.map((p) => (p.id === id ? { ...p, position } : p)),
+    );
+  };
+
   // Bulk paste --------------------------------------------------------------
   const handleBulkAdd = (
     parsed: Array<{ name: string; category: string; damageTypes: string[] }>,
@@ -1085,35 +1463,107 @@ function TemplateEditor({
                 Add Category
               </Button>
             </div>
-            <div className="space-y-2">
-              {categories.map((cat, idx) => (
-                <div key={cat.id} className="flex items-center gap-2">
-                  <Badge className={`text-xs ${CATEGORY_COLORS[idx % CATEGORY_COLORS.length]}`}>
-                    {cat.id}
-                  </Badge>
-                  <Input
-                    value={cat.label}
-                    onChange={(e) => updateCategoryLabel(cat.id, e.target.value)}
-                    className="flex-1"
-                    data-testid={`input-category-label-${cat.id}`}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCategory(cat.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    data-testid={`button-remove-category-${cat.id}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleCategoryDragEnd}
+            >
+              <SortableContext
+                items={categories.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {categories.map((cat, idx) => (
+                    <SortableRow key={cat.id} id={cat.id}>
+                      {({ handleProps }) => (
+                        <div className="flex items-center gap-2 bg-white border rounded-md p-2">
+                          <button
+                            type="button"
+                            {...handleProps}
+                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
+                            data-testid={`drag-category-${cat.id}`}
+                            aria-label="Drag category"
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                          <Badge
+                            className={`text-xs ${CATEGORY_COLORS[idx % CATEGORY_COLORS.length]}`}
+                          >
+                            {cat.id}
+                          </Badge>
+                          <Input
+                            value={cat.label}
+                            onChange={(e) => updateCategoryLabel(cat.id, e.target.value)}
+                            className="flex-1 min-w-[120px]"
+                            data-testid={`input-category-label-${cat.id}`}
+                          />
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs text-gray-500">Cols</Label>
+                            <Select
+                              value={String(cat.columns ?? 1)}
+                              onValueChange={(v) =>
+                                updateCategoryColumns(cat.id, Number(v) as 1 | 2 | 3 | 4)
+                              }
+                            >
+                              <SelectTrigger
+                                className="w-[64px] h-8"
+                                data-testid={`select-category-columns-${cat.id}`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs text-gray-500">Align</Label>
+                            <Select
+                              value={cat.alignment ?? "left"}
+                              onValueChange={(v) =>
+                                updateCategoryAlignment(
+                                  cat.id,
+                                  v as "left" | "center" | "right",
+                                )
+                              }
+                            >
+                              <SelectTrigger
+                                className="w-[88px] h-8"
+                                data-testid={`select-category-alignment-${cat.id}`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="left">Left</SelectItem>
+                                <SelectItem value="center">Center</SelectItem>
+                                <SelectItem value="right">Right</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCategory(cat.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-remove-category-${cat.id}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </SortableRow>
+                  ))}
+                  {categories.length === 0 && (
+                    <p className="text-xs text-red-600">
+                      No categories defined — at least one category is required.
+                    </p>
+                  )}
                 </div>
-              ))}
-              {categories.length === 0 && (
-                <p className="text-xs text-red-600">
-                  No categories defined — at least one category is required.
-                </p>
-              )}
-            </div>
+              </SortableContext>
+            </DndContext>
           </section>
 
           {/* Handover checklist */}
@@ -1243,6 +1693,29 @@ function TemplateEditor({
             </div>
           </section>
 
+          {/* Diagram Placement */}
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Diagram Placement
+              </h3>
+              <p className="text-xs text-gray-600">
+                Pin inspection points to the top-view diagram. Click anywhere
+                on the image to place a point; drag markers to reposition.
+              </p>
+            </div>
+            <DiagramPlacementPanel
+              topViewPath={
+                topViewFile
+                  ? URL.createObjectURL(topViewFile)
+                  : template?.diagramTopView ?? null
+              }
+              points={inspectionPoints}
+              onSetPosition={setPointPosition}
+            />
+          </section>
+
           {/* Inspection Points */}
           <section className="space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-2">
@@ -1273,94 +1746,175 @@ function TemplateEditor({
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {categories.map((cat) => {
-                  const pts = pointsByCategory.get(cat.id) || [];
-                  if (pts.length === 0) return null;
-                  return (
-                    <div key={cat.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          className={`text-xs ${getCategoryColor(cat.id, categories)}`}
-                        >
-                          {cat.label}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {pts.length} point{pts.length === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                      {pts.map((point) => (
-                        <div
-                          key={point.id}
-                          className="border rounded-lg p-3 flex items-start justify-between hover:bg-gray-50"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {point.required ? (
-                                <CheckCircle2 className="h-4 w-4 text-orange-500" />
-                              ) : (
-                                <Circle className="h-4 w-4 text-gray-400" />
-                              )}
-                              <span className="font-medium">{point.name}</span>
-                              {point.required && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs text-orange-600 border-orange-300"
-                                >
-                                  Required
-                                </Badge>
-                              )}
-                              {point.inputType && point.inputType !== "checkbox" && (
-                                <Badge variant="outline" className="text-xs">
-                                  {point.inputType}
-                                </Badge>
-                              )}
-                            </div>
-                            {point.description && (
-                              <p className="text-xs text-gray-600 mt-1 ml-6">{point.description}</p>
-                            )}
-                            {point.notes && (
-                              <p className="text-xs text-blue-600 mt-1 ml-6 italic">
-                                Note: {point.notes}
-                              </p>
-                            )}
-                            {point.inputType === "dropdown" &&
-                              (point.dropdownOptions?.length ?? 0) > 0 && (
-                                <p className="text-xs text-gray-500 mt-1 ml-6">
-                                  Options: {point.dropdownOptions!.join(", ")}
-                                </p>
-                              )}
-                            {(point.photoPaths?.length ?? 0) > 0 && (
-                              <p className="text-xs text-gray-500 mt-1 ml-6">
-                                {point.photoPaths!.length} reference photo
-                                {point.photoPaths!.length === 1 ? "" : "s"}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPoint(point)}
-                              data-testid={`button-edit-point-${point.id}`}
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePoint(point.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              data-testid={`button-delete-point-${point.id}`}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={(e: DragStartEvent) => {
+                  const sId = String(e.active.id);
+                  if (sId.startsWith("point::"))
+                    setActivePointId(sId.slice("point::".length));
+                }}
+                onDragOver={handlePointDragOver}
+                onDragEnd={handlePointDragEnd}
+                onDragCancel={() => setActivePointId(null)}
+              >
+                <div className="space-y-4">
+                  {categories.map((cat) => {
+                    const pts = pointsByCategory.get(cat.id) || [];
+                    const containerId = `container::${cat.id}`;
+                    const itemIds = pts.map((p) => `point::${p.id}`);
+                    // Include the container id in the sortable set so the
+                    // container itself remains a valid drop target when empty.
+                    const sortableItems = [...itemIds, containerId];
+                    return (
+                      <div key={cat.id} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            className={`text-xs ${getCategoryColor(cat.id, categories)}`}
+                          >
+                            {cat.label}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            {pts.length} point{pts.length === 1 ? "" : "s"}
+                          </span>
+                          {(cat.columns ?? 1) > 1 && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {cat.columns} cols
+                            </Badge>
+                          )}
+                          {cat.alignment && cat.alignment !== "left" && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {cat.alignment}
+                            </Badge>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  );
-                })}
+                        <SortableContext
+                          items={sortableItems}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <SortableRow
+                            id={containerId}
+                            data={{ kind: "container", category: cat.id }}
+                          >
+                            {() => (
+                              <div
+                                className={`space-y-2 min-h-[40px] rounded-lg ${
+                                  pts.length === 0
+                                    ? "border-2 border-dashed border-gray-200 p-3"
+                                    : ""
+                                }`}
+                                data-testid={`droppable-category-${cat.id}`}
+                              >
+                                {pts.length === 0 && (
+                                  <p className="text-xs text-gray-400 text-center">
+                                    Drop points here
+                                  </p>
+                                )}
+                                {pts.map((point) => (
+                                  <SortableRow
+                                    key={point.id}
+                                    id={`point::${point.id}`}
+                                    data={{ kind: "point", category: cat.id }}
+                                  >
+                                    {({ handleProps }) => (
+                                      <div className="border rounded-lg p-3 flex items-start justify-between hover:bg-gray-50 bg-white">
+                                        <div className="flex items-start gap-2 flex-1">
+                                          <button
+                                            type="button"
+                                            {...handleProps}
+                                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 mt-0.5 touch-none"
+                                            data-testid={`drag-point-${point.id}`}
+                                            aria-label="Drag point"
+                                          >
+                                            <GripVertical className="h-4 w-4" />
+                                          </button>
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              {point.required ? (
+                                                <CheckCircle2 className="h-4 w-4 text-orange-500" />
+                                              ) : (
+                                                <Circle className="h-4 w-4 text-gray-400" />
+                                              )}
+                                              <span className="font-medium">{point.name}</span>
+                                              {point.required && (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-xs text-orange-600 border-orange-300"
+                                                >
+                                                  Required
+                                                </Badge>
+                                              )}
+                                              {point.inputType &&
+                                                point.inputType !== "checkbox" && (
+                                                  <Badge variant="outline" className="text-xs">
+                                                    {point.inputType}
+                                                  </Badge>
+                                                )}
+                                              {point.position && (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-[10px] text-orange-600 border-orange-300"
+                                                >
+                                                  <MapPin className="h-3 w-3 mr-0.5" />
+                                                  placed
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            {point.description && (
+                                              <p className="text-xs text-gray-600 mt-1 ml-6">
+                                                {point.description}
+                                              </p>
+                                            )}
+                                            {point.notes && (
+                                              <p className="text-xs text-blue-600 mt-1 ml-6 italic">
+                                                Note: {point.notes}
+                                              </p>
+                                            )}
+                                            {point.inputType === "dropdown" &&
+                                              (point.dropdownOptions?.length ?? 0) > 0 && (
+                                                <p className="text-xs text-gray-500 mt-1 ml-6">
+                                                  Options:{" "}
+                                                  {point.dropdownOptions!.join(", ")}
+                                                </p>
+                                              )}
+                                            {(point.photoPaths?.length ?? 0) > 0 && (
+                                              <p className="text-xs text-gray-500 mt-1 ml-6">
+                                                {point.photoPaths!.length} reference photo
+                                                {point.photoPaths!.length === 1 ? "" : "s"}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditPoint(point)}
+                                            data-testid={`button-edit-point-${point.id}`}
+                                          >
+                                            <Edit className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeletePoint(point.id)}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            data-testid={`button-delete-point-${point.id}`}
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </SortableRow>
+                                ))}
+                              </div>
+                            )}
+                          </SortableRow>
+                        </SortableContext>
+                      </div>
+                    );
+                  })}
                 {/* Orphan points (category was deleted) */}
                 {(() => {
                   const validIds = new Set(categories.map((c) => c.id));
@@ -1402,7 +1956,8 @@ function TemplateEditor({
                     </div>
                   );
                 })()}
-              </div>
+                </div>
+              </DndContext>
             )}
           </section>
         </div>

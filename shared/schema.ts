@@ -1201,6 +1201,9 @@ export const damageCheckTemplates = pgTable("damage_check_templates", {
     id: string; // stable identifier referenced by inspectionPoints.category
     label: string; // human-readable label shown in the editor/PDF
     order: number;
+    // Phase 2 — layout controls (per category):
+    columns?: 1 | 2 | 3 | 4; // number of columns when rendered on the PDF (default 1)
+    alignment?: "left" | "center" | "right"; // horizontal alignment of column content
   }>>().default([]).notNull(),
 
   // Handover checklist — items handed over with the vehicle (keys, fuel card,
