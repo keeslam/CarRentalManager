@@ -43,6 +43,7 @@ import SettingsPage from "@/pages/settings/index";
 import WhatsAppSettingsPage from "@/pages/settings/whatsapp";
 import WhatsAppTemplatesPage from "@/pages/settings/whatsapp-templates";
 import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
+import DamageCheckTemplateEditorPage from "@/pages/settings/damage-check-template-editor";
 import DamageCheckTemplateEditor from "@/pages/documents/damage-check-template-editor";
 import WhatsAppMessagingPage from "@/pages/whatsapp/messaging";
 import CommunicationsPage from "@/pages/communications";
@@ -133,6 +134,7 @@ function AppRoutes() {
               <ProtectedRoute path="/settings/whatsapp/templates" component={WhatsAppTemplatesPage} />
               <ProtectedRoute path="/settings/whatsapp" component={WhatsAppSettingsPage} />
               <ProtectedRoute path="/settings/damage-check-templates" component={DamageCheckTemplatesPage} />
+              <ProtectedRoute path="/settings/damage-check-template-editor" component={DamageCheckTemplateEditorPage} />
               <ProtectedRoute path="/settings" component={SettingsPage} />
               <Route path="/auth" component={AuthPage} />
               <Route component={NotFound} />

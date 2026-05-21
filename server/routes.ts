@@ -10439,6 +10439,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           handoverChecklist: Array.isArray(draft.handoverChecklist)
             ? draft.handoverChecklist
             : [],
+          canvasFields: Array.isArray(draft.canvasFields) ? draft.canvasFields : [],
           headerText: draft.headerText ?? null,
           footerText: draft.footerText ?? null,
           diagramTopView: safeDiagram(draft.diagramTopView),

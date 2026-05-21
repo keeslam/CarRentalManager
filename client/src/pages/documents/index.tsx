@@ -1168,7 +1168,6 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [filterReservation, setFilterReservation] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
   // Fetch all damage check documents
   const { data: damageChecks = [] } = useQuery<Document[]>({
@@ -1259,7 +1258,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setTemplatesDialogOpen(true)}
+              onClick={() => { window.location.href = '/settings/damage-check-template-editor'; }}
               data-testid="button-manage-damage-check-templates"
             >
               <SettingsIcon className="mr-2 h-4 w-4" />
@@ -1434,20 +1433,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Damage Check Templates Editor Dialog */}
-      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-6 pt-6 pb-3 border-b">
-            <DialogTitle>Damage Check Templates</DialogTitle>
-            <DialogDescription>
-              Create, edit, clone and set defaults for damage check templates without leaving the Documents page.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            <DamageCheckTemplatesPage />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Damage Check Templates Editor — full page route */}
     </Card>
   );
 }

@@ -143,11 +143,174 @@ interface ReservationData {
   rentalDays?: number;
 }
 
+/**
+ * Canvas-mode renderer: draws free-positioned fields onto blank A4 pages.
+ * Used when template.canvasFields is non-empty. Each field carries x/y in
+ * PDF points using a top-left origin (matching the editor's coordinate
+ * system); we convert to PDF's bottom-left origin per page.
+ */
+async function generateDamageCheckPDFFromCanvas(
+  vehicle: VehicleData,
+  template: any,
+  reservationData?: ReservationData,
+): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const dynVals: Record<string, string> = {
+    licensePlate: vehicle.licensePlate ? formatLicensePlate(vehicle.licensePlate) : '',
+    brand: vehicle.brand || '',
+    model: vehicle.model || '',
+    buildYear: vehicle.buildYear || '',
+    fuel: vehicle.fuel || '',
+    currentMileage: vehicle.mileage ? String(vehicle.mileage) : '',
+    customerName: reservationData?.customerName || '',
+    contractNumber: reservationData?.contractNumber || '',
+    startDate: reservationData?.startDate || '',
+    endDate: reservationData?.endDate || '',
+    rentalDays: reservationData?.rentalDays ? String(reservationData.rentalDays) : '',
+    currentDate: new Date().toLocaleDateString('en-GB'),
+  };
+
+  const fields: any[] = Array.isArray(template.canvasFields) ? template.canvasFields : [];
+  const maxPage = Math.max(1, ...fields.map(f => Number(f.page) || 1));
+  const pages = Array.from({ length: maxPage }, () => pdfDoc.addPage([595, 842]));
+  const PAGE_H = 842;
+
+  for (const f of fields) {
+    const p = pages[(Number(f.page) || 1) - 1];
+    if (!p) continue;
+    const x = Number(f.x) || 0;
+    const yTop = Number(f.y) || 0;
+    const fontSize = Number(f.fontSize) || 11;
+    const useFont = f.isBold ? boldFont : font;
+    // Convert top-left origin to bottom-left baseline. We treat (x,y) as the
+    // top-left of the text box and offset by fontSize so the baseline sits
+    // inside the box (closer to top alignment than CSS-equivalent).
+    const baselineY = PAGE_H - yTop - fontSize;
+
+    if (f.type === 'line') {
+      p.drawLine({
+        start: { x, y: PAGE_H - yTop },
+        end: { x: x + (Number(f.width) || 100), y: PAGE_H - yTop },
+        thickness: Math.max(0.5, Number(f.height) || 1),
+        color: rgb(0, 0, 0),
+      });
+      continue;
+    }
+    if (f.type === 'box') {
+      const w = Number(f.width) || 100;
+      const h = Number(f.height) || 50;
+      p.drawRectangle({
+        x,
+        y: PAGE_H - yTop - h,
+        width: w,
+        height: h,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 0.7,
+      });
+      continue;
+    }
+    if (f.type === 'signature') {
+      const w = Number(f.width) || 200;
+      const h = Number(f.height) || 40;
+      // Underline at the bottom of the box
+      p.drawLine({
+        start: { x, y: PAGE_H - yTop - h },
+        end: { x: x + w, y: PAGE_H - yTop - h },
+        thickness: 0.7, color: rgb(0, 0, 0),
+      });
+      // Caption above the line
+      const label = String(f.name || 'Signature');
+      p.drawText(label, {
+        x: x + 2,
+        y: PAGE_H - yTop - h + 3,
+        size: Math.min(9, fontSize),
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      continue;
+    }
+    if (f.type === 'checkbox') {
+      const box = Math.max(8, fontSize - 2);
+      p.drawRectangle({
+        x, y: PAGE_H - yTop - box,
+        width: box, height: box,
+        borderColor: rgb(0, 0, 0), borderWidth: 0.7,
+      });
+      const label = String(f.name || '');
+      if (label) {
+        p.drawText(label, {
+          x: x + box + 4,
+          y: PAGE_H - yTop - box + 2,
+          size: fontSize,
+          font: useFont,
+          color: rgb(0, 0, 0),
+        });
+      }
+      continue;
+    }
+    if (f.type === 'inspection') {
+      // Title
+      const title = String(f.name || '');
+      p.drawText(title, {
+        x, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0),
+      });
+      // Damage type checkboxes underneath
+      const types: string[] = Array.isArray(f.damageTypes) ? f.damageTypes : [];
+      let cx = x;
+      const cy = PAGE_H - yTop - fontSize - 4;
+      const optSize = Math.max(7, fontSize - 1);
+      const box = optSize;
+      for (const t of types) {
+        p.drawRectangle({
+          x: cx, y: cy - box,
+          width: box, height: box,
+          borderColor: rgb(0, 0, 0), borderWidth: 0.5,
+        });
+        p.drawText(t, { x: cx + box + 3, y: cy - box + 2, size: optSize, font, color: rgb(0, 0, 0) });
+        cx += box + 4 + font.widthOfTextAtSize(t, optSize) + 8;
+      }
+      continue;
+    }
+    // text / dynamic
+    let textVal = String(f.name || '');
+    if (f.type === 'dynamic') {
+      textVal = dynVals[String(f.source || '')] ?? `{{${f.source || ''}}}`;
+    }
+    let drawX = x;
+    if (f.textAlign === 'center' || f.textAlign === 'right') {
+      const tw = useFont.widthOfTextAtSize(textVal, fontSize);
+      const w = Number(f.width) || 0;
+      if (w > 0) {
+        if (f.textAlign === 'center') drawX = x + (w - tw) / 2;
+        else if (f.textAlign === 'right') drawX = x + w - tw;
+      } else if (f.textAlign === 'center') {
+        drawX = x - tw / 2;
+      } else {
+        drawX = x - tw;
+      }
+    }
+    p.drawText(textVal, { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
+  }
+
+  // Ensure at least one page
+  if (pdfDoc.getPageCount() === 0) pdfDoc.addPage([595, 842]);
+
+  const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
+}
+
 export async function generateDamageCheckPDF(
   vehicle: VehicleData,
   template: DamageCheckTemplate,
   reservationData?: ReservationData
 ): Promise<Buffer> {
+  // Canvas-mode templates render via the free-positioning path on a blank A4.
+  if (template && Array.isArray((template as any).canvasFields) && (template as any).canvasFields.length > 0) {
+    return generateDamageCheckPDFFromCanvas(vehicle, template, reservationData);
+  }
   const pdfDoc = await PDFDocument.create();
   let page = pdfDoc.addPage([595, 842]); // A4 size
   const { width, height } = page.getSize();
@@ -822,6 +985,11 @@ export async function generateDamageCheckPDFWithTemplate(
   reservationData?: ReservationData,
   interactiveDamageCheck?: any
 ): Promise<Buffer> {
+  // Canvas-mode short-circuit: ignore the PDF sections template and render
+  // directly from the canvas fields stored on the damage check template.
+  if (damageTemplate && Array.isArray((damageTemplate as any).canvasFields) && (damageTemplate as any).canvasFields.length > 0) {
+    return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData);
+  }
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
   

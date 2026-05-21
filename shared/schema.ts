@@ -1219,6 +1219,28 @@ export const damageCheckTemplates = pgTable("damage_check_templates", {
   headerText: text("header_text"),
   footerText: text("footer_text"),
 
+  // Canvas-mode fields — when present (length > 0), the PDF generator renders
+  // these free-positioned fields on a blank A4 page instead of the legacy
+  // structured (categories + inspection points) layout. Each field has page
+  // coordinates (x/y in PDF points, top-left origin) and a type-specific
+  // payload. This powers the visual drag-and-drop template editor.
+  canvasFields: jsonb("canvas_fields").$type<Array<{
+    id: string;
+    type: "text" | "dynamic" | "inspection" | "checkbox" | "signature" | "line" | "box";
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    name: string;         // visible label / static text
+    source?: string;      // for type="dynamic": e.g., licensePlate, customerName
+    fontSize: number;
+    isBold: boolean;
+    textAlign: "left" | "center" | "right";
+    damageTypes?: string[]; // for type="inspection"
+    locked?: boolean;
+    page?: number;        // 1-based; defaults to 1 if absent
+  }>>().default([]).notNull(),
+
   // Template settings
   isDefault: boolean("is_default").default(false).notNull(),
   language: text("language").default("nl").notNull(), // "nl" | "en" for Dutch or English

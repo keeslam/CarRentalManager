@@ -364,6 +364,9 @@ async function runMigrations() {
     
     // Add created_by column if it doesn't exist (for existing tables)
     await addColumnIfNotExists('vehicle_customer_blacklist', 'created_by', 'integer REFERENCES users(id)');
+
+    // Canvas-mode field layout for damage check templates (visual editor)
+    await addColumnIfNotExists('damage_check_templates', 'canvas_fields', "jsonb NOT NULL DEFAULT '[]'::jsonb");
     
     // Add unique index if it doesn't exist
     const blacklistIndexCheck = await db.execute(sql`
