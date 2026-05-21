@@ -54,6 +54,27 @@ interface InspectionPoint {
   name: string;
   category: string;
   damageTypes: string[];
+  // Phase 1 additions — present in stored templates, optional here for back-compat.
+  inputType?: "checkbox" | "text" | "dropdown";
+  dropdownOptions?: string[];
+  notes?: string;
+  required?: boolean;
+  // Used by the PDF-template-driven render path to bind a point to a
+  // checklistData field in an interactive damage check.
+  fieldKey?: string;
+}
+
+interface TemplateCategory {
+  id: string;
+  label: string;
+  order?: number;
+}
+
+interface HandoverChecklistItem {
+  id: string;
+  label: string;
+  type: "checkbox" | "text";
+  order?: number;
 }
 
 interface DamageCheckTemplate {
@@ -70,6 +91,11 @@ interface DamageCheckTemplate {
   diagramRearView?: string | null;
   diagramSideView?: string | null;
   isDefault?: boolean;
+  // Phase 1 additions
+  categories?: TemplateCategory[] | null;
+  handoverChecklist?: HandoverChecklistItem[] | null;
+  headerText?: string | null;
+  footerText?: string | null;
 }
 
 interface PdfTemplateSection {
@@ -276,12 +302,25 @@ export async function generateDamageCheckPDF(
   template.inspectionPoints.forEach(p => {
     if (p.category) categorySet.add(p.category);
   });
-  const categories = Array.from(categorySet);
-  
-  // Create category labels (capitalize first letter)
+
+  // Prefer the template's configured category ordering when available, so
+  // editors control the section order on the PDF.
+  const configuredOrder = (template.categories ?? [])
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map(c => c.id);
+  const categories: string[] = [
+    ...configuredOrder.filter(id => categorySet.has(id)),
+    ...Array.from(categorySet).filter(id => !configuredOrder.includes(id)),
+  ];
+
+  // Build a label lookup that prefers the per-template configured label and
+  // falls back to a humanised version of the category id.
   const categoryLabels: Record<string, string> = {};
   categories.forEach(cat => {
-    categoryLabels[cat] = cat.replace(/_/g, ' ').toUpperCase();
+    const configured = template.categories?.find(c => c.id === cat);
+    categoryLabels[cat] = configured?.label?.toUpperCase()
+      || cat.replace(/_/g, ' ').toUpperCase();
   });
   
   // Extract all unique damage types from all inspection points to use as column headers
@@ -341,11 +380,12 @@ export async function generateDamageCheckPDF(
     
     yPosition -= 12;
     
-    // Inspection points with checkboxes
+    // Inspection points with checkboxes (or a free-text line / dropdown row
+    // depending on the point's inputType — Phase 1 additions).
     for (const point of points) {
       // Ensure space for this row
       page = ensureSpace(50);
-      
+
       // Point name
       page.drawText(point.name, {
         x: margin + 5,
@@ -353,22 +393,77 @@ export async function generateDamageCheckPDF(
         size: 8,
         font,
       });
-      
-      // Checkboxes for each damage type
-      let checkXPos = margin + nameColumnWidth + 10;
-      for (const damageType of damageTypes) {
-        page.drawRectangle({
-          x: checkXPos + 2,
-          y: yPosition - 1,
-          width: checkboxSize,
-          height: checkboxSize,
-          borderColor: rgb(0, 0, 0),
-          borderWidth: 0.5,
+
+      if (point.inputType === 'text') {
+        // Draw a single full-width underline as a write-in field instead of
+        // the checkbox grid.
+        const lineY = yPosition - 1;
+        page.drawLine({
+          start: { x: margin + nameColumnWidth + 10, y: lineY },
+          end: { x: width - margin - 5, y: lineY },
+          thickness: 0.5,
+          color: rgb(0, 0, 0),
         });
-        checkXPos += damageColumnWidth;
+      } else if (point.inputType === 'dropdown') {
+        // Render each option with its own checkbox so the inspector can
+        // circle/check the chosen one. Width is measured ahead of time and
+        // overflowing options are skipped instead of bleeding past the right
+        // margin.
+        const opts = (point.dropdownOptions ?? []).slice(0, 8);
+        const optionGap = 8;
+        const rightLimit = width - margin - 5;
+        let optX = margin + nameColumnWidth + 10;
+        for (const opt of opts) {
+          const label = opt.substring(0, 12);
+          const labelWidth = font.widthOfTextAtSize(label, 7);
+          const slotWidth = checkboxSize + 3 + labelWidth + optionGap;
+          if (optX + slotWidth > rightLimit) break;
+          page.drawRectangle({
+            x: optX,
+            y: yPosition - 1,
+            width: checkboxSize,
+            height: checkboxSize,
+            borderColor: rgb(0, 0, 0),
+            borderWidth: 0.5,
+          });
+          page.drawText(label, {
+            x: optX + checkboxSize + 3,
+            y: yPosition,
+            size: 7,
+            font,
+          });
+          optX += slotWidth;
+        }
+      } else {
+        // Default: damage-type checkbox grid (existing behaviour).
+        let checkXPos = margin + nameColumnWidth + 10;
+        for (const damageType of damageTypes) {
+          page.drawRectangle({
+            x: checkXPos + 2,
+            y: yPosition - 1,
+            width: checkboxSize,
+            height: checkboxSize,
+            borderColor: rgb(0, 0, 0),
+            borderWidth: 0.5,
+          });
+          checkXPos += damageColumnWidth;
+        }
       }
-      
+
       yPosition -= 14;
+
+      // Per-point notes are printed in small italic under the row when present.
+      if (point.notes) {
+        page = ensureSpace(20);
+        page.drawText(point.notes.substring(0, 120), {
+          x: margin + 12,
+          y: yPosition,
+          size: 7,
+          font,
+          color: rgb(0.35, 0.35, 0.35),
+        });
+        yPosition -= 10;
+      }
     }
     
     yPosition -= 10;
@@ -515,18 +610,116 @@ export async function generateDamageCheckPDF(
     font,
   });
   
-  // Footer on last page
+  // ---------------------------------------------------------------------
+  // Handover checklist (Phase 1) — rendered after signatures when defined.
+  // ---------------------------------------------------------------------
+  if (template.handoverChecklist && template.handoverChecklist.length > 0) {
+    const items = template.handoverChecklist
+      .slice()
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    page = ensureSpace(40 + items.length * 14);
+    yPosition -= 20;
+    page.drawText('OVERDRACHT / HANDOVER CHECKLIST', {
+      x: margin,
+      y: yPosition,
+      size: 10,
+      font: boldFont,
+    });
+    yPosition -= 14;
+    for (const item of items) {
+      page = ensureSpace(20);
+      if (item.type === 'checkbox') {
+        page.drawRectangle({
+          x: margin,
+          y: yPosition - 1,
+          width: 8,
+          height: 8,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 0.5,
+        });
+        page.drawText(item.label, {
+          x: margin + 14,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+      } else {
+        page.drawText(`${item.label}:`, {
+          x: margin,
+          y: yPosition,
+          size: 8,
+          font: boldFont,
+        });
+        const labelWidth = boldFont.widthOfTextAtSize(`${item.label}:`, 8);
+        page.drawLine({
+          start: { x: margin + labelWidth + 6, y: yPosition - 1 },
+          end: { x: width - margin, y: yPosition - 1 },
+          thickness: 0.5,
+          color: rgb(0, 0, 0),
+        });
+      }
+      yPosition -= 14;
+    }
+  }
+
+  // Per-page header / footer overlay (Phase 1).
+  applyHeaderFooterOverlay(pdfDoc, font, template.headerText, template.footerText, margin);
+
+  // Footer on last page — keeps the template-name watermark for traceability.
   const lastPage = pdfDoc.getPages()[pdfDoc.getPageCount() - 1];
   lastPage.drawText(`Template: ${template.name}`, {
     x: margin,
-    y: 30,
+    y: (template.footerText ?? '').trim() ? 22 : 30,
     size: 7,
     font,
     color: rgb(0.5, 0.5, 0.5),
   });
-  
+
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
+}
+
+/**
+ * Draws optional header / footer text on every page of the document.
+ * Shared by both the standard and section-based render paths so configured
+ * text appears consistently regardless of which renderer is used.
+ */
+function applyHeaderFooterOverlay(
+  pdfDoc: PDFDocument,
+  font: any,
+  headerTextRaw: string | null | undefined,
+  footerTextRaw: string | null | undefined,
+  margin: number,
+): void {
+  const headerText = (headerTextRaw ?? '').trim();
+  const footerText = (footerTextRaw ?? '').trim();
+  if (!headerText && !footerText) return;
+  for (const p of pdfDoc.getPages()) {
+    const { width: pw, height: ph } = p.getSize();
+    if (headerText) {
+      const line = headerText.replace(/\s+/g, ' ').substring(0, 140);
+      const textWidth = font.widthOfTextAtSize(line, 7);
+      p.drawText(line, {
+        x: Math.max(margin, (pw - textWidth) / 2),
+        y: ph - 12,
+        size: 7,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      });
+    }
+    if (footerText) {
+      const line = footerText.replace(/\s+/g, ' ').substring(0, 160);
+      const textWidth = font.widthOfTextAtSize(line, 7);
+      p.drawText(line, {
+        x: Math.max(margin, (pw - textWidth) / 2),
+        y: 12,
+        size: 7,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      });
+    }
+  }
 }
 
 /**
@@ -854,7 +1047,7 @@ export async function generateDamageCheckPDFWithTemplate(
             
             // Get the value from checklistData if available
             let itemValue = '';
-            let rawBooleanValue = false;
+            let rawBooleanValue: boolean = false;
             if (checklistData) {
               const categoryKey = category === 'interieur' ? 'interior' : 
                                  category === 'exterieur' ? 'exterior' : 'delivery';
@@ -882,7 +1075,7 @@ export async function generateDamageCheckPDFWithTemplate(
             if (category === 'afweez_check') {
               // Checkbox for delivery checks - use raw boolean value
               console.log(`📦 Delivery check: ${point.fieldKey}, itemValue=${itemValue}, rawBooleanValue=${rawBooleanValue}, typeof=${typeof itemValue}`);
-              const isChecked = rawBooleanValue === true;
+              const isChecked: boolean = Boolean(rawBooleanValue);
               console.log(`🎯 isChecked for ${point.fieldKey}: ${isChecked}`);
               
               page.drawRectangle({
@@ -1267,7 +1460,17 @@ export async function generateDamageCheckPDFWithTemplate(
       }
     }
   }
-  
+
+  // Per-page header / footer overlay (Phase 1) — same helper as the standard
+  // renderer so configured text is consistent across both render paths.
+  applyHeaderFooterOverlay(
+    pdfDoc,
+    font,
+    (damageTemplate as any)?.headerText,
+    (damageTemplate as any)?.footerText,
+    40,
+  );
+
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }

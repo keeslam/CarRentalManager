@@ -188,6 +188,8 @@ export interface IStorage {
   getDefaultDamageCheckTemplate(): Promise<any | undefined>;
   createDamageCheckTemplate(template: any): Promise<any>;
   updateDamageCheckTemplate(id: number, templateData: any): Promise<any | undefined>;
+  setDefaultDamageCheckTemplate(id: number): Promise<any | undefined>;
+  cloneDamageCheckTemplate(sourceId: number, newName?: string, createdBy?: string): Promise<any | undefined>;
   deleteDamageCheckTemplate(id: number): Promise<boolean>;
   
   // Vehicle Diagram Template methods
@@ -2090,6 +2092,14 @@ export class MemStorage implements IStorage {
   }
 
   async updateDamageCheckTemplate(id: number, templateData: any): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async setDefaultDamageCheckTemplate(id: number): Promise<any | undefined> {
+    throw new Error('Not implemented in MemStorage');
+  }
+
+  async cloneDamageCheckTemplate(sourceId: number, newName?: string, createdBy?: string): Promise<any | undefined> {
     throw new Error('Not implemented in MemStorage');
   }
 

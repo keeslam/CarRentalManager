@@ -32,7 +32,7 @@ import {
 } from "./vehicle-status-helper";
 import { addMonths, addDays, parseISO, isBefore, isAfter, isEqual } from "date-fns";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
+import { eq, ne, and, gte, lte, desc, sql, inArray, not, or, ilike, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { IStorage } from "./storage";
 import * as fs from "fs";
@@ -2939,23 +2939,118 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDamageCheckTemplate(template: InsertDamageCheckTemplate): Promise<DamageCheckTemplate> {
-    const [newTemplate] = await db.insert(damageCheckTemplates).values(template).returning();
-    return newTemplate;
+    return await db.transaction(async (tx) => {
+      // Atomic: if this new template is marked default, unset all others first
+      // so we never end up with multiple defaults at the same time.
+      if (template.isDefault) {
+        await tx
+          .update(damageCheckTemplates)
+          .set({ isDefault: false })
+          .where(eq(damageCheckTemplates.isDefault, true));
+      }
+      const [newTemplate] = await tx
+        .insert(damageCheckTemplates)
+        .values(template)
+        .returning();
+      return newTemplate;
+    });
   }
 
   async updateDamageCheckTemplate(id: number, templateData: Partial<InsertDamageCheckTemplate>): Promise<DamageCheckTemplate | undefined> {
-    const updateData = {
-      ...templateData,
-      updatedAt: new Date()
+    return await db.transaction(async (tx) => {
+      // Atomic: if this update sets isDefault=true, unset it on every other row
+      // so only this template ends up as the default.
+      if (templateData.isDefault === true) {
+        await tx
+          .update(damageCheckTemplates)
+          .set({ isDefault: false })
+          .where(
+            and(
+              eq(damageCheckTemplates.isDefault, true),
+              ne(damageCheckTemplates.id, id),
+            ),
+          );
+      }
+      const updateData = {
+        ...templateData,
+        updatedAt: new Date(),
+      };
+      const [updatedTemplate] = await tx
+        .update(damageCheckTemplates)
+        .set(updateData)
+        .where(eq(damageCheckTemplates.id, id))
+        .returning();
+      return updatedTemplate || undefined;
+    });
+  }
+
+  /**
+   * Atomically marks a single template as the default and unsets every other
+   * template's isDefault flag. Used by the dedicated "Set as Default" button
+   * in the templates list.
+   */
+  async setDefaultDamageCheckTemplate(id: number): Promise<DamageCheckTemplate | undefined> {
+    return await db.transaction(async (tx) => {
+      await tx
+        .update(damageCheckTemplates)
+        .set({ isDefault: false })
+        .where(
+          and(
+            eq(damageCheckTemplates.isDefault, true),
+            ne(damageCheckTemplates.id, id),
+          ),
+        );
+      const [updated] = await tx
+        .update(damageCheckTemplates)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(eq(damageCheckTemplates.id, id))
+        .returning();
+      return updated || undefined;
+    });
+  }
+
+  /**
+   * Creates a copy of an existing template. The clone is always created as
+   * NOT default (so cloning never disturbs which template is currently the
+   * default). Optionally accepts a new name; otherwise appends "(Copy)".
+   */
+  async cloneDamageCheckTemplate(
+    sourceId: number,
+    newName?: string,
+    createdBy?: string,
+  ): Promise<DamageCheckTemplate | undefined> {
+    const [source] = await db
+      .select()
+      .from(damageCheckTemplates)
+      .where(eq(damageCheckTemplates.id, sourceId));
+    if (!source) return undefined;
+    const insertData: InsertDamageCheckTemplate = {
+      name: newName?.trim() || `${source.name} (Copy)`,
+      description: source.description ?? null,
+      vehicleMake: source.vehicleMake ?? null,
+      vehicleModel: source.vehicleModel ?? null,
+      vehicleType: source.vehicleType ?? null,
+      buildYearFrom: source.buildYearFrom ?? null,
+      buildYearTo: source.buildYearTo ?? null,
+      diagramTopView: source.diagramTopView ?? null,
+      diagramFrontView: source.diagramFrontView ?? null,
+      diagramRearView: source.diagramRearView ?? null,
+      diagramSideView: source.diagramSideView ?? null,
+      inspectionPoints: source.inspectionPoints ?? [],
+      categories: (source as any).categories ?? [],
+      handoverChecklist: (source as any).handoverChecklist ?? [],
+      headerText: (source as any).headerText ?? null,
+      footerText: (source as any).footerText ?? null,
+      isDefault: false,
+      language: source.language,
+      createdBy: createdBy ?? null,
+      updatedBy: createdBy ?? null,
     };
-    
-    const [updatedTemplate] = await db
-      .update(damageCheckTemplates)
-      .set(updateData)
-      .where(eq(damageCheckTemplates.id, id))
+    const [created] = await db
+      .insert(damageCheckTemplates)
+      .values(insertData)
       .returning();
-      
-    return updatedTemplate || undefined;
+    return created || undefined;
   }
 
   async deleteDamageCheckTemplate(id: number): Promise<boolean> {

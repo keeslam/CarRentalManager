@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, boolean, timestamp, numeric, jsonb, index, varchar, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 // User Roles enum
@@ -1180,13 +1181,41 @@ export const damageCheckTemplates = pgTable("damage_check_templates", {
   inspectionPoints: jsonb("inspection_points").$type<Array<{
     id: string;
     name: string; // e.g., "Voorruit" (Windshield), "Bumper voor" (Front Bumper)
-    category: string; // "interieur" | "exterieur" | "afweez_check" | "documents"
+    category: string; // categoryId — must match one of the template's categories
     damageTypes: string[]; // e.g., ["Kapot", "Gat", "Kras", "Deuk", "Ster"] - available damage type checkboxes
     position?: { x: number; y: number }; // Position on vehicle diagram for marking damage
     description?: string; // Optional description of what to check
     required: boolean; // Whether this point must be checked
+    // New extensible fields (Phase 1):
+    notes?: string; // Inspector notes / instructions specific to this point
+    photoPaths?: string[]; // Reference photos uploaded for this point
+    inputType?: "checkbox" | "text" | "dropdown"; // Default "checkbox" (i.e., damage type checkboxes)
+    dropdownOptions?: string[]; // For inputType="dropdown" — selectable values
+    order?: number; // Ordering hint within the category
   }>>().default([]).notNull(),
-  
+
+  // Configurable categories (per template). Replaces the hardcoded list of
+  // Interieur / Exterieur / Afweez Check / Documents. If empty the system
+  // falls back to that default list.
+  categories: jsonb("categories").$type<Array<{
+    id: string; // stable identifier referenced by inspectionPoints.category
+    label: string; // human-readable label shown in the editor/PDF
+    order: number;
+  }>>().default([]).notNull(),
+
+  // Handover checklist — items handed over with the vehicle (keys, fuel card,
+  // jack, registration documents, etc.). Each item is rendered on the PDF.
+  handoverChecklist: jsonb("handover_checklist").$type<Array<{
+    id: string;
+    label: string;
+    type: "checkbox" | "text"; // checkbox = present/absent; text = free-form (e.g., "fuel card #")
+    order: number;
+  }>>().default([]).notNull(),
+
+  // Header / footer text rendered on every page of the generated PDF.
+  headerText: text("header_text"),
+  footerText: text("footer_text"),
+
   // Template settings
   isDefault: boolean("is_default").default(false).notNull(),
   language: text("language").default("nl").notNull(), // "nl" | "en" for Dutch or English
@@ -1196,7 +1225,16 @@ export const damageCheckTemplates = pgTable("damage_check_templates", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: text("created_by"),
   updatedBy: text("updated_by"),
-});
+}, (table) => ({
+  // Enforce the "at most one default template" invariant at the database
+  // level. Application-level transactions still unset the previous default
+  // for ergonomics, but this partial unique index is the source of truth
+  // and prevents race conditions where two concurrent requests could each
+  // succeed in marking a different template as default.
+  onlyOneDefault: uniqueIndex("damage_check_templates_only_one_default")
+    .on(table.isDefault)
+    .where(sql`${table.isDefault} = true`),
+}));
 
 export const insertDamageCheckTemplateSchema = createInsertSchema(damageCheckTemplates).omit({
   id: true,

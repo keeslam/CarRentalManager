@@ -10466,6 +10466,71 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Upload a single reference photo for an inspection point. Reuses the
+  // diagramUpload multer config (image-only, size-limited).
+  app.post(
+    "/api/damage-check-templates/upload-photo",
+    hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS),
+    diagramUpload.single("photo"),
+    async (req: Request, res: Response) => {
+      try {
+        const file = req.file;
+        if (!file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        const path = getRelativePath(file.path);
+        res.json({ path, url: `/${path}` });
+      } catch (error) {
+        console.error("Error uploading inspection point photo:", error);
+        res.status(500).json({ message: "Error uploading photo" });
+      }
+    },
+  );
+
+  // Set a single template as the default (atomically un-defaults all others)
+  app.post("/api/damage-check-templates/:id/set-default", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "Invalid template id" });
+      }
+      const updated = await storage.setDefaultDamageCheckTemplate(id);
+      if (!updated) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error setting default damage check template:", error);
+      res.status(500).json({ message: "Error setting default damage check template" });
+    }
+  });
+
+  // Clone an existing damage check template (used by the "Clone from
+  // existing…" picker at the top of the templates list). The clone is created
+  // as a non-default template so existing defaults are preserved.
+  app.post("/api/damage-check-templates/:id/clone", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
+    try {
+      const sourceId = parseInt(req.params.id);
+      if (Number.isNaN(sourceId)) {
+        return res.status(400).json({ message: "Invalid template id" });
+      }
+      const user = req.user;
+      const newName = typeof req.body?.name === "string" ? req.body.name : undefined;
+      const cloned = await storage.cloneDamageCheckTemplate(
+        sourceId,
+        newName,
+        user ? (user as any).username : undefined,
+      );
+      if (!cloned) {
+        return res.status(404).json({ message: "Source template not found" });
+      }
+      res.status(201).json(cloned);
+    } catch (error) {
+      console.error("Error cloning damage check template:", error);
+      res.status(500).json({ message: "Error cloning damage check template" });
+    }
+  });
+
   // Delete damage check template
   app.delete("/api/damage-check-templates/:id", hasPermission(UserPermission.MANAGE_DAMAGE_CHECKS), async (req: Request, res: Response) => {
     try {
