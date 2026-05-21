@@ -29,7 +29,8 @@ import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
 import DamageCheckTemplateEditor from "./damage-check-template-editor";
-import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit } from "lucide-react";
+import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit, Settings as SettingsIcon } from "lucide-react";
+import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -1167,6 +1168,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [filterReservation, setFilterReservation] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
   // Fetch all damage check documents
   const { data: damageChecks = [] } = useQuery<Document[]>({
@@ -1254,14 +1256,24 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
               Upload and manage damage check PDFs for vehicles and reservations
             </CardDescription>
           </div>
-          <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-damage-check">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" x2="12" y1="3" y2="15" />
-            </svg>
-            Upload Damage Check
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTemplatesDialogOpen(true)}
+              data-testid="button-manage-damage-check-templates"
+            >
+              <SettingsIcon className="mr-2 h-4 w-4" />
+              Manage Templates
+            </Button>
+            <Button onClick={() => setUploadDialogOpen(true)} data-testid="button-upload-damage-check">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" x2="12" y1="3" y2="15" />
+              </svg>
+              Upload Damage Check
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -1418,6 +1430,21 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
             >
               {uploadMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Damage Check Templates Editor Dialog */}
+      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle>Damage Check Templates</DialogTitle>
+            <DialogDescription>
+              Create, edit, clone and set defaults for damage check templates without leaving the Documents page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <DamageCheckTemplatesPage />
           </div>
         </DialogContent>
       </Dialog>
