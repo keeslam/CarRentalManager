@@ -120,30 +120,34 @@ function buildDefaultLayout(): CanvasField[] {
   });
   const out: CanvasField[] = [];
 
+  // Sizing tuned for tablet readability while still fitting on A4.
   // ============ LEFT COLUMN ============
   const LX = 30;                  // left edge for checkbox/label column
-  const LABEL_X = LX + 14;        // text label after the checkbox
-  const OPT_X = LX + 130;         // option text (e.g. "schoon / vuil")
-  const ROW_H = 14;               // distance between checklist rows
+  const LABEL_X = LX + 16;        // text label after the checkbox
+  const OPT_X = LX + 150;         // option text (e.g. "schoon / vuil")
+  const ROW_H = 15;               // distance between checklist rows
+  const HEAD_GAP = 22;            // space the heading bar + small gap takes
   const COL_W = 350;              // full width of the left column (heading bar)
+  const ROW_FS = 10;
+  const HEAD_FS = 13;
 
   // Heading bar (filled blue rectangle + centered white text in the image — we
   // approximate with a box + bold centered text).
   const heading = (title: string, y: number) => {
-    out.push(mk('box', LX, y, '', { width: COL_W, height: 16 }));
-    out.push(mk('text', LX, y + 2, title, { fontSize: 12, isBold: true, textAlign: 'center', width: COL_W } as any));
+    out.push(mk('box', LX, y, '', { width: COL_W, height: 18 }));
+    out.push(mk('text', LX, y + 3, title, { fontSize: HEAD_FS, isBold: true, textAlign: 'center', width: COL_W } as any));
   };
 
   // Single checklist row: checkbox + label + options text.
   const row = (y: number, label: string, options: string) => {
-    out.push(mk('checkbox', LX, y, '', { fontSize: 9 }));
-    out.push(mk('text', LABEL_X, y, label, { fontSize: 9 }));
-    out.push(mk('text', OPT_X, y, options, { fontSize: 9 }));
+    out.push(mk('checkbox', LX, y, '', { fontSize: ROW_FS }));
+    out.push(mk('text', LABEL_X, y, label, { fontSize: ROW_FS }));
+    if (options) out.push(mk('text', OPT_X, y, options, { fontSize: ROW_FS }));
   };
 
   // --- INTERIEUR ---
   let y = 30;
-  heading('Interieur', y); y += 22;
+  heading('Interieur', y); y += HEAD_GAP;
   const interieur: [string, string][] = [
     ['Binnenzijde auto', 'schoon / vuil'],
     ['Ruitschade', 'ja / nee'],
@@ -158,8 +162,8 @@ function buildDefaultLayout(): CanvasField[] {
   interieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
   // --- EXTERIEUR ---
-  y += 8;
-  heading('Exterieur', y); y += 22;
+  y += 6;
+  heading('Exterieur', y); y += HEAD_GAP;
   const exterieur: [string, string][] = [
     ['Buitenzijde auto', 'vuil / schoon'],
     ['Wieldoppen', 'LV / LA / RV / RA / geen'],
@@ -177,8 +181,8 @@ function buildDefaultLayout(): CanvasField[] {
   exterieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
   // --- AFLEVER CHECK ---
-  y += 8;
-  heading('Aflever Check', y); y += 22;
+  y += 6;
+  heading('Aflever Check', y); y += HEAD_GAP;
   const aflever: [string, string][] = [
     ['Olie - water', ''],
     ['Ruitenproeiervloeistof', ''],
@@ -194,76 +198,91 @@ function buildDefaultLayout(): CanvasField[] {
   ];
   aflever.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
-  // Vertical divider between columns
-  out.push(mk('line', 390, 30, '', { width: 1, height: 760 }));
+  // Track where the left column ends so we can place the diagram below it.
+  const leftEndY = y;
+
+  // Vertical divider between columns (drawn from top through end of right block).
+  out.push(mk('line', 390, 30, '', { width: 1, height: 560 }));
 
   // ============ RIGHT COLUMN ============
   const RX = 405;
   const RCOL_W = 160;
   const rheading = (title: string, y: number) => {
-    out.push(mk('box', RX, y, '', { width: RCOL_W, height: 16 }));
-    out.push(mk('text', RX, y + 2, title, { fontSize: 12, isBold: true, textAlign: 'center', width: RCOL_W } as any));
+    out.push(mk('box', RX, y, '', { width: RCOL_W, height: 18 }));
+    out.push(mk('text', RX, y + 3, title, { fontSize: HEAD_FS, isBold: true, textAlign: 'center', width: RCOL_W } as any));
   };
 
   // --- GEGEVENS VOERTUIG ---
   let ry = 30;
-  rheading('Gegevens voertuig', ry); ry += 22;
+  rheading('Gegevens voertuig', ry); ry += HEAD_GAP;
   const vehicleRow = (label: string, source: string | null, valueText?: string) => {
-    out.push(mk('text', RX, ry, label, { fontSize: 10, isBold: true }));
+    out.push(mk('text', RX, ry, label, { fontSize: ROW_FS, isBold: true }));
     if (source) {
-      out.push(mk('dynamic', RX + 70, ry, label, { source, fontSize: 10 } as any));
+      out.push(mk('dynamic', RX + 70, ry, label, { source, fontSize: ROW_FS } as any));
     }
-    out.push(mk('line', RX + 70, ry + 11, '', { width: RCOL_W - 70, height: 1 }));
+    out.push(mk('line', RX + 70, ry + 12, '', { width: RCOL_W - 70, height: 1 }));
     if (valueText) {
-      out.push(mk('text', RX + 70, ry, valueText, { fontSize: 9 }));
+      out.push(mk('text', RX + 70, ry, valueText, { fontSize: ROW_FS }));
     }
-    ry += 18;
+    ry += 20;
   };
   vehicleRow('Merk:', 'brand');
   vehicleRow('Type:', 'model');
   vehicleRow('Kenteken:', 'licensePlate');
   vehicleRow('Tellerstand:', 'currentMileage');
   // Tank — options instead of dynamic value
-  out.push(mk('text', RX, ry, 'Tank:', { fontSize: 10, isBold: true }));
-  out.push(mk('text', RX + 70, ry, 'vol / leeg / 1/4 / 1/2 / 3/4', { fontSize: 9 }));
-  ry += 18;
+  out.push(mk('text', RX, ry, 'Tank:', { fontSize: ROW_FS, isBold: true }));
+  out.push(mk('text', RX + 70, ry, 'vol / leeg / 1/4 / 1/2 / 3/4', { fontSize: ROW_FS }));
+  ry += 22;
 
   // --- OPMERKINGEN ---
   ry += 6;
-  rheading('Opmerkingen', ry); ry += 22;
+  rheading('Opmerkingen', ry); ry += HEAD_GAP;
   for (let i = 0; i < 6; i++) {
     out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 }));
-    ry += 16;
+    ry += 17;
   }
 
   // --- CONTROLE DOOR ---
   ry += 6;
-  rheading('Controle door', ry); ry += 22;
-  out.push(mk('text', RX, ry, 'Datum:', { fontSize: 10, isBold: true }));
-  out.push(mk('dynamic', RX + 50, ry, 'Today\'s Date', { source: 'currentDate', fontSize: 10 } as any));
-  out.push(mk('line', RX + 50, ry + 11, '', { width: RCOL_W - 50, height: 1 }));
+  rheading('Controle door', ry); ry += HEAD_GAP;
+  out.push(mk('text', RX, ry, 'Datum:', { fontSize: ROW_FS, isBold: true }));
+  out.push(mk('dynamic', RX + 50, ry, 'Today\'s Date', { source: 'currentDate', fontSize: ROW_FS } as any));
+  out.push(mk('line', RX + 50, ry + 12, '', { width: RCOL_W - 50, height: 1 }));
   ry += 22;
-  out.push(mk('text', RX, ry, 'NAAM:', { fontSize: 10, isBold: true }));
-  out.push(mk('line', RX + 50, ry + 11, '', { width: RCOL_W - 50, height: 1 }));
+  out.push(mk('text', RX, ry, 'NAAM:', { fontSize: ROW_FS, isBold: true }));
+  out.push(mk('line', RX + 50, ry + 12, '', { width: RCOL_W - 50, height: 1 }));
   ry += 22;
 
   // --- HANDTEKENING ---
   ry += 6;
-  rheading('Handtekening', ry); ry += 22;
-  out.push(mk('text', RX, ry, 'Naam verhuurder', { fontSize: 9 })); ry += 12;
+  rheading('Handtekening', ry); ry += HEAD_GAP;
+  out.push(mk('text', RX, ry, 'Naam verhuurder', { fontSize: ROW_FS })); ry += 13;
   out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 })); ry += 6;
-  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: 9 }));
-  out.push(mk('signature', RX + 65, ry - 4, 'Verhuurder', { width: RCOL_W - 65, height: 24 } as any));
-  ry += 28;
-  out.push(mk('text', RX, ry, 'Naam huurder', { fontSize: 9 })); ry += 12;
+  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: ROW_FS }));
+  out.push(mk('signature', RX + 70, ry - 4, 'Verhuurder', { width: RCOL_W - 70, height: 26 } as any));
+  ry += 32;
+  out.push(mk('text', RX, ry, 'Naam huurder', { fontSize: ROW_FS })); ry += 13;
   out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 })); ry += 6;
-  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: 9 }));
-  out.push(mk('signature', RX + 65, ry - 4, 'Huurder', { width: RCOL_W - 65, height: 24 } as any));
-  ry += 28;
+  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: ROW_FS }));
+  out.push(mk('signature', RX + 70, ry - 4, 'Huurder', { width: RCOL_W - 70, height: 26 } as any));
+  ry += 32;
 
-  // ============ BOTTOM: vehicle diagram ============
-  out.push(mk('line', 30, 800, '', { width: 535, height: 1 }));
-  out.push(mk('diagram', 30, 805, 'Vehicle diagram', { width: 535, height: 30, diagramTemplateId: null } as any));
+  // ============ BOTTOM: VEHICLE DIAGRAM (full width, prominent) ============
+  // Start below whichever column extends further so we never overlap.
+  const diagStart = Math.max(leftEndY, ry) + 10;
+  // Heading bar across the full page width.
+  out.push(mk('box', 30, diagStart, '', { width: 535, height: 18 }));
+  out.push(mk('text', 30, diagStart + 3, 'Voertuig diagram', {
+    fontSize: HEAD_FS, isBold: true, textAlign: 'center', width: 535,
+  } as any));
+  // The diagram itself fills the rest of the page (down to ~y=820 with a small
+  // bottom margin).
+  const diagY = diagStart + 22;
+  const diagH = Math.max(140, 820 - diagY);
+  out.push(mk('diagram', 30, diagY, 'Vehicle diagram', {
+    width: 535, height: diagH, diagramTemplateId: null,
+  } as any));
 
   return out;
 }
