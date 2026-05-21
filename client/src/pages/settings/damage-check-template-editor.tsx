@@ -118,67 +118,153 @@ function buildDefaultLayout(): CanvasField[] {
     name,
     ...extra,
   });
-  const fs = (n: number) => ({ fontSize: n } as Partial<CanvasField>);
-  const inspectionLabels = [
-    'Voorruit', 'Achterruit', 'Motorkap', 'Dak', 'Linker voorportier', 'Rechter voorportier',
-    'Linker achterportier', 'Rechter achterportier', 'Achterklep', 'Voorbumper',
-    'Achterbumper', 'Linker spiegel', 'Rechter spiegel', 'Velgen', 'Banden',
+  const out: CanvasField[] = [];
+
+  // ============ LEFT COLUMN ============
+  const LX = 30;                  // left edge for checkbox/label column
+  const LABEL_X = LX + 14;        // text label after the checkbox
+  const OPT_X = LX + 130;         // option text (e.g. "schoon / vuil")
+  const ROW_H = 14;               // distance between checklist rows
+  const COL_W = 350;              // full width of the left column (heading bar)
+
+  // Heading bar (filled blue rectangle + centered white text in the image — we
+  // approximate with a box + bold centered text).
+  const heading = (title: string, y: number) => {
+    out.push(mk('box', LX, y, '', { width: COL_W, height: 16 }));
+    out.push(mk('text', LX, y + 2, title, { fontSize: 12, isBold: true, textAlign: 'center', width: COL_W } as any));
+  };
+
+  // Single checklist row: checkbox + label + options text.
+  const row = (y: number, label: string, options: string) => {
+    out.push(mk('checkbox', LX, y, '', { fontSize: 9 }));
+    out.push(mk('text', LABEL_X, y, label, { fontSize: 9 }));
+    out.push(mk('text', OPT_X, y, options, { fontSize: 9 }));
+  };
+
+  // --- INTERIEUR ---
+  let y = 30;
+  heading('Interieur', y); y += 22;
+  const interieur: [string, string][] = [
+    ['Binnenzijde auto', 'schoon / vuil'],
+    ['Ruitschade', 'ja / nee'],
+    ['Bekleding', 'kapot / heel / brandgaten'],
+    ['Asbak', 'schoon / vuil'],
+    ['Reservewiel', 'goed / geen / lek'],
+    ['Krik', 'ja / nee'],
+    ['Wielsleutel', 'ja / nee'],
+    ['Matten', 'ja / nee'],
+    ['Hoofdsteunen', 'goed / kapot'],
   ];
-  const out: CanvasField[] = [
-    mk('text', 40, 30, 'SCHADE CONTROLE FORMULIER', { ...fs(16), isBold: true }),
-    mk('text', 40, 56, 'Damage Check Form', { ...fs(10) }),
-    mk('line', 40, 78, '', { width: 515, height: 1 }),
+  interieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
-    // Vehicle / contract block (two columns)
-    mk('text', 40, 90, 'Kenteken:', { ...fs(10), isBold: true }),
-    mk('dynamic', 110, 90, 'License Plate', { source: 'licensePlate', ...fs(10) }),
-    mk('text', 40, 108, 'Merk:', { ...fs(10), isBold: true }),
-    mk('dynamic', 110, 108, 'Vehicle Brand', { source: 'brand', ...fs(10) }),
-    mk('text', 40, 126, 'Model:', { ...fs(10), isBold: true }),
-    mk('dynamic', 110, 126, 'Vehicle Model', { source: 'model', ...fs(10) }),
-    mk('text', 40, 144, 'KM-stand:', { ...fs(10), isBold: true }),
-    mk('dynamic', 110, 144, 'Current Mileage', { source: 'currentMileage', ...fs(10) }),
-
-    mk('text', 310, 90, 'Klant:', { ...fs(10), isBold: true }),
-    mk('dynamic', 360, 90, 'Customer Name', { source: 'customerName', ...fs(10) }),
-    mk('text', 310, 108, 'Contractnr:', { ...fs(10), isBold: true }),
-    mk('dynamic', 380, 108, 'Contract Number', { source: 'contractNumber', ...fs(10) }),
-    mk('text', 310, 126, 'Vanaf:', { ...fs(10), isBold: true }),
-    mk('dynamic', 360, 126, 'Start Date', { source: 'startDate', ...fs(10) }),
-    mk('text', 310, 144, 'Tot:', { ...fs(10), isBold: true }),
-    mk('dynamic', 360, 144, 'End Date', { source: 'endDate', ...fs(10) }),
-
-    mk('line', 40, 170, '', { width: 515, height: 1 }),
-    mk('text', 40, 180, 'Voertuig diagram', { ...fs(11), isBold: true }),
-    mk('diagram', 40, 200, 'Vehicle diagram', { width: 515, height: 230, diagramTemplateId: null }),
-
-    mk('text', 40, 445, 'Inspectiepunten', { ...fs(11), isBold: true }),
+  // --- EXTERIEUR ---
+  y += 8;
+  heading('Exterieur', y); y += 22;
+  const exterieur: [string, string][] = [
+    ['Buitenzijde auto', 'vuil / schoon'],
+    ['Wieldoppen', 'LV / LA / RV / RA / geen'],
+    ['Kentekenplaten', 'voor / achter'],
+    ['Spiegelkap links', 'kapot / krassen / goed'],
+    ['Spiegelkap rechts', 'kapot / krassen / goed'],
+    ['Spiegelglas L+R', 'goed / kapot'],
+    ['Antenne', 'goed / kapot / geen'],
+    ['Ruitenwisser', 'goed / kapot'],
+    ['Deurvangers', 'goed / kapot'],
+    ['Schuifdeur (bus)', 'goed / kapot / slecht'],
+    ['Werkende sloten', 'ja / nee'],
+    ['Mistlampen voor', 'goed / kapot / geen'],
   ];
+  exterieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
-  // Inspection grid: 3 cols × 5 rows = 15 items, ~170x36 each
-  const colW = 175;
-  const rowH = 36;
-  inspectionLabels.forEach((label, i) => {
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    out.push(
-      mk('inspection', 40 + col * colW, 465 + row * rowH, label, {
-        damageTypes: ['Kras', 'Deuk', 'Ster'],
-        fontSize: 9,
-      }),
-    );
-  });
+  // --- AFLEVER CHECK ---
+  y += 8;
+  heading('Aflever Check', y); y += 22;
+  const aflever: [string, string][] = [
+    ['Olie - water', ''],
+    ['Ruitenproeiervloeistof', ''],
+    ['Verlichting', ''],
+    ['Bandenspanning incl. reservewiel', ''],
+    ['Kachelfan', ''],
+    ['Hoedenplank', ''],
+    ['IJskrabber', ''],
+    ['Gaan alle deuren open', ''],
+    ['Kentekenpapieren (eventueel kopie)', ''],
+    ['Geldige groene kaart', ''],
+    ['Europees schadeformulier', ''],
+  ];
+  aflever.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
 
-  // Signature row
-  const sigY = 700;
-  out.push(
-    mk('text', 40, sigY, 'Handtekening verhuurder:', { ...fs(10), isBold: true }),
-    mk('signature', 40, sigY + 16, 'Verhuurder', { width: 230, height: 40 }),
-    mk('text', 310, sigY, 'Handtekening huurder:', { ...fs(10), isBold: true }),
-    mk('signature', 310, sigY + 16, 'Huurder', { width: 230, height: 40 }),
-    mk('text', 40, sigY + 70, 'Datum:', { ...fs(10), isBold: true }),
-    mk('dynamic', 90, sigY + 70, "Today's Date", { source: 'currentDate', ...fs(10) }),
-  );
+  // Vertical divider between columns
+  out.push(mk('line', 390, 30, '', { width: 1, height: 760 }));
+
+  // ============ RIGHT COLUMN ============
+  const RX = 405;
+  const RCOL_W = 160;
+  const rheading = (title: string, y: number) => {
+    out.push(mk('box', RX, y, '', { width: RCOL_W, height: 16 }));
+    out.push(mk('text', RX, y + 2, title, { fontSize: 12, isBold: true, textAlign: 'center', width: RCOL_W } as any));
+  };
+
+  // --- GEGEVENS VOERTUIG ---
+  let ry = 30;
+  rheading('Gegevens voertuig', ry); ry += 22;
+  const vehicleRow = (label: string, source: string | null, valueText?: string) => {
+    out.push(mk('text', RX, ry, label, { fontSize: 10, isBold: true }));
+    if (source) {
+      out.push(mk('dynamic', RX + 70, ry, label, { source, fontSize: 10 } as any));
+    }
+    out.push(mk('line', RX + 70, ry + 11, '', { width: RCOL_W - 70, height: 1 }));
+    if (valueText) {
+      out.push(mk('text', RX + 70, ry, valueText, { fontSize: 9 }));
+    }
+    ry += 18;
+  };
+  vehicleRow('Merk:', 'brand');
+  vehicleRow('Type:', 'model');
+  vehicleRow('Kenteken:', 'licensePlate');
+  vehicleRow('Tellerstand:', 'currentMileage');
+  // Tank — options instead of dynamic value
+  out.push(mk('text', RX, ry, 'Tank:', { fontSize: 10, isBold: true }));
+  out.push(mk('text', RX + 70, ry, 'vol / leeg / 1/4 / 1/2 / 3/4', { fontSize: 9 }));
+  ry += 18;
+
+  // --- OPMERKINGEN ---
+  ry += 6;
+  rheading('Opmerkingen', ry); ry += 22;
+  for (let i = 0; i < 6; i++) {
+    out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 }));
+    ry += 16;
+  }
+
+  // --- CONTROLE DOOR ---
+  ry += 6;
+  rheading('Controle door', ry); ry += 22;
+  out.push(mk('text', RX, ry, 'Datum:', { fontSize: 10, isBold: true }));
+  out.push(mk('dynamic', RX + 50, ry, 'Today\'s Date', { source: 'currentDate', fontSize: 10 } as any));
+  out.push(mk('line', RX + 50, ry + 11, '', { width: RCOL_W - 50, height: 1 }));
+  ry += 22;
+  out.push(mk('text', RX, ry, 'NAAM:', { fontSize: 10, isBold: true }));
+  out.push(mk('line', RX + 50, ry + 11, '', { width: RCOL_W - 50, height: 1 }));
+  ry += 22;
+
+  // --- HANDTEKENING ---
+  ry += 6;
+  rheading('Handtekening', ry); ry += 22;
+  out.push(mk('text', RX, ry, 'Naam verhuurder', { fontSize: 9 })); ry += 12;
+  out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 })); ry += 6;
+  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: 9 }));
+  out.push(mk('signature', RX + 65, ry - 4, 'Verhuurder', { width: RCOL_W - 65, height: 24 } as any));
+  ry += 28;
+  out.push(mk('text', RX, ry, 'Naam huurder', { fontSize: 9 })); ry += 12;
+  out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 })); ry += 6;
+  out.push(mk('text', RX, ry, 'Voor akkoord:', { fontSize: 9 }));
+  out.push(mk('signature', RX + 65, ry - 4, 'Huurder', { width: RCOL_W - 65, height: 24 } as any));
+  ry += 28;
+
+  // ============ BOTTOM: vehicle diagram ============
+  out.push(mk('line', 30, 800, '', { width: 535, height: 1 }));
+  out.push(mk('diagram', 30, 805, 'Vehicle diagram', { width: 535, height: 30, diagramTemplateId: null } as any));
+
   return out;
 }
 
