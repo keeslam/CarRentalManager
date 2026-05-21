@@ -2075,6 +2075,17 @@ export default function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteEmailDialogOpen}
+        onOpenChange={setDeleteEmailDialogOpen}
+        title="Delete Email Configuration"
+        description="Are you sure you want to delete this email configuration? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteEmailConfig}
+        onCancel={() => setEmailConfigToDelete(null)}
+      />
     </div>
   );
 }
@@ -2405,16 +2416,6 @@ function ContractNumberSettings() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={deleteEmailDialogOpen}
-        onOpenChange={setDeleteEmailDialogOpen}
-        title="Delete Email Configuration"
-        description="Are you sure you want to delete this email configuration? This action cannot be undone."
-        variant="danger"
-        confirmLabel="Delete"
-        onConfirm={confirmDeleteEmailConfig}
-        onCancel={() => setEmailConfigToDelete(null)}
-      />
     </div>
   );
 }
