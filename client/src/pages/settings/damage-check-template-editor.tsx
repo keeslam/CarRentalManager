@@ -18,10 +18,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   ArrowLeft, Loader2, Plus, Save, Trash2, FileText, ZoomIn, ZoomOut, Grid,
   AlignCenter, AlignLeft, AlignRight, Lock, Unlock, Maximize2, Undo2, Redo2,
-  LayoutGrid, Move, Type, Database, CheckSquare, ClipboardList, PenLine, Minus, Square,
+  LayoutGrid, Move, Type, Database, CheckSquare, ClipboardList, PenLine, Minus, Square, Image as ImageIcon, Sparkles,
 } from 'lucide-react';
 
-type FieldType = 'text' | 'dynamic' | 'inspection' | 'checkbox' | 'signature' | 'line' | 'box';
+type FieldType = 'text' | 'dynamic' | 'inspection' | 'checkbox' | 'signature' | 'line' | 'box' | 'diagram';
 
 interface CanvasField {
   id: string;
@@ -36,8 +36,17 @@ interface CanvasField {
   isBold: boolean;
   textAlign: 'left' | 'center' | 'right';
   damageTypes?: string[];
+  diagramTemplateId?: number | null; // for type=='diagram'; null = auto-match by vehicle
   locked?: boolean;
   page?: number;
+}
+
+interface DiagramTemplateSummary {
+  id: number;
+  make: string;
+  model: string;
+  year?: number | null;
+  diagramPath?: string | null;
 }
 
 interface Template {
@@ -88,12 +97,94 @@ function defaultFieldFor(type: FieldType, x: number, y: number): CanvasField {
       return { ...base, type, name: '', width: 200, height: 1 };
     case 'box':
       return { ...base, type, name: '', width: 150, height: 80 };
+    case 'diagram':
+      return { ...base, type, name: 'Vehicle diagram', width: 400, height: 220, diagramTemplateId: null };
   }
+}
+
+// Default starter layout matching the legacy structured form: header text, key
+// dynamic fields (license plate, customer, contract #, dates), a vehicle diagram
+// placeholder, an inspection grid and signature lines. Editors can move/delete
+// anything — this is just a starting point so a blank canvas isn't overwhelming.
+function buildDefaultLayout(): CanvasField[] {
+  const mk = (
+    type: FieldType,
+    x: number,
+    y: number,
+    name: string,
+    extra: Partial<CanvasField> = {},
+  ): CanvasField => ({
+    ...defaultFieldFor(type, x, y),
+    name,
+    ...extra,
+  });
+  const fs = (n: number) => ({ fontSize: n } as Partial<CanvasField>);
+  const inspectionLabels = [
+    'Voorruit', 'Achterruit', 'Motorkap', 'Dak', 'Linker voorportier', 'Rechter voorportier',
+    'Linker achterportier', 'Rechter achterportier', 'Achterklep', 'Voorbumper',
+    'Achterbumper', 'Linker spiegel', 'Rechter spiegel', 'Velgen', 'Banden',
+  ];
+  const out: CanvasField[] = [
+    mk('text', 40, 30, 'SCHADE CONTROLE FORMULIER', { ...fs(16), isBold: true }),
+    mk('text', 40, 56, 'Damage Check Form', { ...fs(10) }),
+    mk('line', 40, 78, '', { width: 515, height: 1 }),
+
+    // Vehicle / contract block (two columns)
+    mk('text', 40, 90, 'Kenteken:', { ...fs(10), isBold: true }),
+    mk('dynamic', 110, 90, 'License Plate', { source: 'licensePlate', ...fs(10) }),
+    mk('text', 40, 108, 'Merk:', { ...fs(10), isBold: true }),
+    mk('dynamic', 110, 108, 'Vehicle Brand', { source: 'brand', ...fs(10) }),
+    mk('text', 40, 126, 'Model:', { ...fs(10), isBold: true }),
+    mk('dynamic', 110, 126, 'Vehicle Model', { source: 'model', ...fs(10) }),
+    mk('text', 40, 144, 'KM-stand:', { ...fs(10), isBold: true }),
+    mk('dynamic', 110, 144, 'Current Mileage', { source: 'currentMileage', ...fs(10) }),
+
+    mk('text', 310, 90, 'Klant:', { ...fs(10), isBold: true }),
+    mk('dynamic', 360, 90, 'Customer Name', { source: 'customerName', ...fs(10) }),
+    mk('text', 310, 108, 'Contractnr:', { ...fs(10), isBold: true }),
+    mk('dynamic', 380, 108, 'Contract Number', { source: 'contractNumber', ...fs(10) }),
+    mk('text', 310, 126, 'Vanaf:', { ...fs(10), isBold: true }),
+    mk('dynamic', 360, 126, 'Start Date', { source: 'startDate', ...fs(10) }),
+    mk('text', 310, 144, 'Tot:', { ...fs(10), isBold: true }),
+    mk('dynamic', 360, 144, 'End Date', { source: 'endDate', ...fs(10) }),
+
+    mk('line', 40, 170, '', { width: 515, height: 1 }),
+    mk('text', 40, 180, 'Voertuig diagram', { ...fs(11), isBold: true }),
+    mk('diagram', 40, 200, 'Vehicle diagram', { width: 515, height: 230, diagramTemplateId: null }),
+
+    mk('text', 40, 445, 'Inspectiepunten', { ...fs(11), isBold: true }),
+  ];
+
+  // Inspection grid: 3 cols × 5 rows = 15 items, ~170x36 each
+  const colW = 175;
+  const rowH = 36;
+  inspectionLabels.forEach((label, i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    out.push(
+      mk('inspection', 40 + col * colW, 465 + row * rowH, label, {
+        damageTypes: ['Kras', 'Deuk', 'Ster'],
+        fontSize: 9,
+      }),
+    );
+  });
+
+  // Signature row
+  const sigY = 700;
+  out.push(
+    mk('text', 40, sigY, 'Handtekening verhuurder:', { ...fs(10), isBold: true }),
+    mk('signature', 40, sigY + 16, 'Verhuurder', { width: 230, height: 40 }),
+    mk('text', 310, sigY, 'Handtekening huurder:', { ...fs(10), isBold: true }),
+    mk('signature', 310, sigY + 16, 'Huurder', { width: 230, height: 40 }),
+    mk('text', 40, sigY + 70, 'Datum:', { ...fs(10), isBold: true }),
+    mk('dynamic', 90, sigY + 70, "Today's Date", { source: 'currentDate', ...fs(10) }),
+  );
+  return out;
 }
 
 interface HistoryState { fields: CanvasField[]; ts: number; }
 
-export default function DamageCheckTemplateCanvasEditor() {
+export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { embedded?: boolean } = {}) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -129,6 +220,12 @@ export default function DamageCheckTemplateCanvasEditor() {
   // Load templates list
   const { data: templates = [], isLoading } = useQuery<Template[]>({
     queryKey: ['/api/damage-check-templates'],
+  });
+
+  // Vehicle diagram templates — used for the 'diagram' field type so editors
+  // can pick which diagram appears on the form (or leave it as auto-match).
+  const { data: diagramTemplates = [] } = useQuery<DiagramTemplateSummary[]>({
+    queryKey: ['/api/vehicle-diagram-templates'],
   });
 
   // Parse ?id= from URL once templates load
@@ -419,10 +516,12 @@ export default function DamageCheckTemplateCanvasEditor() {
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/documents">
-            <Button variant="ghost" size="sm"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
-          </Link>
-          <h1 className="text-xl font-semibold">Damage Check Template Editor</h1>
+          {!embedded && (
+            <Link href="/documents">
+              <Button variant="ghost" size="sm"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+            </Link>
+          )}
+          {!embedded && <h1 className="text-xl font-semibold">Damage Check Template Editor</h1>}
         </div>
         <div className="text-xs text-muted-foreground hidden md:flex items-center gap-2">
           <kbd className="px-1.5 py-0.5 bg-muted rounded">Ctrl+Z</kbd> Undo
@@ -536,6 +635,20 @@ export default function DamageCheckTemplateCanvasEditor() {
               <Button variant="outline" className="w-full justify-start" onClick={() => addField('signature')} data-testid="button-add-signature"><PenLine className="h-4 w-4 mr-2" /> Signature</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => addField('line')} data-testid="button-add-line"><Minus className="h-4 w-4 mr-2" /> Line</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => addField('box')} data-testid="button-add-box"><Square className="h-4 w-4 mr-2" /> Box</Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => addField('diagram')} data-testid="button-add-diagram"><ImageIcon className="h-4 w-4 mr-2" /> Vehicle Diagram</Button>
+              <Separator />
+              <Button
+                variant="secondary"
+                className="w-full justify-start"
+                onClick={() => {
+                  if (fields.length > 0 && !confirm('Replace current fields with the default layout?')) return;
+                  updateFields(buildDefaultLayout());
+                  setSelectedIds([]);
+                }}
+                data-testid="button-insert-default-layout"
+              >
+                <Sparkles className="h-4 w-4 mr-2" /> Insert Default Layout
+              </Button>
               <Separator />
               <Button variant="outline" className="w-full" onClick={handleGeneratePreview} disabled={previewLoading} data-testid="button-generate-preview">
                 {previewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
@@ -617,6 +730,7 @@ export default function DamageCheckTemplateCanvasEditor() {
                         zoom={zoom}
                         selected={selectedIds.includes(f.id)}
                         onMouseDown={(e) => onFieldMouseDown(e, f)}
+                        diagramTemplates={diagramTemplates}
                       />
                     ))}
                     {selectionBox && (
@@ -667,6 +781,23 @@ export default function DamageCheckTemplateCanvasEditor() {
                       </Select>
                     </div>
                   )}
+                  {selectedField.type === 'diagram' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Vehicle diagram</Label>
+                      <Select
+                        value={selectedField.diagramTemplateId ? String(selectedField.diagramTemplateId) : 'auto'}
+                        onValueChange={(v) => updateSelected({ diagramTemplateId: v === 'auto' ? null : Number(v) })}
+                      >
+                        <SelectTrigger data-testid="select-diagram-template"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto (match vehicle)</SelectItem>
+                          {diagramTemplates.map(d => (
+                            <SelectItem key={d.id} value={String(d.id)}>{d.make} {d.model}{d.year ? ` (${d.year})` : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {selectedField.type === 'inspection' && (
                     <div className="space-y-1">
                       <Label className="text-xs">Damage types (comma separated)</Label>
@@ -686,7 +817,7 @@ export default function DamageCheckTemplateCanvasEditor() {
                       <Input type="number" value={Math.round(selectedField.y)} onChange={e => updateSelected({ y: Number(e.target.value) })} data-testid="input-field-y" />
                     </div>
                   </div>
-                  {(selectedField.type === 'signature' || selectedField.type === 'line' || selectedField.type === 'box') && (
+                  {(selectedField.type === 'signature' || selectedField.type === 'line' || selectedField.type === 'box' || selectedField.type === 'diagram') && (
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1"><Label className="text-xs">Width</Label>
                         <Input type="number" value={selectedField.width ?? 100} onChange={e => updateSelected({ width: Number(e.target.value) })} data-testid="input-field-width" />
@@ -761,8 +892,9 @@ export default function DamageCheckTemplateCanvasEditor() {
 }
 
 // Render a single canvas field
-function FieldRender({ field, zoom, selected, onMouseDown }: {
+function FieldRender({ field, zoom, selected, onMouseDown, diagramTemplates }: {
   field: CanvasField; zoom: number; selected: boolean; onMouseDown: (e: React.MouseEvent) => void;
+  diagramTemplates?: DiagramTemplateSummary[];
 }) {
   const baseStyle: React.CSSProperties = {
     position: 'absolute',
@@ -796,6 +928,24 @@ function FieldRender({ field, zoom, selected, onMouseDown }: {
       <div onMouseDown={onMouseDown} style={{ ...baseStyle, display: 'inline-flex', alignItems: 'center', gap: 4 * zoom, padding: 2 * zoom, background: 'rgba(255,255,255,0.85)', borderRadius: 2, fontSize: field.fontSize * zoom, fontWeight: field.isBold ? 700 : 400 }}>
         <span style={{ display: 'inline-block', width: 10 * zoom, height: 10 * zoom, border: '1px solid #111' }} />
         <span>{field.name}</span>
+      </div>
+    );
+  }
+  if (field.type === 'diagram') {
+    const w = (field.width ?? 400) * zoom;
+    const h = (field.height ?? 220) * zoom;
+    const resolvedId = field.diagramTemplateId ?? diagramTemplates?.[0]?.id ?? null;
+    const imgSrc = resolvedId ? `/api/vehicle-diagram-templates/${resolvedId}/image` : null;
+    return (
+      <div
+        onMouseDown={onMouseDown}
+        style={{ ...baseStyle, width: w, height: h, border: '1px dashed #6b7280', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+      >
+        {imgSrc ? (
+          <img src={imgSrc} alt="Vehicle diagram" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} draggable={false} />
+        ) : (
+          <span style={{ fontSize: 11 * zoom, color: '#6b7280' }}>Vehicle diagram (no templates uploaded)</span>
+        )}
       </div>
     );
   }

@@ -31,6 +31,7 @@ import PDFTemplateEditor from "./template-editor";
 import DamageCheckTemplateEditor from "./damage-check-template-editor";
 import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit, Settings as SettingsIcon } from "lucide-react";
 import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
+import DamageCheckTemplateCanvasEditor from "@/pages/settings/damage-check-template-editor";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -1168,6 +1169,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [filterReservation, setFilterReservation] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
   // Fetch all damage check documents
   const { data: damageChecks = [] } = useQuery<Document[]>({
@@ -1258,7 +1260,7 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => { window.location.href = '/settings/damage-check-template-editor'; }}
+              onClick={() => setTemplatesDialogOpen(true)}
               data-testid="button-manage-damage-check-templates"
             >
               <SettingsIcon className="mr-2 h-4 w-4" />
@@ -1433,7 +1435,20 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Damage Check Templates Editor — full page route */}
+      {/* Damage Check Templates Editor — fullscreen dialog wrapping the canvas editor route */}
+      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
+        <DialogContent className="max-w-[98vw] w-[98vw] max-h-[98vh] h-[98vh] flex flex-col p-0 gap-0" data-testid="dialog-damage-check-templates">
+          <DialogHeader className="px-4 py-2 border-b">
+            <DialogTitle>Damage Check Template Editor</DialogTitle>
+            <DialogDescription className="sr-only">
+              Visual canvas editor for damage check templates.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-white">
+            {templatesDialogOpen && <DamageCheckTemplateCanvasEditor embedded />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

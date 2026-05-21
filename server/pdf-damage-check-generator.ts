@@ -178,6 +178,53 @@ async function generateDamageCheckPDFFromCanvas(
   const pages = Array.from({ length: maxPage }, () => pdfDoc.addPage([595, 842]));
   const PAGE_H = 842;
 
+  // Pre-resolve diagram template images so each field can embed one. We fetch
+  // any explicitly referenced ids, plus a fallback (auto-match by vehicle, or
+  // the first available template) used when a field has no diagramTemplateId.
+  const diagramCache = new Map<number, any>(); // id -> embedded pdf-lib image
+  let fallbackDiagram: any = null;
+  const hasDiagram = fields.some(f => f.type === 'diagram');
+  if (hasDiagram) {
+    try {
+      const allDiagrams = await db.select().from(vehicleDiagramTemplates);
+      const explicitIds = new Set<number>(
+        fields.filter(f => f.type === 'diagram' && f.diagramTemplateId).map(f => Number(f.diagramTemplateId)),
+      );
+      const tryEmbed = async (row: any) => {
+        if (!row?.diagramPath) return null;
+        try {
+          const filePath = path.join(process.cwd(), row.diagramPath);
+          const bytes = await fs.readFile(filePath);
+          return row.diagramPath.toLowerCase().endsWith('.png')
+            ? await pdfDoc.embedPng(bytes)
+            : await pdfDoc.embedJpg(bytes);
+        } catch (e) {
+          console.warn(`Canvas diagram embed failed for #${row.id}:`, (e as Error).message);
+          return null;
+        }
+      };
+      for (const id of explicitIds) {
+        const row = allDiagrams.find((d: any) => d.id === id);
+        if (row) {
+          const img = await tryEmbed(row);
+          if (img) diagramCache.set(id, img);
+        }
+      }
+      // Fallback: prefer a brand/model match against the vehicle, else first row.
+      const brandLc = (vehicle.brand || '').toLowerCase();
+      const modelLc = (vehicle.model || '').toLowerCase();
+      const matched = allDiagrams.find((d: any) => {
+        const mk = String(d.make || '').toLowerCase();
+        const md = String(d.model || '').toLowerCase();
+        return brandLc && mk && (brandLc.includes(mk) || mk.includes(brandLc))
+          && modelLc && md && (modelLc.includes(md) || md.includes(modelLc));
+      }) || allDiagrams[0];
+      if (matched) fallbackDiagram = await tryEmbed(matched);
+    } catch (e) {
+      console.warn('Canvas diagram lookup failed:', (e as Error).message);
+    }
+  }
+
   for (const f of fields) {
     const p = pages[(Number(f.page) || 1) - 1];
     if (!p) continue;
@@ -197,6 +244,34 @@ async function generateDamageCheckPDFFromCanvas(
         thickness: Math.max(0.5, Number(f.height) || 1),
         color: rgb(0, 0, 0),
       });
+      continue;
+    }
+    if (f.type === 'diagram') {
+      const w = Number(f.width) || 400;
+      const h = Number(f.height) || 220;
+      const img = f.diagramTemplateId ? diagramCache.get(Number(f.diagramTemplateId)) : null;
+      const useImg = img || fallbackDiagram;
+      if (useImg) {
+        // Fit-contain inside the box, preserving aspect ratio
+        const iw = useImg.width;
+        const ih = useImg.height;
+        const scale = Math.min(w / iw, h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = x + (w - dw) / 2;
+        const dy = PAGE_H - yTop - h + (h - dh) / 2;
+        p.drawImage(useImg, { x: dx, y: dy, width: dw, height: dh });
+      } else {
+        // Placeholder box so missing-diagram is visible rather than invisible
+        p.drawRectangle({
+          x, y: PAGE_H - yTop - h, width: w, height: h,
+          borderColor: rgb(0.6, 0.6, 0.6), borderWidth: 0.5,
+        });
+        p.drawText('Vehicle diagram (no template available)', {
+          x: x + 6, y: PAGE_H - yTop - h / 2,
+          size: 9, font, color: rgb(0.5, 0.5, 0.5),
+        });
+      }
       continue;
     }
     if (f.type === 'box') {
