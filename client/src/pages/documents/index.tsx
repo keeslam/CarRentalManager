@@ -28,7 +28,6 @@ import { formatDate, formatFileSize } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest , invalidateByPrefix } from "@/lib/queryClient";
 import PDFTemplateEditor from "./template-editor";
-import DamageCheckTemplateEditor from "./damage-check-template-editor";
 import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit, Settings as SettingsIcon } from "lucide-react";
 import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
 import DamageCheckTemplateCanvasEditor from "@/pages/settings/damage-check-template-editor";
@@ -953,7 +952,6 @@ export default function DocumentsIndex() {
           <div className="space-y-6">
             <DamageCheckManager vehicles={vehicles || []} />
             <DiagramTemplateManager />
-            <DamageCheckTemplateEditor />
           </div>
         </TabsContent>
       </Tabs>
