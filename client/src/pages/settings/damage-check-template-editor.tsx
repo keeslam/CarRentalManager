@@ -74,6 +74,7 @@ const DYNAMIC_SOURCES: { value: string; label: string }[] = [
   { value: 'endDate', label: 'End Date' },
   { value: 'rentalDays', label: 'Rental Days' },
   { value: 'currentDate', label: 'Today\'s Date' },
+  { value: 'notes', label: 'Inspection Notes' },
 ];
 
 const PAGE_W = 595;
@@ -212,10 +213,23 @@ function buildDefaultLayout(config: DamageCheckFieldsConfig = DEFAULT_DAMAGE_CHE
   out.push(mk('text', RX + 70, ry, 'vol / leeg / 1/4 / 1/2 / 3/4', { fontSize: ROW_FS }));
   ry += 22;
 
-  // --- OPMERKINGEN ---
+  // --- GEGEVENS HUURDER --- (rental info that should auto-fill from the
+  // reservation: customer name, contract number, start/end dates).
+  ry += 6;
+  rheading('Gegevens huurder', ry); ry += HEAD_GAP;
+  vehicleRow('Naam:', 'customerName');
+  vehicleRow('Contract:', 'contractNumber');
+  vehicleRow('Van:', 'startDate');
+  vehicleRow('Tot:', 'endDate');
+
+  // --- OPMERKINGEN --- (first line auto-fills with the inspection notes;
+  // remaining blank lines remain available for hand-written remarks).
   ry += 6;
   rheading('Opmerkingen', ry); ry += HEAD_GAP;
-  for (let i = 0; i < 6; i++) {
+  out.push(mk('dynamic', RX, ry, 'Inspection Notes', { source: 'notes', fontSize: ROW_FS } as any));
+  out.push(mk('line', RX, ry + 12, '', { width: RCOL_W, height: 1 }));
+  ry += 17;
+  for (let i = 0; i < 4; i++) {
     out.push(mk('line', RX, ry, '', { width: RCOL_W, height: 1 }));
     ry += 17;
   }
