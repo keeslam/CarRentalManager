@@ -617,12 +617,9 @@ async function generateDamageCheckPDFFromCanvas(
       // immediate-left sibling text as the label, falling back to this field's
       // own name.
       const opts = textVal;
-      // Detect "options" text by presence of "/" and short length; not perfect
-      // but safe — we only append if we find a matching answer.
+      // Detect "options" text by presence of "/" and find the recorded
+      // answer(s) so we can circle them in-place when drawing below.
       if (opts.includes('/')) {
-        // Find the nearest label text on the same row whose label resolves to
-        // a known checklist key. Wider tolerance + prefer left-side (label
-        // before options), then right-side. Skip other "/" option fields.
         const sameRow = fields.filter((g: any) =>
           g !== f && g.type === 'text' && String(g.name || '').trim()
           && !String(g.name || '').includes('/')
@@ -644,7 +641,9 @@ async function generateDamageCheckPDFFromCanvas(
                      || candidates[0];
         const labelStr = matched ? String(matched.name || '') : '';
         const ans = lookupAnswer(labelStr);
-        if (ans) textVal = `${opts}   ->  ${ans}`;
+        if (ans) {
+          (f as any).__circleAnswers = ans.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        }
       }
     }
     let drawX = x;
@@ -660,7 +659,41 @@ async function generateDamageCheckPDFFromCanvas(
         drawX = x - tw;
       }
     }
-    p.drawText(sanitizeForWinAnsi(textVal), { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
+    const sanitized = sanitizeForWinAnsi(textVal);
+    p.drawText(sanitized, { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
+
+    // Circle the selected option(s) inside an options field like "ja / nee".
+    // We split on "/" and ellipse the substring(s) whose trimmed text matches
+    // one of the recorded answers (case-insensitive).
+    const circles: string[] | undefined = (f as any).__circleAnswers;
+    if (circles && circles.length > 0) {
+      const parts = sanitized.split('/');
+      let cursor = 0;
+      for (let i = 0; i < parts.length; i++) {
+        const seg = parts[i];
+        const trimmed = seg.trim().toLowerCase();
+        if (circles.includes(trimmed)) {
+          const leadingSpaces = seg.length - seg.trimStart().length;
+          const beforeText = sanitized.slice(0, cursor + leadingSpaces);
+          const wordText = seg.trim();
+          const wordX = drawX + useFont.widthOfTextAtSize(beforeText, fontSize);
+          const wordW = useFont.widthOfTextAtSize(wordText, fontSize);
+          const padX = Math.max(2, fontSize * 0.3);
+          const padY = Math.max(2, fontSize * 0.25);
+          const cx = wordX + wordW / 2;
+          const cy = baselineY + fontSize * 0.35;
+          const rx = wordW / 2 + padX;
+          const ry = fontSize * 0.6 + padY;
+          p.drawEllipse({
+            x: cx, y: cy,
+            xScale: rx, yScale: ry,
+            borderColor: rgb(0, 0, 0),
+            borderWidth: 1,
+          });
+        }
+        cursor += seg.length + (i < parts.length - 1 ? 1 : 0); // +1 for "/"
+      }
+    }
   }
 
   // Ensure at least one page
