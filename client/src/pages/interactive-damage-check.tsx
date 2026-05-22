@@ -932,14 +932,15 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   };
   
   const clearSignature = (canvasRef: React.RefObject<HTMLCanvasElement>, setSignature: (val: string | null) => void) => {
+    // Always reset the stored signature — when a saved signature image is
+    // displayed the canvas element is unmounted, so canvasRef.current is null.
+    // If we bailed out here the "Clear Signature" button would do nothing.
+    setSignature(null);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setSignature(null);
   };
   
   const saveSignature = (canvasRef: React.RefObject<HTMLCanvasElement>, setSignature: (val: string | null) => void, setIsSigning: (val: boolean) => void) => {
