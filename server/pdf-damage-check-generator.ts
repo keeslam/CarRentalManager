@@ -603,7 +603,7 @@ async function generateDamageCheckPDFFromCanvas(
         );
         const labelStr = sibling ? String(sibling.name || '') : '';
         const ans = lookupAnswer(labelStr);
-        if (ans) textVal = `${opts}   →  ${ans}`;
+        if (ans) textVal = `${opts}   ->  ${ans}`;
       }
     }
     let drawX = x;
