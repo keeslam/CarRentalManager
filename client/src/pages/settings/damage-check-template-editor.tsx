@@ -916,6 +916,20 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
                     onMouseUp={onCanvasMouseUp}
                     onMouseLeave={onCanvasMouseUp}
                   >
+                    <img
+                      src="/damage-check-header.png"
+                      alt="Header"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: PAGE_W * zoom,
+                        height: 'auto',
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                      }}
+                      draggable={false}
+                    />
                     {fields.map(f => (
                       <FieldRender
                         key={f.id}

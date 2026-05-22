@@ -413,12 +413,12 @@ async function generateDamageCheckPDFFromCanvas(
     const headerPath = path.join(process.cwd(), 'attached_assets', 'image_1779471993617.png');
     const headerBytes = await fs.readFile(headerPath);
     const headerImg = await pdfDoc.embedPng(headerBytes);
-    const margin = 10;
-    const headerW = 595 - margin * 2;
+    const margin = 0;
+    const headerW = 595;
     const srcW = headerImg.width;
     const srcH = headerImg.height;
     const headerH = headerW * (srcH / srcW);
-    const headerYBottom = PAGE_H - margin - headerH;
+    const headerYBottom = PAGE_H - headerH;
     const dateStr = new Date().toLocaleDateString('en-GB');
     const contractStr = reservationData?.contractNumber || '';
     // Normalize overlay coords against the actual source image dimensions so
