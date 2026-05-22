@@ -712,7 +712,11 @@ async function generateDamageCheckPDFFromCanvas(
     let drawX = contentLeft;
     if (f.textAlign === 'center') drawX = contentLeft + (contentW - tw) / 2;
     else if (f.textAlign === 'right') drawX = contentLeft + contentW - tw;
-    const drawY = PAGE_H - yTop - PAD_Y - fontSize;
+    // Browsers place the text baseline ~0.78·fontSize below the box top (ascender
+    // height). pdf-lib draws from the baseline, so mirror that offset rather than
+    // using the full fontSize — otherwise text sits ~2–3pt lower than the editor.
+    const ASCENDER_RATIO = 0.78;
+    const drawY = PAGE_H - yTop - PAD_Y - fontSize * ASCENDER_RATIO;
     p.drawText(sanitized, { x: drawX, y: drawY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
 
     // Circle the selected option(s) inside an options field like "ja / nee".
