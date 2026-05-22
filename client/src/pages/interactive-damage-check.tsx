@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Vehicle, type Reservation, type DamageCheckFieldsConfig, DEFAULT_DAMAGE_CHECK_FIELDS } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
-import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
+import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck, Printer } from "lucide-react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { ReservationSelector } from "@/components/ui/reservation-selector";
 
@@ -67,6 +67,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [mileage, setMileage] = useState(initialMileage || "");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedCheckId, setLastSavedCheckId] = useState<number | null>(null);
   
   // Comparison mode state
   const [pickupCheckData, setPickupCheckData] = useState<any | null>(null);
@@ -1006,15 +1007,26 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
       };
 
       // Use PUT for update, POST for create
+      let savedId: number | null = null;
       if (editingCheckId) {
         await apiRequest('PUT', `/api/interactive-damage-checks/${editingCheckId}`, checkData);
+        savedId = editingCheckId;
         toast({
           title: "Success",
           description: "Damage check updated successfully",
         });
       } else {
         try {
-          await apiRequest('POST', '/api/interactive-damage-checks', checkData);
+          const postRes = await apiRequest('POST', '/api/interactive-damage-checks', checkData);
+          try {
+            const created = await postRes.json();
+            if (created?.id) {
+              savedId = created.id;
+              setEditingCheckId(created.id);
+            }
+          } catch {
+            // ignore JSON parse errors — we'll just leave Print disabled
+          }
           toast({
             title: "Success",
             description: "Damage check saved successfully",
@@ -1028,6 +1040,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               if (existing) {
                 setEditingCheckId(existing.id);
                 await apiRequest('PUT', `/api/interactive-damage-checks/${existing.id}`, checkData);
+                savedId = existing.id;
                 toast({
                   title: "Success",
                   description: "Existing damage check updated with your changes",
@@ -1043,6 +1056,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           }
         }
       }
+      if (savedId) setLastSavedCheckId(savedId);
 
       invalidateRelatedQueries('reservations');
       invalidateRelatedQueries('vehicles');
@@ -1056,11 +1070,9 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
         queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/reservation/${selectedReservationId}`], refetchType: 'active' });
       }
 
-      if (onClose) {
-        onClose();
-      } else {
-        navigate('/documents');
-      }
+      // Intentionally do NOT close the dialog or navigate away after save —
+      // the user wants to stay on this view so they can print the PDF (or
+      // keep editing) and close it themselves via the Close button or the X.
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1186,7 +1198,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               </Select>
             </div>
 
-            <div className="flex items-end">
+            <div className="flex flex-col items-stretch gap-2">
               <Button 
                 onClick={handleSave}
                 disabled={isSaving || !selectedVehicleId || !diagramTemplate}
@@ -1195,6 +1207,22 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? 'Saving...' : 'Save Check'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const id = lastSavedCheckId ?? editingCheckId;
+                  if (!id) return;
+                  window.open(`/api/interactive-damage-checks/${id}/pdf`, '_blank');
+                }}
+                disabled={isSaving || !(lastSavedCheckId ?? editingCheckId)}
+                className="w-full"
+                data-testid="button-print-check"
+                title={!(lastSavedCheckId ?? editingCheckId) ? 'Save the check first to enable printing' : 'Open the generated PDF in a new tab to print'}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print PDF
               </Button>
             </div>
           </div>
@@ -1210,6 +1238,7 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
                     onValueChange={(val) => {
                       if (val === "new") {
                         setEditingCheckId(null);
+                        setLastSavedCheckId(null);
                         setMarkers([]);
                         setDrawingPaths([]);
                         setFuelLevel("");
