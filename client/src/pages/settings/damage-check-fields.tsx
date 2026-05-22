@@ -33,7 +33,7 @@ function autoKeyFromLabel(label: string): string {
   return key.replace(/[^a-zA-Z0-9_]/g, '');
 }
 
-export default function DamageCheckFieldsPage() {
+export default function DamageCheckFieldsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -169,16 +169,18 @@ export default function DamageCheckFieldsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className={embedded ? "p-4 md:p-6" : "container mx-auto p-4 md:p-6 max-w-5xl"}>
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} data-testid="button-back">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
-            </Button>
+            {!embedded && (
+              <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} data-testid="button-back">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+            )}
             <Badge variant="secondary">Admin only</Badge>
           </div>
-          <h1 className="text-2xl font-bold">Damage Check Fields</h1>
+          {!embedded && <h1 className="text-2xl font-bold">Damage Check Fields</h1>}
           <p className="text-sm text-muted-foreground mt-1">
             Edit the checklist used by the interactive damage check and the PDF template editor.
             Changes apply immediately to new checks; existing saved checks keep their original values.

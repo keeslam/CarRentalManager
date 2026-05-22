@@ -31,6 +31,9 @@ import PDFTemplateEditor from "./template-editor";
 import { FileEdit, Star, Trash2, Printer, Eye, ChevronDown, ChevronRight, FileCheck, Image, Plus, X, Edit, Settings as SettingsIcon } from "lucide-react";
 import DamageCheckTemplatesPage from "@/pages/settings/damage-check-templates";
 import DamageCheckTemplateCanvasEditor from "@/pages/settings/damage-check-template-editor";
+import DamageCheckFieldsPage from "@/pages/settings/damage-check-fields";
+import { useAuth } from "@/hooks/use-auth";
+import { UserRole } from "@shared/schema";
 
 export default function DocumentsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -1168,6 +1171,9 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
   const [filterReservation, setFilterReservation] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   // Fetch all damage check documents
   const { data: damageChecks = [] } = useQuery<Document[]>({
@@ -1256,6 +1262,16 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => setFieldsDialogOpen(true)}
+                data-testid="button-edit-damage-check-fields"
+              >
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                Edit Fields
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => setTemplatesDialogOpen(true)}
@@ -1429,6 +1445,21 @@ function DamageCheckManager({ vehicles }: { vehicles: Vehicle[] }) {
             >
               {uploadMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Damage Check Fields Editor — admin-only dialog for the checklist field schema */}
+      <Dialog open={fieldsDialogOpen} onOpenChange={setFieldsDialogOpen}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] h-[90vh] flex flex-col p-0 gap-0" data-testid="dialog-damage-check-fields">
+          <DialogHeader className="px-4 py-2 border-b">
+            <DialogTitle>Damage Check Fields</DialogTitle>
+            <DialogDescription className="sr-only">
+              Edit the checklist fields used by the interactive damage check and PDF template editor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto bg-background">
+            {fieldsDialogOpen && <DamageCheckFieldsPage embedded />}
           </div>
         </DialogContent>
       </Dialog>
