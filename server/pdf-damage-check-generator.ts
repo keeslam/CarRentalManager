@@ -542,6 +542,15 @@ async function generateDamageCheckPDFFromCanvas(
       });
       // Damage type checkboxes underneath
       const types: string[] = Array.isArray(f.damageTypes) ? f.damageTypes : [];
+      // Look up what the staff recorded for this label (may be a single answer
+      // or CSV of damage codes like "LV,RV" / "voor,achter" / "schoon").
+      const recorded = lookupAnswer(title) || '';
+      const recordedSet = new Set(
+        recorded
+          .split(',')
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean),
+      );
       let cx = x;
       const cy = PAGE_H - yTop - fontSize - 4;
       const optSize = Math.max(7, fontSize - 1);
@@ -552,6 +561,20 @@ async function generateDamageCheckPDFFromCanvas(
           width: box, height: box,
           borderColor: rgb(0, 0, 0), borderWidth: 0.5,
         });
+        // Tick the box if this damage type was recorded for this inspection.
+        if (recordedSet.has(String(t).trim().toLowerCase())) {
+          const pad = 1;
+          p.drawLine({
+            start: { x: cx + pad, y: cy - box + pad },
+            end:   { x: cx + box - pad, y: cy - pad },
+            thickness: 0.9, color: rgb(0, 0, 0),
+          });
+          p.drawLine({
+            start: { x: cx + pad, y: cy - pad },
+            end:   { x: cx + box - pad, y: cy - box + pad },
+            thickness: 0.9, color: rgb(0, 0, 0),
+          });
+        }
         p.drawText(t, { x: cx + box + 3, y: cy - box + 2, size: optSize, font, color: rgb(0, 0, 0) });
         cx += box + 4 + font.widthOfTextAtSize(t, optSize) + 8;
       }
@@ -1291,18 +1314,9 @@ export async function generateDamageCheckPDFWithTemplate(
 ): Promise<Buffer> {
   // Canvas-mode short-circuit: ignore the PDF sections template and render
   // directly from the canvas fields stored on the damage check template.
-  const cf = (damageTemplate as any)?.canvasFields;
-  console.log('🧭 [dmg-check] template selected:', {
-    id: (damageTemplate as any)?.id,
-    name: (damageTemplate as any)?.name,
-    isDefault: (damageTemplate as any)?.isDefault,
-    canvasFieldsType: Array.isArray(cf) ? `array(${cf.length})` : typeof cf,
-  });
-  if (damageTemplate && Array.isArray(cf) && cf.length > 0) {
-    console.log('🧭 [dmg-check] → using CANVAS renderer');
+  if (damageTemplate && Array.isArray((damageTemplate as any).canvasFields) && (damageTemplate as any).canvasFields.length > 0) {
     return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData, interactiveDamageCheck);
   }
-  console.log('🧭 [dmg-check] → using legacy SECTION renderer (canvas empty/missing)');
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
   
