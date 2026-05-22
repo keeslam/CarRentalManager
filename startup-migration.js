@@ -367,6 +367,18 @@ async function runMigrations() {
 
     // Canvas-mode field layout for damage check templates (visual editor)
     await addColumnIfNotExists('damage_check_templates', 'canvas_fields', "jsonb NOT NULL DEFAULT '[]'::jsonb");
+
+    // Configurable categories + handover checklist + header/footer text on
+    // damage check templates. These were added after the initial deployment
+    // and must be backfilled on existing production databases or PDF
+    // generation fails with "column does not exist".
+    await addColumnIfNotExists('damage_check_templates', 'categories', "jsonb NOT NULL DEFAULT '[]'::jsonb");
+    await addColumnIfNotExists('damage_check_templates', 'handover_checklist', "jsonb NOT NULL DEFAULT '[]'::jsonb");
+    await addColumnIfNotExists('damage_check_templates', 'header_text', 'text');
+    await addColumnIfNotExists('damage_check_templates', 'footer_text', 'text');
+    await addColumnIfNotExists('damage_check_templates', 'inspection_points', "jsonb NOT NULL DEFAULT '[]'::jsonb");
+    await addColumnIfNotExists('damage_check_templates', 'language', "text NOT NULL DEFAULT 'nl'");
+    await addColumnIfNotExists('damage_check_templates', 'is_default', 'boolean NOT NULL DEFAULT false');
     
     // Add unique index if it doesn't exist
     const blacklistIndexCheck = await db.execute(sql`
