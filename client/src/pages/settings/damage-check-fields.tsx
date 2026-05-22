@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  ArrowLeft, Plus, Trash2, Save, Loader2, ArrowUp, ArrowDown, AlertTriangle,
+  ArrowLeft, Plus, Trash2, Save, Loader2, ArrowUp, ArrowDown, AlertTriangle, Upload, RotateCcw,
 } from "lucide-react";
 import {
   type DamageCheckFieldsConfig,
@@ -44,6 +44,36 @@ export default function DamageCheckFieldsPage({ embedded = false }: { embedded?:
   });
 
   const [config, setConfig] = useState<DamageCheckFieldsConfig>(DEFAULT_DAMAGE_CHECK_FIELDS);
+  const [headerCacheBust, setHeaderCacheBust] = useState(Date.now());
+  const [uploadingHeader, setUploadingHeader] = useState(false);
+
+  const handleHeaderUpload = async (file: File) => {
+    setUploadingHeader(true);
+    try {
+      const fd = new FormData();
+      fd.append('header', file);
+      const res = await fetch('/api/damage-check-fields/header', { method: 'POST', body: fd, credentials: 'include' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Upload failed');
+      setHeaderCacheBust(Date.now());
+      toast({ title: 'Header updated', description: 'New header image uploaded.' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err?.message || 'Could not upload', variant: 'destructive' });
+    } finally {
+      setUploadingHeader(false);
+    }
+  };
+
+  const handleHeaderReset = async () => {
+    if (!confirm('Reset the header back to the bundled default image?')) return;
+    try {
+      const res = await fetch('/api/damage-check-fields/header', { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error('Reset failed');
+      setHeaderCacheBust(Date.now());
+      toast({ title: 'Header reset', description: 'Default header restored.' });
+    } catch (err: any) {
+      toast({ title: 'Reset failed', description: err?.message || 'Could not reset', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => {
     if (data) setConfig(data);
@@ -196,6 +226,50 @@ export default function DamageCheckFieldsPage({ embedded = false }: { embedded?:
       </div>
 
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Header image</CardTitle>
+            <CardDescription>
+              Shown at the top of every page of the generated damage check PDF and in the template editor preview. Use a wide image (recommended ~1000×113px or similar landscape ratio) so it fills the page width cleanly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="border rounded bg-muted/30 p-2">
+              <img
+                src={`/api/damage-check-fields/header?t=${headerCacheBust}`}
+                alt="Current damage check header"
+                className="w-full h-auto block"
+                style={{ maxHeight: 120, objectFit: 'contain' }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Label htmlFor="header-upload" className="inline-flex">
+                <Button asChild variant="outline" disabled={uploadingHeader}>
+                  <span className="cursor-pointer">
+                    {uploadingHeader ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    Upload new header
+                  </span>
+                </Button>
+              </Label>
+              <input
+                id="header-upload"
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleHeaderUpload(f);
+                  e.target.value = '';
+                }}
+                data-testid="input-header-upload"
+              />
+              <Button variant="outline" onClick={handleHeaderReset} data-testid="button-header-reset">
+                <RotateCcw className="h-4 w-4 mr-2" /> Reset to default
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {config.groups.map((group) => (
           <Card key={group.id} data-testid={`group-${group.id}`}>
             <CardHeader>

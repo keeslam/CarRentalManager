@@ -921,6 +921,7 @@ export const checklistGroupDefSchema = z.object({
 
 export const damageCheckFieldsConfigSchema = z.object({
   groups: z.array(checklistGroupDefSchema),
+  headerImagePath: z.string().nullable().optional(),
 });
 
 export type ChecklistFieldDef = z.infer<typeof checklistFieldDefSchema>;

@@ -9660,6 +9660,95 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Damage check header image: serve uploaded one if configured, else fall back
+  // to the bundled default in attached_assets/.
+  const damageCheckHeaderStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = path.join(uploadsDir, 'damage-check');
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(sanitizeFilename(file.originalname)) || '.png';
+      cb(null, `header-${Date.now()}${ext}`);
+    },
+  });
+  const damageCheckHeaderUpload = multer({
+    storage: damageCheckHeaderStorage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: createSecureMulterFilter('image'),
+  });
+
+  app.get("/api/damage-check-fields/header", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      const setting = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      const cfg = setting?.value as any;
+      const customPath = cfg?.headerImagePath as string | undefined;
+      if (customPath) {
+        const absolute = path.isAbsolute(customPath)
+          ? customPath
+          : path.join(process.cwd(), customPath);
+        if (fs.existsSync(absolute)) {
+          return res.sendFile(absolute);
+        }
+      }
+      const fallback = path.join(process.cwd(), 'attached_assets', 'image_1779471993617.png');
+      return res.sendFile(fallback);
+    } catch (e) {
+      res.status(500).json({ message: 'Error loading header image' });
+    }
+  });
+
+  app.post("/api/damage-check-fields/header", requireAuth, requireAdmin, damageCheckHeaderUpload.single('header'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      const relPath = path.relative(process.cwd(), req.file.path);
+      const username = (req.user as any)?.username || 'system';
+      const existing = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      const baseValue = (existing?.value as any) || DEFAULT_DAMAGE_CHECK_FIELDS;
+      // Clean up previous uploaded file if any
+      const prevPath = baseValue?.headerImagePath as string | undefined;
+      if (prevPath) {
+        try {
+          const abs = path.isAbsolute(prevPath) ? prevPath : path.join(process.cwd(), prevPath);
+          if (abs.includes(path.join('uploads', 'damage-check')) && fs.existsSync(abs)) fs.unlinkSync(abs);
+        } catch {}
+      }
+      const newValue = { ...baseValue, headerImagePath: relPath };
+      if (existing) {
+        await storage.updateAppSetting(existing.id, { value: newValue as any, updatedBy: username });
+      } else {
+        await storage.createAppSetting({ key: DAMAGE_CHECK_FIELDS_KEY, value: newValue as any, category: 'damage_check', updatedBy: username } as any);
+      }
+      res.json({ success: true, headerImagePath: relPath });
+    } catch (e) {
+      console.error('Header upload failed:', e);
+      res.status(500).json({ message: 'Error uploading header' });
+    }
+  });
+
+  app.delete("/api/damage-check-fields/header", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const existing = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      if (!existing) return res.json({ success: true });
+      const baseValue = (existing.value as any) || {};
+      const prevPath = baseValue?.headerImagePath as string | undefined;
+      if (prevPath) {
+        try {
+          const abs = path.isAbsolute(prevPath) ? prevPath : path.join(process.cwd(), prevPath);
+          if (abs.includes(path.join('uploads', 'damage-check')) && fs.existsSync(abs)) fs.unlinkSync(abs);
+        } catch {}
+      }
+      const username = (req.user as any)?.username || 'system';
+      const newValue = { ...baseValue, headerImagePath: null };
+      await storage.updateAppSetting(existing.id, { value: newValue as any, updatedBy: username });
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ message: 'Error resetting header' });
+    }
+  });
+
   app.put("/api/damage-check-fields", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const parsed = damageCheckFieldsConfigSchema.safeParse(req.body);
@@ -9683,16 +9772,23 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       const username = (req.user as any)?.username || "system";
       const existing = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      // Preserve headerImagePath if the client didn't send one (it's managed
+      // via the dedicated upload endpoint).
+      const existingHeader = (existing?.value as any)?.headerImagePath;
+      const mergedValue: any = {
+        ...parsed.data,
+        headerImagePath: parsed.data.headerImagePath ?? existingHeader ?? null,
+      };
       if (existing) {
         const updated = await storage.updateAppSetting(existing.id, {
-          value: parsed.data as any,
+          value: mergedValue,
           updatedBy: username,
         });
-        return res.json(updated?.value ?? parsed.data);
+        return res.json(updated?.value ?? mergedValue);
       }
       const created = await storage.createAppSetting({
         key: DAMAGE_CHECK_FIELDS_KEY,
-        value: parsed.data as any,
+        value: mergedValue,
         category: "damage_check",
         description: "Editable checklist fields for the interactive damage check + template editor",
         createdBy: username,

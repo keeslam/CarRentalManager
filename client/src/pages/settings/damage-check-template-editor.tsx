@@ -917,7 +917,7 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
                     onMouseLeave={onCanvasMouseUp}
                   >
                     <img
-                      src="/damage-check-header.png"
+                      src="/api/damage-check-fields/header"
                       alt="Header"
                       style={{
                         position: 'absolute',

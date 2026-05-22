@@ -409,10 +409,24 @@ async function generateDamageCheckPDFFromCanvas(
   // Draw the LAM Groep / BOVAG branded header at the top of every page,
   // matching the paper damage check form. Overlays Datum and Verhuur-
   // contractnummer values on top of the lines in the static image.
+  // Header source: admin-uploaded file (damage_check_fields.headerImagePath)
+  // if present, otherwise the bundled default in attached_assets/.
   try {
-    const headerPath = path.join(process.cwd(), 'attached_assets', 'image_1779471993617.png');
+    let headerPath = path.join(process.cwd(), 'attached_assets', 'image_1779471993617.png');
+    try {
+      const { storage: appStorage } = await import('./storage');
+      const setting = await appStorage.getAppSettingByKey('damage_check_fields');
+      const customPath = (setting?.value as any)?.headerImagePath as string | undefined;
+      if (customPath) {
+        const candidate = path.isAbsolute(customPath) ? customPath : path.join(process.cwd(), customPath);
+        try { await fs.access(candidate); headerPath = candidate; } catch {}
+      }
+    } catch {}
     const headerBytes = await fs.readFile(headerPath);
-    const headerImg = await pdfDoc.embedPng(headerBytes);
+    const isJpeg = headerPath.toLowerCase().endsWith('.jpg') || headerPath.toLowerCase().endsWith('.jpeg');
+    const headerImg = isJpeg
+      ? await pdfDoc.embedJpg(headerBytes)
+      : await pdfDoc.embedPng(headerBytes);
     const margin = 0;
     const headerW = 595;
     const srcW = headerImg.width;
@@ -425,7 +439,7 @@ async function generateDamageCheckPDFFromCanvas(
     // a different aspect ratio still lands the text on the printed lines.
     const sx = headerW / srcW;
     const sy = headerH / srcH;
-    const textSize = Math.max(8, Math.round(headerH * 0.18));
+    const textSize = Math.max(7, Math.round(headerH * 0.12));
     const datumSrcX = 445, datumSrcY = 28;     // top line in source pixels
     const contractSrcX = 445, contractSrcY = 80; // bottom line in source pixels
     for (const pg of pages) {
