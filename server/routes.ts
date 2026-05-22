@@ -11708,9 +11708,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             vehicle.vehicleType || undefined
           );
           
-          let damageTemplate = matchingTemplates && matchingTemplates.length > 0 
-            ? matchingTemplates[0] 
-            : await storage.getDefaultDamageCheckTemplate();
+          let damageTemplate = await pickBestDamageCheckTemplate(matchingTemplates, vehicle);
           
           if (damageTemplate) {
             // Get reservation data
@@ -11833,12 +11831,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         vehicle.vehicleType || undefined
       );
       
-      if (matchingTemplates && matchingTemplates.length > 0) {
-        damageTemplate = matchingTemplates[0];
-      } else {
-        // Fall back to default template
-        damageTemplate = await storage.getDefaultDamageCheckTemplate();
-      }
+      damageTemplate = await pickBestDamageCheckTemplate(matchingTemplates, vehicle);
       
       if (!damageTemplate) {
         return res.status(404).json({ 
