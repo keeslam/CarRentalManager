@@ -1291,9 +1291,18 @@ export async function generateDamageCheckPDFWithTemplate(
 ): Promise<Buffer> {
   // Canvas-mode short-circuit: ignore the PDF sections template and render
   // directly from the canvas fields stored on the damage check template.
-  if (damageTemplate && Array.isArray((damageTemplate as any).canvasFields) && (damageTemplate as any).canvasFields.length > 0) {
+  const cf = (damageTemplate as any)?.canvasFields;
+  console.log('🧭 [dmg-check] template selected:', {
+    id: (damageTemplate as any)?.id,
+    name: (damageTemplate as any)?.name,
+    isDefault: (damageTemplate as any)?.isDefault,
+    canvasFieldsType: Array.isArray(cf) ? `array(${cf.length})` : typeof cf,
+  });
+  if (damageTemplate && Array.isArray(cf) && cf.length > 0) {
+    console.log('🧭 [dmg-check] → using CANVAS renderer');
     return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData, interactiveDamageCheck);
   }
+  console.log('🧭 [dmg-check] → using legacy SECTION renderer (canvas empty/missing)');
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
   
