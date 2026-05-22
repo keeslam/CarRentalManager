@@ -159,6 +159,23 @@ async function generateDamageCheckPDFFromCanvas(
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+  // pdf-lib's standard fonts only support WinAnsi (~Latin-1). Strip or map
+  // characters outside that range so user-typed glyphs like "→" / smart
+  // quotes don't blow up the whole PDF.
+  const sanitizeForWinAnsi = (s: string): string => {
+    if (!s) return s;
+    return s
+      .replace(/→/g, '->')
+      .replace(/←/g, '<-')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      // drop anything still outside WinAnsi (basic Latin + Latin-1 Supp)
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '?');
+  };
+
   // Parse interactive check JSON blobs once.
   const parseJson = (v: any) => {
     if (!v) return null;
@@ -483,7 +500,7 @@ async function generateDamageCheckPDFFromCanvas(
         thickness: 0.7, color: rgb(0, 0, 0),
       });
       // Caption above the line
-      const label = String(f.name || 'Signature');
+      const label = sanitizeForWinAnsi(String(f.name || 'Signature'));
       p.drawText(label, {
         x: x + 2,
         y: PAGE_H - yTop - h + 3,
@@ -500,7 +517,7 @@ async function generateDamageCheckPDFFromCanvas(
         width: box, height: box,
         borderColor: rgb(0, 0, 0), borderWidth: 0.7,
       });
-      const label = String(f.name || '');
+      const label = sanitizeForWinAnsi(String(f.name || ''));
       if (label) {
         p.drawText(label, {
           x: x + box + 4,
@@ -537,7 +554,7 @@ async function generateDamageCheckPDFFromCanvas(
     if (f.type === 'inspection') {
       // Title
       const title = String(f.name || '');
-      p.drawText(title, {
+      p.drawText(sanitizeForWinAnsi(title), {
         x, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0),
       });
       // Damage type checkboxes underneath
@@ -575,7 +592,7 @@ async function generateDamageCheckPDFFromCanvas(
             thickness: 0.9, color: rgb(0, 0, 0),
           });
         }
-        p.drawText(t, { x: cx + box + 3, y: cy - box + 2, size: optSize, font, color: rgb(0, 0, 0) });
+        p.drawText(sanitizeForWinAnsi(String(t)), { x: cx + box + 3, y: cy - box + 2, size: optSize, font, color: rgb(0, 0, 0) });
         cx += box + 4 + font.widthOfTextAtSize(t, optSize) + 8;
       }
       continue;
@@ -619,7 +636,7 @@ async function generateDamageCheckPDFFromCanvas(
         drawX = x - tw;
       }
     }
-    p.drawText(textVal, { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
+    p.drawText(sanitizeForWinAnsi(textVal), { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
   }
 
   // Ensure at least one page
