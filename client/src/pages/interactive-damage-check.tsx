@@ -1767,9 +1767,12 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
 
         {/* Bottom action footer — mirrors the Save / Print buttons from the
             top header so the user doesn't have to scroll back up after
-            finishing the damage check. */}
-        <div className="mt-6 sticky bottom-4 z-20">
-          <Card className="p-4 shadow-lg border-2">
+            finishing the damage check. Rendered as a plain block (not
+            sticky) because this page is hosted inside a Radix Dialog whose
+            transformed positioning breaks `position: sticky` for nested
+            children. The user scrolls to the end of the page to use it. */}
+        <div className="mt-8 pb-4">
+          <Card className="p-4 shadow-lg border-2 border-blue-200 bg-white">
             <div className="flex flex-col sm:flex-row gap-3 justify-end items-stretch sm:items-center">
               <Button
                 variant="outline"
