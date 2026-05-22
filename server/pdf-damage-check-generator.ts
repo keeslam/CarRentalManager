@@ -472,10 +472,15 @@ async function generateDamageCheckPDFFromCanvas(
     const baselineY = PAGE_H - yTop - fontSize;
 
     if (f.type === 'line') {
+      // The editor renders the line as a div with top=yTop and height=h, so
+      // its visual band is yTop..yTop+h. pdf-lib's drawLine centers the
+      // stroke on the given y, so shift down by thickness/2 to match.
+      const thickness = Math.max(0.5, Number(f.height) || 1);
+      const lineY = PAGE_H - yTop - thickness / 2;
       p.drawLine({
-        start: { x, y: PAGE_H - yTop },
-        end: { x: x + (Number(f.width) || 100), y: PAGE_H - yTop },
-        thickness: Math.max(0.5, Number(f.height) || 1),
+        start: { x, y: lineY },
+        end: { x: x + (Number(f.width) || 100), y: lineY },
+        thickness,
         color: rgb(0, 0, 0),
       });
       continue;
@@ -565,8 +570,14 @@ async function generateDamageCheckPDFFromCanvas(
     }
     if (f.type === 'checkbox') {
       const box = Math.max(8, fontSize - 2);
+      // Editor renders the checkbox as an inline-flex with the box vertically
+      // centered next to text whose top sits at yTop + ~2 (padding) and whose
+      // baseline is at yTop + ~2 + 0.78*fontSize. Place the rect so its top
+      // matches the text top and the label uses the shared text baseline.
+      const labelTop = yTop + 2;
+      const rectTop = labelTop + Math.max(0, (fontSize - box) / 2);
       p.drawRectangle({
-        x, y: PAGE_H - yTop - box,
+        x, y: PAGE_H - rectTop - box,
         width: box, height: box,
         borderColor: rgb(0, 0, 0), borderWidth: 0.7,
       });
@@ -574,7 +585,7 @@ async function generateDamageCheckPDFFromCanvas(
       if (label) {
         p.drawText(label, {
           x: x + box + 4,
-          y: PAGE_H - yTop - box + 2,
+          y: PAGE_H - labelTop - fontSize * 0.78,
           size: fontSize,
           font: useFont,
           color: rgb(0, 0, 0),
@@ -606,19 +617,21 @@ async function generateDamageCheckPDFFromCanvas(
         if (matched) effectiveLabel = String(matched.name || '');
       }
       if (effectiveLabel && isDeliveryChecked(effectiveLabel)) {
-        // Draw an X mark
+        // Draw an X mark inside the (possibly-shifted) checkbox rect
         const pad = 1.5;
-        const bx = x, by = PAGE_H - yTop - box;
+        const bx = x, by = PAGE_H - rectTop - box;
         p.drawLine({ start: { x: bx + pad, y: by + pad }, end: { x: bx + box - pad, y: by + box - pad }, thickness: 0.9, color: rgb(0, 0, 0) });
         p.drawLine({ start: { x: bx + pad, y: by + box - pad }, end: { x: bx + box - pad, y: by + pad }, thickness: 0.9, color: rgb(0, 0, 0) });
       }
       continue;
     }
     if (f.type === 'inspection') {
-      // Title
+      // Title — use the same CSS-ascender baseline as text/dynamic fields so
+      // the row lines up with neighbouring labels.
       const title = String(f.name || '');
       p.drawText(sanitizeForWinAnsi(title), {
-        x, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0),
+        x, y: PAGE_H - yTop - 2 - fontSize * 0.78,
+        size: fontSize, font: useFont, color: rgb(0, 0, 0),
       });
       // Damage type checkboxes underneath
       const types: string[] = Array.isArray(f.damageTypes) ? f.damageTypes : [];
@@ -712,10 +725,11 @@ async function generateDamageCheckPDFFromCanvas(
     let drawX = contentLeft;
     if (f.textAlign === 'center') drawX = contentLeft + (contentW - tw) / 2;
     else if (f.textAlign === 'right') drawX = contentLeft + contentW - tw;
-    // Use the full fontSize as the baseline offset — this matches how the
-    // editor's checkboxes/rectangles/diagrams (drawn at raw y) line up with
-    // the inline text label rendered next to them.
-    const drawY = PAGE_H - yTop - PAD_Y - fontSize;
+    // Match the editor's CSS baseline: text top at yTop + PAD_Y, baseline
+    // at yTop + PAD_Y + 0.78*fontSize (Helvetica ascender ratio). Use the
+    // same formula as the checkbox label so text fields and checkbox labels
+    // sit on the SAME row instead of drifting ~5pt apart.
+    const drawY = PAGE_H - yTop - PAD_Y - fontSize * 0.78;
     p.drawText(sanitized, { x: drawX, y: drawY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
 
     // Circle the selected option(s) inside an options field like "ja / nee".
