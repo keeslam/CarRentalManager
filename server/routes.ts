@@ -453,6 +453,18 @@ async function regenerateUnsignedDamageChecksForReservation(
       };
     }
 
+    // Pick up the latest interactive damage check for this reservation so
+    // all ticked checkboxes and recorded answers carry through to the PDF.
+    let latestInteractiveCheck: any = undefined;
+    try {
+      const checks = await storage.getInteractiveDamageChecksByReservation(reservationId);
+      if (checks && checks.length > 0) {
+        latestInteractiveCheck = checks[0]; // storage returns desc(checkDate), so [0] is newest
+      }
+    } catch (e) {
+      console.warn('[damage-check-regen] Could not load interactive check:', (e as Error).message);
+    }
+
     // Generate the new PDF FIRST so failures don't lose the old one.
     const { generateDamageCheckPDFWithTemplate } = await import(
       "./pdf-damage-check-generator"
@@ -461,6 +473,7 @@ async function regenerateUnsignedDamageChecksForReservation(
       vehicleData,
       damageTemplate as any,
       reservationData,
+      latestInteractiveCheck,
     );
 
     // Write the new file to disk in the same convention as the existing endpoint.
@@ -4789,11 +4802,60 @@ export async function registerRoutes(app: Express): Promise<void> {
             console.log(`📝 Generating damage check for reservation ${reservationId} using template ${template.id}`);
             
             const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
-            
+
+            // Build correct vehicle / reservation payloads (the previous code
+            // had them swapped, which prevented all dynamic fields and
+            // checklist answers from rendering on the generated PDF).
+            const damageCheckVehicleData = {
+              brand: vehicle.brand,
+              model: vehicle.model,
+              licensePlate: vehicle.licensePlate,
+              buildYear: vehicle.productionDate || undefined,
+              fuel: fuelLevelReturn || vehicle.fuel || undefined,
+              mileage: mileage,
+            };
+            let damageCheckReservationData: any = undefined;
+            try {
+              const customerForCheck = updatedReservation.customerId
+                ? await storage.getCustomer(updatedReservation.customerId)
+                : null;
+              const startD = new Date(updatedReservation.startDate);
+              const endD = updatedReservation.endDate
+                ? new Date(updatedReservation.endDate)
+                : new Date(startD.getTime() + 7 * 24 * 60 * 60 * 1000);
+              damageCheckReservationData = {
+                contractNumber: (updatedReservation as any).contractNumber || '',
+                customerName: customerForCheck
+                  ? `${(customerForCheck as any).firstName || ''} ${(customerForCheck as any).lastName || ''}`.trim() ||
+                    (customerForCheck as any).name || ''
+                  : '',
+                startDate: format(startD, 'dd-MM-yyyy'),
+                endDate: format(endD, 'dd-MM-yyyy'),
+                rentalDays: Math.max(
+                  1,
+                  Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)),
+                ),
+              };
+            } catch (e) {
+              console.warn('[return-damage-check] Could not build reservation data:', (e as Error).message);
+            }
+            // Pick up the latest interactive damage check so all ticked
+            // checkboxes and recorded answers appear on the PDF.
+            let latestInteractiveCheck: any = undefined;
+            try {
+              const checks = await storage.getInteractiveDamageChecksByReservation(reservationId);
+              if (checks && checks.length > 0) {
+                latestInteractiveCheck = checks[0]; // storage returns desc(checkDate), so [0] is newest
+              }
+            } catch (e) {
+              console.warn('[return-damage-check] Could not load interactive check:', (e as Error).message);
+            }
+
             const damageCheckPdf = await generateDamageCheckPDFWithTemplate(
-              updatedReservation,
+              damageCheckVehicleData,
               template,
-              vehicle
+              damageCheckReservationData,
+              latestInteractiveCheck,
             );
             
             const sanitizedPlate = vehicle.licensePlate.replace(/[^a-zA-Z0-9]/g, '');
@@ -7012,12 +7074,25 @@ export async function registerRoutes(app: Express): Promise<void> {
         };
       }
 
+      // Pick up the latest interactive damage check for this reservation so
+      // all ticked checkboxes and recorded answers carry through to the PDF.
+      let latestInteractiveCheck: any = undefined;
+      try {
+        const checks = await storage.getInteractiveDamageChecksByReservation(reservationId);
+        if (checks && checks.length > 0) {
+          latestInteractiveCheck = checks[0]; // storage returns desc(checkDate), so [0] is newest
+        }
+      } catch (e) {
+        console.warn('[damage-check-generate] Could not load interactive check:', (e as Error).message);
+      }
+
       // Generate damage check PDF
       const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
       const pdfBuffer = await generateDamageCheckPDFWithTemplate(
         vehicleData,
         damageTemplate,
-        reservationData
+        reservationData,
+        latestInteractiveCheck,
       );
 
       // Save the damage check to documents (linked to both reservation and vehicle)
