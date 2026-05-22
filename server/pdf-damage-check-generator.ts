@@ -153,24 +153,118 @@ async function generateDamageCheckPDFFromCanvas(
   vehicle: VehicleData,
   template: any,
   reservationData?: ReservationData,
+  interactiveCheck?: any,
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Parse interactive check JSON blobs once.
+  const parseJson = (v: any) => {
+    if (!v) return null;
+    if (typeof v !== 'string') return v;
+    try { return JSON.parse(v); } catch { return null; }
+  };
+  const checklist = parseJson(interactiveCheck?.checklistData) || {};
+  const checkInterior: Record<string, string> = checklist.interior || {};
+  const checkExterior: Record<string, string> = checklist.exterior || {};
+  const checkDelivery: Record<string, boolean> = checklist.delivery || {};
+
+  // Map the Dutch labels we render on the canvas to the checklist keys saved
+  // by the interactive damage check. This lets us auto-fill answers on the PDF.
+  const interiorKeyByLabel: Record<string, string> = {
+    'binnenzijde auto': 'carInterior',
+    'matten': 'floorMats',
+    'bekleding': 'upholstery',
+    'asbak': 'ashtray',
+    'reservewiel': 'spareWheel',
+    'krik': 'jack',
+    'wielsleutel': 'wheelBrace',
+    // Note: 'Ruitschade' and 'Hoofdsteunen' have no exact 1:1 field in the
+    // interactive check's interior schema, so they're intentionally not mapped
+    // here — the options text will still render unfilled. 'matKit' / 'mainKeys'
+    // in the interactive check are best-effort fallbacks if a template uses
+    // those English-ish labels.
+    'mat kit': 'matKit',
+    'main keys': 'mainKeys',
+  };
+  const exteriorKeyByLabel: Record<string, string> = {
+    'buitenzijde auto': 'carExterior',
+    'wieldoppen': 'hubcaps',
+    'kentekenplaten': 'licensePlates',
+    'spiegelkap links': 'mirrorCapsLeft',
+    'spiegelkap rechts': 'mirrorCapsRight',
+    'spiegelglas l+r': 'mirrorGlassLeftRight',
+    'antenne': 'antenna',
+    'ruitenwisser': 'wiperBlade',
+    'deurvangers': 'mudguards',
+    'schuifdeur (bus)': 'slidingDoorBus',
+    'werkende sloten': 'indicatorSlots',
+    'mistlampen voor': 'fogLights',
+  };
+  const deliveryKeyByLabel: Record<string, string> = {
+    'olie - water': 'oilWater',
+    'ruitenproeiervloeistof': 'washerFluid',
+    'verlichting': 'lighting',
+    'bandenspanning incl. reservewiel': 'tireInflation',
+    'kachelfan': 'fanBelt',
+    'hoedenplank': 'engineBoard',
+    'ijskrabber': 'jackKnife',
+    'gaan alle deuren open': 'allDoorsOpen',
+    'kentekenpapieren (eventueel kopie)': 'licensePlatePapers',
+    'geldige groene kaart': 'validGreenCard',
+    'europees schadeformulier': 'europeanDamageForm',
+  };
+  const lookupAnswer = (label: string): string | null => {
+    const key = label.trim().toLowerCase();
+    if (interiorKeyByLabel[key] && checkInterior[interiorKeyByLabel[key]]) return checkInterior[interiorKeyByLabel[key]];
+    if (exteriorKeyByLabel[key] && checkExterior[exteriorKeyByLabel[key]]) return checkExterior[exteriorKeyByLabel[key]];
+    return null;
+  };
+  const isDeliveryChecked = (label: string): boolean => {
+    const key = label.trim().toLowerCase();
+    return deliveryKeyByLabel[key] ? !!checkDelivery[deliveryKeyByLabel[key]] : false;
+  };
+
+  // Pre-embed signatures from the interactive check (base64 PNG data URLs).
+  const embedDataUrl = async (dataUrl: string | null | undefined) => {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    try {
+      const m = dataUrl.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+      if (!m) return null;
+      const bytes = Buffer.from(m[2], 'base64');
+      return m[1].toLowerCase().startsWith('png')
+        ? await pdfDoc.embedPng(bytes)
+        : await pdfDoc.embedJpg(bytes);
+    } catch (e) {
+      console.warn('Signature embed failed:', (e as Error).message);
+      return null;
+    }
+  };
+  const renterSigImg = await embedDataUrl(interactiveCheck?.renterSignature);
+  const customerSigImg = await embedDataUrl(interactiveCheck?.customerSignature);
+  const annotatedDiagramImg = await embedDataUrl(interactiveCheck?.diagramWithAnnotations);
+
+  // Override vehicle values from the interactive check (these reflect what the
+  // staff member actually recorded at pickup/return time).
+  const checkMileage = interactiveCheck?.mileage ?? vehicle.mileage;
+  const checkFuel = interactiveCheck?.fuelLevel ?? vehicle.fuel;
+  const checkNotes = interactiveCheck?.notes ?? '';
 
   const dynVals: Record<string, string> = {
     licensePlate: vehicle.licensePlate ? formatLicensePlate(vehicle.licensePlate) : '',
     brand: vehicle.brand || '',
     model: vehicle.model || '',
     buildYear: vehicle.buildYear || '',
-    fuel: vehicle.fuel || '',
-    currentMileage: vehicle.mileage ? String(vehicle.mileage) : '',
+    fuel: checkFuel || '',
+    currentMileage: checkMileage ? String(checkMileage) : '',
     customerName: reservationData?.customerName || '',
     contractNumber: reservationData?.contractNumber || '',
     startDate: reservationData?.startDate || '',
     endDate: reservationData?.endDate || '',
     rentalDays: reservationData?.rentalDays ? String(reservationData.rentalDays) : '',
     currentDate: new Date().toLocaleDateString('en-GB'),
+    notes: checkNotes || '',
   };
 
   const fields: any[] = Array.isArray(template.canvasFields) ? template.canvasFields : [];
@@ -249,8 +343,11 @@ async function generateDamageCheckPDFFromCanvas(
     if (f.type === 'diagram') {
       const w = Number(f.width) || 400;
       const h = Number(f.height) || 220;
+      // Prefer the marked-up diagram from the interactive check (it bakes in
+      // damage markers/drawing paths). Fall back to explicit template, then
+      // the auto-matched fallback.
       const img = f.diagramTemplateId ? diagramCache.get(Number(f.diagramTemplateId)) : null;
-      const useImg = img || fallbackDiagram;
+      const useImg = annotatedDiagramImg || img || fallbackDiagram;
       if (useImg) {
         // Fit-contain inside the box, preserving aspect ratio
         const iw = useImg.width;
@@ -290,6 +387,25 @@ async function generateDamageCheckPDFFromCanvas(
     if (f.type === 'signature') {
       const w = Number(f.width) || 200;
       const h = Number(f.height) || 40;
+      // If the interactive check captured a signature image, draw it inside
+      // the box. Pick renter vs customer based on the field's name.
+      const lname = String(f.name || '').toLowerCase();
+      let sigImg: any = null;
+      if (lname.includes('verhuurder') || lname.includes('renter') || lname.includes('staff')) {
+        sigImg = renterSigImg;
+      } else if (lname.includes('huurder') || lname.includes('customer') || lname.includes('klant')) {
+        sigImg = customerSigImg;
+      }
+      if (sigImg) {
+        const iw = sigImg.width;
+        const ih = sigImg.height;
+        const scale = Math.min(w / iw, h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = x + (w - dw) / 2;
+        const dy = PAGE_H - yTop - h + (h - dh) / 2;
+        p.drawImage(sigImg, { x: dx, y: dy, width: dw, height: dh });
+      }
       // Underline at the bottom of the box
       p.drawLine({
         start: { x, y: PAGE_H - yTop - h },
@@ -324,6 +440,28 @@ async function generateDamageCheckPDFFromCanvas(
           color: rgb(0, 0, 0),
         });
       }
+      // Auto-tick the box if this label matches a checked delivery item.
+      // Also handles the layout where the label sits in a SEPARATE text field
+      // immediately to the right of an empty-named checkbox — we look for any
+      // text field whose x is within ~30pt to the right at the same y.
+      let effectiveLabel = label;
+      if (!effectiveLabel) {
+        const sibling = fields.find((g: any) =>
+          g !== f && g.type === 'text'
+          && (Number(g.page) || 1) === (Number(f.page) || 1)
+          && Math.abs((Number(g.y) || 0) - yTop) < 3
+          && (Number(g.x) || 0) - x > 0
+          && (Number(g.x) || 0) - x < 40,
+        );
+        if (sibling) effectiveLabel = String(sibling.name || '');
+      }
+      if (effectiveLabel && isDeliveryChecked(effectiveLabel)) {
+        // Draw an X mark
+        const pad = 1.5;
+        const bx = x, by = PAGE_H - yTop - box;
+        p.drawLine({ start: { x: bx + pad, y: by + pad }, end: { x: bx + box - pad, y: by + box - pad }, thickness: 0.9, color: rgb(0, 0, 0) });
+        p.drawLine({ start: { x: bx + pad, y: by + box - pad }, end: { x: bx + box - pad, y: by + pad }, thickness: 0.9, color: rgb(0, 0, 0) });
+      }
       continue;
     }
     if (f.type === 'inspection') {
@@ -353,6 +491,27 @@ async function generateDamageCheckPDFFromCanvas(
     let textVal = String(f.name || '');
     if (f.type === 'dynamic') {
       textVal = dynVals[String(f.source || '')] ?? `{{${f.source || ''}}}`;
+    } else if (f.type === 'text') {
+      // If this text field is a checklist label/options pair, append the
+      // recorded answer (e.g. "schoon / vuil  → schoon"). We try the
+      // immediate-left sibling text as the label, falling back to this field's
+      // own name.
+      const opts = textVal;
+      // Detect "options" text by presence of "/" and short length; not perfect
+      // but safe — we only append if we find a matching answer.
+      if (opts.includes('/')) {
+        // Find a text field to the left at the same y serving as label.
+        const sibling = fields.find((g: any) =>
+          g !== f && g.type === 'text'
+          && (Number(g.page) || 1) === (Number(f.page) || 1)
+          && Math.abs((Number(g.y) || 0) - yTop) < 3
+          && (Number(f.x) || 0) - (Number(g.x) || 0) > 0
+          && (Number(f.x) || 0) - (Number(g.x) || 0) < 200,
+        );
+        const labelStr = sibling ? String(sibling.name || '') : '';
+        const ans = lookupAnswer(labelStr);
+        if (ans) textVal = `${opts}   →  ${ans}`;
+      }
     }
     let drawX = x;
     if (f.textAlign === 'center' || f.textAlign === 'right') {
@@ -1063,7 +1222,7 @@ export async function generateDamageCheckPDFWithTemplate(
   // Canvas-mode short-circuit: ignore the PDF sections template and render
   // directly from the canvas fields stored on the damage check template.
   if (damageTemplate && Array.isArray((damageTemplate as any).canvasFields) && (damageTemplate as any).canvasFields.length > 0) {
-    return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData);
+    return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData, interactiveDamageCheck);
   }
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);
