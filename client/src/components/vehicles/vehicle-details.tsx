@@ -20,7 +20,7 @@ import { InlineDocumentUpload } from "@/components/documents/inline-document-upl
 import { QuickStatusChangeButton } from "@/components/vehicles/quick-status-change-button";
 import { CustomerViewDialog } from "@/components/customers/customer-view-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1753,23 +1753,28 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               </div>
             </CardHeader>
             <CardContent>
-              {/* Interactive Damage Checks Section */}
-              {interactiveDamageChecks && interactiveDamageChecks.length > 0 && (
-                <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-blue-900">Interactive Damage Checks</h3>
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        setEditingCheckId(null);
-                        setInteractiveDamageCheckDialogOpen(true);
-                      }}
-                      data-testid="button-new-damage-check"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Check
-                    </Button>
+              {/* Interactive Damage Checks Section — always visible so staff
+                  can create the first check from this page. */}
+              <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-blue-900">Interactive Damage Checks</h3>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingCheckId(null);
+                      setInteractiveDamageCheckDialogOpen(true);
+                    }}
+                    data-testid="button-new-damage-check"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Check
+                  </Button>
+                </div>
+                {!interactiveDamageChecks || interactiveDamageChecks.length === 0 ? (
+                  <div className="text-sm text-blue-700/70 italic">
+                    No damage checks recorded for this vehicle yet.
                   </div>
+                ) : (
                   <div className="space-y-3">
                     {interactiveDamageChecks.map((check: any) => (
                       <div key={check.id} className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
@@ -1868,8 +1873,8 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               
               {/* Document Categories */}
               <div className="mb-6">
@@ -3325,6 +3330,13 @@ export function VehicleDetails({ vehicleId, inDialogContext = false, onClose }: 
               
               invalidateByPrefix(`/api/interactive-damage-checks/vehicle/${vehicleId}`);
               invalidateByPrefix(`/api/vehicles/${vehicleId}`);
+              // Active refetch so the vehicle log updates immediately, and
+              // also nudge any reservation-detail page that may be open with
+              // this check's reservationId visible.
+              queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${vehicleId}`], refetchType: 'active' });
+              if (damageCheckToDelete?.reservationId) {
+                queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/reservation/${damageCheckToDelete.reservationId}`], refetchType: 'active' });
+              }
               
               toast({ 
                 title: "Damage Check Deleted", 

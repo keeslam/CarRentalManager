@@ -329,6 +329,13 @@ export default function ReservationCalendarPage() {
       // Refetch damage checks and documents
       refetchDamageChecks();
       refetchDocuments();
+      // Also actively refresh the per-vehicle log so other open views update.
+      if (selectedReservation?.vehicleId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${selectedReservation.vehicleId}`], refetchType: 'active' });
+      }
+      if (selectedReservation?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/reservation/${selectedReservation.id}`], refetchType: 'active' });
+      }
     } catch (error) {
       console.error('Error deleting damage check:', error);
       toast({

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle, type Reservation, type DamageCheckFieldsConfig, DEFAULT_DAMAGE_CHECK_FIELDS } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
-import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
 import { VehicleSelector } from "@/components/ui/vehicle-selector";
 import { ReservationSelector } from "@/components/ui/reservation-selector";
@@ -1047,6 +1047,14 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
       invalidateRelatedQueries('reservations');
       invalidateRelatedQueries('vehicles');
       invalidateByPrefix('/api/interactive-damage-checks');
+      // Active refetch so the vehicle-details and reservation-detail logs
+      // update immediately if they're currently visible.
+      if (selectedVehicleId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/vehicle/${selectedVehicleId}`], refetchType: 'active' });
+      }
+      if (selectedReservationId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/interactive-damage-checks/reservation/${selectedReservationId}`], refetchType: 'active' });
+      }
 
       if (onClose) {
         onClose();

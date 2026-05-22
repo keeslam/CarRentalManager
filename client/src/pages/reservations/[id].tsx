@@ -8,7 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { formatDate, formatCurrency, formatLicensePlate } from "@/lib/format-utils";
 import { Reservation, Vehicle, Customer } from "@shared/schema";
 import { differenceInDays, parseISO } from "date-fns";
-import { Calendar, List, ArrowLeft, Trash2, Wrench, Car, ArrowRightLeft, CheckCircle } from "lucide-react";
+import { Calendar, List, ArrowLeft, Trash2, Wrench, Car, ArrowRightLeft, CheckCircle, ClipboardCheck, FileText } from "lucide-react";
+import { format } from "date-fns";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,12 @@ export default function ReservationDetails() {
   // Fetch reservation details
   const { data: reservation, isLoading, error } = useQuery<Reservation>({
     queryKey: [`/api/reservations/${id}`],
+  });
+
+  // Fetch interactive damage checks linked to this reservation
+  const { data: damageChecks = [] } = useQuery<any[]>({
+    queryKey: [`/api/interactive-damage-checks/reservation/${id}`],
+    enabled: !!id,
   });
   
   // Delete reservation mutation
@@ -504,7 +511,7 @@ export default function ReservationDetails() {
             <CardTitle>Documents & Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Damage check document */}
+            {/* Damage check document (legacy uploaded file) */}
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-2">Damage Check</h3>
               {reservation.damageCheckPath ? (
@@ -515,13 +522,7 @@ export default function ReservationDetails() {
                   className="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50"
                 >
                   <div className="bg-primary-100 text-primary-800 p-2 rounded-md mr-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" x2="8" y1="13" y2="13"/>
-                      <line x1="16" x2="8" y1="17" y2="17"/>
-                      <line x1="10" x2="8" y1="9" y2="9"/>
-                    </svg>
+                    <FileText className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">View Damage Check</p>
@@ -531,6 +532,55 @@ export default function ReservationDetails() {
               ) : (
                 <div className="p-3 border border-gray-200 border-dashed rounded-md bg-gray-50 text-gray-500 text-sm">
                   No damage check document attached
+                </div>
+              )}
+            </div>
+
+            {/* Interactive damage check log */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                <ClipboardCheck className="h-4 w-4" />
+                Damage Check Log
+              </h3>
+              {damageChecks.length > 0 ? (
+                <div className="space-y-2">
+                  {damageChecks.map((check) => (
+                    <div
+                      key={check.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-md bg-white"
+                      data-testid={`damage-check-row-${check.id}`}
+                    >
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant={check.checkType === 'pickup' ? 'default' : 'secondary'} className="text-xs">
+                            {check.checkType === 'pickup' ? 'Pickup' : 'Return'}
+                          </Badge>
+                          <span className="text-sm text-gray-700">
+                            {check.checkDate ? format(new Date(check.checkDate), 'PP') : (check.createdAt ? format(new Date(check.createdAt), 'PP') : '—')}
+                          </span>
+                          {check.completedBy && (
+                            <span className="text-xs text-gray-500">by {check.completedBy}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-3 text-xs text-gray-500">
+                          {check.mileage && <span>Mileage: {Number(check.mileage).toLocaleString()} km</span>}
+                          {check.fuelLevel && <span>Fuel: {check.fuelLevel}</span>}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/api/interactive-damage-checks/${check.id}/pdf`, '_blank')}
+                        data-testid={`button-damage-check-pdf-${check.id}`}
+                      >
+                        View PDF
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 border border-gray-200 border-dashed rounded-md bg-gray-50 text-gray-500 text-sm">
+                  No interactive damage checks recorded for this reservation yet.
                 </div>
               )}
             </div>
