@@ -1764,6 +1764,50 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
             )}
           </Card>
         </div>
+
+        {/* Bottom action footer — mirrors the Save / Print buttons from the
+            top header so the user doesn't have to scroll back up after
+            finishing the damage check. */}
+        <div className="mt-6 sticky bottom-4 z-20">
+          <Card className="p-4 shadow-lg border-2">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end items-stretch sm:items-center">
+              <Button
+                variant="outline"
+                onClick={() => onClose ? onClose() : navigate('/documents')}
+                data-testid="button-close-footer"
+                className="sm:w-auto"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const id = lastSavedCheckId ?? editingCheckId;
+                  if (!id) return;
+                  window.open(`/api/interactive-damage-checks/${id}/pdf`, '_blank');
+                }}
+                disabled={isSaving || !(lastSavedCheckId ?? editingCheckId)}
+                data-testid="button-print-check-footer"
+                title={!(lastSavedCheckId ?? editingCheckId) ? 'Save the check first to enable printing' : 'Open the generated PDF in a new tab to print'}
+                className="sm:w-auto"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print PDF
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || !selectedVehicleId || !diagramTemplate}
+                data-testid="button-save-check-footer"
+                className="sm:w-auto"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save Check'}
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );
