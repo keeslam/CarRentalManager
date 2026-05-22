@@ -378,6 +378,43 @@ async function cleanupSupersededDamageCheckVersions(
  * Must be invoked through `scheduleReservationPdfRegeneration` to ensure
  * per-reservation serialization. Errors are logged and swallowed.
  */
+/**
+ * Pick the best damage check template from a list returned by
+ * `getDamageCheckTemplatesByVehicle`. The storage method returns templates
+ * whose vehicle attributes match OR are NULL (generic), sorted by name —
+ * which means an empty unfinished template can shadow the real default.
+ *
+ * Preference order:
+ *   1. Templates with non-empty canvasFields (i.e. an actual drawn layout)
+ *      that exactly match brand+model+type.
+ *   2. The default template, if it has canvasFields.
+ *   3. Any template with canvasFields.
+ *   4. The first matching template (legacy behaviour).
+ *   5. The default template as a hard fallback.
+ */
+async function pickBestDamageCheckTemplate(
+  matching: any[] | undefined,
+  vehicle: { brand?: string | null; model?: string | null; vehicleType?: string | null },
+): Promise<any | undefined> {
+  const list = Array.isArray(matching) ? matching : [];
+  const hasContent = (t: any) =>
+    Array.isArray(t?.canvasFields) && t.canvasFields.length > 0;
+  const exact = list.find(
+    (t) =>
+      hasContent(t) &&
+      t.vehicleMake === vehicle.brand &&
+      t.vehicleModel === vehicle.model &&
+      (vehicle.vehicleType ? t.vehicleType === vehicle.vehicleType : true),
+  );
+  if (exact) return exact;
+  const defaultWithContent = list.find((t) => t.isDefault && hasContent(t));
+  if (defaultWithContent) return defaultWithContent;
+  const anyWithContent = list.find(hasContent);
+  if (anyWithContent) return anyWithContent;
+  if (list.length > 0) return list[0];
+  return await storage.getDefaultDamageCheckTemplate();
+}
+
 async function regenerateUnsignedDamageChecksForReservation(
   reservationId: number,
   username: string | null,
@@ -404,10 +441,7 @@ async function regenerateUnsignedDamageChecksForReservation(
       vehicle.model,
       vehicle.vehicleType || undefined,
     );
-    const damageTemplate =
-      (matchingTemplates && matchingTemplates.length > 0)
-        ? matchingTemplates[0]
-        : await storage.getDefaultDamageCheckTemplate();
+    const damageTemplate = await pickBestDamageCheckTemplate(matchingTemplates, vehicle);
 
     if (!damageTemplate) {
       console.warn(
@@ -11475,9 +11509,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             vehicle.vehicleType || undefined
           );
           
-          let damageTemplate = matchingTemplates && matchingTemplates.length > 0 
-            ? matchingTemplates[0] 
-            : await storage.getDefaultDamageCheckTemplate();
+          let damageTemplate = await pickBestDamageCheckTemplate(matchingTemplates, vehicle);
           
           if (damageTemplate) {
             // Get reservation data
