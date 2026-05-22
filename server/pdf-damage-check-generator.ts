@@ -406,6 +406,45 @@ async function generateDamageCheckPDFFromCanvas(
     }
   }
 
+  // Draw the LAM Groep / BOVAG branded header at the top of every page,
+  // matching the paper damage check form. Overlays Datum and Verhuur-
+  // contractnummer values on top of the lines in the static image.
+  try {
+    const headerPath = path.join(process.cwd(), 'attached_assets', 'image_1779471993617.png');
+    const headerBytes = await fs.readFile(headerPath);
+    const headerImg = await pdfDoc.embedPng(headerBytes);
+    const margin = 10;
+    const headerW = 595 - margin * 2;
+    const srcW = headerImg.width;
+    const srcH = headerImg.height;
+    const headerH = headerW * (srcH / srcW);
+    const headerYBottom = PAGE_H - margin - headerH;
+    const dateStr = new Date().toLocaleDateString('en-GB');
+    const contractStr = reservationData?.contractNumber || '';
+    // Normalize overlay coords against the actual source image dimensions so
+    // a different aspect ratio still lands the text on the printed lines.
+    const sx = headerW / srcW;
+    const sy = headerH / srcH;
+    const textSize = Math.max(8, Math.round(headerH * 0.18));
+    const datumSrcX = 445, datumSrcY = 28;     // top line in source pixels
+    const contractSrcX = 445, contractSrcY = 80; // bottom line in source pixels
+    for (const pg of pages) {
+      pg.drawImage(headerImg, { x: margin, y: headerYBottom, width: headerW, height: headerH });
+      pg.drawText(sanitizeForWinAnsi(dateStr), {
+        x: margin + datumSrcX * sx,
+        y: headerYBottom + headerH - datumSrcY * sy - textSize,
+        size: textSize, font, color: rgb(0, 0, 0),
+      });
+      pg.drawText(sanitizeForWinAnsi(contractStr), {
+        x: margin + contractSrcX * sx,
+        y: headerYBottom + headerH - contractSrcY * sy - textSize,
+        size: textSize, font, color: rgb(0, 0, 0),
+      });
+    }
+  } catch (e) {
+    console.warn('Damage check header embed failed:', (e as Error).message);
+  }
+
   for (const f of fields) {
     const p = pages[(Number(f.page) || 1) - 1];
     if (!p) continue;
@@ -646,9 +685,10 @@ async function generateDamageCheckPDFFromCanvas(
         }
       }
     }
+    const sanitized = sanitizeForWinAnsi(textVal);
     let drawX = x;
     if (f.textAlign === 'center' || f.textAlign === 'right') {
-      const tw = useFont.widthOfTextAtSize(textVal, fontSize);
+      const tw = useFont.widthOfTextAtSize(sanitized, fontSize);
       const w = Number(f.width) || 0;
       if (w > 0) {
         if (f.textAlign === 'center') drawX = x + (w - tw) / 2;
@@ -659,7 +699,6 @@ async function generateDamageCheckPDFFromCanvas(
         drawX = x - tw;
       }
     }
-    const sanitized = sanitizeForWinAnsi(textVal);
     p.drawText(sanitized, { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
 
     // Circle the selected option(s) inside an options field like "ja / nee".
