@@ -11657,14 +11657,6 @@ export async function registerRoutes(app: Express): Promise<void> {
               uploadedBy: user ? user.username : null,
             });
 
-            // A brand-new active PDF was just created — purge any superseded
-            // "Edited (Previous Version)" entries so old files don't pile up.
-            if (created.checkType === 'pickup' || created.checkType === 'return') {
-              await cleanupSupersededDamageCheckVersions(
-                created.reservationId,
-                created.checkType,
-              );
-            }
           }
         }
       } catch (pdfError) {
@@ -11857,18 +11849,6 @@ export async function registerRoutes(app: Express): Promise<void> {
               uploadedBy: user ? user.username : null,
             });
 
-            // A fresh active PDF was just created — purge prior superseded
-            // "Edited (Previous Version)" entries for this reservation+type
-            // so old files don't accumulate on disk or in the documents list.
-            if (
-              updated.reservationId &&
-              (updated.checkType === 'pickup' || updated.checkType === 'return')
-            ) {
-              await cleanupSupersededDamageCheckVersions(
-                updated.reservationId,
-                updated.checkType,
-              );
-            }
           }
         }
       } catch (pdfError) {
@@ -11989,12 +11969,30 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.delete("/api/interactive-damage-checks/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+
+      // Capture metadata BEFORE deletion so we can also clean up any preserved
+      // "Edited (Previous Version)" PDFs that belong to the same
+      // reservation+checkType lineage. Storage.deleteInteractiveDamageCheck
+      // only removes the currently-active PDF document.
+      const existing = await storage.getInteractiveDamageCheck(id);
+
       const deleted = await storage.deleteInteractiveDamageCheck(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Damage check not found" });
       }
-      
+
+      if (
+        existing &&
+        existing.reservationId &&
+        (existing.checkType === "pickup" || existing.checkType === "return")
+      ) {
+        await cleanupSupersededDamageCheckVersions(
+          existing.reservationId,
+          existing.checkType,
+        );
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting interactive damage check:", error);
