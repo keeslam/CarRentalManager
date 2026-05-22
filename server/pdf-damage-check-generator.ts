@@ -243,15 +243,22 @@ async function generateDamageCheckPDFFromCanvas(
     'geldige groene kaart': 'validGreenCard',
     'europees schadeformulier': 'europeanDamageForm',
   };
+  // Multi-select chips in the interactive damage check are stored as CSV
+  // (e.g. "LV,RV"). Normalize whitespace so the PDF shows "LV, RV".
+  const formatAnswer = (v: string | null | undefined): string | null => {
+    if (!v) return null;
+    if (!v.includes(',')) return v;
+    return v.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+  };
   const lookupAnswer = (label: string): string | null => {
     const key = normalize(label);
-    if (interiorKeyByLabel[key] && checkInterior[interiorKeyByLabel[key]]) return checkInterior[interiorKeyByLabel[key]];
-    if (exteriorKeyByLabel[key] && checkExterior[exteriorKeyByLabel[key]]) return checkExterior[exteriorKeyByLabel[key]];
+    if (interiorKeyByLabel[key] && checkInterior[interiorKeyByLabel[key]]) return formatAnswer(checkInterior[interiorKeyByLabel[key]]);
+    if (exteriorKeyByLabel[key] && checkExterior[exteriorKeyByLabel[key]]) return formatAnswer(checkExterior[exteriorKeyByLabel[key]]);
     // Legacy fallback: historical Dutch labels on older templates.
     const li = legacyInteriorAliases[key];
-    if (li && checkInterior[li]) return checkInterior[li];
+    if (li && checkInterior[li]) return formatAnswer(checkInterior[li]);
     const le = legacyExteriorAliases[key];
-    if (le && checkExterior[le]) return checkExterior[le];
+    if (le && checkExterior[le]) return formatAnswer(checkExterior[le]);
     return null;
   };
   const isDeliveryChecked = (label: string): boolean => {

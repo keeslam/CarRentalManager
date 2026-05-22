@@ -1508,7 +1508,9 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           </Card>
         )}
 
-        {/* Inspection Checklist - Full Width (schema-driven) */}
+        {/* Inspection Checklist — paper-style multi-select chips.
+            Stored value is a CSV (e.g. "LV,RV") so legacy single-value strings
+            like "schoon" or "ja" still load and the PDF renders them as-is. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           {fieldsConfig.groups.map((group) => (
             <Card key={group.id} className="p-4">
@@ -1516,43 +1518,68 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
               <div className="space-y-3 text-sm">
                 {group.fields.map((field) => {
                   if (field.inputType === 'checkbox') {
+                    const checked = !!checklistItems[group.id]?.[field.key];
                     return (
-                      <div key={field.key} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={!!checklistItems[group.id]?.[field.key]}
-                          onChange={(e) => setChecklistItems({
-                            ...checklistItems,
-                            [group.id]: { ...checklistItems[group.id], [field.key]: e.target.checked },
-                          })}
-                          className="w-4 h-4"
-                          data-testid={`checkbox-${group.id}-${field.key}`}
-                        />
+                      <button
+                        key={field.key}
+                        type="button"
+                        onClick={() => setChecklistItems({
+                          ...checklistItems,
+                          [group.id]: { ...checklistItems[group.id], [field.key]: !checked },
+                        })}
+                        className={`w-full flex items-center gap-2 px-2 py-2 rounded border text-left transition-colors ${
+                          checked ? 'bg-blue-50 border-blue-500' : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                        data-testid={`checkbox-${group.id}-${field.key}`}
+                      >
+                        <span className={`inline-flex items-center justify-center w-5 h-5 border-2 rounded ${
+                          checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-400'
+                        }`}>
+                          {checked && (
+                            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="2 6 5 9 10 3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
                         <span>{field.label}</span>
-                      </div>
+                      </button>
                     );
                   }
-                  // select
-                  const value = (checklistItems[group.id]?.[field.key] as string) || '';
+                  // Multi-select chip group — tap to toggle, like circling options on paper.
+                  const raw = (checklistItems[group.id]?.[field.key] as string) || '';
+                  const selected = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+                  const toggle = (opt: string) => {
+                    const next = selected.includes(opt)
+                      ? selected.filter(o => o !== opt)
+                      : [...selected, opt];
+                    setChecklistItems({
+                      ...checklistItems,
+                      [group.id]: { ...checklistItems[group.id], [field.key]: next.join(',') },
+                    });
+                  };
                   return (
-                    <div key={field.key} className="flex items-center justify-between gap-2">
-                      <span className="flex-1">{field.label}</span>
-                      <Select
-                        value={value}
-                        onValueChange={(val) => setChecklistItems({
-                          ...checklistItems,
-                          [group.id]: { ...checklistItems[group.id], [field.key]: val },
+                    <div key={field.key} className="space-y-1.5">
+                      <div className="font-medium text-gray-700">{field.label}</div>
+                      <div className="flex flex-wrap gap-1.5" data-testid={`chips-${group.id}-${field.key}`}>
+                        {field.options.map((opt) => {
+                          const isOn = selected.includes(opt);
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => toggle(opt)}
+                              className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                                isOn
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                              data-testid={`chip-${group.id}-${field.key}-${opt}`}
+                            >
+                              {opt}
+                            </button>
+                          );
                         })}
-                      >
-                        <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-${group.id}-${field.key}`}>
-                          <SelectValue placeholder="select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      </div>
                     </div>
                   );
                 })}
