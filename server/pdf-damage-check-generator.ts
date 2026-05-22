@@ -154,6 +154,7 @@ async function generateDamageCheckPDFFromCanvas(
   template: any,
   reservationData?: ReservationData,
   interactiveCheck?: any,
+  inspectorName?: string,
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -352,6 +353,7 @@ async function generateDamageCheckPDFFromCanvas(
     rentalDays: reservationData?.rentalDays ? String(reservationData.rentalDays) : '',
     currentDate: new Date().toLocaleDateString('en-GB'),
     notes: checkNotes || '',
+    inspectorName: inspectorName || '',
   };
 
   const fields: any[] = Array.isArray(template.canvasFields) ? template.canvasFields : [];
@@ -1459,12 +1461,13 @@ export async function generateDamageCheckPDFWithTemplate(
   vehicle: VehicleData,
   damageTemplate: DamageCheckTemplate,
   reservationData?: ReservationData,
-  interactiveDamageCheck?: any
+  interactiveDamageCheck?: any,
+  inspectorName?: string,
 ): Promise<Buffer> {
   // Canvas-mode short-circuit: ignore the PDF sections template and render
   // directly from the canvas fields stored on the damage check template.
   if (damageTemplate && Array.isArray((damageTemplate as any).canvasFields) && (damageTemplate as any).canvasFields.length > 0) {
-    return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData, interactiveDamageCheck);
+    return generateDamageCheckPDFFromCanvas(vehicle, damageTemplate, reservationData, interactiveDamageCheck, inspectorName);
   }
   // Fetch the default PDF template
   const [pdfTemplate] = await db.select().from(damageCheckPdfTemplates).where(eq(damageCheckPdfTemplates.isDefault, true)).limit(1);

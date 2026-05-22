@@ -11938,6 +11938,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       const { generateDamageCheckPDFWithTemplate } = await import('./pdf-damage-check-generator');
       
       // Generate PDF using custom template with vehicle data and interactive check data
+      // Pull the logged-in employee's name so the "Controle door" (inspector)
+      // field on the PDF auto-populates with whoever is generating the check.
+      const inspectorName = (req.user as any)?.fullName || (req.user as any)?.username || '';
+
       const pdfBuffer = await generateDamageCheckPDFWithTemplate(
         {
           brand: vehicle.brand,
@@ -11949,7 +11953,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         },
         damageTemplate,
         reservationData,
-        check // Pass the interactive damage check data with diagram annotations
+        check, // Pass the interactive damage check data with diagram annotations
+        inspectorName,
       );
       
       // Set response headers for PDF viewing in browser

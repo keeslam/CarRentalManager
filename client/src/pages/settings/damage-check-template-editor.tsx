@@ -75,6 +75,7 @@ const DYNAMIC_SOURCES: { value: string; label: string }[] = [
   { value: 'rentalDays', label: 'Rental Days' },
   { value: 'currentDate', label: 'Today\'s Date' },
   { value: 'notes', label: 'Inspection Notes' },
+  { value: 'inspectorName', label: 'Inspector / Logged-in User (Controle door)' },
 ];
 
 const PAGE_W = 595;
