@@ -492,32 +492,41 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
     setSelectedIds([f.id]);
   }
 
+  // These helpers are also called from the one-time-bound keyboard listener,
+  // so they MUST read from refs (not React state) to avoid stale-closure bugs
+  // like Ctrl+C/V/D acting on the initial selection.
   function deleteSelected() {
-    if (selectedIds.length === 0) return;
-    const next = fields.filter(f => !selectedIds.includes(f.id));
+    const sel = selectedIdsRef.current;
+    if (sel.length === 0) return;
+    const next = fieldsRef.current.filter(f => !sel.includes(f.id));
     updateFields(next);
     setSelectedIds([]);
   }
 
   function duplicateSelected() {
-    if (selectedIds.length === 0) return;
-    const dup: CanvasField[] = selectedIds
-      .map(id => fields.find(f => f.id === id))
+    const sel = selectedIdsRef.current;
+    if (sel.length === 0) return;
+    const dup: CanvasField[] = sel
+      .map(id => fieldsRef.current.find(f => f.id === id))
       .filter(Boolean)
       .map(f => ({ ...(f as CanvasField), id: newId(), x: (f as CanvasField).x + 10, y: (f as CanvasField).y + 10 }));
-    const next = [...fields, ...dup];
+    const next = [...fieldsRef.current, ...dup];
     updateFields(next);
     setSelectedIds(dup.map(d => d.id));
   }
 
   function copySelected() {
-    setClipboard(fields.filter(f => selectedIds.includes(f.id)).map(f => ({ ...f })));
+    const sel = selectedIdsRef.current;
+    const copied = fieldsRef.current.filter(f => sel.includes(f.id)).map(f => ({ ...f }));
+    clipboardRef.current = copied;
+    setClipboard(copied);
   }
 
   function pasteClipboard() {
-    if (clipboard.length === 0) return;
-    const pasted = clipboard.map(f => ({ ...f, id: newId(), x: f.x + 10, y: f.y + 10 }));
-    const next = [...fields, ...pasted];
+    const clip = clipboardRef.current;
+    if (clip.length === 0) return;
+    const pasted = clip.map(f => ({ ...f, id: newId(), x: f.x + 10, y: f.y + 10 }));
+    const next = [...fieldsRef.current, ...pasted];
     updateFields(next);
     setSelectedIds(pasted.map(p => p.id));
   }
@@ -618,7 +627,31 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
 
   function onCanvasMouseUp() {
     if (dragging) {
-      pushHistory(fields);
+      // Flush any pending drag frame so the final position is in fieldsRef
+      // before we snapshot history.
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+        const p = lastPointRef.current;
+        if (p) {
+          const nx = snap(Math.max(0, Math.min(PAGE_W, p.x - dragging.offX)));
+          const ny = snap(Math.max(0, Math.min(PAGE_H, p.y - dragging.offY)));
+          const cur = fieldsRef.current.find(f => f.id === dragging.id);
+          if (cur) {
+            const dx = nx - cur.x;
+            const dy = ny - cur.y;
+            const sel = selectedIdsRef.current;
+            const moveIds = sel.includes(dragging.id) && sel.length > 1 ? sel : [dragging.id];
+            const next = fieldsRef.current.map(f => moveIds.includes(f.id) && !f.locked
+              ? { ...f, x: Math.max(0, Math.min(PAGE_W, f.x + dx)), y: Math.max(0, Math.min(PAGE_H, f.y + dy)) }
+              : f);
+            fieldsRef.current = next;
+            setFields(next);
+          }
+        }
+      }
+      pushHistory(fieldsRef.current);
+      lastPointRef.current = null;
       setDragging(null);
     }
     if (selectionBox) {
