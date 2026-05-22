@@ -700,20 +700,20 @@ async function generateDamageCheckPDFFromCanvas(
       }
     }
     const sanitized = sanitizeForWinAnsi(textVal);
-    let drawX = x;
-    if (f.textAlign === 'center' || f.textAlign === 'right') {
-      const tw = useFont.widthOfTextAtSize(sanitized, fontSize);
-      const w = Number(f.width) || 0;
-      if (w > 0) {
-        if (f.textAlign === 'center') drawX = x + (w - tw) / 2;
-        else if (f.textAlign === 'right') drawX = x + w - tw;
-      } else if (f.textAlign === 'center') {
-        drawX = x - tw / 2;
-      } else {
-        drawX = x - tw;
-      }
-    }
-    p.drawText(sanitized, { x: drawX, y: baselineY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
+    // Match the editor's box model: padding 1px top / 4px left+right,
+    // minWidth 40 (so short labels still center inside a 40pt box).
+    const PAD_X = 4;
+    const PAD_Y = 1;
+    const tw = useFont.widthOfTextAtSize(sanitized, fontSize);
+    const explicitW = Number(f.width) || 0;
+    const boxW = explicitW > 0 ? explicitW : Math.max(tw + PAD_X * 2, 40);
+    const contentLeft = x + PAD_X;
+    const contentW = Math.max(0, boxW - PAD_X * 2);
+    let drawX = contentLeft;
+    if (f.textAlign === 'center') drawX = contentLeft + (contentW - tw) / 2;
+    else if (f.textAlign === 'right') drawX = contentLeft + contentW - tw;
+    const drawY = PAGE_H - yTop - PAD_Y - fontSize;
+    p.drawText(sanitized, { x: drawX, y: drawY, size: fontSize, font: useFont, color: rgb(0, 0, 0) });
 
     // Circle the selected option(s) inside an options field like "ja / nee".
     // We split on "/" and ellipse the substring(s) whose trimmed text matches
@@ -734,7 +734,7 @@ async function generateDamageCheckPDFFromCanvas(
           const padX = Math.max(2, fontSize * 0.3);
           const padY = Math.max(2, fontSize * 0.25);
           const cx = wordX + wordW / 2;
-          const cy = baselineY + fontSize * 0.35;
+          const cy = drawY + fontSize * 0.35;
           const rx = wordW / 2 + padX;
           const ry = fontSize * 0.6 + padY;
           p.drawEllipse({
