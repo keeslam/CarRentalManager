@@ -208,10 +208,9 @@ function buildDefaultLayout(config: DamageCheckFieldsConfig = DEFAULT_DAMAGE_CHE
   vehicleRow('Type:', 'model');
   vehicleRow('Kenteken:', 'licensePlate');
   vehicleRow('Tellerstand:', 'currentMileage');
-  // Tank — options instead of dynamic value
-  out.push(mk('text', RX, ry, 'Tank:', { fontSize: ROW_FS, isBold: true }));
-  out.push(mk('text', RX + 70, ry, 'vol / leeg / 1/4 / 1/2 / 3/4', { fontSize: ROW_FS }));
-  ry += 22;
+  // Tank — pulls the live fuel level recorded during the interactive check
+  // so the actual selection (vol / leeg / 1/4 / 1/2 / 3/4) appears here.
+  vehicleRow('Tank:', 'fuel');
 
   // --- GEGEVENS HUURDER --- (rental info that should auto-fill from the
   // reservation: customer name, contract number, start/end dates).

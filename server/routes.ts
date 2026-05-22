@@ -10530,6 +10530,40 @@ export async function registerRoutes(app: Express): Promise<void> {
           ),
           rentalDays: 7,
         };
+        // Sample interactive check so editors can see how filled-in checklist
+        // answers, fuel level, mileage and notes appear next to their labels.
+        // We seed answers for every field in the active schema so a freshly
+        // inserted default layout shows realistic, fully-populated output.
+        const sampleChecklistData: Record<string, Record<string, string | boolean>> = {
+          interior: {},
+          exterior: {},
+          delivery: {},
+        };
+        try {
+          const { storage } = await import("./storage");
+          const { DAMAGE_CHECK_FIELDS_KEY, DEFAULT_DAMAGE_CHECK_FIELDS } =
+            await import("@shared/schema");
+          const setting = await storage.getSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+          const cfg: any = (setting?.value as any) || DEFAULT_DAMAGE_CHECK_FIELDS;
+          for (const g of cfg.groups || []) {
+            for (const f of g.fields || []) {
+              if (g.id === "delivery") {
+                sampleChecklistData.delivery[f.key] = true;
+              } else if (g.id === "interior" || g.id === "exterior") {
+                const first = Array.isArray(f.options) && f.options[0] ? f.options[0] : "";
+                sampleChecklistData[g.id][f.key] = first;
+              }
+            }
+          }
+        } catch {
+          // Best-effort — preview still renders without seeded checklist data.
+        }
+        const sampleInteractiveCheck = {
+          mileage: 12345,
+          fuelLevel: "vol",
+          notes: "Sample inspection notes recorded during the check.",
+          checklistData: JSON.stringify(sampleChecklistData),
+        };
 
         const { generateDamageCheckPDFWithTemplate } = await import(
           "./pdf-damage-check-generator"
@@ -10538,6 +10572,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           sampleVehicle,
           templateForRender,
           sampleReservation,
+          sampleInteractiveCheck,
         );
 
         res.setHeader("Content-Type", "application/pdf");
