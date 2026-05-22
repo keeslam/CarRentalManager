@@ -352,31 +352,55 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
     window.history.replaceState({}, '', url.toString());
   }
 
+  // Mirror live state in refs so event handlers (keyboard, drag, etc.) don't
+  // need these in their dependency arrays. Without this, the keyboard `useEffect`
+  // re-binds 60+ times per second during a drag, eventually causing the editor
+  // tab to lag or crash on long sessions.
+  const fieldsRef = useRef<CanvasField[]>(fields);
+  const selectedIdsRef = useRef<string[]>(selectedIds);
+  const historyRef = useRef<HistoryState[]>(history);
+  const histIdxRef = useRef<number>(histIdx);
+  const clipboardRef = useRef<CanvasField[]>(clipboard);
+  useEffect(() => { fieldsRef.current = fields; }, [fields]);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+  useEffect(() => { historyRef.current = history; }, [history]);
+  useEffect(() => { histIdxRef.current = histIdx; }, [histIdx]);
+  useEffect(() => { clipboardRef.current = clipboard; }, [clipboard]);
+
   function pushHistory(next: CanvasField[]) {
-    const slice = history.slice(0, histIdx + 1);
+    const slice = historyRef.current.slice(0, histIdxRef.current + 1);
     slice.push({ fields: next, ts: Date.now() });
     if (slice.length > 50) slice.shift();
+    historyRef.current = slice;
+    histIdxRef.current = slice.length - 1;
     setHistory(slice);
     setHistIdx(slice.length - 1);
   }
 
   function updateFields(next: CanvasField[], record = true) {
+    fieldsRef.current = next;
     setFields(next);
     if (record) pushHistory(next);
   }
 
   function undo() {
-    if (histIdx <= 0) return;
-    const i = histIdx - 1;
+    if (histIdxRef.current <= 0) return;
+    const i = histIdxRef.current - 1;
+    histIdxRef.current = i;
     setHistIdx(i);
-    setFields(history[i].fields);
+    const f = historyRef.current[i].fields;
+    fieldsRef.current = f;
+    setFields(f);
   }
 
   function redo() {
-    if (histIdx >= history.length - 1) return;
-    const i = histIdx + 1;
+    if (histIdxRef.current >= historyRef.current.length - 1) return;
+    const i = histIdxRef.current + 1;
+    histIdxRef.current = i;
     setHistIdx(i);
-    setFields(history[i].fields);
+    const f = historyRef.current[i].fields;
+    fieldsRef.current = f;
+    setFields(f);
   }
 
   // Mutations
@@ -498,7 +522,9 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
     setSelectedIds(pasted.map(p => p.id));
   }
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. Bind ONCE and read state from refs — without this the
+  // listener re-binds on every drag mousemove (which mutates `fields`) and the
+  // browser tab eventually grinds to a halt.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
@@ -510,12 +536,13 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
       if (ctrl && e.key === 'v') { e.preventDefault(); pasteClipboard(); return; }
       if (ctrl && e.key === 'd') { e.preventDefault(); duplicateSelected(); return; }
       if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedIds.length > 0) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedIdsRef.current.length > 0) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        const next = fields.map(f => selectedIds.includes(f.id) && !f.locked
+        const sel = selectedIdsRef.current;
+        const next = fieldsRef.current.map(f => sel.includes(f.id) && !f.locked
           ? { ...f, x: Math.max(0, Math.min(PAGE_W, f.x + dx)), y: Math.max(0, Math.min(PAGE_H, f.y + dy)) }
           : f);
         updateFields(next);
@@ -524,7 +551,7 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fields, selectedIds, history, histIdx, clipboard]);
+  }, []);
 
   // Mouse interactions on the canvas
   function getCanvasPoint(e: React.MouseEvent): { x: number; y: number } {
@@ -553,24 +580,41 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
     setDragging({ id: f.id, offX: p.x - f.x, offY: p.y - f.y });
   }
 
+  // Throttle drag updates with requestAnimationFrame — without this the editor
+  // does one full React render per native mousemove event, which on a busy
+  // canvas can flood the React scheduler and crash the tab.
+  const rafRef = useRef<number | null>(null);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   function onCanvasMouseMove(e: React.MouseEvent) {
     if (dragging) {
-      const p = getCanvasPoint(e);
-      const nx = snap(Math.max(0, Math.min(PAGE_W, p.x - dragging.offX)));
-      const ny = snap(Math.max(0, Math.min(PAGE_H, p.y - dragging.offY)));
-      const cur = fields.find(f => f.id === dragging.id);
-      if (!cur) return;
-      const dx = nx - cur.x;
-      const dy = ny - cur.y;
-      const moveIds = selectedIds.includes(dragging.id) && selectedIds.length > 1 ? selectedIds : [dragging.id];
-      setFields(fields.map(f => moveIds.includes(f.id) && !f.locked
-        ? { ...f, x: Math.max(0, Math.min(PAGE_W, f.x + dx)), y: Math.max(0, Math.min(PAGE_H, f.y + dy)) }
-        : f));
+      lastPointRef.current = getCanvasPoint(e);
+      if (rafRef.current != null) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const p = lastPointRef.current;
+        if (!p || !dragging) return;
+        const nx = snap(Math.max(0, Math.min(PAGE_W, p.x - dragging.offX)));
+        const ny = snap(Math.max(0, Math.min(PAGE_H, p.y - dragging.offY)));
+        const cur = fieldsRef.current.find(f => f.id === dragging.id);
+        if (!cur) return;
+        const dx = nx - cur.x;
+        const dy = ny - cur.y;
+        const sel = selectedIdsRef.current;
+        const moveIds = sel.includes(dragging.id) && sel.length > 1 ? sel : [dragging.id];
+        const next = fieldsRef.current.map(f => moveIds.includes(f.id) && !f.locked
+          ? { ...f, x: Math.max(0, Math.min(PAGE_W, f.x + dx)), y: Math.max(0, Math.min(PAGE_H, f.y + dy)) }
+          : f);
+        fieldsRef.current = next;
+        setFields(next);
+      });
     } else if (selectionBox) {
       const p = getCanvasPoint(e);
       setSelectionBox({ ...selectionBox, ex: p.x, ey: p.y });
     }
   }
+  useEffect(() => () => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   function onCanvasMouseUp() {
     if (dragging) {
