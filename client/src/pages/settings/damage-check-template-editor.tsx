@@ -20,6 +20,7 @@ import {
   AlignCenter, AlignLeft, AlignRight, Lock, Unlock, Maximize2, Undo2, Redo2,
   LayoutGrid, Move, Type, Database, CheckSquare, ClipboardList, PenLine, Minus, Square, Image as ImageIcon, Sparkles,
 } from 'lucide-react';
+import { type DamageCheckFieldsConfig, DEFAULT_DAMAGE_CHECK_FIELDS } from '@shared/schema';
 
 type FieldType = 'text' | 'dynamic' | 'inspection' | 'checkbox' | 'signature' | 'line' | 'box' | 'diagram';
 
@@ -106,7 +107,7 @@ function defaultFieldFor(type: FieldType, x: number, y: number): CanvasField {
 // dynamic fields (license plate, customer, contract #, dates), a vehicle diagram
 // placeholder, an inspection grid and signature lines. Editors can move/delete
 // anything — this is just a starting point so a blank canvas isn't overwhelming.
-function buildDefaultLayout(): CanvasField[] {
+function buildDefaultLayout(config: DamageCheckFieldsConfig = DEFAULT_DAMAGE_CHECK_FIELDS): CanvasField[] {
   const mk = (
     type: FieldType,
     x: number,
@@ -145,58 +146,34 @@ function buildDefaultLayout(): CanvasField[] {
     if (options) out.push(mk('text', OPT_X, y, options, { fontSize: ROW_FS }));
   };
 
-  // --- INTERIEUR ---
+  // Build the three columns from the admin-editable schema so the editor's
+  // default layout stays in lock-step with the interactive damage check.
   let y = 30;
-  heading('Interieur', y); y += HEAD_GAP;
-  const interieur: [string, string][] = [
-    ['Binnenzijde auto', 'schoon / vuil'],
-    ['Ruitschade', 'ja / nee'],
-    ['Bekleding', 'kapot / heel / brandgaten'],
-    ['Asbak', 'schoon / vuil'],
-    ['Reservewiel', 'goed / geen / lek'],
-    ['Krik', 'ja / nee'],
-    ['Wielsleutel', 'ja / nee'],
-    ['Matten', 'ja / nee'],
-    ['Hoofdsteunen', 'goed / kapot'],
-  ];
-  interieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
+  const findGroup = (id: 'interior' | 'exterior' | 'delivery') =>
+    config.groups.find(g => g.id === id) || { label: id, fields: [] as { label: string; options: string[]; inputType: string }[] };
 
-  // --- EXTERIEUR ---
-  y += 6;
-  heading('Exterieur', y); y += HEAD_GAP;
-  const exterieur: [string, string][] = [
-    ['Buitenzijde auto', 'vuil / schoon'],
-    ['Wieldoppen', 'LV / LA / RV / RA / geen'],
-    ['Kentekenplaten', 'voor / achter'],
-    ['Spiegelkap links', 'kapot / krassen / goed'],
-    ['Spiegelkap rechts', 'kapot / krassen / goed'],
-    ['Spiegelglas L+R', 'goed / kapot'],
-    ['Antenne', 'goed / kapot / geen'],
-    ['Ruitenwisser', 'goed / kapot'],
-    ['Deurvangers', 'goed / kapot'],
-    ['Schuifdeur (bus)', 'goed / kapot / slecht'],
-    ['Werkende sloten', 'ja / nee'],
-    ['Mistlampen voor', 'goed / kapot / geen'],
-  ];
-  exterieur.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
+  const interior = findGroup('interior');
+  heading(interior.label, y); y += HEAD_GAP;
+  interior.fields.forEach(f => {
+    row(y, f.label, f.options.join(' / '));
+    y += ROW_H;
+  });
 
-  // --- AFLEVER CHECK ---
   y += 6;
-  heading('Aflever Check', y); y += HEAD_GAP;
-  const aflever: [string, string][] = [
-    ['Olie - water', ''],
-    ['Ruitenproeiervloeistof', ''],
-    ['Verlichting', ''],
-    ['Bandenspanning incl. reservewiel', ''],
-    ['Kachelfan', ''],
-    ['Hoedenplank', ''],
-    ['IJskrabber', ''],
-    ['Gaan alle deuren open', ''],
-    ['Kentekenpapieren (eventueel kopie)', ''],
-    ['Geldige groene kaart', ''],
-    ['Europees schadeformulier', ''],
-  ];
-  aflever.forEach(([l, o]) => { row(y, l, o); y += ROW_H; });
+  const exterior = findGroup('exterior');
+  heading(exterior.label, y); y += HEAD_GAP;
+  exterior.fields.forEach(f => {
+    row(y, f.label, f.options.join(' / '));
+    y += ROW_H;
+  });
+
+  y += 6;
+  const delivery = findGroup('delivery');
+  heading(delivery.label, y); y += HEAD_GAP;
+  delivery.fields.forEach(f => {
+    row(y, f.label, '');
+    y += ROW_H;
+  });
 
   // Track where the left column ends so we can place the diagram below it.
   const leftEndY = y;
@@ -331,6 +308,12 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
   // can pick which diagram appears on the form (or leave it as auto-match).
   const { data: diagramTemplates = [] } = useQuery<DiagramTemplateSummary[]>({
     queryKey: ['/api/vehicle-diagram-templates'],
+  });
+
+  // Admin-editable damage check field schema — used by "Insert Default Layout"
+  // so the editor's starter rows match the interactive damage check's fields.
+  const { data: damageCheckFields = DEFAULT_DAMAGE_CHECK_FIELDS } = useQuery<DamageCheckFieldsConfig>({
+    queryKey: ['/api/damage-check-fields'],
   });
 
   // Parse ?id= from URL once templates load
@@ -747,7 +730,7 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
                 className="w-full justify-start"
                 onClick={() => {
                   if (fields.length > 0 && !confirm('Replace current fields with the default layout?')) return;
-                  updateFields(buildDefaultLayout());
+                  updateFields(buildDefaultLayout(damageCheckFields));
                   setSelectedIds([]);
                 }}
                 data-testid="button-insert-default-layout"

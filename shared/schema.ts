@@ -899,6 +899,91 @@ export const insertAppSettingsSchema = createInsertSchema(appSettings).omit({
 export type AppSettings = typeof appSettings.$inferSelect;
 export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
 
+// ---------------------------------------------------------------------------
+// Damage check field schema (editable from admin settings page)
+// ---------------------------------------------------------------------------
+// Stored as a single row in app_settings keyed `damage_check_fields`.
+// Used by: interactive damage check UI, template editor default layout,
+// and the PDF renderer's auto-fill map.
+
+export const checklistFieldDefSchema = z.object({
+  key: z.string().min(1).regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "key must be camelCase / snake_case"),
+  label: z.string().min(1),
+  inputType: z.enum(["select", "checkbox"]),
+  options: z.array(z.string()).default([]),
+});
+
+export const checklistGroupDefSchema = z.object({
+  id: z.enum(["interior", "exterior", "delivery"]),
+  label: z.string().min(1),
+  fields: z.array(checklistFieldDefSchema),
+});
+
+export const damageCheckFieldsConfigSchema = z.object({
+  groups: z.array(checklistGroupDefSchema),
+});
+
+export type ChecklistFieldDef = z.infer<typeof checklistFieldDefSchema>;
+export type ChecklistGroupDef = z.infer<typeof checklistGroupDefSchema>;
+export type DamageCheckFieldsConfig = z.infer<typeof damageCheckFieldsConfigSchema>;
+
+export const DAMAGE_CHECK_FIELDS_KEY = "damage_check_fields";
+
+export const DEFAULT_DAMAGE_CHECK_FIELDS: DamageCheckFieldsConfig = {
+  groups: [
+    {
+      id: "interior",
+      label: "Interieur",
+      fields: [
+        { key: "carInterior", label: "Binnenzijde auto", inputType: "select", options: ["schoon", "vuil"] },
+        { key: "floorMats", label: "Vloermatten", inputType: "select", options: ["ja", "nee"] },
+        { key: "upholstery", label: "Bekleding", inputType: "select", options: ["kapot", "heel", "brandgaten"] },
+        { key: "ashtray", label: "Asbak", inputType: "select", options: ["schoon", "vuil"] },
+        { key: "spareWheel", label: "Reservewiel", inputType: "select", options: ["goed", "geen", "lek"] },
+        { key: "jack", label: "Krik", inputType: "select", options: ["ja", "nee"] },
+        { key: "wheelBrace", label: "Wielsleutel", inputType: "select", options: ["ja", "nee"] },
+        { key: "matKit", label: "Matten", inputType: "select", options: ["ja", "nee"] },
+        { key: "mainKeys", label: "Hoofdsteunen", inputType: "select", options: ["goed", "kapot"] },
+      ],
+    },
+    {
+      id: "exterior",
+      label: "Exterieur",
+      fields: [
+        { key: "carExterior", label: "Buitenzijde auto", inputType: "select", options: ["vuil", "schoon"] },
+        { key: "hubcaps", label: "Wieldoppen", inputType: "select", options: ["LV", "LA", "RV", "RA", "geen"] },
+        { key: "licensePlates", label: "Kentekenplaten", inputType: "select", options: ["voor", "achter"] },
+        { key: "mirrorCapsLeft", label: "Spiegelkap links", inputType: "select", options: ["kapot", "krassen", "goed"] },
+        { key: "mirrorCapsRight", label: "Spiegelkap rechts", inputType: "select", options: ["kapot", "krassen", "goed"] },
+        { key: "mirrorGlassLeftRight", label: "Spiegelglas L+R", inputType: "select", options: ["goed", "kapot"] },
+        { key: "antenna", label: "Antenne", inputType: "select", options: ["goed", "kapot", "geen"] },
+        { key: "wiperBlade", label: "Ruitenwisser", inputType: "select", options: ["goed", "kapot"] },
+        { key: "mudguards", label: "Deurvanger", inputType: "select", options: ["goed", "kapot"] },
+        { key: "slidingDoorBus", label: "Schuifdeur (bus)", inputType: "select", options: ["goed", "kapot", "slecht"] },
+        { key: "indicatorSlots", label: "Werkende sloten", inputType: "select", options: ["ja", "nee"] },
+        { key: "fogLights", label: "Mistlampen voor", inputType: "select", options: ["goed", "kapot", "geen"] },
+      ],
+    },
+    {
+      id: "delivery",
+      label: "Aflever Check",
+      fields: [
+        { key: "oilWater", label: "Olie - water", inputType: "checkbox", options: [] },
+        { key: "washerFluid", label: "Ruitenproeiervloeistof", inputType: "checkbox", options: [] },
+        { key: "lighting", label: "Verlichting", inputType: "checkbox", options: [] },
+        { key: "tireInflation", label: "Bandenspanning incl. reservewiel", inputType: "checkbox", options: [] },
+        { key: "fanBelt", label: "Kachelfan", inputType: "checkbox", options: [] },
+        { key: "engineBoard", label: "Hoedenplank", inputType: "checkbox", options: [] },
+        { key: "jackKnife", label: "IJskrabber", inputType: "checkbox", options: [] },
+        { key: "allDoorsOpen", label: "Gaan alle deuren open", inputType: "checkbox", options: [] },
+        { key: "licensePlatePapers", label: "Kentekenpapieren", inputType: "checkbox", options: [] },
+        { key: "validGreenCard", label: "Geldige groene kaart", inputType: "checkbox", options: [] },
+        { key: "europeanDamageForm", label: "Europees schadeformulier", inputType: "checkbox", options: [] },
+      ],
+    },
+  ],
+};
+
 // Vehicle Waitlist table - for tracking customers waiting for unavailable vehicles
 export const vehicleWaitlist = pgTable("vehicle_waitlist", {
   id: serial("id").primaryKey(),

@@ -170,9 +170,41 @@ async function generateDamageCheckPDFFromCanvas(
   const checkExterior: Record<string, string> = checklist.exterior || {};
   const checkDelivery: Record<string, boolean> = checklist.delivery || {};
 
-  // Map the Dutch labels we render on the canvas to the checklist keys saved
-  // by the interactive damage check. This lets us auto-fill answers on the PDF.
-  const interiorKeyByLabel: Record<string, string> = {
+  // Build label->key maps from the admin-editable schema (falls back to default).
+  // Match labels case/whitespace-insensitively, and also tolerate the editor's
+  // "(eventueel kopie)" style suffixes by matching on the leading words.
+  const { storage } = await import('./storage');
+  const { DAMAGE_CHECK_FIELDS_KEY, DEFAULT_DAMAGE_CHECK_FIELDS, damageCheckFieldsConfigSchema } =
+    await import('../shared/schema');
+  let fieldsConfig = DEFAULT_DAMAGE_CHECK_FIELDS;
+  try {
+    const setting = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+    if (setting) {
+      const parsed = damageCheckFieldsConfigSchema.safeParse(setting.value);
+      if (parsed.success) fieldsConfig = parsed.data;
+    }
+  } catch (e) {
+    console.warn('Damage check fields config fetch failed, using defaults:', (e as Error).message);
+  }
+  const normalize = (s: string) =>
+    s.trim().toLowerCase().replace(/\s*\(.*?\)\s*$/, '').trim();
+  const interiorKeyByLabel: Record<string, string> = {};
+  const exteriorKeyByLabel: Record<string, string> = {};
+  const deliveryKeyByLabel: Record<string, string> = {};
+  for (const group of fieldsConfig.groups) {
+    const target =
+      group.id === 'interior' ? interiorKeyByLabel
+      : group.id === 'exterior' ? exteriorKeyByLabel
+      : deliveryKeyByLabel;
+    for (const field of group.fields) target[normalize(field.label)] = field.key;
+  }
+  // Legacy label -> canonical checklist key aliases. Older damage check
+  // templates were authored against a fixed Dutch label list; if an admin later
+  // edits / renames fields, those legacy labels won't appear in the config-
+  // derived map above. This fallback keeps existing PDF templates auto-filling
+  // correctly. Keys here MUST match the historical interactive-check JSON keys
+  // (interior/exterior/delivery sub-objects).
+  const legacyInteriorAliases: Record<string, string> = {
     'binnenzijde auto': 'carInterior',
     'matten': 'floorMats',
     'bekleding': 'upholstery',
@@ -180,15 +212,10 @@ async function generateDamageCheckPDFFromCanvas(
     'reservewiel': 'spareWheel',
     'krik': 'jack',
     'wielsleutel': 'wheelBrace',
-    // Note: 'Ruitschade' and 'Hoofdsteunen' have no exact 1:1 field in the
-    // interactive check's interior schema, so they're intentionally not mapped
-    // here — the options text will still render unfilled. 'matKit' / 'mainKeys'
-    // in the interactive check are best-effort fallbacks if a template uses
-    // those English-ish labels.
     'mat kit': 'matKit',
     'main keys': 'mainKeys',
   };
-  const exteriorKeyByLabel: Record<string, string> = {
+  const legacyExteriorAliases: Record<string, string> = {
     'buitenzijde auto': 'carExterior',
     'wieldoppen': 'hubcaps',
     'kentekenplaten': 'licensePlates',
@@ -198,11 +225,12 @@ async function generateDamageCheckPDFFromCanvas(
     'antenne': 'antenna',
     'ruitenwisser': 'wiperBlade',
     'deurvangers': 'mudguards',
-    'schuifdeur (bus)': 'slidingDoorBus',
+    'deurvanger': 'mudguards',
+    'schuifdeur': 'slidingDoorBus',
     'werkende sloten': 'indicatorSlots',
     'mistlampen voor': 'fogLights',
   };
-  const deliveryKeyByLabel: Record<string, string> = {
+  const legacyDeliveryAliases: Record<string, string> = {
     'olie - water': 'oilWater',
     'ruitenproeiervloeistof': 'washerFluid',
     'verlichting': 'lighting',
@@ -211,19 +239,28 @@ async function generateDamageCheckPDFFromCanvas(
     'hoedenplank': 'engineBoard',
     'ijskrabber': 'jackKnife',
     'gaan alle deuren open': 'allDoorsOpen',
-    'kentekenpapieren (eventueel kopie)': 'licensePlatePapers',
+    'kentekenpapieren': 'licensePlatePapers',
     'geldige groene kaart': 'validGreenCard',
     'europees schadeformulier': 'europeanDamageForm',
   };
   const lookupAnswer = (label: string): string | null => {
-    const key = label.trim().toLowerCase();
+    const key = normalize(label);
     if (interiorKeyByLabel[key] && checkInterior[interiorKeyByLabel[key]]) return checkInterior[interiorKeyByLabel[key]];
     if (exteriorKeyByLabel[key] && checkExterior[exteriorKeyByLabel[key]]) return checkExterior[exteriorKeyByLabel[key]];
+    // Legacy fallback: historical Dutch labels on older templates.
+    const li = legacyInteriorAliases[key];
+    if (li && checkInterior[li]) return checkInterior[li];
+    const le = legacyExteriorAliases[key];
+    if (le && checkExterior[le]) return checkExterior[le];
     return null;
   };
   const isDeliveryChecked = (label: string): boolean => {
-    const key = label.trim().toLowerCase();
-    return deliveryKeyByLabel[key] ? !!checkDelivery[deliveryKeyByLabel[key]] : false;
+    const key = normalize(label);
+    if (deliveryKeyByLabel[key] && checkDelivery[deliveryKeyByLabel[key]] !== undefined) {
+      return !!checkDelivery[deliveryKeyByLabel[key]];
+    }
+    const ld = legacyDeliveryAliases[key];
+    return ld ? !!checkDelivery[ld] : false;
   };
 
   // Pre-embed signatures from the interactive check (base64 PNG data URLs).

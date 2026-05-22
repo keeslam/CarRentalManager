@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Vehicle, type Reservation } from "@shared/schema";
+import { Vehicle, type Reservation, type DamageCheckFieldsConfig, DEFAULT_DAMAGE_CHECK_FIELDS } from "@shared/schema";
 import { displayLicensePlate } from "@/lib/utils";
 import { apiRequest, invalidateRelatedQueries, invalidateByPrefix } from "@/lib/queryClient";
 import { X, Save, Trash2, Plus, Pencil, Eraser, Download, ClipboardCheck } from "lucide-react";
@@ -72,47 +72,18 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
   const [pickupCheckData, setPickupCheckData] = useState<any | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   
-  // Inspection checklist items
-  const [checklistItems, setChecklistItems] = useState({
-    interior: {
-      carInterior: '', // schoon/vuil
-      floorMats: '', // ja/nee
-      upholstery: '', // kapot/heel/brandgaten
-      ashtray: '', // schoon/vuil
-      spareWheel: '', // goed/geen/lek
-      jack: '', // ja/nee
-      wheelBrace: '', // ja/nee
-      matKit: '', // ja/nee
-      mainKeys: '', // goed/kapot
-    },
-    exterior: {
-      carExterior: '', // vuil/schoon
-      hubcaps: '', // LV/LA/RV/RA/geen
-      licensePlates: '', // voor/achter
-      mirrorCapsLeft: '', // kapot/krassen/goed
-      mirrorCapsRight: '', // kapot/krassen/goed
-      mirrorGlassLeftRight: '', // goed/kapot
-      antenna: '', // goed/kapot/geen
-      wiperBlade: '', // goed/kapot
-      mudguards: '', // goed/kapot
-      slidingDoorBus: '', // goed/kapot/slecht
-      indicatorSlots: '', // ja/nee
-      fogLights: '', // goed/kapot/geen
-    },
-    delivery: {
-      oilWater: false,
-      washerFluid: false,
-      lighting: false,
-      tireInflation: false,
-      fanBelt: false,
-      engineBoard: false,
-      jackKnife: false,
-      allDoorsOpen: false,
-      licensePlatePapers: false,
-      validGreenCard: false,
-      europeanDamageForm: false,
-    }
+  // Damage check field schema (admin-editable). Fall back to the bundled
+  // defaults so the UI still renders if the API fetch is slow / fails.
+  const { data: fieldsConfig = DEFAULT_DAMAGE_CHECK_FIELDS } = useQuery<DamageCheckFieldsConfig>({
+    queryKey: ['/api/damage-check-fields'],
   });
+
+  // Inspection checklist items — shape: { interior:{key:string}, exterior:{key:string}, delivery:{key:boolean} }
+  const [checklistItems, setChecklistItems] = useState<{
+    interior: Record<string, string>;
+    exterior: Record<string, string>;
+    delivery: Record<string, boolean>;
+  }>({ interior: {}, exterior: {}, delivery: {} });
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -1537,219 +1508,57 @@ export default function InteractiveDamageCheck({ onClose, editingCheckId: propEd
           </Card>
         )}
 
-        {/* Inspection Checklist - Full Width */}
+        {/* Inspection Checklist - Full Width (schema-driven) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* Interior */}
-          <Card className="p-4">
-            <h3 className="font-bold text-center text-lg mb-4 bg-blue-900 text-white py-2 rounded">Interieur</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Binnenzijde auto</span>
-                <Select value={checklistItems.interior.carInterior} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, carInterior: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="schoon">schoon</SelectItem><SelectItem value="vuil">vuil</SelectItem></SelectContent>
-                </Select>
+          {fieldsConfig.groups.map((group) => (
+            <Card key={group.id} className="p-4">
+              <h3 className="font-bold text-center text-lg mb-4 bg-blue-900 text-white py-2 rounded">{group.label}</h3>
+              <div className="space-y-3 text-sm">
+                {group.fields.map((field) => {
+                  if (field.inputType === 'checkbox') {
+                    return (
+                      <div key={field.key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!!checklistItems[group.id]?.[field.key]}
+                          onChange={(e) => setChecklistItems({
+                            ...checklistItems,
+                            [group.id]: { ...checklistItems[group.id], [field.key]: e.target.checked },
+                          })}
+                          className="w-4 h-4"
+                          data-testid={`checkbox-${group.id}-${field.key}`}
+                        />
+                        <span>{field.label}</span>
+                      </div>
+                    );
+                  }
+                  // select
+                  const value = (checklistItems[group.id]?.[field.key] as string) || '';
+                  return (
+                    <div key={field.key} className="flex items-center justify-between gap-2">
+                      <span className="flex-1">{field.label}</span>
+                      <Select
+                        value={value}
+                        onValueChange={(val) => setChecklistItems({
+                          ...checklistItems,
+                          [group.id]: { ...checklistItems[group.id], [field.key]: val },
+                        })}
+                      >
+                        <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-${group.id}-${field.key}`}>
+                          <SelectValue placeholder="select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex items-center justify-between">
-                <span>Vloermatten</span>
-                <Select value={checklistItems.interior.floorMats} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, floorMats: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="ja">ja</SelectItem><SelectItem value="nee">nee</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Bekleding</span>
-                <Select value={checklistItems.interior.upholstery} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, upholstery: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="kapot">kapot</SelectItem><SelectItem value="heel">heel</SelectItem><SelectItem value="brandgaten">brandgaten</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Asbak</span>
-                <Select value={checklistItems.interior.ashtray} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, ashtray: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="schoon">schoon</SelectItem><SelectItem value="vuil">vuil</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Reservewiel</span>
-                <Select value={checklistItems.interior.spareWheel} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, spareWheel: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="geen">geen</SelectItem><SelectItem value="lek">lek</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Krik</span>
-                <Select value={checklistItems.interior.jack} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, jack: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="ja">ja</SelectItem><SelectItem value="nee">nee</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Wielsleutel</span>
-                <Select value={checklistItems.interior.wheelBrace} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, wheelBrace: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="ja">ja</SelectItem><SelectItem value="nee">nee</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Matten</span>
-                <Select value={checklistItems.interior.matKit} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, matKit: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="ja">ja</SelectItem><SelectItem value="nee">nee</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Hoofdsteunen</span>
-                <Select value={checklistItems.interior.mainKeys} onValueChange={(val) => setChecklistItems({...checklistItems, interior: {...checklistItems.interior, mainKeys: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem></SelectContent>
-                </Select>
-              </div>
-            </div>
-          </Card>
-
-          {/* Exterior */}
-          <Card className="p-4">
-            <h3 className="font-bold text-center text-lg mb-4 bg-blue-900 text-white py-2 rounded">Exterieur</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Buitenzijde auto</span>
-                <Select value={checklistItems.exterior.carExterior} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, carExterior: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="vuil">vuil</SelectItem><SelectItem value="schoon">schoon</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Wieldoppen</span>
-                <Select value={checklistItems.exterior.hubcaps} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, hubcaps: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="LV">LV</SelectItem><SelectItem value="LA">LA</SelectItem><SelectItem value="RV">RV</SelectItem><SelectItem value="RA">RA</SelectItem><SelectItem value="geen">geen</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Kentekemplaten</span>
-                <Select value={checklistItems.exterior.licensePlates} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, licensePlates: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="voor">voor</SelectItem><SelectItem value="achter">achter</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Spiegelkap links</span>
-                <Select value={checklistItems.exterior.mirrorCapsLeft} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, mirrorCapsLeft: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="kapot">kapot</SelectItem><SelectItem value="krassen">krassen</SelectItem><SelectItem value="goed">goed</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Spiegelkap rechts</span>
-                <Select value={checklistItems.exterior.mirrorCapsRight} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, mirrorCapsRight: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="kapot">kapot</SelectItem><SelectItem value="krassen">krassen</SelectItem><SelectItem value="goed">goed</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Spiegelglas L+R</span>
-                <Select value={checklistItems.exterior.mirrorGlassLeftRight} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, mirrorGlassLeftRight: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Antenne</span>
-                <Select value={checklistItems.exterior.antenna} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, antenna: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem><SelectItem value="geen">geen</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Ruitenwisser</span>
-                <Select value={checklistItems.exterior.wiperBlade} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, wiperBlade: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Deurvanger</span>
-                <Select value={checklistItems.exterior.mudguards} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, mudguards: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Schuifdeur (bus)</span>
-                <Select value={checklistItems.exterior.slidingDoorBus} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, slidingDoorBus: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem><SelectItem value="slecht">slecht</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Werkende sloten</span>
-                <Select value={checklistItems.exterior.indicatorSlots} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, indicatorSlots: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="ja">ja</SelectItem><SelectItem value="nee">nee</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Mistlampen voor</span>
-                <Select value={checklistItems.exterior.fogLights} onValueChange={(val) => setChecklistItems({...checklistItems, exterior: {...checklistItems.exterior, fogLights: val}})}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="select" /></SelectTrigger>
-                  <SelectContent><SelectItem value="goed">goed</SelectItem><SelectItem value="kapot">kapot</SelectItem><SelectItem value="geen">geen</SelectItem></SelectContent>
-                </Select>
-              </div>
-            </div>
-          </Card>
-
-          {/* Delivery Check */}
-          <Card className="p-4">
-            <h3 className="font-bold text-center text-lg mb-4 bg-blue-900 text-white py-2 rounded">Aflever Check</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.oilWater} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, oilWater: e.target.checked}})} className="w-4 h-4" />
-                <span>Olie - water</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.washerFluid} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, washerFluid: e.target.checked}})} className="w-4 h-4" />
-                <span>Ruitenproeiervloeistof</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.lighting} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, lighting: e.target.checked}})} className="w-4 h-4" />
-                <span>Verlichting</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.tireInflation} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, tireInflation: e.target.checked}})} className="w-4 h-4" />
-                <span>Bandenspanning incl. reservewiel</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.fanBelt} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, fanBelt: e.target.checked}})} className="w-4 h-4" />
-                <span>Kachelfan</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.engineBoard} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, engineBoard: e.target.checked}})} className="w-4 h-4" />
-                <span>Hoedenplank</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.jackKnife} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, jackKnife: e.target.checked}})} className="w-4 h-4" />
-                <span>IJskrabber</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.allDoorsOpen} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, allDoorsOpen: e.target.checked}})} className="w-4 h-4" />
-                <span>Gaan alle deuren open</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.licensePlatePapers} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, licensePlatePapers: e.target.checked}})} className="w-4 h-4" />
-                <span>Kentekenpapieren <span className="text-xs">(eventueel kopie)</span></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.validGreenCard} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, validGreenCard: e.target.checked}})} className="w-4 h-4" />
-                <span>Geldige groene kaart</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={checklistItems.delivery.europeanDamageForm} onChange={(e) => setChecklistItems({...checklistItems, delivery: {...checklistItems.delivery, europeanDamageForm: e.target.checked}})} className="w-4 h-4" />
-                <span>Europees schadeformulier</span>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
 
         {/* Vehicle Details */}

@@ -27,7 +27,10 @@ import {
   UserRole,
   UserPermission,
   isValidReservationTransition,
-  isValidSpareTransition
+  isValidSpareTransition,
+  damageCheckFieldsConfigSchema,
+  DEFAULT_DAMAGE_CHECK_FIELDS,
+  DAMAGE_CHECK_FIELDS_KEY,
 } from "../shared/schema";
 import multer from "multer";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -9531,6 +9534,65 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Error fetching app settings:", error);
       res.status(500).json({ message: "Error fetching app settings" });
+    }
+  });
+
+  // Damage check field schema (used by interactive damage check + template editor + PDF renderer)
+  // Read: any authenticated user. Write: admin only.
+  app.get("/api/damage-check-fields", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const setting = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      if (!setting) return res.json(DEFAULT_DAMAGE_CHECK_FIELDS);
+      const parsed = damageCheckFieldsConfigSchema.safeParse(setting.value);
+      res.json(parsed.success ? parsed.data : DEFAULT_DAMAGE_CHECK_FIELDS);
+    } catch (error) {
+      console.error("Error fetching damage check fields:", error);
+      res.status(500).json({ message: "Error fetching damage check fields" });
+    }
+  });
+
+  app.put("/api/damage-check-fields", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const parsed = damageCheckFieldsConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid config", errors: parsed.error.flatten() });
+      }
+      // Enforce: keys unique within a group, all three group ids present
+      const groupIds = parsed.data.groups.map(g => g.id).sort();
+      const expected = ["delivery", "exterior", "interior"];
+      if (groupIds.length !== 3 || groupIds.some((g, i) => g !== expected[i])) {
+        return res.status(400).json({ message: "Must contain exactly the three groups: interior, exterior, delivery" });
+      }
+      for (const g of parsed.data.groups) {
+        const seen = new Set<string>();
+        for (const f of g.fields) {
+          if (seen.has(f.key)) {
+            return res.status(400).json({ message: `Duplicate field key "${f.key}" in group "${g.id}"` });
+          }
+          seen.add(f.key);
+        }
+      }
+      const username = (req.user as any)?.username || "system";
+      const existing = await storage.getAppSettingByKey(DAMAGE_CHECK_FIELDS_KEY);
+      if (existing) {
+        const updated = await storage.updateAppSetting(existing.id, {
+          value: parsed.data as any,
+          updatedBy: username,
+        });
+        return res.json(updated?.value ?? parsed.data);
+      }
+      const created = await storage.createAppSetting({
+        key: DAMAGE_CHECK_FIELDS_KEY,
+        value: parsed.data as any,
+        category: "damage_check",
+        description: "Editable checklist fields for the interactive damage check + template editor",
+        createdBy: username,
+        updatedBy: username,
+      });
+      res.json(created.value);
+    } catch (error) {
+      console.error("Error saving damage check fields:", error);
+      res.status(500).json({ message: "Error saving damage check fields" });
     }
   });
 
