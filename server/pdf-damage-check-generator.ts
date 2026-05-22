@@ -713,13 +713,18 @@ async function generateDamageCheckPDFFromCanvas(
       }
     }
     const sanitized = sanitizeForWinAnsi(textVal);
-    // Match the editor's box model: padding 1px top / 4px left+right,
-    // minWidth 40 (so short labels still center inside a 40pt box).
+    // Mirror the editor's text/dynamic box model exactly:
+    //   - padding: 1px top, 4px left+right
+    //   - NO explicit width (the editor ignores f.width for text fields), so
+    //     the div is always content-sized. minWidth: 40 only kicks in for
+    //     very short strings.
+    // Honoring f.width here would push center-aligned labels off-position
+    // versus the editor — the editor draws them at x, not centered across
+    // the stored width.
     const PAD_X = 4;
     const PAD_Y = 1;
     const tw = useFont.widthOfTextAtSize(sanitized, fontSize);
-    const explicitW = Number(f.width) || 0;
-    const boxW = explicitW > 0 ? explicitW : Math.max(tw + PAD_X * 2, 40);
+    const boxW = Math.max(tw + PAD_X * 2, 40);
     const contentLeft = x + PAD_X;
     const contentW = Math.max(0, boxW - PAD_X * 2);
     let drawX = contentLeft;
