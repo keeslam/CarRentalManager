@@ -533,14 +533,24 @@ async function generateDamageCheckPDFFromCanvas(
       // text field whose x is within ~30pt to the right at the same y.
       let effectiveLabel = label;
       if (!effectiveLabel) {
-        const sibling = fields.find((g: any) =>
-          g !== f && g.type === 'text'
+        // Find nearest text field on same row whose name resolves to a known
+        // delivery key. Try right side first (typical layout: ☐ Label), then
+        // left side. Tolerate ~8pt vertical drift and up to 120pt horizontal.
+        const sameRow = fields.filter((g: any) =>
+          g !== f && g.type === 'text' && String(g.name || '').trim()
           && (Number(g.page) || 1) === (Number(f.page) || 1)
-          && Math.abs((Number(g.y) || 0) - yTop) < 3
-          && (Number(g.x) || 0) - x > 0
-          && (Number(g.x) || 0) - x < 40,
+          && Math.abs((Number(g.y) || 0) - yTop) <= 8,
         );
-        if (sibling) effectiveLabel = String(sibling.name || '');
+        const pickSide = (rightSide: boolean) => sameRow
+          .filter((g: any) => {
+            const dx = (Number(g.x) || 0) - x;
+            return rightSide ? (dx > -2 && dx < 120) : (dx < 2 && dx > -200);
+          })
+          .sort((a: any, b: any) => Math.abs((Number(a.x) || 0) - x) - Math.abs((Number(b.x) || 0) - x));
+        const candidates = [...pickSide(true), ...pickSide(false)];
+        const matched = candidates.find((g: any) => isDeliveryChecked(String(g.name || '')))
+                     || candidates[0];
+        if (matched) effectiveLabel = String(matched.name || '');
       }
       if (effectiveLabel && isDeliveryChecked(effectiveLabel)) {
         // Draw an X mark
@@ -610,15 +620,29 @@ async function generateDamageCheckPDFFromCanvas(
       // Detect "options" text by presence of "/" and short length; not perfect
       // but safe — we only append if we find a matching answer.
       if (opts.includes('/')) {
-        // Find a text field to the left at the same y serving as label.
-        const sibling = fields.find((g: any) =>
-          g !== f && g.type === 'text'
+        // Find the nearest label text on the same row whose label resolves to
+        // a known checklist key. Wider tolerance + prefer left-side (label
+        // before options), then right-side. Skip other "/" option fields.
+        const sameRow = fields.filter((g: any) =>
+          g !== f && g.type === 'text' && String(g.name || '').trim()
+          && !String(g.name || '').includes('/')
           && (Number(g.page) || 1) === (Number(f.page) || 1)
-          && Math.abs((Number(g.y) || 0) - yTop) < 3
-          && (Number(f.x) || 0) - (Number(g.x) || 0) > 0
-          && (Number(f.x) || 0) - (Number(g.x) || 0) < 200,
+          && Math.abs((Number(g.y) || 0) - yTop) <= 8,
         );
-        const labelStr = sibling ? String(sibling.name || '') : '';
+        const left = sameRow
+          .filter((g: any) => (Number(f.x) || 0) - (Number(g.x) || 0) > 0
+                           && (Number(f.x) || 0) - (Number(g.x) || 0) < 250)
+          .sort((a: any, b: any) => Math.abs((Number(a.x) || 0) - (Number(f.x) || 0))
+                                  - Math.abs((Number(b.x) || 0) - (Number(f.x) || 0)));
+        const right = sameRow
+          .filter((g: any) => (Number(g.x) || 0) - (Number(f.x) || 0) > 0
+                           && (Number(g.x) || 0) - (Number(f.x) || 0) < 250)
+          .sort((a: any, b: any) => Math.abs((Number(a.x) || 0) - (Number(f.x) || 0))
+                                  - Math.abs((Number(b.x) || 0) - (Number(f.x) || 0)));
+        const candidates = [...left, ...right];
+        const matched = candidates.find((g: any) => lookupAnswer(String(g.name || '')) != null)
+                     || candidates[0];
+        const labelStr = matched ? String(matched.name || '') : '';
         const ans = lookupAnswer(labelStr);
         if (ans) textVal = `${opts}   ->  ${ans}`;
       }
