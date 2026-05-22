@@ -206,14 +206,15 @@ async function generateDamageCheckPDFFromCanvas(
   // (interior/exterior/delivery sub-objects).
   const legacyInteriorAliases: Record<string, string> = {
     'binnenzijde auto': 'carInterior',
+    'ruitschade': 'windowDamage',
     'matten': 'floorMats',
+    'vloermatten': 'floorMats',
     'bekleding': 'upholstery',
     'asbak': 'ashtray',
     'reservewiel': 'spareWheel',
     'krik': 'jack',
     'wielsleutel': 'wheelBrace',
-    'mat kit': 'matKit',
-    'main keys': 'mainKeys',
+    'hoofdsteunen': 'headrests',
   };
   const legacyExteriorAliases: Record<string, string> = {
     'buitenzijde auto': 'carExterior',
@@ -224,11 +225,24 @@ async function generateDamageCheckPDFFromCanvas(
     'spiegelglas l+r': 'mirrorGlassLeftRight',
     'antenne': 'antenna',
     'ruitenwisser': 'wiperBlade',
-    'deurvangers': 'mudguards',
-    'deurvanger': 'mudguards',
+    'deurvangers': 'doorCatchers',
+    'deurvanger': 'doorCatchers',
     'schuifdeur': 'slidingDoorBus',
     'werkende sloten': 'indicatorSlots',
     'mistlampen voor': 'fogLights',
+  };
+  // Cross-rename map: lookups under a new schema key also try old keys so
+  // damage checks saved before the rename still surface in the PDF.
+  const legacyKeyRenames: Record<string, string[]> = {
+    floorMats: ['matKit'],
+    headrests: ['mainKeys'],
+    doorCatchers: ['mudguards'],
+  };
+  const readFromGroup = (group: Record<string, string>, key: string): string | null => {
+    if (group[key]) return group[key];
+    const olds = legacyKeyRenames[key];
+    if (olds) for (const o of olds) if (group[o]) return group[o];
+    return null;
   };
   const legacyDeliveryAliases: Record<string, string> = {
     'olie - water': 'oilWater',
@@ -252,13 +266,25 @@ async function generateDamageCheckPDFFromCanvas(
   };
   const lookupAnswer = (label: string): string | null => {
     const key = normalize(label);
-    if (interiorKeyByLabel[key] && checkInterior[interiorKeyByLabel[key]]) return formatAnswer(checkInterior[interiorKeyByLabel[key]]);
-    if (exteriorKeyByLabel[key] && checkExterior[exteriorKeyByLabel[key]]) return formatAnswer(checkExterior[exteriorKeyByLabel[key]]);
+    if (interiorKeyByLabel[key]) {
+      const v = readFromGroup(checkInterior, interiorKeyByLabel[key]);
+      if (v) return formatAnswer(v);
+    }
+    if (exteriorKeyByLabel[key]) {
+      const v = readFromGroup(checkExterior, exteriorKeyByLabel[key]);
+      if (v) return formatAnswer(v);
+    }
     // Legacy fallback: historical Dutch labels on older templates.
     const li = legacyInteriorAliases[key];
-    if (li && checkInterior[li]) return formatAnswer(checkInterior[li]);
+    if (li) {
+      const v = readFromGroup(checkInterior, li);
+      if (v) return formatAnswer(v);
+    }
     const le = legacyExteriorAliases[key];
-    if (le && checkExterior[le]) return formatAnswer(checkExterior[le]);
+    if (le) {
+      const v = readFromGroup(checkExterior, le);
+      if (v) return formatAnswer(v);
+    }
     return null;
   };
   const isDeliveryChecked = (label: string): boolean => {

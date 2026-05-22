@@ -934,16 +934,17 @@ export const DEFAULT_DAMAGE_CHECK_FIELDS: DamageCheckFieldsConfig = {
     {
       id: "interior",
       label: "Interieur",
+      // Matches LAM Groep paper "PRE RENTAL/SCHADE CHECK" exactly.
       fields: [
         { key: "carInterior", label: "Binnenzijde auto", inputType: "select", options: ["schoon", "vuil"] },
-        { key: "floorMats", label: "Vloermatten", inputType: "select", options: ["ja", "nee"] },
+        { key: "windowDamage", label: "Ruitschade", inputType: "select", options: ["ja", "nee"] },
         { key: "upholstery", label: "Bekleding", inputType: "select", options: ["kapot", "heel", "brandgaten"] },
         { key: "ashtray", label: "Asbak", inputType: "select", options: ["schoon", "vuil"] },
         { key: "spareWheel", label: "Reservewiel", inputType: "select", options: ["goed", "geen", "lek"] },
         { key: "jack", label: "Krik", inputType: "select", options: ["ja", "nee"] },
         { key: "wheelBrace", label: "Wielsleutel", inputType: "select", options: ["ja", "nee"] },
-        { key: "matKit", label: "Matten", inputType: "select", options: ["ja", "nee"] },
-        { key: "mainKeys", label: "Hoofdsteunen", inputType: "select", options: ["goed", "kapot"] },
+        { key: "floorMats", label: "Matten", inputType: "select", options: ["ja", "nee"] },
+        { key: "headrests", label: "Hoofdsteunen", inputType: "select", options: ["goed", "kapot"] },
       ],
     },
     {
@@ -958,7 +959,7 @@ export const DEFAULT_DAMAGE_CHECK_FIELDS: DamageCheckFieldsConfig = {
         { key: "mirrorGlassLeftRight", label: "Spiegelglas L+R", inputType: "select", options: ["goed", "kapot"] },
         { key: "antenna", label: "Antenne", inputType: "select", options: ["goed", "kapot", "geen"] },
         { key: "wiperBlade", label: "Ruitenwisser", inputType: "select", options: ["goed", "kapot"] },
-        { key: "mudguards", label: "Deurvanger", inputType: "select", options: ["goed", "kapot"] },
+        { key: "doorCatchers", label: "Deurvangers", inputType: "select", options: ["goed", "kapot"] },
         { key: "slidingDoorBus", label: "Schuifdeur (bus)", inputType: "select", options: ["goed", "kapot", "slecht"] },
         { key: "indicatorSlots", label: "Werkende sloten", inputType: "select", options: ["ja", "nee"] },
         { key: "fogLights", label: "Mistlampen voor", inputType: "select", options: ["goed", "kapot", "geen"] },

@@ -407,13 +407,28 @@ export default function DamageCheckTemplateCanvasEditor({ embedded = false }: { 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!currentId) return null;
+      // Read from the ref so a save fired immediately after a drag captures
+      // the final field positions rather than a pre-drop React snapshot.
       const res = await apiRequest('PUT', `/api/damage-check-templates/${currentId}`, {
-        name, description, language, canvasFields: fields,
+        name, description, language, canvasFields: fieldsRef.current,
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (saved: Template | null) => {
       invalidateByPrefix('/api/damage-check-templates');
+      // Reload local state from what the server actually persisted so the
+      // canvas reflects the saved data exactly (no drift between editor and
+      // what reload would show).
+      if (saved && Array.isArray(saved.canvasFields)) {
+        const f = saved.canvasFields as CanvasField[];
+        fieldsRef.current = f;
+        setFields(f);
+        const snap: HistoryState[] = [{ fields: f, ts: Date.now() }];
+        historyRef.current = snap;
+        histIdxRef.current = 0;
+        setHistory(snap);
+        setHistIdx(0);
+      }
       toast({ title: 'Saved', description: 'Template saved successfully' });
     },
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
