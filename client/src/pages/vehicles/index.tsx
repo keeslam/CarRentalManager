@@ -17,19 +17,38 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import { Vehicle, Reservation } from "@shared/schema";
 import { formatDate, formatLicensePlate } from "@/lib/format-utils";
 import { displayLicensePlate } from "@/lib/utils";
 import { isTrueValue } from "@/lib/utils";
 import { getDaysUntil } from "@/lib/date-utils";
-import { Search } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Feature-based filter options. Each maps a user-facing label to the boolean
+// column on the vehicle record. A vehicle "has" the feature when isTrueValue()
+// is truthy for that column.
+const FEATURE_FILTERS: { key: keyof Vehicle; label: string }[] = [
+  { key: "euroZoneAccess", label: "Emissions Zone Access" },
+  { key: "moveIziRegistered", label: "Move IZI" },
+  { key: "gps", label: "GPS" },
+  { key: "gpsSwapped", label: "GPS Swapped" },
+  { key: "seatcovers", label: "Seat Covers" },
+  { key: "backupbeepers", label: "Backup Beepers" },
+  { key: "spareKey", label: "Spare Key" },
+];
 
 export default function VehiclesIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("default");
+  // Feature filters: list of selected vehicle boolean columns to require, plus
+  // the match mode (strict = vehicle must have ALL selected; broad = ANY).
+  const [featureFilters, setFeatureFilters] = useState<(keyof Vehicle)[]>([]);
+  const [featureMatchMode, setFeatureMatchMode] = useState<"all" | "any">("all");
   const [vehicleViewDialogOpen, setVehicleViewDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [reservationViewDialogOpen, setReservationViewDialogOpen] = useState(false);
@@ -129,7 +148,17 @@ export default function VehiclesIndex() {
     if (sortBy === "filter-needs-fixing") {
       if (vehicle.availabilityStatus !== 'needs_fixing') return false;
     }
-    
+
+    // Apply feature filters. Strict mode ("all") requires the vehicle to have
+    // every selected feature; broad mode ("any") requires at least one.
+    if (featureFilters.length > 0) {
+      const hasFeature = (key: keyof Vehicle) => isTrueValue(vehicle[key] as any);
+      const matches = featureMatchMode === "all"
+        ? featureFilters.every(hasFeature)
+        : featureFilters.some(hasFeature);
+      if (!matches) return false;
+    }
+
     return true;
   }).sort((a, b) => {
     // If sortBy is a filter option, use default sorting
@@ -550,6 +579,81 @@ export default function VehiclesIndex() {
                 </Button>
               )}
             </div>
+            {/* Feature filter — dropdown with checkboxes */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2" data-testid="button-feature-filter">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filter features
+                  {featureFilters.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">{featureFilters.length}</Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="start">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="text-sm font-medium">Filter by features</span>
+                  {featureFilters.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-2 py-1 text-xs"
+                      onClick={() => setFeatureFilters([])}
+                      data-testid="button-clear-feature-filter"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+
+                {/* Match mode toggle: strict (all) vs broad (any) */}
+                <div className="px-4 py-3 border-b">
+                  <div className="text-xs text-muted-foreground mb-2">Show vehicles that have</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={featureMatchMode === "all" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFeatureMatchMode("all")}
+                      data-testid="button-match-all"
+                    >
+                      All selected
+                    </Button>
+                    <Button
+                      variant={featureMatchMode === "any" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFeatureMatchMode("any")}
+                      data-testid="button-match-any"
+                    >
+                      Any selected
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="px-2 py-2 max-h-72 overflow-auto">
+                  {FEATURE_FILTERS.map(({ key, label }) => {
+                    const checked = featureFilters.includes(key);
+                    return (
+                      <label
+                        key={String(key)}
+                        className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-accent cursor-pointer"
+                        data-testid={`feature-filter-${String(key)}`}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(val) => {
+                            setFeatureFilters((prev) =>
+                              val ? [...prev, key] : prev.filter((k) => k !== key)
+                            );
+                          }}
+                        />
+                        <span className="text-sm">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="flex items-center">
               <label htmlFor="sortBy" className="mr-2 text-sm font-medium">Sort by:</label>
               <Select value={sortBy} onValueChange={setSortBy}>
